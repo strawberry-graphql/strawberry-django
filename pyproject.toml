@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "strawberry-graphql-django"
+packages = [ { include = "strawberry_django" } ]
+version = "0.0.1"
+description = ""
+authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+Django = "^3.1.2"
+strawberry-graphql = "^0.39.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.1.1"
+pytest-django = "^4.1.0"
+pytest-pythonpath = "^0.7.3"
+pytest-watch = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "setuptools"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.django_settings"
+testpaths = ["tests/"]
