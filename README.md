@@ -2,13 +2,6 @@
 
 This library provides helpers to generate fields, mutations and resolvers for Django models.
 
-## Next steps
-* create python package to python package repository
-* improve relation field handling
-* add documentation
-* add resolvers for user login and logout
-* create demo site
-
 ## Sample project files
 
 models.py:
@@ -32,9 +25,16 @@ from .models import User, Group
 
 class UserResolver(ModelResolver):
     model = User
+    @strawberry.field
+    def age_in_months(info, root) -> int:
+        return root.age * 16
 
 class GroupResolver(ModelResolver):
     model = Group
+    fields = ['name', 'users']
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs
 
 @strawberry.type
 class Query(UserResolver.query(), GroupResolver.query()):
@@ -57,30 +57,67 @@ urlpatterns = [
 ]
 ```
 
-Create database and start server
+Add models and schema. Create database. Start development server.
 ```shell
+pip install strawberry-graphql-django
+manage.py makemigrations
+manage.py migrate
 manage.py runserver
 ```
 
+## Mutations and Queries
+
 Open http://localhost:8000/graphql and start testing.
-Create user and make first query
+
+Create new user.
 ```
 mutation {
-  createUser(data: {name: "hello", age: 20} ) {
+  createUser(data: {name: "my user", age: 20}) {
     id
   }
 }
 ```
 
+Make first queries.
 ```
 query {
   user(id: 1) {
     name
     age
+    groups {
+        name
+    }
   }
-  users(filter: ["name__contains=my"]) {
+  users(filter: ["name__contains=my", "!age__gt=60"]) {
+    id
+    name
+    age_in_months
+  }
+}
+```
+
+Update user data.
+```
+mutation {
+  updateUsers(data: {name: "new name"}, filter: ["id=1"]) {
     id
     name
   }
 }
 ```
+
+Finally delete user.
+```
+mutation {
+  deleteUsers(filter: ["id=1"]) {
+    id
+  }
+}
+```
+
+## Next steps
+* check python package metadata and dependencies
+* improve relation field handling and add new field types
+* add documentation
+* add resolvers for user login and logout
+* create demo site
