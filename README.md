@@ -1,6 +1,15 @@
 # Strawberry GraphQL Django extension
 
-This library provides helpers to generate fields, mutations and resolvers from you Django models.
+This library provides helpers to generate fields, mutations and resolvers for Django models.
+
+## Next steps
+* create python package to python package repository
+* improve relation field handling
+* add documentation
+* add resolvers for user login and logout
+* create demo site
+
+## Sample project files
 
 models.py:
 ```python
@@ -62,6 +71,7 @@ mutation {
   }
 }
 ```
+
 ```
 query {
   user(id: 1) {
