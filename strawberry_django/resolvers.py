@@ -25,15 +25,15 @@ class ModelResolverMixin:
         model = self.get_model()
         return model.objects.all()
 
-    def get_queryset_filtered(self, filter):
+    def get_queryset_filtered(self, filters):
         qs = self.get_queryset()
-        if not filter:
+        if not filters:
             return qs
-        filter, exclude = utils.split_filters(filter)
-        if filter:
-            qs = qs.filter(**filter)
-        if exclude:
-            qs = qs.exclude(**exclude)
+        filters, excludes = utils.split_filters(filters)
+        if filters:
+            qs = qs.filter(**filters)
+        if excludes:
+            qs = qs.exclude(**excludes)
         return qs
 
     def list(self, **filters):
@@ -90,9 +90,9 @@ class ModelFieldMixin:
 
         @strawberry.field(permission_classes=permission_classes)
         def list_field(info, root,
-                filter: Optional[List[str]] = None) -> List[cls.output_type]:
+                filters: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
-            return instance.list(filter=filter)
+            return instance.list(filters=filters)
 
         return list_field
 
@@ -118,9 +118,9 @@ class ModelMutationMixin:
 
         @strawberry.mutation(permission_classes=permission_classes)
         def update_mutation(info, root, data: cls.update_input_type,
-                filter: Optional[List[str]] = None) -> List[cls.output_type]:
+                filters: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
-            return instance.update(utils.get_data(cls.model, data), filter=filter)
+            return instance.update(utils.get_data(cls.model, data), filters=filters)
 
         return update_mutation
 
@@ -130,9 +130,9 @@ class ModelMutationMixin:
 
         @strawberry.mutation(permission_classes=permission_classes)
         def delete_mutation(info, root,
-                filter: Optional[List[str]] = None) -> List[cls.output_type]:
+                filters: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
-            return instance.delete(filter=filter)
+            return instance.delete(filters=filters)
 
         return delete_mutation
 

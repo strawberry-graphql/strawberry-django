@@ -84,20 +84,30 @@ def get_relation_field(field):
         field_name = field.get_accessor_name()
     else:
         field_name = field.name
-    field_type = get_model_type(field.related_model)
+    model = field.related_model
+    field_type = get_model_type(model)
+
     @strawberry.field
-    def resolver(info, root,
-            filter: Optional[List[str]] = None,
-            exclude: Optional[List[str]] = None) -> List[field_type]:
+    def resolver(info, root, filters: Optional[List[str]] = None) -> List[field_type]:
+        #resolver_cls = get_resolver_cls(model)
+        #instance = resolver_cls(info, root)
         qs = getattr(root, field_name).all()
-        return utils.filter_qs(qs, filter, exclude)
+        if filters:
+            filters, excludes = utils.split_filters(filters)
+            if filters:
+                qs = qs.filter(**filters)
+            if excludes:
+                qs = qs.exclude(**excludes)
+        return qs
+
 
     return field_name, None, resolver
 
 
 def get_relation_foreignkey_field(field):
     field_name = field.name
-    field_type = get_model_type(field.related_model)
+    model = field.related_model
+    field_type = get_model_type(model)
 
     @strawberry.field
     def resolver(info, root) -> Optional[field_type]:

@@ -61,8 +61,8 @@ def test_query_list(schema):
     ]
 
 
-def test_query_list_filter(schema):
-    result = schema.execute_sync('query { users(filter: "age__gt=10") { name age } }')
+def test_query_list_filters(schema):
+    result = schema.execute_sync('query { users(filters: ["age__gt=10"]) { name age } }')
 
     assert not result.errors
     assert result.data['users'] == [
@@ -71,8 +71,8 @@ def test_query_list_filter(schema):
     ]
 
 
-def test_query_list_exclude(schema):
-    result = schema.execute_sync('query { users(filter: "!age__gt=10") { name age } }')
+def test_query_list_negated_filters(schema):
+    result = schema.execute_sync('query { users(filters: ["!age__gt=10"]) { name age } }')
 
     assert not result.errors
     assert result.data['users'] == [
@@ -104,6 +104,14 @@ def test_query_many_to_one_relation(schema):
     assert result.data['user']['adminGroups'] == [
         {'name': 'x'},
         {'name': 'y'},
+    ]
+
+def test_query_many_to_one_relation_with_filters(schema):
+    result = schema.execute_sync('query { user(id: 1) { adminGroups(filters: ["name=x"]) { name } } }')
+
+    assert not result.errors
+    assert result.data['user']['adminGroups'] == [
+        {'name': 'x'},
     ]
 
 

@@ -35,7 +35,7 @@ def test_mutation_create(schema):
 
 
 def test_mutation_update(schema):
-    result = schema.execute_sync('mutation { users: updateUsers(data: {name: "y"}, filter: ["id=2"]) { name } }')
+    result = schema.execute_sync('mutation { users: updateUsers(data: {name: "y"}, filters: ["id=2"]) { name } }')
 
     assert not result.errors
     assert result.data['users'][0]['name'] == 'y'
@@ -47,7 +47,7 @@ def test_mutation_update(schema):
 def test_mutation_delete(schema):
     assert User.objects.count() == 3
 
-    result = schema.execute_sync('mutation { users: deleteUsers(filter: ["id=2"]) { id } }')
+    result = schema.execute_sync('mutation { users: deleteUsers(filters: ["id=2"]) { id } }')
 
     assert not result.errors
     assert result.data['users'][0]['id'] == '2'
