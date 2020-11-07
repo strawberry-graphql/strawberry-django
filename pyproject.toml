@@ -7,13 +7,13 @@ authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
 repository = "https://github.com/la4de/strawberry-graphql-django"
 license = "MIT"
 readme = "README.md"
-keywords = ["grapqhl", "api", "django"]
+keywords = ["graphql", "api", "django"]
 classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Python Modules" ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-Django = "^3.1.2"
-strawberry-graphql = "^0.39.1"
+python = "^3.7"
+Django = "^3.1"
+strawberry-graphql = "^0.41"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.1"
