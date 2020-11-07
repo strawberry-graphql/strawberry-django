@@ -8,11 +8,7 @@ repository = "https://github.com/la4de/strawberry-graphql-django"
 license = "MIT"
 readme = "README.md"
 keywords = ["grapqhl", "api", "django"]
-
-classifiers = [
-    "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Libraries :: Python Modules"
-]
+classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Python Modules" ]
 
 [tool.poetry.dependencies]
 python = "^3.9"
