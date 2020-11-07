@@ -144,19 +144,19 @@ class ModelMutationMixin:
 class ModelQueryMixin:
     @classmethod
     def query(cls):
-        verbose_name = cls.model._meta.verbose_name
+        object_name = utils.camel_to_snake(cls.model._meta.object_name)
         class Query: pass
-        setattr(Query, f'{verbose_name}', cls.get_field())
-        setattr(Query, f'{verbose_name}s', cls.list_field())
+        setattr(Query, f'{object_name}', cls.get_field())
+        setattr(Query, f'{object_name}s', cls.list_field())
         return strawberry.type(Query)
 
     @classmethod
     def mutation(cls):
-        verbose_name = cls.model._meta.verbose_name
+        object_name = utils.camel_to_snake(cls.model._meta.object_name)
         class Mutation: pass
-        setattr(Mutation, f'create_{verbose_name}', cls.create_mutation())
-        setattr(Mutation, f'update_{verbose_name}s', cls.update_mutation())
-        setattr(Mutation, f'delete_{verbose_name}s', cls.delete_mutation())
+        setattr(Mutation, f'create_{object_name}', cls.create_mutation())
+        setattr(Mutation, f'update_{object_name}s', cls.update_mutation())
+        setattr(Mutation, f'delete_{object_name}s', cls.delete_mutation())
         return strawberry.type(Mutation)
 
 
