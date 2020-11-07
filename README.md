@@ -20,7 +20,7 @@ class Group(models.Model):
 schema.py:
 ```python
 import strawberry
-from strawberry_django import ModelResolver
+from strawberry_django import ModelResolver, ModelPermissions
 from .models import User, Group
 
 class UserResolver(ModelResolver):
@@ -32,6 +32,8 @@ class UserResolver(ModelResolver):
 class GroupResolver(ModelResolver):
     model = Group
     fields = ['name', 'users']
+    # only users who have permissions for group models can access and modify
+    permissions_classess = [ModelPermissions]
     def get_queryset(self):
         qs = super().get_queryset()
         return qs
@@ -88,7 +90,7 @@ query {
         name
     }
   }
-  users(filter: ["name__contains=my", "!age__gt=60"]) {
+  users(filters: ["name__contains=my", "!age__gt=60"]) {
     id
     name
     age_in_months
@@ -99,7 +101,7 @@ query {
 Update user data.
 ```
 mutation {
-  updateUsers(data: {name: "new name"}, filter: ["id=1"]) {
+  updateUsers(data: {name: "new name"}, filters: ["id=1"]) {
     id
     name
   }
@@ -117,7 +119,7 @@ mutation {
 
 ## Next steps
 * check python package metadata and dependencies
-* improve relation field handling and add new field types
+* improve relation field handling
 * add documentation
 * add resolvers for user login and logout
-* create demo site
+* example app and demo site
