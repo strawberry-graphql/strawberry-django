@@ -7,6 +7,7 @@ field_type_map = {
     fields.AutoField: strawberry.ID,
     fields.IntegerField: int,
     fields.CharField: str,
+    fields.SlugField: str,
     fields.TextField: str,
     fields.BooleanField: bool,
 }

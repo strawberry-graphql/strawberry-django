@@ -2,10 +2,13 @@ from typing import List, Optional, cast
 import strawberry
 from . import utils
 from .types import generate_model_type
+from .permissions import permission_class_wrapper
 from django.core import exceptions
 
 
 class ModelResolverMixin:
+    permission_classes = None
+
     def __init__(self, info, root):
         self.info = info
         self.root = root
@@ -32,70 +35,63 @@ class ModelResolverMixin:
         return qs
 
     def list(self, **filters):
-        self.check_permissions('view')
         qs = self.get_queryset_filtered(**filters)
         return qs
 
     def get(self, id):
-        self.check_permissions('view')
         qs = self.get_queryset()
         return qs.get(id=id)
 
     def create(self, data):
-        self.check_permissions('add')
         model = self.get_model()
         instance = model(**data)
         instance.save()
         return instance
 
     def update(self, data, **filters):
-        self.check_permissions('change')
         qs = self.get_queryset_filtered(**filters)
         qs.update(**data)
         return qs
 
     def delete(self, **filters):
-        self.check_permissions('delete')
         qs = self.get_queryset_filtered(**filters)
         items = list(qs)
         qs.delete()
         return items
 
-    def check_permissions(self, permission_codenames):
-        _super = super()
-        if hasattr(_super, 'check_permissions'):
-            _super.check_permissions(permission_codenames)
 
-
-class ModelPermissionMixin:
-    def check_permissions(self, permission_codenames):
-        if not self.request:
-            return
-        if isinstance(permission_codenames, str):
-            permission_codenames = [permission_codenames]
-        app_label = self.model._meta.app_label
-        model_name = self.model._meta.model_name
-        perms = [f'{app_label}.{perm}_{model_name}' for perm in permission_codenames]
-        if not self.request.user.has_perms(perms):
-            raise exceptions.PermissionDenied('Permission denied')
+def get_permission_classes(cls, permission_codename):
+    if not cls.permission_classes:
+        return None
+    permission_classes = [
+        permission_class_wrapper(permission_class, cls.model, permission_codename)
+            for permission_class in cls.permission_classes
+    ]
+    return permission_classes
 
 
 class ModelFieldMixin:
     @classmethod
     def get_field(cls):
-        @strawberry.field
+        permission_classes = get_permission_classes(cls, 'view')
+
+        @strawberry.field(permission_classes=permission_classes)
         def get_field(info, root, id: strawberry.ID) -> cls.output_type:
             instance = cls(info, root)
             return instance.get(id)
+
         return get_field
 
     @classmethod
     def list_field(cls):
-        @strawberry.field
+        permission_classes = get_permission_classes(cls, 'view')
+
+        @strawberry.field(permission_classes=permission_classes)
         def list_field(info, root,
                 filter: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
             return instance.list(filter=filter)
+
         return list_field
 
     @classmethod
@@ -106,7 +102,9 @@ class ModelFieldMixin:
 class ModelMutationMixin:
     @classmethod
     def create_mutation(cls):
-        @strawberry.mutation
+        permission_classes = get_permission_classes(cls, 'add')
+
+        @strawberry.mutation(permission_classes=permission_classes)
         def create_mutation(info, root, data: cls.create_input_type) -> cls.output_type:
             instance = cls(info, root)
             return instance.create(utils.get_data(cls.model, data))
@@ -114,20 +112,26 @@ class ModelMutationMixin:
 
     @classmethod
     def update_mutation(cls):
-        @strawberry.mutation
+        permission_classes = get_permission_classes(cls, 'change')
+
+        @strawberry.mutation(permission_classes=permission_classes)
         def update_mutation(info, root, data: cls.update_input_type,
                 filter: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
             return instance.update(utils.get_data(cls.model, data), filter=filter)
+
         return update_mutation
 
     @classmethod
     def delete_mutation(cls):
-        @strawberry.mutation
+        permission_classes = get_permission_classes(cls, 'delete')
+
+        @strawberry.mutation(permission_classes=permission_classes)
         def delete_mutation(info, root,
                 filter: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
             return instance.delete(filter=filter)
+
         return delete_mutation
 
     @classmethod
@@ -166,7 +170,6 @@ class ModelTypeBase(type):
 
 class ModelResolver(
         ModelResolverMixin,
-        ModelPermissionMixin,
         ModelFieldMixin,
         ModelMutationMixin,
         ModelQueryMixin,
