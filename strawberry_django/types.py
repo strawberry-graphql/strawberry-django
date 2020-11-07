@@ -54,13 +54,13 @@ def register_model_type(model, field_type):
 def get_model_type(model):
     model_type = model_type_map.get(model)
     if model_type is None:
-        model_type = LazyModelType(model)
+        name = model._meta.object_name
+        package, module = model.__module__.split('.', 1)
+        model_type = LazyModelType(name, module, package)
+        model_type.model = model
     return model_type
 
 class LazyModelType(strawberry.LazyType):
-    def __init__(self, model):
-        super().__init__('', '', '')
-        self.model = model
     def resolve_type(self):
         if self.model not in model_type_map:
             raise Exception(f'GraphQL type not defined for "{self.model._meta.object_name}" Django model.')
