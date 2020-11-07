@@ -44,10 +44,11 @@ def get_field_type(field):
     return field_type
 
 
-model_type_map = {
-}
+model_type_map = {}
 
-def set_model_type(model, field_type):
+def register_model_type(model, field_type):
+    #if model in model_type_map:
+    #    raise AttributeError(f'Model {model} already registered')
     model_type_map[model] = field_type
 
 def get_model_type(model):
@@ -64,6 +65,20 @@ class LazyModelType(strawberry.LazyType):
         if self.model not in model_type_map:
             raise Exception(f'GraphQL type not defined for "{self.model._meta.object_name}" Django model.')
         return model_type_map[self.model]
+
+
+resolver_cls_map = {}
+
+def register_resolver_cls(model, resolver_cls):
+    #if model in resolver_cls_map:
+    #    raise AttributeError(f'Model {model} already registered')
+    resolver_cls_map[model] = resolver_cls
+
+def get_resolver_cls(model):
+    resolver_cls = resolver_cls_map.get(model)
+    if not resolver_cls:
+        raise TypeError(f'Model resolver not defined for {model}')
+    return resolver_cls
 
 
 def get_field(field, is_input, is_update):
@@ -123,16 +138,16 @@ def get_relation_foreignkey_field(field):
     return field_name, None, resolver
 
 
-def generate_model_type(resolver, is_input=False, is_update=False):
-    model = resolver.model
+def generate_model_type(resolver_cls, is_input=False, is_update=False):
+    model = resolver_cls.model
     annotations = {}
     attributes = { '__annotations__': annotations }
 
     # add fields
     for field in model._meta.get_fields():
-        if resolver.fields and field.name not in resolver.fields:
+        if resolver_cls.fields and field.name not in resolver_cls.fields:
             continue # skip
-        if resolver.exclude and field.name in resolver.exclude:
+        if resolver_cls.exclude and field.name in resolver_cls.exclude:
             continue # skip
         if field.is_relation:
             if is_input:
@@ -149,9 +164,10 @@ def generate_model_type(resolver, is_input=False, is_update=False):
         attributes[field_name] = field_value
         if field_type:
             annotations[field_name] = field_type
+
     if not is_input:
-        for field_name in dir(resolver):
-            field = getattr(resolver, field_name)
+        for field_name in dir(resolver_cls):
+            field = getattr(resolver_cls, field_name)
             if hasattr(field, '_field_definition'):
                 attributes[field_name] = field
 
@@ -164,5 +180,6 @@ def generate_model_type(resolver, is_input=False, is_update=False):
     model_type = type(type_name, (), attributes)
     model_type = strawberry.type(model_type, is_input=is_input)
     if not is_input:
-        set_model_type(model, model_type)
+        register_model_type(model, model_type)
+        register_resolver_cls(model, resolver_cls)
     return model_type
