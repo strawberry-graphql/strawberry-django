@@ -17,3 +17,9 @@ class DataModel(models.Model):
     mandatory = models.CharField(max_length=50)
     optional = models.CharField(max_length=50, blank=True)
     relation = models.ManyToManyField(User)
+
+class UnknownField(models.Field):
+    pass
+
+class UnknownFieldModel(models.Model):
+    unknown = UnknownField()

@@ -1,7 +1,8 @@
+import pytest
 import strawberry
 from strawberry_django import ModelResolver
 from strawberry_django.types import generate_model_type
-from .app.models import DataModel, User
+from .app.models import DataModel, User, UnknownFieldModel
 
 def generate_and_get_fields(resolver_or_model, **kwargs):
     if issubclass(resolver_or_model, ModelResolver):
@@ -54,3 +55,8 @@ def test_exclude_fields(db):
 
     assert 'id' not in fields
     assert 'char' in fields
+
+
+def test_unknown_field_type(db):
+    with pytest.raises(TypeError):
+        generate_and_get_fields(UnknownFieldModel)

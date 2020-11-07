@@ -14,7 +14,10 @@ field_type_map = {
 
 def get_field_type(field):
     db_field_type = type(field)
-    return field_type_map.get(db_field_type)
+    field_type = field_type_map.get(db_field_type)
+    if field_type is None:
+        raise TypeError(f'Unknown type for {db_field_type.__name__}')
+    return field_type
 
 
 model_type_map = {
@@ -40,14 +43,10 @@ class LazyModelType(strawberry.LazyType):
 
 
 def get_field(field, is_input, is_update):
-    field_type = field_type_map.get(type(field))
+    field_type = get_field_type(field)
 
     if is_input and field_type == strawberry.ID:
         return #TODO: is this correct?
-
-    if field_type is None:
-        print('Unknown field type', type(field))
-        return
 
     if is_input:
         if field.blank or is_update:
@@ -88,14 +87,12 @@ def generate_model_type(resolver, is_input=False, is_update=False):
     model = resolver.model
     annotations = {}
     attributes = { '__annotations__': annotations }
-    resolver_fields = getattr(resolver, 'fields', None)
-    resolver_exclude = getattr(resolver, 'exclude', None)
 
     # add fields
     for field in model._meta.get_fields():
-        if resolver_fields and field.name not in resolver_fields:
+        if resolver.fields and field.name not in resolver.fields:
             continue # skip
-        if resolver_exclude and field.name in resolver_exclude:
+        if resolver.exclude and field.name in resolver.exclude:
             continue # skip
         if field.is_relation:
             if is_input:

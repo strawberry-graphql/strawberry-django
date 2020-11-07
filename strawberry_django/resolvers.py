@@ -8,6 +8,8 @@ from django.core import exceptions
 
 class ModelResolverMixin:
     permission_classes = None
+    fields = None
+    exclude = None
 
     def __init__(self, info, root):
         self.info = info
