@@ -72,9 +72,15 @@ def get_field(field, is_input, is_update):
     if is_input and field_type == strawberry.ID:
         return #TODO: is this correct?
 
+    optional = False
     if is_input:
         if field.blank or is_update:
-            field_type = Optional[field_type]
+            optional = True
+    if field.null:
+        optional = True
+
+    if optional:
+        field_type = Optional[field_type]
 
     return field.name, field_type, strawberry.arguments.UNSET
 

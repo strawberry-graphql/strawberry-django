@@ -15,7 +15,8 @@ class DataModel(models.Model):
     integer = models.IntegerField()
     text = models.TextField()
     mandatory = models.CharField(max_length=50)
-    optional = models.CharField(max_length=50, blank=True)
+    optional = models.IntegerField(blank=True)
+    nullable = models.IntegerField(null=True)
     relation = models.ManyToManyField(User)
 
 class UnknownField(models.Field):
