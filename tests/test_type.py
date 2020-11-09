@@ -58,6 +58,15 @@ def test_exclude_fields(db):
     assert 'char' in fields
 
 
+def test_read_only_fields(db):
+    class Resolver(ModelResolver):
+        model = DataModel
+        readonly_fields = ['text']
+
+    fields = generate_and_get_fields(Resolver, is_input=True)
+    assert 'text' not in list(fields.keys())
+
+
 def test_unknown_field_type(db):
     with pytest.raises(TypeError):
         generate_and_get_fields(UnknownFieldModel)

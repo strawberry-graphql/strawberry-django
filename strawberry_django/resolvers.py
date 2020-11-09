@@ -11,6 +11,7 @@ class ModelResolverMixin:
     permission_classes = None
     fields = None
     exclude = None
+    readonly_fields = None
 
     def __init__(self, info, root):
         self.info = info

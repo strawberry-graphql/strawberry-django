@@ -138,6 +138,12 @@ def get_relation_foreignkey_field(field):
     return field_name, None, {'resolver': resolver}
 
 
+def is_in(item, item_list):
+    if not item_list:
+        return False
+    return item in item_list
+
+
 def generate_model_type(resolver_cls, is_input=False, is_update=False):
     model = resolver_cls.model
     annotations = {}
@@ -147,7 +153,9 @@ def generate_model_type(resolver_cls, is_input=False, is_update=False):
     for field in model._meta.get_fields():
         if resolver_cls.fields and field.name not in resolver_cls.fields:
             continue # skip
-        if resolver_cls.exclude and field.name in resolver_cls.exclude:
+        if is_in(field.name, resolver_cls.exclude):
+            continue # skip
+        if is_input and is_in(field.name, resolver_cls.readonly_fields):
             continue # skip
         if field.is_relation:
             if is_input:
