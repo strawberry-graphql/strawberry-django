@@ -36,6 +36,8 @@ class GroupResolver(ModelResolver):
     permissions_classess = [ModelPermissions]
     def get_queryset(self):
         qs = super().get_queryset()
+        if not self.request.user.is_superuser:
+            qs = qs.none()
         return qs
 
 @strawberry.type
@@ -117,9 +119,6 @@ mutation {
 }
 ```
 
-## Next steps
-* check python package metadata and dependencies
-* improve relation field handling
-* add documentation
-* add resolvers for user login and logout
-* example app and demo site
+## Contribution
+
+I would be more than happy to get pull requests, improvement ideas or any feedback.
