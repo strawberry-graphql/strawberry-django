@@ -2,7 +2,7 @@ from django.db import models
 
 class User(models.Model):
     name = models.CharField(max_length=50)
-    age = models.IntegerField()
+    age = models.IntegerField(default=10)
     groups = models.ManyToManyField('Group', related_name='users', related_query_name='user')
 
 class Group(models.Model):
@@ -17,6 +17,7 @@ class DataModel(models.Model):
     mandatory = models.CharField(max_length=50)
     optional = models.IntegerField(blank=True)
     nullable = models.IntegerField(null=True)
+    hasdefault = models.IntegerField(default=1)
     relation = models.ManyToManyField(User)
 
 class UnknownField(models.Field):

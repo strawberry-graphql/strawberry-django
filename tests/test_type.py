@@ -29,6 +29,7 @@ def test_optional_field(db):
     assert fields['mandatory'].is_optional == False
     assert fields['optional'].is_optional == True
     assert fields['nullable'].is_optional == True
+    assert fields['hasdefault'].is_optional == True
 
 
 def test_relation_field(db):

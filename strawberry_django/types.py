@@ -89,7 +89,8 @@ def get_field(field, is_input, is_update):
 
     optional = False
     if is_input:
-        if field.blank or is_update:
+        has_default = field.default != fields.NOT_PROVIDED
+        if field.blank or is_update or has_default:
             optional = True
     if field.null:
         optional = True
