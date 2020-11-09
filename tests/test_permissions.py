@@ -100,3 +100,23 @@ def test_delete_permissions(schema, context):
     result = schema.execute_sync(context_value=context,
             query='mutation { deleteUsers { id } }')
     assert not result.errors
+
+
+def test_field_permission_classes(testdata):
+    class FieldPermission:
+        message = 'Field permission denied'
+        def has_permission(self, root, info, **kwargs):
+            if info.field_name == 'age':
+                return False
+            return True
+    class UserResolver(ModelResolver):
+        field_permission_classes = [FieldPermission]
+        fields = ['id', 'name', 'age']
+        model = User
+    schema = strawberry.Schema(query=UserResolver.query())
+
+    result = schema.execute_sync('query { user(id: 1) { name } }')
+    assert not result.errors
+
+    result = schema.execute_sync('query { user(id: 1) { age } }')
+    assert result.errors[0].message == 'Field permission denied'

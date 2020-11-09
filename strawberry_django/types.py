@@ -97,7 +97,7 @@ def get_field(field, is_input, is_update):
     if optional:
         field_type = Optional[field_type]
 
-    return field.name, field_type, strawberry.arguments.UNSET
+    return field.name, field_type, {}
 
 
 def get_relation_field(field):
@@ -122,7 +122,7 @@ def get_relation_field(field):
         return qs
 
 
-    return field_name, None, resolver
+    return field_name, None, {'resolver': resolver}
 
 
 def get_relation_foreignkey_field(field):
@@ -135,7 +135,7 @@ def get_relation_foreignkey_field(field):
         obj = getattr(root, field_name)
         return obj
 
-    return field_name, None, resolver
+    return field_name, None, {'resolver': resolver}
 
 
 def generate_model_type(resolver_cls, is_input=False, is_update=False):
@@ -160,8 +160,16 @@ def generate_model_type(resolver_cls, is_input=False, is_update=False):
             field_params = get_field(field, is_input, is_update)
         if not field_params:
             continue
-        field_name, field_type, field_value = field_params
-        attributes[field_name] = field_value
+
+        field_name, field_type, field_kwargs = field_params
+
+        if is_input:
+            attributes[field_name] = strawberry.arguments.UNSET
+        else:
+            if resolver_cls.field_permission_classes:
+                field_kwargs['permission_classes'] = resolver_cls.field_permission_classes
+            attributes[field_name] = strawberry.field(**field_kwargs)
+
         if field_type:
             annotations[field_name] = field_type
 

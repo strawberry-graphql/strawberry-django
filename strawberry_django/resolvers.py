@@ -7,6 +7,7 @@ from django.core import exceptions
 
 
 class ModelResolverMixin:
+    field_permission_classes = None
     permission_classes = None
     fields = None
     exclude = None
