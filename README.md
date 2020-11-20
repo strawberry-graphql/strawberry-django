@@ -9,7 +9,7 @@ pip install strawberry-graphql-django
 
 ## Example project files
 
-See example Django project [examples/django].
+See example Django project [examples/django](examples/django).
 
 models.py:
 ```python
