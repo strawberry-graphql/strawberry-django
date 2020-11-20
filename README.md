@@ -2,7 +2,14 @@
 
 This library provides helpers to generate fields, mutations and resolvers for Django models.
 
-## Sample project files
+Installing strawberry-graphql-django packet from the python package repository.
+```shell
+pip install strawberry-graphql-django
+```
+
+## Example project files
+
+See example Django project [examples/django].
 
 models.py:
 ```python
@@ -27,15 +34,19 @@ class UserResolver(ModelResolver):
     model = User
     @strawberry.field
     def age_in_months(info, root) -> int:
-        return root.age * 16
+        return root.age * 12
 
 class GroupResolver(ModelResolver):
     model = Group
     fields = ['name', 'users']
-    # only users who have permissions for group models can access and modify
-    permissions_classess = [ModelPermissions]
+
+    # only users who have group permissions can access and modify groups
+    permissions_classes = [ModelPermissions]
+
+    # queryset filtering
     def get_queryset(self):
         qs = super().get_queryset()
+        # only super users can access groups
         if not self.request.user.is_superuser:
             qs = qs.none()
         return qs
@@ -53,6 +64,7 @@ schema = strawberry.Schema(query=Query, mutation=Mutation)
 
 urls.py:
 ```python
+from django.urls import include, path
 from strawberry.django.views import GraphQLView
 from .schema import schema
 
@@ -63,7 +75,6 @@ urlpatterns = [
 
 Add models and schema. Create database. Start development server.
 ```shell
-pip install strawberry-graphql-django
 manage.py makemigrations
 manage.py migrate
 manage.py runserver
@@ -95,7 +106,7 @@ query {
   users(filters: ["name__contains=my", "!age__gt=60"]) {
     id
     name
-    age_in_months
+    ageInMonths
   }
 }
 ```
@@ -113,12 +124,12 @@ mutation {
 Finally delete user.
 ```
 mutation {
-  deleteUsers(filter: ["id=1"]) {
+  deleteUsers(filters: ["id=1"]) {
     id
   }
 }
 ```
 
-## Contribution
+## Contributing
 
-I would be more than happy to get pull requests, improvement ideas or any feedback.
+I would be more than happy to get pull requests, improvement ideas or any feedback from you.
