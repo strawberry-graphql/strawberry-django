@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "testapp"
+version = "0.1.0"
+description = ""
+authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+strawberry-graphql-django = "^0.0.4"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
