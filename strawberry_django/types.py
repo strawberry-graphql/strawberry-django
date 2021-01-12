@@ -109,7 +109,6 @@ def get_relation_field(field):
     model = field.related_model
     field_type = get_model_type(model)
 
-    @strawberry.field
     def resolver(info, root, filters: Optional[List[str]] = None) -> List[field_type]:
         #resolver_cls = get_resolver_cls(model)
         #instance = resolver_cls(info, root)
@@ -131,7 +130,6 @@ def get_relation_foreignkey_field(field):
     model = field.related_model
     field_type = get_model_type(model)
 
-    @strawberry.field
     def resolver(info, root) -> Optional[field_type]:
         obj = getattr(root, field_name)
         return obj
