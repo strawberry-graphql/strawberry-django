@@ -1,4 +1,5 @@
 import strawberry
+from django.db.models import fields
 
 def split_filters(filters):
     filter, exclude = {}, {}
@@ -17,10 +18,13 @@ def split_filters(filters):
 def get_data(model, data):
     values = {}
     for field in model._meta.fields:
+        field_name = field.name
         value = getattr(data, field.name, strawberry.arguments.UNSET)
         if value is strawberry.arguments.UNSET:
             continue
-        values[field.name] = value
+        if isinstance(field, fields.related.ForeignKey):
+            field_name = f'{field_name}_id'
+        values[field_name] = value
     return values
 
 def camel_to_snake(s):

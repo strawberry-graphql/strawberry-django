@@ -10,6 +10,7 @@ def testdata(db):
         User(name='b', age=20),
         User(name='c', age=20),
     ])
+    Group.objects.create(name='x', admin_id=3)
 
 
 @pytest.fixture
@@ -18,7 +19,10 @@ def schema(testdata):
         model = User
     class GroupResolver(ModelResolver):
         model = Group
-    schema = strawberry.Schema(query=UserResolver.query(), mutation=UserResolver.mutation())
+    @strawberry.type
+    class Mutation(UserResolver.mutation(), GroupResolver.mutation()):
+        pass
+    schema = strawberry.Schema(query=UserResolver.query(), mutation=Mutation)
     return schema
 
 
@@ -54,3 +58,17 @@ def test_mutation_delete(schema):
 
     assert User.objects.filter(id=2).count() == 0
     assert User.objects.count() == 2
+
+
+def test_mutation_create_with_relation(schema):
+    result = schema.execute_sync('mutation { group: createGroup(data: {name: "x", admin: 3}) { admin { name }} }')
+
+    assert not result.errors
+    assert result.data['group']['admin']['name'] == 'c'
+
+
+def test_mutation_update_relation(schema):
+    result = schema.execute_sync('mutation { group: updateGroups(data: {admin: 2}) { admin { name }} }')
+
+    assert not result.errors
+    assert result.data['group'][0]['admin']['name'] == 'b'

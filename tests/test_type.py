@@ -71,3 +71,10 @@ def test_read_only_fields(db):
 def test_unknown_field_type(db):
     with pytest.raises(TypeError):
         generate_and_get_fields(UnknownFieldModel)
+
+
+def test_input_foreign_key_field(db):
+    fields = generate_and_get_fields(DataModel, is_input=True)
+
+    assert fields['foreignKey'].type == strawberry.ID
+    assert fields['foreignKey'].is_optional == True

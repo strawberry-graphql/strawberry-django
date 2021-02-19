@@ -125,10 +125,16 @@ def get_relation_field(field):
     return field_name, None, {'resolver': resolver}
 
 
-def get_relation_foreignkey_field(field):
+def get_relation_foreignkey_field(field, is_input):
     field_name = field.name
     model = field.related_model
     field_type = get_model_type(model)
+
+    if is_input:
+        field_type = strawberry.ID
+        if field.blank or field.null:
+            field_type = Optional[field_type]
+        return field_name, field_type, {}
 
     def resolver(info, root) -> Optional[field_type]:
         obj = getattr(root, field_name)
@@ -157,11 +163,11 @@ def generate_model_type(resolver_cls, is_input=False, is_update=False):
         if is_input and is_in(field.name, resolver_cls.readonly_fields):
             continue # skip
         if field.is_relation:
-            if is_input:
-                continue
             if isinstance(field, fields.related.ForeignKey):
-                field_params = get_relation_foreignkey_field(field)
+                field_params = get_relation_foreignkey_field(field, is_input)
             else:
+                if is_input:
+                    continue
                 field_params = get_relation_field(field)
         else:
             field_params = get_field(field, is_input, is_update)
