@@ -48,9 +48,10 @@ class ModelResolverMixin:
 
     def create(self, data):
         model = self.get_model()
-        instance = model(**data)
-        instance.save()
-        return instance
+        instances = [model(**i) for i in data]
+        for instance in instances:
+            instance.save()
+        return instances
 
     def update(self, data, **filters):
         qs = self.get_queryset_filtered(**filters)
@@ -109,9 +110,9 @@ class ModelMutationMixin:
         permission_classes = get_permission_classes(cls, 'add')
 
         @strawberry.mutation(permission_classes=permission_classes)
-        def create_mutation(info, root, data: cls.create_input_type) -> cls.output_type:
+        def create_mutation(info, root, data: List[cls.create_input_type]) -> List[cls.output_type]:
             instance = cls(info, root)
-            return instance.create(utils.get_data(cls.model, data))
+            return instance.create([utils.get_data(cls.model, i) for i in data])
         return create_mutation
 
     @classmethod
