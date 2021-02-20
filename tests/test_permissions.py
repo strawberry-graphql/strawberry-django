@@ -54,7 +54,7 @@ def test_query_without_permissions(schema, context):
 
 def test_mutation_without_permissions(schema, context):
     result = schema.execute_sync(context_value=context,
-            query='mutation { createUser(data: {name: "hello", age: 1}) { id } }')
+            query='mutation { createUsers(data: {name: "hello", age: 1}) { id } }')
     assert result.errors[0].message == 'User does not have app.add_user permission'
 
     result = schema.execute_sync(context_value=context,
@@ -82,7 +82,7 @@ def test_add_permissions(schema, context):
     context['permissions'] = ['app.add_user']
 
     result = schema.execute_sync(context_value=context,
-            query='mutation { createUser(data: {name: "hello", age: 1}) { id } }')
+            query='mutation { createUsers(data: {name: "hello", age: 1}) { id } }')
     assert not result.errors
 
 
