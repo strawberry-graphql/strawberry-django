@@ -23,13 +23,26 @@ def test_field_types(db):
     assert fields['text'].type == str
 
 
-def test_optional_field(db):
+def test_input_fields(db):
     fields = generate_and_get_fields(DataModel, is_input=True)
 
     assert fields['mandatory'].is_optional == False
     assert fields['optional'].is_optional == True
     assert fields['nullable'].is_optional == True
     assert fields['hasdefault'].is_optional == True
+    assert fields['mandatoryForeignKeyId'].is_optional == False
+    assert fields['optionalForeignKeyId'].is_optional == True
+
+
+def test_update_fields(db):
+    fields = generate_and_get_fields(DataModel, is_input=True, is_update=True)
+
+    assert fields['mandatory'].is_optional == True
+    assert fields['optional'].is_optional == True
+    assert fields['nullable'].is_optional == True
+    assert fields['hasdefault'].is_optional == True
+    assert fields['mandatoryForeignKeyId'].is_optional == True
+    assert fields['optionalForeignKeyId'].is_optional == True
 
 
 def test_relation_field(db):
@@ -71,10 +84,3 @@ def test_read_only_fields(db):
 def test_unknown_field_type(db):
     with pytest.raises(TypeError):
         generate_and_get_fields(UnknownFieldModel)
-
-
-def test_input_foreign_key_field(db):
-    fields = generate_and_get_fields(DataModel, is_input=True)
-
-    assert fields['foreignKey'].type == strawberry.ID
-    assert fields['foreignKey'].is_optional == True

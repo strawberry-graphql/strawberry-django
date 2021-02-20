@@ -7,7 +7,7 @@ class User(models.Model):
 
 class Group(models.Model):
     name = models.CharField(max_length=50)
-    admin = models.ForeignKey(User, related_name='admin_groups', on_delete=models.SET_NULL)
+    admin = models.ForeignKey(User, related_name='admin_groups', on_delete=models.CASCADE)
 
 class DataModel(models.Model):
     boolean = models.BooleanField()
@@ -19,7 +19,8 @@ class DataModel(models.Model):
     nullable = models.IntegerField(null=True)
     hasdefault = models.IntegerField(default=1)
     relation = models.ManyToManyField(User)
-    foreign_key = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    mandatory_foreign_key = models.ForeignKey(User, on_delete=models.CASCADE)
+    optional_foreign_key = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
 class UnknownField(models.Field):
     pass
