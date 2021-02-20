@@ -117,7 +117,7 @@ class ModelMutationMixin:
         @strawberry.mutation(permission_classes=permission_classes)
         def create_mutation(info, root, data: cls.create_input_type) -> cls.output_type:
             instance = cls(info, root)
-            return instance.create(utils.get_data(cls.model, data))
+            return instance.create(utils.get_input_data(cls.model, data))
         return create_mutation
 
     @classmethod
@@ -127,7 +127,7 @@ class ModelMutationMixin:
         @strawberry.mutation(permission_classes=permission_classes)
         def batch_create_mutation(info, root, data: List[cls.create_input_type]) -> List[cls.output_type]:
             instance = cls(info, root)
-            return instance.batch_create([utils.get_data(cls.model, i) for i in data])
+            return instance.batch_create([utils.get_input_data(cls.model, i) for i in data])
         return batch_create_mutation
 
     @classmethod
@@ -138,7 +138,7 @@ class ModelMutationMixin:
         def update_mutation(info, root, data: cls.update_input_type,
                 filters: Optional[List[str]] = None) -> List[cls.output_type]:
             instance = cls(info, root)
-            return instance.update(utils.get_data(cls.model, data), filters=filters)
+            return instance.update(utils.get_input_data(cls.model, data), filters=filters)
 
         return update_mutation
 

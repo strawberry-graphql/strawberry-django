@@ -15,7 +15,7 @@ def split_filters(filters):
             filter[k] = v
     return filter, exclude
 
-def get_data(model, data):
+def get_input_data(model, data):
     values = {}
     for field in model._meta.fields:
         field_name = field.name
