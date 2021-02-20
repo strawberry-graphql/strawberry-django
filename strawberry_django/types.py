@@ -80,6 +80,14 @@ def get_resolver_cls(model):
         raise TypeError(f'Model resolver not defined for {model}')
     return resolver_cls
 
+def is_optional(field, is_input, is_update):
+    if is_input:
+        has_default = field.default != fields.NOT_PROVIDED
+        if field.blank or is_update or has_default:
+            return True
+    if field.null:
+        return True
+    return False
 
 def get_field(field, is_input, is_update):
     field_type = get_field_type(field)
@@ -87,15 +95,7 @@ def get_field(field, is_input, is_update):
     if is_input and field_type == strawberry.ID:
         return #TODO: is this correct?
 
-    optional = False
-    if is_input:
-        has_default = field.default != fields.NOT_PROVIDED
-        if field.blank or is_update or has_default:
-            optional = True
-    if field.null:
-        optional = True
-
-    if optional:
+    if is_optional(field, is_input, is_update):
         field_type = Optional[field_type]
 
     return field.name, field_type, {}
@@ -125,16 +125,17 @@ def get_relation_field(field):
     return field_name, None, {'resolver': resolver}
 
 
-def get_relation_foreignkey_field(field, is_input):
+def get_relation_foreignkey_field(field, is_input, is_update):
+    if is_input:
+        field_name = field.name
+        field_type = strawberry.ID
+        if is_optional(field, is_input, is_update):
+            field_type = Optional[field_type]
+        return field_name, field_type, {}
+
     field_name = field.name
     model = field.related_model
     field_type = get_model_type(model)
-
-    if is_input:
-        field_type = strawberry.ID
-        if field.blank or field.null:
-            field_type = Optional[field_type]
-        return field_name, field_type, {}
 
     def resolver(info, root) -> Optional[field_type]:
         obj = getattr(root, field_name)
@@ -164,7 +165,7 @@ def generate_model_type(resolver_cls, is_input=False, is_update=False):
             continue # skip
         if field.is_relation:
             if isinstance(field, fields.related.ForeignKey):
-                field_params = get_relation_foreignkey_field(field, is_input)
+                field_params = get_relation_foreignkey_field(field, is_input, is_update)
             else:
                 if is_input:
                     continue
