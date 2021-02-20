@@ -130,6 +130,12 @@ mutation {
 }
 ```
 
+## Running unit tests
+```
+poetry install
+poetry run pytest
+```
+
 ## Contributing
 
 I would be more than happy to get pull requests, improvement ideas or any feedback from you.
