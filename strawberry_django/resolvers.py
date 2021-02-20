@@ -157,7 +157,7 @@ class ModelQueryMixin:
     def mutation(cls):
         object_name = utils.camel_to_snake(cls.model._meta.object_name)
         class Mutation: pass
-        setattr(Mutation, f'create_{object_name}', cls.create_mutation())
+        setattr(Mutation, f'create_{object_name}s', cls.create_mutation())
         setattr(Mutation, f'update_{object_name}s', cls.update_mutation())
         setattr(Mutation, f'delete_{object_name}s', cls.delete_mutation())
         return strawberry.type(Mutation)
