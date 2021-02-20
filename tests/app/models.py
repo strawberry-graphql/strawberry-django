@@ -19,7 +19,8 @@ class DataModel(models.Model):
     nullable = models.IntegerField(null=True)
     hasdefault = models.IntegerField(default=1)
     relation = models.ManyToManyField(User)
-    foreign_key = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    mandatory_foreign_key = models.ForeignKey(User, on_delete=models.SET_NULL)
+    optional_foreign_key = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
 
 class UnknownField(models.Field):
     pass

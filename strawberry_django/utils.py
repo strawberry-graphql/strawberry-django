@@ -18,12 +18,10 @@ def split_filters(filters):
 def get_input_data(model, data):
     values = {}
     for field in model._meta.fields:
-        field_name = field.name
-        value = getattr(data, field.name, strawberry.arguments.UNSET)
+        field_name = field.attname
+        value = getattr(data, field_name, strawberry.arguments.UNSET)
         if value is strawberry.arguments.UNSET:
             continue
-        if isinstance(field, fields.related.ForeignKey):
-            field_name = f'{field_name}_id'
         values[field_name] = value
     return values
 

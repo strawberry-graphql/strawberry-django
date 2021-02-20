@@ -127,7 +127,7 @@ def get_relation_field(field):
 
 def get_relation_foreignkey_field(field, is_input, is_update):
     if is_input:
-        field_name = field.name
+        field_name = field.attname
         field_type = strawberry.ID
         if is_optional(field, is_input, is_update):
             field_type = Optional[field_type]

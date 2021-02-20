@@ -61,14 +61,14 @@ def test_mutation_delete(schema):
 
 
 def test_mutation_create_with_relation(schema):
-    result = schema.execute_sync('mutation { group: createGroup(data: {name: "x", admin: 3}) { admin { name }} }')
+    result = schema.execute_sync('mutation { group: createGroup(data: {name: "x", adminId: 3}) { admin { id }} }')
 
     assert not result.errors
-    assert result.data['group']['admin']['name'] == 'c'
+    assert result.data['group']['admin']['id'] == '3'
 
 
 def test_mutation_update_relation(schema):
-    result = schema.execute_sync('mutation { group: updateGroups(data: {admin: 2}) { admin { name }} }')
+    result = schema.execute_sync('mutation { group: updateGroups(data: {adminId: 2}) { admin { id }} }')
 
     assert not result.errors
-    assert result.data['group'][0]['admin']['name'] == 'b'
+    assert result.data['group'][0]['admin']['id'] == '2'
