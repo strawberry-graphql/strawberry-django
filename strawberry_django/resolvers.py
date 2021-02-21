@@ -48,6 +48,12 @@ class ModelResolverMixin:
 
     def create(self, data):
         model = self.get_model()
+        instance = model(**data)
+        instance.save()
+        return instance
+
+    def batch_create(self, data):
+        model = self.get_model()
         instances = [model(**i) for i in data]
         for instance in instances:
             instance.save()
@@ -110,10 +116,20 @@ class ModelMutationMixin:
         permission_classes = get_permission_classes(cls, 'add')
 
         @strawberry.mutation(permission_classes=permission_classes)
-        def create_mutation(info, root, data: List[cls.create_input_type]) -> List[cls.output_type]:
+        def create_mutation(info, root, data: cls.create_input_type) -> cls.output_type:
             instance = cls(info, root)
-            return instance.create([utils.get_data(cls.model, i) for i in data])
+            return instance.create(utils.get_data(cls.model, data))
         return create_mutation
+
+    @classmethod
+    def batch_create_mutation(cls):
+        permission_classes = get_permission_classes(cls, 'add')
+
+        @strawberry.mutation(permission_classes=permission_classes)
+        def batch_create_mutation(info, root, data: List[cls.create_input_type]) -> List[cls.output_type]:
+            instance = cls(info, root)
+            return instance.batch_create([utils.get_data(cls.model, i) for i in data])
+        return batch_create_mutation
 
     @classmethod
     def update_mutation(cls):
@@ -141,7 +157,7 @@ class ModelMutationMixin:
 
     @classmethod
     def mutations(cls):
-        return cls.create_mutation(), cls.update_mutation(), cls.delete_mutation()
+        return cls.create_mutation(), cls.batch_create_mutation(), cls.update_mutation(), cls.delete_mutation()
 
 
 class ModelQueryMixin:
@@ -157,7 +173,8 @@ class ModelQueryMixin:
     def mutation(cls):
         object_name = utils.camel_to_snake(cls.model._meta.object_name)
         class Mutation: pass
-        setattr(Mutation, f'create_{object_name}s', cls.create_mutation())
+        setattr(Mutation, f'create_{object_name}', cls.create_mutation())
+        setattr(Mutation, f'create_{object_name}s', cls.batch_create_mutation())
         setattr(Mutation, f'update_{object_name}s', cls.update_mutation())
         setattr(Mutation, f'delete_{object_name}s', cls.delete_mutation())
         return strawberry.type(Mutation)

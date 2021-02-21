@@ -27,18 +27,18 @@ def schema(testdata):
 
 
 def test_mutation_create(schema):
-    result = schema.execute_sync('mutation { user: createUsers(data: {name: "x", age: 1}) { id name age } }')
+    result = schema.execute_sync('mutation { user: createUser(data: {name: "x", age: 1}) { id name age } }')
 
     assert not result.errors
-    assert result.data['user'][0]['name'] == 'x'
-    assert result.data['user'][0]['age'] == 1
+    assert result.data['user']['name'] == 'x'
+    assert result.data['user']['age'] == 1
 
-    user = User.objects.get(id=result.data['user'][0]['id'])
+    user = User.objects.get(id=result.data['user']['id'])
     assert user.name == 'x'
     assert user.age == 1
 
 
-def test_batch_mutation_create(schema):
+def test_batch_create_mutation(schema):
     result = schema.execute_sync('''
     mutation {
         user: createUsers(data: [
@@ -88,10 +88,10 @@ def test_mutation_delete(schema):
 
 
 def test_mutation_create_with_relation(schema):
-    result = schema.execute_sync('mutation { group: createGroups(data: {name: "x", admin: 3}) { admin { name }} }')
+    result = schema.execute_sync('mutation { group: createGroup(data: {name: "x", admin: 3}) { admin { name }} }')
 
     assert not result.errors
-    assert result.data['group'][0]['admin']['name'] == 'c'
+    assert result.data['group']['admin']['name'] == 'c'
 
 
 def test_mutation_update_relation(schema):
