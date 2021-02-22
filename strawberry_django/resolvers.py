@@ -1,9 +1,11 @@
-from typing import List, Optional, cast
+from typing import List, Optional
+
 import strawberry
+from django.db import transaction
+
 from . import utils
-from .types import generate_model_type
 from .permissions import permission_class_wrapper
-from django.core import exceptions
+from .types import generate_model_type
 
 
 class ModelResolverMixin:
@@ -52,12 +54,9 @@ class ModelResolverMixin:
         instance.save()
         return instance
 
+    @transaction.atomic
     def batch_create(self, data):
-        model = self.get_model()
-        instances = [model(**i) for i in data]
-        for instance in instances:
-            instance.save()
-        return instances
+        return [self.create(i) for i in data]
 
     def update(self, data, **filters):
         qs = self.get_queryset_filtered(**filters)
