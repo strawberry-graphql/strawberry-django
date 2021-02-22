@@ -38,6 +38,33 @@ def test_mutation_create(schema):
     assert user.age == 1
 
 
+def test_batch_create_mutation(schema):
+    result = schema.execute_sync('''
+    mutation {
+        user: createUsers(data: [
+            {name: "d", age: 1},
+            {name: "e", age: 2}
+        ]) {
+            id
+            name
+            age
+        }
+    }''')
+
+    assert not result.errors
+    assert result.data['user'][0]['name'] == 'd'
+    assert result.data['user'][0]['age'] == 1
+    assert result.data['user'][1]['name'] == 'e'
+    assert result.data['user'][1]['age'] == 2
+
+    user = User.objects.get(id=result.data['user'][0]['id'])
+    assert user.name == 'd'
+    assert user.age == 1
+    user = User.objects.get(id=result.data['user'][1]['id'])
+    assert user.name == 'e'
+    assert user.age == 2
+
+
 def test_mutation_update(schema):
     result = schema.execute_sync('mutation { users: updateUsers(data: {name: "y"}, filters: ["id=2"]) { name } }')
 
