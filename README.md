@@ -1,5 +1,9 @@
 # Strawberry GraphQL Django extension
 
+[![CI](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml/badge.svg)](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml)
+![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/strawberry-graphql-django)
+
 This library provides helpers to generate fields, mutations and resolvers for Django models.
 
 Installing strawberry-graphql-django packet from the python package repository.
