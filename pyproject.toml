@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "strawberry-graphql-django"
+packages = [ { include = "strawberry_django" } ]
+version = "0.1.0"
+description = "Strawberry GraphQL Django extension"
+authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
+repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
+license = "MIT"
+readme = "README.md"
+keywords = ["graphql", "api", "django"]
+classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Python Modules" ]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0"
+Django = ">=3.0"
+strawberry-graphql = ">=0.49.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.1.1"
+pytest-asyncio = "^0.14.0"
+pytest-django = "^4.1.0"
+pytest-pythonpath = "^0.7.3"
+pytest-watch = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "setuptools"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.django_settings"
+python_paths = "."
+testpaths = ["tests"]
