@@ -30,15 +30,10 @@ class Group(models.Model):
 
 schema.py:
 ```python
+from typing import List
 import strawberry
 from strawberry_django import ModelResolver, ModelPermissions
 from .models import User, Group
-
-class UserResolver(ModelResolver):
-    model = User
-    @strawberry.field
-    def age_in_months(info, root) -> int:
-        return root.age * 12
 
 class GroupResolver(ModelResolver):
     model = Group
@@ -54,6 +49,20 @@ class GroupResolver(ModelResolver):
         if not self.request.user.is_superuser:
             qs = qs.none()
         return qs
+
+class UserResolver(ModelResolver):
+    model = User
+    @strawberry.field
+    def age_in_months(self, info, root) -> int:
+        return root.age * 12
+
+    # "ModelResolver.output_type" is a "strawberry.type".
+    # So we can use it in any "strawberry.field".
+    @strawberry.field
+    def groups(self, info, root) -> List[GroupResolver.output_type]:
+        if not info.context["request"].user.is_superuser:
+            return root.groups.none()
+        return root.groups.all()
 
 @strawberry.type
 class Query(UserResolver.query(), GroupResolver.query()):
@@ -130,6 +139,67 @@ Finally delete user.
 mutation {
   deleteUsers(filters: ["id=1"]) {
     id
+  }
+}
+```
+
+## Django authentication examples
+
+
+schema.py:
+```
+class IsAuthenticated(strawberry.BasePermission):
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        self.message = "Not authenticated"
+        return info.context.request.user.is_authenticated
+
+
+class UserResolver(ModelResolver):
+    model = User
+    fields = (
+        "id",
+        "first_name",
+        "last_name",
+    )
+
+
+@strawberry.type
+class Query:
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    def current_user(self, info: Info) -> UserResolver.output_type:
+        return info.context.request.user
+
+
+@strawberry.type
+class Mutation:
+    @strawberry.mutation(description="Login user to the current session.")
+    def login(self, info: Info, username: str, password: str) -> UserResolver.output_type:
+        request = info.context.request
+        user = auth.authenticate(request, username=username, password=password)
+        auth.login(request, user)
+        return user
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)
+```
+
+Login with:
+```
+mutation {
+  login(username:"myuser", password:"mypassword") {
+    id
+    firstName
+    lastName
+  }
+}
+```
+
+Get current user with:
+```
+query {
+  currentUser {
+    id
+    firstName
+    lastName
   }
 }
 ```
