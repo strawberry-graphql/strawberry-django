@@ -143,6 +143,67 @@ mutation {
 }
 ```
 
+## Django authentication examples
+
+
+schema.py:
+```
+class IsAuthenticated(strawberry.BasePermission):
+    def has_permission(self, source: Any, info: Info, **kwargs) -> bool:
+        self.message = "Not authenticated"
+        return info.context.request.user.is_authenticated
+
+
+class UserResolver(ModelResolver):
+    model = User
+    fields = (
+        "id",
+        "first_name",
+        "last_name",
+    )
+
+
+@strawberry.type
+class Query:
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    def current_user(self, info: Info) -> UserResolver.output_type:
+        return info.context.request.user
+
+
+@strawberry.type
+class Mutation:
+    @strawberry.mutation(description="Login user to the current session.")
+    def login(self, info: Info, username: str, password: str) -> UserResolver.output_type:
+        request = info.context.request
+        user = auth.authenticate(request, username=username, password=password)
+        auth.login(request, user)
+        return user
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)
+```
+
+Login with:
+```
+mutation {
+  login(username:"myuser", password:"mypassword") {
+    id
+    firstName
+    lastName
+  }
+}
+```
+
+Get current user with:
+```
+query {
+  currentUser {
+    id
+    firstName
+    lastName
+  }
+}
+```
+
 ## Running unit tests
 ```
 poetry install
