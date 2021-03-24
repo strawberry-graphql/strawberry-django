@@ -1,6 +1,6 @@
 # Proposal for the new API
 
-> :heavy_exclamation_mark: We are designing new API for Strawberry GraphQL Django library. Please review the proposal and leave your comments to [the ticket](https://github.com/strawberry-graphql/strawberry-graphql-django/issues/10).
+> :heavy_exclamation_mark: This is old version of the API and not maintained anymore. Please see the latest from main branch.
 
 # Strawberry GraphQL Django extension
 
