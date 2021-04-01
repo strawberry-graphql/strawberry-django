@@ -1,4 +1,4 @@
-import datetime, decimal, uuid
+import datetime, decimal, enum, uuid
 import pytest
 import strawberry
 import strawberry_django
@@ -90,3 +90,27 @@ def test_field_does_not_exist():
         @strawberry_django.type(FieldTypesModel, fields=['unknownField'])
         class Type:
             pass
+
+def test_override_field_type():
+    @strawberry.enum
+    class EnumType(enum.Enum):
+        a = 'A'
+
+    @strawberry_django.type(FieldTypesModel, fields=['char'])
+    class Type:
+        char: EnumType
+
+    assert [(f.name, f.type) for f in Type._type_definition.fields] == [
+        ('char', EnumType),
+    ]
+
+def test_override_field_default_value():
+    @strawberry_django.type(FieldTypesModel, fields=['char'])
+    class Type:
+        char = 'my value'
+
+    assert [(f.name, f.type) for f in Type._type_definition.fields] == [
+        ('char', str),
+    ]
+
+    assert Type().char == 'my value'
