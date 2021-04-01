@@ -4,7 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
 
-This library provides helpers to generate fields, mutations and resolvers for Django models.
+This library provides helpers to generate types, mutations and resolvers for Django models.
 
 > NOTE: Package v0.1.0 introduced new API. See more detailed description about new API from [the ticket](https://github.com/strawberry-graphql/strawberry-graphql-django/issues/10). Old version is still available in [v0.0.x](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/v0.0.x) branch.
 
@@ -16,7 +16,7 @@ pip install strawberry-graphql-django
 
 ## Example project files
 
-See example Django project [examples/django](examples/django).
+See example Django project [examples/django](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django).
 
 models.py
 ```python
