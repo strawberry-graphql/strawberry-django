@@ -155,7 +155,7 @@ def get_model_fields(cls, model, fields, types, is_input, is_update):
                     field_type = strawberry.ID
                     if is_optional(field, is_input, is_update):
                         field_type = Optional[field_type]
-                    model_fields.append((field_name, field_type, None))
+                    model_fields.append((field_name, field_type, strawberry.arguments.UNSET))
                 continue
 
         try:
