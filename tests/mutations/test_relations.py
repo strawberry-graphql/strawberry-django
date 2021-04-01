@@ -23,6 +23,11 @@ def test_update_foreign_key(mutation, user, group):
     user = models.User.objects.get()
     assert user.group == group
 
+    result = mutation('{ updateUsers(data: { name: "newName" }) { id } }')
+    assert not result.errors
+    user = models.User.objects.get()
+    assert user.group == group
+
     result = mutation('{ updateUsers(data: { groupId: null }) { id } }')
     assert not result.errors
     user = models.User.objects.get()
