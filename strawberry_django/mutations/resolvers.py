@@ -1,7 +1,7 @@
 from typing import List, Optional
 import strawberry
 from .. import fields, hooks, utils
-from ..type import generate_update_from_input
+from ..type import generate_partial_input
 from ..queries.arguments import resolve_type_args
 from ..resolvers import django_resolver
 
@@ -44,7 +44,7 @@ def create_batch(*args, types=None, pre_save=None, post_save=None):
 
 def update(*args, types=None):
     model, output_type, input_type = resolve_type_args(args, types=types, is_input=True, single=True)
-    update_type = generate_update_from_input(model, input_type)
+    update_type = generate_partial_input(model, input_type)
     @strawberry.mutation
     @django_resolver
     def mutation(data: update_type, filters: Optional[List[str]] = []) -> List[output_type]:

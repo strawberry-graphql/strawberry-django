@@ -91,10 +91,10 @@ def get_field_type(field, type_register, is_input):
     raise TypeError(f"No type defined for '{db_field_type.__name__}'")
 
 
-def is_optional(field, is_input, is_update):
+def is_optional(field, is_input, partial):
     if is_input:
         has_default = field.default != fields.NOT_PROVIDED
-        if field.blank or is_update or has_default:
+        if field.blank or partial or has_default:
             return True
     if field.null:
         return True
@@ -125,7 +125,7 @@ def process_fields(fields, model):
     return field_names
 
 
-def get_model_fields(cls, model, fields, types, is_input, is_update):
+def get_model_fields(cls, model, fields, types, is_input, partial):
     if fields == []:
         return []
 
@@ -153,7 +153,7 @@ def get_model_fields(cls, model, fields, types, is_input, is_update):
                 else:
                     field_name = field.attname
                     field_type = strawberry.ID
-                    if is_optional(field, is_input, is_update):
+                    if is_optional(field, is_input, partial):
                         field_type = Optional[field_type]
                     model_fields.append((field_name, field_type, strawberry.arguments.UNSET))
                 continue
@@ -172,7 +172,7 @@ def get_model_fields(cls, model, fields, types, is_input, is_update):
         else:
             field_value = strawberry.arguments.UNSET
 
-        if is_optional(field, is_input, is_update):
+        if is_optional(field, is_input, partial):
             field_type = Optional[field_type]
 
         model_fields.append((field.name, field_type, field_value))

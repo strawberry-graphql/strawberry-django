@@ -27,7 +27,7 @@ def test_input_type():
 
 
 def test_input_type_for_partial_update():
-    @strawberry_django.input(InputFieldsModel, is_update=True)
+    @strawberry_django.input(InputFieldsModel, partial=True)
     class InputType:
         pass
 

@@ -1,13 +1,15 @@
 import strawberry
 import typing
 from .types import get_model_fields, update_fields
+from .utils import deprecated
 
 _type = type
 
-def type(model, *, fields=None, types=None, is_update=False, **kwargs):
+def type(model, *, fields=None, types=None, **kwargs):
     def wrapper(cls):
         is_input = kwargs.get('is_input', False)
-        model_fields = get_model_fields(cls, model, fields, types, is_input, is_update)
+        partial = kwargs.pop('partial', False)
+        model_fields = get_model_fields(cls, model, fields, types, is_input, partial)
         if not hasattr(cls, '__annotations__'):
             cls.__annotations__ = {}
         for field_name, field_type, field_value in model_fields:
@@ -17,17 +19,20 @@ def type(model, *, fields=None, types=None, is_update=False, **kwargs):
                 setattr(cls, field_name, field_value)
         update_fields(cls, model)
         cls._django_model = model
-        cls._is_update = is_update
+        cls._partial = partial
         return strawberry.type(cls, **kwargs)
     return wrapper
 
 
-def input(model, *, fields=None, types=None, is_update=False, **kwargs):
-    return type(model, fields=fields, types=types, is_update=is_update, is_input=True, **kwargs)
+def input(model, *, fields=None, types=None, partial=False, **kwargs):
+    if 'is_update' in kwargs:
+        deprecated("'is_update' argument is deprecated, please use 'partial' instead", stacklevel=2)
+        partial = kwargs.pop('is_update')
+    return type(model, fields=fields, types=types, partial=partial, is_input=True, **kwargs)
 
 
-def generate_update_from_input(model, input):
-    if input._is_update:
+def generate_partial_input(model, input):
+    if input._partial:
         return input
     cls = _type(f'{input.__name__}Update', (), { '__annotations__': {}})
     for field_name, field_type in input.__annotations__.items():
