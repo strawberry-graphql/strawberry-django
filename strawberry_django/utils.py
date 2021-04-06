@@ -2,6 +2,7 @@ import strawberry
 from django.db.models import fields
 import ast
 import asyncio
+import warnings
 
 def parse_value(value):
     try:
@@ -62,3 +63,7 @@ def is_async():
         if event_loop.is_running():
             return True
     return False
+
+
+def deprecated(msg, stacklevel=1):
+    warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel + 1)
