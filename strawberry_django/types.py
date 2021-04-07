@@ -1,5 +1,5 @@
 from django.db.models import fields
-from strawberry.arguments import UNSET
+from strawberry.arguments import is_unset, UNSET
 from typing import get_origin, List, Optional
 import dataclasses
 import datetime, decimal, uuid
@@ -48,7 +48,7 @@ class LazyModelType(strawberry.LazyType):
         model = self.field.related_model
 
         field_type = self.type_register.get(model, self.is_input, UNSET)
-        if field_type is not UNSET:
+        if not is_unset(field_type):
             return field_type
 
         db_field_type = type(self.field)
@@ -61,18 +61,18 @@ def get_field_type(field, type_register, is_input):
 
     if type_register:
         field_type = type_register.get(field.name, is_input, UNSET)
-        if field_type is not UNSET:
+        if not is_unset(field_type):
             return field_type
 
         field_type = type_register.get(db_field_type, is_input, UNSET)
-        if field_type is not UNSET:
+        if not is_unset(field_type):
             return field_type
 
         if field.is_relation:
             model = field.related_model
 
             field_type = type_register.get(model, is_input, UNSET)
-            if field_type is not UNSET:
+            if not is_unset(field_type):
                 return field_type
 
             # TODO: show field name
@@ -80,7 +80,7 @@ def get_field_type(field, type_register, is_input):
                     f" which has related model '{model._meta.object_name}'")
 
     field_type = field_type_map.get(db_field_type, UNSET)
-    if field_type is not UNSET:
+    if not is_unset(field_type):
         return field_type
 
     if field.is_relation:
@@ -144,7 +144,7 @@ def get_model_fields(cls, model, fields, types, is_input, partial):
             if field.is_relation:
                 if field.many_to_many or field.one_to_many:
                     field_type = Optional[List[strawberry.ID]]
-                    field_value = strawberry.arguments.UNSET
+                    field_value = UNSET
                     model_fields.extend([
                         (f'{field.name}_add', field_type, field_value),
                         (f'{field.name}_set', field_type, field_value),
@@ -155,7 +155,7 @@ def get_model_fields(cls, model, fields, types, is_input, partial):
                     field_type = strawberry.ID
                     if is_optional(field, is_input, partial):
                         field_type = Optional[field_type]
-                    model_fields.append((field_name, field_type, strawberry.arguments.UNSET))
+                    model_fields.append((field_name, field_type, UNSET))
                 continue
 
         try:
@@ -170,7 +170,7 @@ def get_model_fields(cls, model, fields, types, is_input, partial):
                 field_type = List[field_type]
             field_value = strawberry_django_field(field_name=field.name)
         else:
-            field_value = strawberry.arguments.UNSET
+            field_value = UNSET
 
         if is_optional(field, is_input, partial):
             field_type = Optional[field_type]

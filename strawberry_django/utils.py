@@ -1,4 +1,5 @@
 import strawberry
+from strawberry.arguments import is_unset, UNSET
 from django.db.models import fields
 import ast
 import asyncio
@@ -28,8 +29,8 @@ def get_input_data(model, data):
     values = {}
     for field in model._meta.fields:
         field_name = field.attname
-        value = getattr(data, field_name, strawberry.arguments.UNSET)
-        if value is strawberry.arguments.UNSET:
+        value = getattr(data, field_name, UNSET)
+        if is_unset(value):
             continue
         values[field_name] = value
     return values
@@ -39,8 +40,8 @@ def get_input_data_m2m(model, data):
     for field in model._meta.many_to_many:
         for action in ('add', 'set', 'remove'):
             field_name = field.attname
-            value = getattr(data, f'{field_name}_{action}', strawberry.arguments.UNSET)
-            if value is strawberry.arguments.UNSET:
+            value = getattr(data, f'{field_name}_{action}', UNSET)
+            if is_unset(value):
                 continue
             actions = values.setdefault(field_name, {})
             actions[action] = value
