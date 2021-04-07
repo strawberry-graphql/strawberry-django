@@ -22,7 +22,7 @@ def test_input_type():
         ('default', int , True),
         ('blank', int, True),
         ('null', int, True),
-        ('nullBoolean', bool, True),
+        ('null_boolean', bool, True),
     ]
 
 
@@ -37,7 +37,7 @@ def test_input_type_for_partial_update():
         ('default', int , True),
         ('blank', int, True),
         ('null', int, True),
-        ('nullBoolean', bool, True),
+        ('null_boolean', bool, True),
     ]
 
 class InputParentModel(models.Model):
@@ -52,10 +52,10 @@ def test_foreign_key():
 
     assert [(f.name, f.type or f.child.type, f.is_optional) for f in InputType._type_definition.fields] == [
         ('id', strawberry.ID, True),
-        ('foreignKeyId', strawberry.ID, False),
-        ('foreignKeyOptionalId', strawberry.ID, True),
-        ('manyToManyAdd', strawberry.ID, True),
-        ('manyToManySet', strawberry.ID, True),
-        ('manyToManyRemove', strawberry.ID, True),
+        ('foreign_key_id', strawberry.ID, False),
+        ('foreign_key_optional_id', strawberry.ID, True),
+        ('many_to_many_add', strawberry.ID, True),
+        ('many_to_many_set', strawberry.ID, True),
+        ('many_to_many_remove', strawberry.ID, True),
     ]
 

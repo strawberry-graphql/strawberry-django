@@ -64,9 +64,9 @@ def test_model(types):
         pass
 
     assert [(f.name, f.type or f.child.type) for f in Type._type_definition.fields] == [
-        ('foreignKey', ChildType),
-        ('oneToOne', ChildType),
-        ('manyToMany', ChildType),
+        ('foreign_key', ChildType),
+        ('one_to_one', ChildType),
+        ('many_to_many', ChildType),
     ]
 
 
@@ -94,7 +94,7 @@ def test_model_shortcut(types):
         pass
 
     assert [(f.name, f.type or f.child.type) for f in Type._type_definition.fields] == [
-        ('foreignKey', ChildType),
+        ('foreign_key', ChildType),
     ]
 
 
@@ -144,9 +144,9 @@ def test_input_and_output_types(types):
         pass
 
     assert [(f.name, f.type or f.child.type) for f in Type._type_definition.fields] == [
-        ('foreignKey', ChildType),
+        ('foreign_key', ChildType),
     ]
 
     assert [(f.name, f.type or f.child.type) for f in Input._type_definition.fields] == [
-        ('foreignKeyId', strawberry.ID),
+        ('foreign_key_id', strawberry.ID),
     ]
