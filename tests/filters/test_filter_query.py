@@ -40,7 +40,7 @@ def execute():
         @strawberry.field
         def user_ids(self, filters: Optional[UserFilter] = UNSET) -> List[int]:
             queryset = models.User.objects.all()
-            queryset = strawberry_django.apply_filter(filters, queryset)
+            queryset = strawberry_django.filters.apply(filters, queryset)
             return queryset.order_by("pk").values_list("pk", flat=True)
 
     schema = strawberry.Schema(query=Query)

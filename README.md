@@ -158,8 +158,8 @@ import django_filters
 
 @strawberry_django.filter
 class UserFilter(django_filters.FilterSet):
-    # These fields defenitions are optional, 
-    # they can be automaticly generated.
+    # These fields definitions are optional, 
+    # they can be automatically generated.
 
     name = django_filters.CharFilter(lookup_expr="icontains")
     search = django_filters.CharFilter(method="filter_search")
@@ -176,7 +176,7 @@ class UserFilter(django_filters.FilterSet):
         fields = ["name", "search"]
 ```
 
-Create the input type with `UserFilter`, and filter a queryset with `strawberry_django.apply_filter`
+Create the input type with `UserFilter`, and filter a queryset with `strawberry_django.filters.apply`
 
 ```python
 @strawberry.type
@@ -184,7 +184,7 @@ class Query:
     @strawberry.field
     def user_ids(self, filters: Optional[UserFilter] = UNSET) -> List[int]:
         queryset = models.User.objects.all()
-        queryset = strawberry_django.apply_filter(filters, queryset)
+        queryset = strawberry_django.filters.apply(filters, queryset)
         return queryset.order_by("pk").values_list("pk", flat=True)
 ```
 

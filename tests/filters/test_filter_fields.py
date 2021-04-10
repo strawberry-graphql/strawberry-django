@@ -50,7 +50,7 @@ def test_should_accept_string_formatted_inputs():
         "time": "00:09:00",
         "uuid": "6c9d3505-93c2-4d6c-af70-7a1b46a8bcb9",
     })
-    strawberry_django.apply_filter(filter_instance, qs)
+    strawberry_django.filters.apply(filter_instance, qs)
 
 
 @pytest.mark.django_db
@@ -66,7 +66,7 @@ def test_should_accept_native_inputs():
         "float": 1.239058,
         "integer": 5231,
     })
-    strawberry_django.apply_filter(filter_instance, qs)
+    strawberry_django.filters.apply(filter_instance, qs)
 
 
 @pytest.mark.django_db
@@ -77,8 +77,8 @@ def test_should_raise_filterset_error_for_invalid_input():
     filter_instance = Filter(**{
         "date_time": "2021-25-29T00:09:00",
     })
-    with pytest.raises(strawberry_django.FilterSetError):
-        strawberry_django.apply_filter(filter_instance, qs)
+    with pytest.raises(strawberry_django.filters.InvalidFilterError):
+        strawberry_django.filters.apply(filter_instance, qs)
 
 
 @pytest.mark.django_db
@@ -94,7 +94,7 @@ def test_lookup_definition_in_filterset_meta():
     filter_instance = LookupFilter(**{
         "char__iexact": "Some text",
     })
-    strawberry_django.apply_filter(filter_instance, qs)
+    strawberry_django.filters.apply(filter_instance, qs)
 
 
 def test_should_raise_when_not_extending_filterset():

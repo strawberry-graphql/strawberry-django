@@ -6,11 +6,11 @@ from strawberry.arguments import UNSET, is_unset
 
 
 __all__ = [
-    "FilterSetError",
-    "apply_filter",
+    "InvalidFilterError",
+    "apply",
     "filter",
-    "get_filter_field_type",
-    "set_filter_field_type",
+    "get_field_type",
+    "set_field_type",
 ]
 
 
@@ -82,12 +82,12 @@ filter_field_type_map = {
 }
 
 
-class FilterSetError(GraphQLError):
+class InvalidFilterError(GraphQLError):
     pass
 
 
 @assert_django_filters_installed
-def get_filter_field_type(field_type):
+def get_field_type(field_type):
     if type(field_type) != type:
         raise TypeError(
             f"expected 'type', received {type(field_type)}. Maybe you forgot to call type()?"
@@ -99,7 +99,7 @@ def get_filter_field_type(field_type):
 
 
 @assert_django_filters_installed
-def set_filter_field_type(field_type, to_type):
+def set_field_type(field_type, to_type):
     if type(field_type) != type:
         raise TypeError(
             f"expected 'type', received {type(field_type)}. Maybe you forgot to call type()?"
@@ -108,7 +108,7 @@ def set_filter_field_type(field_type, to_type):
 
 
 @assert_django_filters_installed
-def apply_filter(filter_instance, queryset):
+def apply(filter_instance, queryset):
     if is_unset(filter_instance) or not filter_instance:
         return queryset
 
@@ -124,7 +124,7 @@ def apply_filter(filter_instance, queryset):
     )
 
     if not filterset.is_valid():
-        raise FilterSetError(filterset.errors)
+        raise InvalidFilterError(filterset.errors)
 
     return filterset.qs
 
@@ -143,7 +143,7 @@ def filter(filterset_class: Type[django_filters.FilterSet], name=None):
 
     for field_name in filterset_class.get_filters().keys():
         filter_field = filters[field_name]
-        field_type = get_filter_field_type(type(filter_field))
+        field_type = get_field_type(type(filter_field))
         cls.__annotations__[field_name] = field_type
         setattr(cls, field_name, UNSET)
 
