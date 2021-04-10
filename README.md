@@ -149,7 +149,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-Write a `FilterSet` and decorate it with `strawberry_django.create_filter`:
+Write a `FilterSet` and decorate it with `strawberry_django.filter`:
 
 ```python
 import strawberry_django
