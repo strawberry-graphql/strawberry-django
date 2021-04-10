@@ -6,8 +6,6 @@
 
 This library provides helpers to generate types, mutations and resolvers for Django models.
 
-> NOTE: Package v0.1.0 introduced new API. See more detailed description about new API from [the ticket](https://github.com/strawberry-graphql/strawberry-graphql-django/issues/10). Old version is still available in [v0.0.x](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/v0.0.x) branch.
-
 Installing strawberry-graphql-django packet from the python package repository.
 ```shell
 pip install strawberry-graphql-django
