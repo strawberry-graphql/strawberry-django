@@ -79,3 +79,12 @@ def test_should_raise_filterset_error_for_invalid_input():
     })
     with pytest.raises(strawberry_django.FilterSetError):
         strawberry_django.apply_filter(filter_instance, qs)
+
+
+def test_should_raise_when_not_extending_filterset():
+    with pytest.raises(TypeError):
+        @strawberry_django.filter
+        class Filter:
+            class Meta:
+                model = FilterModel
+                exclude = ()

@@ -13,22 +13,26 @@ __all__ = [
     "set_filter_field_type",
 ]
 
+
+class DummyDjangoFilters:
+    def __getattribute__(self, attr):
+        # Dont raise KeyError for not existing attr
+        try:
+            return super(DummyDjangoFilters, self).__getattribute__(attr)
+        except KeyError:
+            return attr
+
+
 try:
     import django_filters
 except ModuleNotFoundError:
-    class DummyDjangoFilters:
-        def __getattribute__(self, attr):
-            return attr
-
     django_filters = DummyDjangoFilters()
 
 
 def assert_django_filters_installed(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        try:
-            import django_filters
-        except ModuleNotFoundError:
+        if isinstance(django_filters, DummyDjangoFilters):
             raise ModuleNotFoundError(
                 'You need to install django-filter to use "strawberry_django.filter". '
                 "See https://django-filter.readthedocs.io/"
@@ -127,6 +131,12 @@ def apply_filter(filter_instance, queryset):
 
 @assert_django_filters_installed
 def filter(filterset_class: Type[django_filters.FilterSet], name=None):
+    if not isinstance(filterset_class, django_filters.filterset.FilterSetMetaclass):
+        raise TypeError(
+            "strawberry_django.filter expects a class that inherits django_filters.FilterSet, received %s",
+            type(filterset_class),
+        )
+
     filters = filterset_class.get_filters()
     name = name or filterset_class.__name__
     cls = type(name, (), {"__annotations__": {}, "filterset_class": filterset_class})
