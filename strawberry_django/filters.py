@@ -141,7 +141,7 @@ def filter(filterset_class: Type[django_filters.FilterSet], name=None):
     name = name or filterset_class.__name__
     cls = type(name, (), {"__annotations__": {}, "filterset_class": filterset_class})
 
-    for field_name in filterset_class.get_fields():
+    for field_name in filterset_class.get_filters().keys():
         filter_field = filters[field_name]
         field_type = get_filter_field_type(type(filter_field))
         cls.__annotations__[field_name] = field_type

@@ -81,6 +81,22 @@ def test_should_raise_filterset_error_for_invalid_input():
         strawberry_django.apply_filter(filter_instance, qs)
 
 
+@pytest.mark.django_db
+def test_lookup_definition_in_filterset_meta():
+
+    @strawberry_django.filter
+    class LookupFilter(django_filters.FilterSet):
+        class Meta:
+            model = FilterModel
+            fields = {'char': ['iexact']}
+
+    qs = FilterModel.objects.all()
+    filter_instance = LookupFilter(**{
+        "char__iexact": "Some text",
+    })
+    strawberry_django.apply_filter(filter_instance, qs)
+
+
 def test_should_raise_when_not_extending_filterset():
     with pytest.raises(TypeError):
         @strawberry_django.filter
