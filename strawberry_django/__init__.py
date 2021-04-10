@@ -3,6 +3,12 @@ from .mutations.fields import mutations
 from .mutations.auth import AuthMutation
 from .queries.fields import queries
 from .registers import TypeRegister
-from .filters import filter, apply_filter, FilterSetError
+from .filters import (
+    filter,
+    apply_filter,
+    FilterSetError,
+    get_filter_field_type,
+    set_filter_field_type,
+)
 from .resolvers import django_resolver
 from .type import input, type
