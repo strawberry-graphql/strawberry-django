@@ -22,6 +22,7 @@ pytest-django = "^4.1.0"
 pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 django-filter = "^2.4.0"
+pytest-mock = "^3.5.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "setuptools"]
