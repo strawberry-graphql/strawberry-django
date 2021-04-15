@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.4
+
+Fix the AttributeError in the projects which do not have django-filter package installed.
+
+
 ## v0.1.3
 
 Add support for django-filter. Now it is possible to convert FilterSet class to input type and apply filters to queryset following way.
