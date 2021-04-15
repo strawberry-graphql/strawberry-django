@@ -16,12 +16,9 @@ __all__ = [
 
 class DummyDjangoFilters:
     def __getattribute__(self, attr):
-        # Dont raise KeyError for not existing attr
-        try:
-            return super(DummyDjangoFilters, self).__getattribute__(attr)
-        except (KeyError, AttributeError):
-            return attr
-
+        # make moecker happy
+        if attr == '__enter__':
+            raise AttributeError
 
 try:
     import django_filters
