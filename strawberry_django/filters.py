@@ -19,7 +19,7 @@ class DummyDjangoFilters:
         # Dont raise KeyError for not existing attr
         try:
             return super(DummyDjangoFilters, self).__getattribute__(attr)
-        except KeyError:
+        except (KeyError, AttributeError):
             return attr
 
 
