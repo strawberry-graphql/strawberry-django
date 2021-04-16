@@ -16,7 +16,7 @@ __all__ = [
 
 class DummyDjangoFilters:
     def __getattribute__(self, attr):
-        # make moecker happy
+        # make mocker happy
         if attr == '__enter__':
             raise AttributeError
 
