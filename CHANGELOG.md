@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.5
+
+Bug fixes:
+* fix m2m relationship setting (#28)
+
+
 ## v0.1.4
 
 Fix the AttributeError in the projects which do not have django-filter package installed.
