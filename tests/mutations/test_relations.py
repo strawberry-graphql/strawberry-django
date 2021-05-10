@@ -37,15 +37,16 @@ def test_update_foreign_key(mutation, user, group):
 def test_update_many_to_many(mutation, group, tag):
     group = models.Group.objects.get()
     group.tags.clear()
+    tag2 = models.Tag.objects.create(name='tag2')
 
-    result = mutation('{ updateGroups(data: { tagsAdd: [1] }) { id } }')
+    result = mutation('{ updateGroups(data: { tagsAdd: [1, 2] }) { id } }')
     assert not result.errors
-    assert list(group.tags.values_list('id', flat=True)) == [1]
+    assert list(group.tags.values_list('id', flat=True)) == [1, 2]
 
-    result = mutation('{ updateGroups(data: { tagsRemove: [1] }) { id } }')
+    result = mutation('{ updateGroups(data: { tagsRemove: [1, 2] }) { id } }')
     assert not result.errors
     assert list(group.tags.values_list('id', flat=True)) == []
 
-    result = mutation('{ updateGroups(data: { tagsSet: [1] }) { id } }')
+    result = mutation('{ updateGroups(data: { tagsSet: [1, 2] }) { id } }')
     assert not result.errors
-    assert list(group.tags.values_list('id', flat=True)) == [1]
+    assert list(group.tags.values_list('id', flat=True)) == [1, 2]

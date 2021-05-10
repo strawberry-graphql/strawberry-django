@@ -84,6 +84,10 @@ def update_m2m_fields(model, objects, data):
         for key, actions in data.items():
             relation_field = getattr(obj, key)
             for key, values in actions.items():
-                # action is add, set or remove function of relation field
-                action = getattr(relation_field, key)
-                action(*values)
+                print(key, values)
+                if key == 'add':
+                    relation_field.add(*values)
+                elif key == 'set':
+                    relation_field.set(values)
+                elif key == 'remove':
+                    relation_field.remove(*values)
