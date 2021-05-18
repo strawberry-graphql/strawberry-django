@@ -1,8 +1,9 @@
 from django.db import models
 
-class User(models.Model):
-    name = models.CharField(max_length=50)
-    groups = models.ManyToManyField('Group', related_name='users')
+class Fruit(models.Model):
+    name = models.CharField(max_length=20)
+    color = models.ForeignKey('Color', blank=True, null=True,
+            related_name='fruits', on_delete=models.CASCADE)
 
-class Group(models.Model):
-    name = models.CharField(max_length=50)
+class Color(models.Model):
+    name = models.CharField(max_length=20)
