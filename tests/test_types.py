@@ -1,6 +1,8 @@
 import strawberry
 import strawberry_django
 from .models import User
+from .types import Fruit
+from . import utils
 
 def test_type_instance():
     @strawberry_django.type(User, fields=['id', 'name'])

@@ -1,57 +1,11 @@
+import dataclasses
 import strawberry
 from strawberry.arguments import is_unset, UNSET
-from django.db.models import fields
-import ast
+from strawberry.field import StrawberryField
+from django.db import models
 import asyncio
 import warnings
 
-def parse_value(value):
-    try:
-        return ast.literal_eval(value)
-    except ValueError:
-        raise ValueError('Invalid filter value')
-
-def process_filters(filters):
-    filter, exclude = {}, {}
-    for string in filters:
-        try:
-            k, v = string.split('=', 1)
-        except ValueError:
-            raise ValueError(f'Invalid filter "{filter}"')
-        if '!' in k:
-            k = k.strip('!')
-            exclude[k] = parse_value(v)
-        else:
-            filter[k] = parse_value(v)
-    return filter, exclude
-
-def get_input_data(model, data):
-    values = {}
-    for field in model._meta.fields:
-        field_name = field.attname
-        value = getattr(data, field_name, UNSET)
-        if is_unset(value):
-            continue
-        values[field_name] = value
-    return values
-
-def get_input_data_m2m(model, data):
-    values = {}
-    for field in model._meta.many_to_many:
-        for action in ('add', 'set', 'remove'):
-            field_name = field.attname
-            value = getattr(data, f'{field_name}_{action}', UNSET)
-            if is_unset(value):
-                continue
-            actions = values.setdefault(field_name, {})
-            actions[action] = value
-    return values
-
-def camel_to_snake(s):
-    return ''.join(['_'+c.lower() if c.isupper() else c for c in s]).lstrip('_')
-
-def snake_to_camel(s):
-    return s.title().replace('_', '')
 
 def is_async():
     # django uses the same method to detect async operation
@@ -68,3 +22,54 @@ def is_async():
 
 def deprecated(msg, stacklevel=1):
     warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel + 1)
+
+def is_strawberry_type(obj):
+    return hasattr(obj, '_type_definition')
+
+def is_strawberry_field(obj):
+    return isinstance(obj, StrawberryField)
+
+def is_strawberry_django_field(obj):
+    from strawberry_django.fields.field import StrawberryDjangoField
+    return isinstance(obj, StrawberryDjangoField)
+
+def is_django_type(obj):
+    return hasattr(obj, '_django_type')
+
+def is_django_model(obj):
+    return isinstance(obj, models.base.ModelBase)
+
+def is_field(obj):
+    return isinstance(obj, dataclasses.Field)
+
+def is_django_field(obj):
+    from .fields.field import DjangoField
+    return isinstance(obj, DjangoField)
+
+def fields(obj):
+    return obj._type_definition.fields
+
+def is_auto(obj):
+    from .fields.types import is_auto
+    return is_auto(obj)
+
+def get_django_model(type_):
+    if not is_django_type(type_):
+        return
+    return type_._django_type.model
+
+def is_similar_django_type(a, b):
+    if not a or not b:
+        return False
+    if a.is_input != b.is_input:
+        return False
+    if a.is_filter != b.is_filter:
+        return False
+    return True
+
+def get_annotations(cls):
+    annotations = {}
+    for c in reversed(cls.__mro__):
+        if '__annotations__' in c.__dict__:
+            annotations.update(c.__annotations__)
+    return annotations

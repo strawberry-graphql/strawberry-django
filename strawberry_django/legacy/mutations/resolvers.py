@@ -84,7 +84,6 @@ def update_m2m_fields(model, objects, data):
         for key, actions in data.items():
             relation_field = getattr(obj, key)
             for key, values in actions.items():
-                print(key, values)
                 if key == 'add':
                     relation_field.add(*values)
                 elif key == 'set':
