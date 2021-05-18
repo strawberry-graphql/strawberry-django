@@ -1,5 +1,6 @@
 import strawberry
 import strawberry_django
+from strawberry_django import auto
 from django.db import models
 
 
@@ -9,11 +10,10 @@ def test_forward_reference():
     class ForwardReferenceModel(models.Model):
         string = models.CharField(max_length=50)
 
-    @strawberry_django.type(ForwardReferenceModel, fields=[
-        'string',
-    ])
+    @strawberry_django.type(ForwardReferenceModel)
     class Type:
         bytes0: 'MyBytes'
+        string: auto
 
     class MyBytes(bytes):
         pass

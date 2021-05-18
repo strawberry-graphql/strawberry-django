@@ -1,5 +1,6 @@
 import strawberry
 import strawberry_django
+from strawberry_django import auto
 from django.db import models
 
 
@@ -14,7 +15,12 @@ class InputFieldsModel(models.Model):
 def test_input_type():
     @strawberry_django.input(InputFieldsModel)
     class InputType:
-        pass
+        id: auto
+        mandatory: auto
+        default: auto
+        blank: auto
+        null: auto
+        null_boolean: auto
 
     assert [(f.name, f.type, f.is_optional) for f in InputType._type_definition.fields] == [
         ('id', strawberry.ID, True),
@@ -29,7 +35,12 @@ def test_input_type():
 def test_input_type_for_partial_update():
     @strawberry_django.input(InputFieldsModel, partial=True)
     class InputType:
-        pass
+        id: auto
+        mandatory: auto
+        default: auto
+        blank: auto
+        null: auto
+        null_boolean: auto
 
     assert [(f.name, f.type, f.is_optional) for f in InputType._type_definition.fields] == [
         ('id', strawberry.ID, True),
@@ -40,22 +51,53 @@ def test_input_type_for_partial_update():
         ('null_boolean', bool, True),
     ]
 
-class InputParentModel(models.Model):
-    foreign_key = models.ForeignKey(InputFieldsModel, on_delete=models.CASCADE)
-    foreign_key_optional = models.ForeignKey(InputFieldsModel, null=True, on_delete=models.CASCADE)
-    many_to_many = models.ManyToManyField(InputFieldsModel)
+def test_input_type():
+    from .. import models
+    @strawberry_django.input(models.User)
+    class UserInput:
+        name: auto
 
-def test_foreign_key():
-    @strawberry_django.input(InputParentModel)
-    class InputType:
-        pass
-
-    assert [(f.name, f.type or f.child.type, f.is_optional) for f in InputType._type_definition.fields] == [
-        ('id', strawberry.ID, True),
-        ('foreign_key_id', strawberry.ID, False),
-        ('foreign_key_optional_id', strawberry.ID, True),
-        ('many_to_many_add', strawberry.ID, True),
-        ('many_to_many_set', strawberry.ID, True),
-        ('many_to_many_remove', strawberry.ID, True),
+    assert [(f.name, f.type, f.is_optional) for f in UserInput._type_definition.fields] == [
+        ('name', str, False),
     ]
 
+def test_partial_input_type():
+    from .. import models
+    @strawberry_django.input(models.User, partial=True)
+    class UserPartialInput:
+        name: auto
+
+    assert [(f.name, f.type, f.is_optional) for f in UserPartialInput._type_definition.fields] == [
+        ('name', str, True),
+    ]
+
+
+def test_partial_input_type_inheritance():
+    from .. import models
+    @strawberry_django.input(models.User)
+    class UserInput:
+        name: auto
+
+    @strawberry_django.input(models.User, partial=True)
+    class UserPartialInput(UserInput):
+        pass
+
+    assert [(f.name, f.type, f.is_optional) for f in UserPartialInput._type_definition.fields] == [
+        ('name', str, True),
+    ]
+
+def test_input_type_inheritance_from_type():
+    from .. import models
+    @strawberry_django.type(models.User)
+    class User:
+        id: auto
+        name: auto
+
+    @strawberry_django.input(models.User)
+    class UserInput(User):
+        pass
+
+    assert [(f.name, f.type, f.is_optional) for f in UserInput._type_definition.fields] == [
+        ('id', strawberry.ID, True),
+        ('name', str, False),
+    ]

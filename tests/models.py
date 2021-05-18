@@ -1,13 +1,15 @@
 from django.db import models
 
-class User(models.Model):
-    name = models.CharField(max_length=50)
-    group = models.ForeignKey('Group', null=True, related_name='users', on_delete=models.CASCADE)
-    tag = models.OneToOneField('Tag', null=True, on_delete=models.CASCADE)
+class Fruit(models.Model):
+    name = models.CharField(max_length=20)
+    color = models.ForeignKey('Color', null=True, related_name='fruits', on_delete=models.CASCADE)
+    types = models.ManyToManyField('FruitType', related_name='fruits')
 
-class Group(models.Model):
-    name = models.CharField(max_length=50)
-    tags = models.ManyToManyField('Tag', null=True, related_name='groups')
+class Color(models.Model):
+    name = models.CharField(max_length=20)
 
-class Tag(models.Model):
-    name = models.CharField(max_length=50)
+class FruitType(models.Model):
+    name = models.CharField(max_length=20)
+
+# TODO: remove later
+from .legacy.models import *

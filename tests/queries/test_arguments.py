@@ -1,5 +1,5 @@
 import pytest
-from strawberry_django.queries.arguments import resolve_type_args
+from strawberry_django.legacy.queries.arguments import resolve_type_args
 from ..import models, types
 
 def test_types():

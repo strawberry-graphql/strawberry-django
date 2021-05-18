@@ -1,19 +1,39 @@
 import pytest
 import strawberry
 import strawberry_django
+from .. import models
 from .. import types
+from .. import utils
+from .. types import (
+    Fruit, FruitInput, FruitPartialInput,
+    Color, ColorInput, ColorPartialInput,
+    FruitType, FruitTypeInput, FruitTypePartialInput,
+)
+from strawberry_django import auto, mutations
+from typing import List
+
+@strawberry_django.filters.filter(models.Fruit, lookups=True)
+class FruitFilter:
+    id: auto
+    name: auto
+
+@strawberry.type
+class Mutation:
+    createFruit: Fruit = mutations.create(FruitInput)
+    createFruits: List[Fruit] = mutations.create(FruitInput)
+    updateFruits: List[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
+    deleteFruits: List[Fruit] = mutations.delete(filters=FruitFilter)
+
+    createColor: Color = mutations.create(ColorInput)
+    createColors: List[Color] = mutations.create(ColorInput)
+    updateColors: List[Color] = mutations.update(ColorPartialInput)
+    deleteColors: List[Color] = mutations.delete()
+
+    createFruitType: FruitType= mutations.create(FruitTypeInput)
+    createFruitTypes: List[FruitType] = mutations.create(FruitTypeInput)
+    updateFruitTypes: List[FruitType] = mutations.update(FruitTypePartialInput)
+    deleteFruitTypes: List[FruitType] = mutations.delete()
 
 @pytest.fixture
-def schema():
-    Query = strawberry_django.queries(types.User)
-    Mutation = strawberry_django.mutations(types.User, types.Group, types.Tag, types=types.types)
-    schema = strawberry.Schema(Query, mutation=Mutation)
-    return schema
-
-@pytest.fixture
-def mutation(schema, db):
-    def mutation(mutation, variable_values=None):
-        if not mutation.startswith('mutation'):
-            mutation = 'mutation ' + mutation
-        return schema.execute_sync(mutation, variable_values=variable_values)
-    return mutation
+def mutation(db):
+    return utils.generate_query(mutation=Mutation)

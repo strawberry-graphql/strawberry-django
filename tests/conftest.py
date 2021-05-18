@@ -1,7 +1,13 @@
 import pytest
 import strawberry
 import strawberry_django
-from . import models, types
+from . import models, types, utils
+
+@pytest.fixture
+def fruits(db):
+    fruit_names = ['strawberry', 'raspberry', 'banana']
+    fruits = [ models.Fruit.objects.create(name=name) for name in fruit_names ]
+    return fruits
 
 @pytest.fixture
 def tag(db):
@@ -28,7 +34,23 @@ def users(db):
     ]
 
 @pytest.fixture
+def groups(db):
+    return [
+        models.Group.objects.create(name='group1'),
+        models.Group.objects.create(name='group2'),
+        models.Group.objects.create(name='group3'),
+    ]
+
+@pytest.fixture
 def schema():
     Query = strawberry_django.queries(types.User, types.Group, types.Tag)
     schema = strawberry.Schema(query=Query)
     return schema
+
+@pytest.fixture(params=[
+    strawberry_django.type,
+    strawberry_django.input,
+    utils.dataclass,
+])
+def testtype(request):
+    return request.param

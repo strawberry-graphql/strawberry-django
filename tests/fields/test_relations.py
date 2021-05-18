@@ -1,5 +1,6 @@
 from django.db import models
-from strawberry_django import resolvers
+from strawberry_django import auto
+from typing import List
 import strawberry_django
 import strawberry
 import pytest
@@ -11,53 +12,30 @@ class ChildModel(models.Model):
     name = models.CharField(max_length=50);
     parents = models.ManyToManyField(ParentModel, related_name='children')
 
-@pytest.fixture
-def types():
-    return strawberry_django.TypeRegister()
+@strawberry_django.type(ParentModel)
+class Parent:
+    id: auto
+    name: auto
+    children: List['Child']
 
-@pytest.fixture
-def parent(types):
-    @types.register
-    @strawberry_django.type(ParentModel, types=types)
-    class Parent:
-        pass
-    return Parent
-
-@pytest.fixture
-def child(types):
-    @types.register
-    @strawberry_django.type(ChildModel, types=types)
-    class Child:
-        pass
-    return Child
+@strawberry_django.type(ChildModel)
+class Child:
+    id: auto
+    name: auto
+    parents: List[Parent]
 
 
-def test_basic(parent, child):
-    assert [(f.name, f.type or f.child.type, f.is_list) for f in parent._type_definition.fields] == [
-        ('children', child, True),
+def test_relation():
+    assert [(f.name, f.type or f.child.type, f.is_list) for f in Parent._type_definition.fields] == [
         ('id', strawberry.ID, False),
         ('name', str, False),
-    ]
-
-    assert [(f.name, f.type or f.child.type, f.is_list) for f in child._type_definition.fields] == [
-        ('id', strawberry.ID, False),
-        ('name', str, False),
-        ('parents', parent, True),
+        ('children', Child, True),
     ]
 
 
-def test_resolvers(parent, child):
-    children = parent._type_definition.fields[0]
-    assert children.name == 'children'
-    assert children.base_resolver
-
-    parents = child._type_definition.fields[2]
-    assert parents.name == 'parents'
-    assert parents.base_resolver
-
-
-def test_unknown_type():
-    with pytest.raises(TypeError, match="No type defined for Django model 'ChildModel'"):
-        @strawberry_django.type(ParentModel, fields=['children'])
-        class Parent:
-            pass
+def test_reversed_relation():
+    assert [(f.name, f.type or f.child.type, f.is_list) for f in Child._type_definition.fields] == [
+        ('id', strawberry.ID, False),
+        ('name', str, False),
+        ('parents', Parent, True),
+    ]

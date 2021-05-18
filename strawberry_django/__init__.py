@@ -1,9 +1,18 @@
-from .fields import field, mutation
-from .mutations.fields import mutations
-from .mutations.auth import AuthMutation
-from .queries.fields import queries
-from .registers import TypeRegister
 from . import filters
-from .filters import filter
+from . import ordering
+from .fields.field import field
+from .fields.types import (
+    auto, is_auto,
+    DjangoFileType, DjangoImageType, DjangoModelType,
+    OneToOneInput, OneToManyInput, ManyToOneInput, ManyToManyInput,
+)
+from .utils import fields
+from .filters import filter_deprecated as filter
+from .mutations.mutations import mutations
 from .resolvers import django_resolver
-from .type import input, type
+from .type import type, input
+
+# deprecated functions
+from .legacy.mutations.auth import AuthMutation
+from .legacy.queries.fields import queries
+from .legacy.registers import TypeRegister
