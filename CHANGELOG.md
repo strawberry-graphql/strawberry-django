@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.2.0
+
+This release adds new class oriented API where all fields are defined in class body. This release also adds basic support for filtering, ordering and pagination. See more information about new API from docs folder.
+
+Example above shows how the new API looks like.
+
+```python
+import strawberry_django
+from strawberry_django import auto
+from . import models
+
+@strawberry_django.type(models.Color)
+class Color:
+    name: auto
+
+@strawberry_django.type(models.Fruit)
+class Fruit:
+    name: auto
+    color: Color
+```
+
+Old API is deprecated and it will removed in v0.3. The biggest breaking change is `fields` parameter which is deprecated. `TypeRegister` is not used anymore in new API. Types and relationships are annotated and defined directly in class body of output and input types.
+
+
 ## v0.1.5
 
 Bug fixes:
