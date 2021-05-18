@@ -1,0 +1,40 @@
+[
+{
+  "model": "app.fruit",
+  "pk": 1,
+  "fields": {
+    "name": "strawberry",
+    "color": 1
+  }
+},
+{
+  "model": "app.fruit",
+  "pk": 2,
+  "fields": {
+    "name": "raspberry",
+    "color": 1
+  }
+},
+{
+  "model": "app.fruit",
+  "pk": 3,
+  "fields": {
+    "name": "blueberry",
+    "color": 2
+  }
+},
+{
+  "model": "app.color",
+  "pk": 1,
+  "fields": {
+    "name": "red"
+  }
+},
+{
+  "model": "app.color",
+  "pk": 2,
+  "fields": {
+    "name": "blue"
+  }
+}
+]

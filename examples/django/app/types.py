@@ -1,31 +1,74 @@
-import strawberry
 import strawberry_django
+from strawberry_django import auto
+from typing import List
 from . import models
 
-# model types are collected into register. type converters use
-# register to resolve types of relation fields
-types = strawberry_django.TypeRegister()
 
-@types.register
-@strawberry_django.type(models.User, types=types)
-class User:
-    # types can be extended with own fields and resolvers
-    @strawberry.field
-    def name_upper(root) -> str:
-        return root.name.upper()
+# filters
 
-@types.register
-@strawberry_django.type(models.Group, fields=['id'], types=types)
-class Group:
-    # fields can be remapped
-    group_name: str = strawberry_django.field(field_name='name')
+@strawberry_django.filters.filter(models.Fruit, lookups=True)
+class FruitFilter:
+    id: auto
+    name: auto
+    color: 'ColorFilter'
 
-@types.register
-@strawberry_django.input(models.User)
-class UserInput:
+@strawberry_django.filters.filter(models.Color, lookups=True)
+class ColorFilter:
+    id: auto
+    name: auto
+    fruits: FruitFilter
+
+
+# order
+
+@strawberry_django.ordering.order(models.Fruit)
+class FruitOrder:
+    name: auto
+    color: 'ColorOrder'
+
+@strawberry_django.ordering.order(models.Color)
+class ColorOrder:
+    name: auto
+    fruit: FruitOrder
+
+
+# types
+
+@strawberry_django.type(models.Fruit, filters=FruitFilter, order=FruitOrder, pagination=True)
+class Fruit:
+    id: auto
+    name: auto
+    color: 'Color'
+
+@strawberry_django.type(models.Color, filters=ColorFilter, order=ColorOrder, pagination=True)
+class Color:
+    id: auto
+    name: auto
+    fruits: List[Fruit]
+
+
+# input types
+
+@strawberry_django.input(models.Fruit)
+class FruitInput:
+    id: auto
+    name: auto
+    color: auto
+
+@strawberry_django.input(models.Color)
+class ColorInput:
+    id: auto
+    name: auto
+    fruits: auto
+
+
+# partial input types
+
+@strawberry_django.input(models.Fruit, partial=True)
+class FruitPartialInput(FruitInput):
     pass
 
-@types.register
-@strawberry_django.input(models.Group)
-class GroupInput:
+
+@strawberry_django.input(models.Color, partial=True)
+class ColorPartialInput(ColorInput):
     pass
