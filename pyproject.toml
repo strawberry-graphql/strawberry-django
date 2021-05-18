@@ -13,7 +13,7 @@ classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.0"
-strawberry-graphql = ">=0.53"
+strawberry-graphql = ">=0.57.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.1"
@@ -32,3 +32,4 @@ build-backend = "poetry.core.masonry.api"
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
 python_paths = "."
 testpaths = ["tests"]
+filterwarnings = "ignore:.*is deprecated.*:DeprecationWarning"
