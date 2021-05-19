@@ -69,7 +69,6 @@ class DjangoUpdateMutation(
 
     @transaction.atomic
     def resolver(self, info, source, data, **kwargs):
-        print('UPDATE', data)
         queryset = self.django_model.objects.all()
         queryset = self.get_queryset(queryset=queryset, info=info, data=data, **kwargs)
         input_data = get_input_data(self.input_type, data)

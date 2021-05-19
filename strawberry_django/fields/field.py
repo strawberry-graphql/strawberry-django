@@ -29,13 +29,34 @@ class StrawberryDjangoField(
         StrawberryDjangoPagination,
         StrawberryDjangoFieldBase,
         StrawberryField):
+    """Basic field
+
+    StrawberryDjangoField inherits all features from StrawberryField and
+    implements Django specific functionalities like ordering, filtering and
+    pagination.
+
+    This field takes care of that Django ORM is always accessed from sync
+    context. Resolver function is wrapped in sync_to_async decorator in async
+    context. See more information about that from Django documentation.
+    https://docs.djangoproject.com/en/3.2/topics/async/
+
+    StrawberryDjangoField has following properties
+    * django_name - django name which is used to access the field of django model instance
+    * is_auto - True if original field type was auto
+    * is_relation - True if field is resolving django model relationship
+    * origin_django_type - pointer to the origin of this field
+    * input_type - input_type of this field used by mutations
+
+    kwargs argument is passed to ordering, filtering, pagination and
+    StrawberryField super classes.
+    """
 
     def __init__(self, django_name=None, graphql_name=None, python_name=None, **kwargs):
         self.django_name = django_name
         self.is_auto = utils.is_auto(kwargs.get('type_', None))
         self.is_relation = False
         self.origin_django_type = None
-        self.input_type = None # only mutations have input type
+        self.input_type = None # used by mutations
         super().__init__(graphql_name=graphql_name, python_name=python_name, **kwargs)
 
     @classmethod

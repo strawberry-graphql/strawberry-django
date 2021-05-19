@@ -33,26 +33,36 @@ def get_field(django_type, field_name, field_annotation=None):
 
     field.python_name = field_name
     if field_name in django_type.origin.__dict__.get('__annotations__', {}):
+        # store origin django type for futher usage
         field.origin_django_type = django_type
+
     if field_annotation:
+        # annotation of field is used as a class type
         field.type = field_annotation
         field.is_auto = utils.is_auto(field_annotation)
 
     try:
+        # resolve the django_name and check if it is relation field. django_name
+        # is used to access the field data in resolvers
         django_name = field.django_name or field_name
         model_field = get_model_field(django_type.model, django_name)
-        field.django_name = resolve_model_field_name(model_field, django_type.is_input, django_type.is_filter)
+        field.django_name = resolve_model_field_name(model_field,
+                django_type.is_input, django_type.is_filter)
         field.is_relation = model_field.is_relation
     except django.core.exceptions.FieldDoesNotExist:
         if field.django_name or field.is_auto:
-            raise # django_name defined, but field does not exist
+            raise # field should exist, reraise catched exception
         model_field = None
 
     if field.is_relation:
+        # change relation field type to auto if field is inherited from another
+        # type. for example if field is inherited from output type but we are
+        # configuring field for input type
         if not utils.is_similar_django_type(django_type, field.origin_django_type):
             field.is_auto = True
 
     if field.is_auto:
+        # resolve type of auto field
         field.type = resolve_model_field_type(model_field, django_type)
 
     if is_optional(model_field, django_type.is_input, django_type.is_partial):
@@ -60,7 +70,10 @@ def get_field(django_type, field_name, field_annotation=None):
     
     if django_type.is_input:
         if field.default is dataclasses.MISSING:
-            #TODO: could strawberry support UNSET?
+            # strawberry converts UNSET value to MISSING, let's set
+            # it back to UNSET. this is important especially for partial
+            # input types
+            #TODO: could strawberry support UNSET default value?
             field.default = UNSET
             field.default_value = UNSET
 

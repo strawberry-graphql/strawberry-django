@@ -1,7 +1,7 @@
 import strawberry_django
 
+def resolve_current_user(info):
+    return info.context.request.user
+
 def current_user():
-    @strawberry_django.field
-    def current_user(info):
-        return info.context.request.user
-    return current_user
+    return strawberry_django.field(resolver=resolve_current_user)
