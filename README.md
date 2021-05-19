@@ -4,9 +4,9 @@
 [![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
 
-This package provides simple and powerful tools to generate GraphQL types, quries, mutations and resolvers from Django models.
+This package provides simple and powerful tools to generate GraphQL types, queries, mutations and resolvers from Django models.
 
-Installing `strawberry-graphql-django` packet from the python package repository.
+Installing `strawberry-graphql-django` package from the python package repository.
 ```shell
 pip install strawberry-graphql-django
 ```
