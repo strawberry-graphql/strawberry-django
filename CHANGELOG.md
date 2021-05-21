@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.1
+
+Buf fixes:
+* fix relation and reverse relation field name resolution (#32)
+
+
 ## v0.2.0
 
 This release adds new class oriented API where all fields are defined in class body. This release also adds basic support for filtering, ordering and pagination. See more information about new API from docs folder.
