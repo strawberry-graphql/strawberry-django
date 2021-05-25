@@ -127,13 +127,20 @@ def resolve_model_field_name(model_field, is_input=False, is_filter=False):
 def get_model_field(model, field_name):
     try:
         return model._meta.get_field(field_name)
-    except django.core.exceptions.FieldDoesNotExist:
+    except django.core.exceptions.FieldDoesNotExist as e:
+        model_field_names = []
+
         # we need to iterate through all the fields because reverse relation
         # fields cannot be accessed by get_field method
         for field in model._meta.get_fields():
-            if field_name == resolve_model_field_name(field):
+            model_field_name = resolve_model_field_name(field)
+            if field_name == model_field_name:
                 return field
-        raise
+            model_field_names.append(model_field_name)
+
+        e.args = '{}, did you mean {}?'.format(e.args[0],
+                ', '.join([f"'{n}'" for n in model_field_names])),
+        raise e
 
 
 def is_auto(type_):
