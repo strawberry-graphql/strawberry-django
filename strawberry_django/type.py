@@ -158,3 +158,6 @@ def type(model, *, filters=UNSET, **kwargs):
 
 def input(model, *, partial=False, **kwargs):
     return type(model, partial=partial, is_input=True, **kwargs)
+
+def mutation(model, **kwargs):
+    return type(model, **kwargs)

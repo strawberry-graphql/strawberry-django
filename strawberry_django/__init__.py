@@ -9,7 +9,7 @@ from .utils import fields
 from .filters import filter_deprecated as filter
 from .mutations.mutations import mutations
 from .resolvers import django_resolver
-from .type import type, input
+from .type import type, input, mutation
 
 # deprecated functions
 from .legacy.mutations.auth import AuthMutation
