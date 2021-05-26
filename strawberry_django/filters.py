@@ -1,3 +1,4 @@
+import inspect
 import strawberry
 from typing import Generic, List, Optional, TypeVar, Union
 from strawberry.field import StrawberryField
@@ -131,6 +132,10 @@ def apply(filters, queryset, pk=UNSET):
         queryset = filter_method(queryset=queryset)
     return queryset
 
+def apply_function_filter(queryset, func, kwargs):
+    func_kwargs = { name: kwargs.pop(name) for name in func.__annotations__ if name in kwargs }
+    queryset = func(queryset, **func_kwargs)
+    return queryset
 
 class StrawberryDjangoFieldFilters:
     def __init__(self, filters=UNSET, **kwargs):
@@ -142,7 +147,12 @@ class StrawberryDjangoFieldFilters:
         arguments = []
         if not self.base_resolver:
             filters = self.get_filters()
-            if self.django_model and not self.is_list:
+            if inspect.isfunction(filters):
+                for name, type_ in filters.__annotations__.items():
+                    arguments.append(
+                        argument(name, type_)
+                    )
+            elif self.django_model and not self.is_list:
                 arguments.append(
                     argument('pk', strawberry.ID)
                 )
@@ -161,5 +171,9 @@ class StrawberryDjangoFieldFilters:
         return None
 
     def get_queryset(self, queryset, info, pk=UNSET, filters=UNSET, **kwargs):
-        queryset = apply(filters, queryset, pk)
+        filters_func = self.get_filters()
+        if inspect.isfunction(filters_func):
+            queryset = apply_function_filter(queryset, filters_func, kwargs)
+        else:
+            queryset = apply(filters, queryset, pk)
         return super().get_queryset(queryset, info, **kwargs)

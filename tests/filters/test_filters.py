@@ -2,7 +2,7 @@ import pytest
 import strawberry
 import strawberry_django
 from strawberry_django import auto
-from typing import List
+from typing import List, Optional
 
 from tests import utils, models
 
@@ -119,4 +119,23 @@ def test_type_filter_method(query, fruits):
     assert not result.errors
     assert result.data['fruits'] == [
         {'id': '3', 'name': 'banana'},
+    ]
+
+
+def test_function_filter(fruits):
+    def filter_name(queryset, name: str = None):
+        if name:
+            queryset = queryset.filter(name__contains=name)
+        return queryset
+
+    @strawberry.type
+    class Query:
+        fruits: List[Fruit] = strawberry_django.field(filters=filter_name)
+    query = utils.generate_query(Query)
+
+    result = query('{ fruits(name: "berry") { name } }')
+    assert not result.errors
+    assert result.data['fruits'] == [
+        {'name': 'strawberry'},
+        {'name': 'raspberry'},
     ]
