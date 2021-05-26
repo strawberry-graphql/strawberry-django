@@ -98,8 +98,11 @@ class StrawberryDjangoField(
         else:
             # relation model field
             result = getattr(source, self.django_name or self.python_name)
+
             if isinstance(result, models.manager.Manager):
                 result = result.all()
+            elif callable(result):
+                result = result()
 
         if isinstance(result, models.QuerySet):
             result = self.get_queryset(queryset=result, info=info, **kwargs)

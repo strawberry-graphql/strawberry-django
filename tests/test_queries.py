@@ -26,6 +26,8 @@ class Group:
 class BerryFruit:
     id: auto
     name: auto
+    name_upper: str
+    name_lower: str
 
     def get_queryset(self, queryset, info):
         return queryset.filter(name__contains='berry')
@@ -90,4 +92,13 @@ async def test_type_queryset(query, fruits):
     assert result.data['berries'] == [
         { 'name': 'strawberry' },
         { 'name': 'raspberry' },
+    ]
+
+async def test_model_properties(query, fruits):
+    result = await query('{ berries { nameUpper nameLower } }')
+
+    assert not result.errors
+    assert result.data['berries'] == [
+        { 'nameUpper': 'STRAWBERRY', 'nameLower': 'strawberry' },
+        { 'nameUpper': 'RASPBERRY', 'nameLower': 'raspberry' },
     ]
