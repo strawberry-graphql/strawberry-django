@@ -64,11 +64,11 @@ class StrawberryDjangoField(
         if utils.is_strawberry_django_field(field) and not field.origin_django_type:
             return field
 
-        default_value = getattr(field, 'default_value', getattr(field, 'default', UNSET))
+        default = getattr(field, 'default', getattr(field, 'default', UNSET))
         new_field = StrawberryDjangoField(
             base_resolver=getattr(field, 'base_resolver', None),
             default_factory=field.default_factory,
-            default_value=default_value,
+            default=default,
             django_name=getattr(field, 'django_name', field.name),
             graphql_name=getattr(field, 'graphql_name', None),
             python_name=field.name,
@@ -120,7 +120,7 @@ def field(resolver=None, *, name=None, field_name=None, filters=UNSET, default=U
         type_=None,
         filters=filters,
         django_name=field_name,
-        default_value=default,
+        default=default,
         **kwargs
     )
     if resolver:

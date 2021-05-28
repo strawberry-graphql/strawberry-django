@@ -27,7 +27,7 @@ def get_field(django_type, field_name, field_annotation=None):
         field = StrawberryDjangoField.from_field(attr, django_type)
     else:
         field = StrawberryDjangoField(
-            default_value=attr,
+            default=attr,
             type_=field_annotation,
         )
 
@@ -74,8 +74,8 @@ def get_field(django_type, field_name, field_annotation=None):
             # it back to UNSET. this is important especially for partial
             # input types
             #TODO: could strawberry support UNSET default value?
-            field.default = UNSET
             field.default_value = UNSET
+            field.default = UNSET
 
     return field
 

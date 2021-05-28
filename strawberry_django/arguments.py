@@ -1,9 +1,8 @@
-from strawberry.arguments import StrawberryArgument
-from strawberry.types.types import undefined
+from strawberry.arguments import StrawberryArgument, UNSET
 
-def argument(name, type_, is_optional=True, default_value=undefined):
+def argument(name, type_, is_optional=True, default=UNSET):
     return StrawberryArgument(
-        default_value=default_value,
+        default=default,
         description=None,
         graphql_name=None,
         is_optional=is_optional,
