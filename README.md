@@ -41,18 +41,18 @@ class Color(models.Model):
 
 ```python
 # types.py
-import strawberry_django
-from strawberry_django import auto
+import strawberry
+from strawberry.django import auto
 from typing import List
 from . import models
 
-@strawberry_django.type(models.Fruit)
+@strawberry.django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
     color: 'Color'
 
-@strawberry_django.type(models.Color)
+@strawberry.django.type(models.Color)
 class Color:
     id: auto
     name: auto
@@ -62,13 +62,12 @@ class Color:
 ```python
 # schema.py
 import strawberry
-import strawberry_django
 from typing import List
 from .types import Fruit
 
 @strawberry.type
 class Query:
-    fruits: List[Fruit] = strawberry_django.field()
+    fruits: List[Fruit] = strawberry.django.field()
 
 schema = strawberry.Schema(query=Query)
 ```
