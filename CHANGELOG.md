@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.2
+
+New features
+* add `strawberry.django.mutation` type
+* add support for model properties and methods
+* add support for `strawberry.django` namespace
+
+Improvements
+* improve error message of FieldDoesNotExist exception, list all available fields
+* update README.md examples to use django namespace
+* integrate to `strawberry-graphql` v0.64.4
+
+Depencies
+* update minimum required `strawberry-graphql` to v0.64.4
+
 ## v0.2.1
 
 Buf fixes:
