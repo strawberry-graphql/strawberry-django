@@ -107,7 +107,7 @@ def resolve_model_field_type(model_field, django_type):
     if field_type is None:
         field_type = field_type_map[model_field_type]
     if field_type is NotImplemented:
-        raise NotImplementedError("GraphQL type for model field '{model_field}' has not been implemented")
+        raise NotImplementedError(f"GraphQL type for model field '{model_field}' has not been implemented")
     if django_type.is_filter == 'lookups':
         # TODO: could this be moved into filters.py
         if not model_field.is_relation and field_type is not bool:
