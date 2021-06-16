@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml/badge.svg)](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml)
 [![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
+[![Downloads](https://pepy.tech/badge/strawberry-graphql-django)](https://pepy.tech/project/strawberry-graphql-django)
 
 This package provides simple and powerful tools to generate GraphQL types, queries, mutations and resolvers from Django models.
 
@@ -105,6 +105,14 @@ urlpatterns = [
 
 See complete Django project from github repository folder [examples/django](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django).
 
+
+## Autocompletion with editors
+
+Some editors like VSCode may not be able to resolve symbols and types without explicit `strawberry.django` import. Adding following line to code fixes that problem.
+
+```python
+import strawberry.django
+```
 
 ## Running unit tests
 ```
