@@ -143,9 +143,10 @@ class StrawberryDjangoFieldFilters:
         if not self.base_resolver:
             filters = self.get_filters()
             if self.django_model and not self.is_list:
-                arguments.append(
-                    argument('pk', strawberry.ID)
-                )
+                if self.is_relation is False:
+                    arguments.append(
+                        argument('pk', strawberry.ID)
+                    )
             elif filters and not is_unset(filters):
                 arguments.append(
                     argument('filters', filters)
