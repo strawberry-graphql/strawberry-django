@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.3
+
+Improvements
+* fix error moessage of NotImplementedError exception (@star2000)
+* remove pk argument on model relations (#40, @g-as)
+
+Fixes
+* fix breaking changes in `strawberry-graphql` (#42)
+
+Depencies
+* update minimum required `strawberry-graphql` to v0.68.2
+
+
 ## v0.2.2
 
 New features
@@ -15,9 +28,10 @@ Improvements
 Depencies
 * update minimum required `strawberry-graphql` to v0.64.4
 
+
 ## v0.2.1
 
-Buf fixes:
+Fixes
 * fix relation and reverse relation field name resolution (#32)
 
 
