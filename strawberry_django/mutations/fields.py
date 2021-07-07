@@ -11,41 +11,29 @@ from django.db import transaction
 class DjangoMutationBase:
     def __init__(self, input_type, **kwargs):
         self.input_type = input_type
-        self.many = False
         super().__init__(graphql_name=None, python_name=None, type_=None, **kwargs)
 
-    def post_init(self):
-        type_ = self.type or self.child.type
+    @property
+    def arguments(self):
         if self.input_type:
             assert self.django_model == utils.get_django_model(self.input_type), (
                 'Input and output types should be from the same Django model')
 
-    @property
-    def arguments(self):
         arguments = []
         if self.input_type:
-            arguments.append(get_argument('data', self.input_type, self.many))
+            is_list = self.is_list and isinstance(self, DjangoCreateMutation)
+            arguments.append(get_argument('data', self.input_type, is_list))
         return arguments + super().arguments
 
     @django_resolver
-    def get_result(self, source, info, kwargs):
-        kwargs = convert_arguments(kwargs, self.arguments)
-        return self.resolver(info=info, source=source, **kwargs)
-
-    def get_wrapped_resolver(self):
-        self.post_init()
-        return super().get_wrapped_resolver()
+    def get_result(self, source, info, args, kwargs):
+        return self.resolver(info=info, source=source, *args, **kwargs)
 
 
 class DjangoCreateMutation(
         DjangoMutationBase,
         StrawberryDjangoFieldBase,
         StrawberryField):
-
-    def post_init(self):
-        if self.is_list:
-            self.many = True
-        super().post_init()
 
     def create(self, data):
         input_data = get_input_data(self.input_type, data)
@@ -55,7 +43,7 @@ class DjangoCreateMutation(
 
     @transaction.atomic
     def resolver(self, info, source, data):
-        if self.many:
+        if self.is_list:
             return [self.create(d) for d in data]
         else:
             return self.create(data)

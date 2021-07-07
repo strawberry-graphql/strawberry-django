@@ -78,16 +78,14 @@ class StrawberryDjangoField(
         new_field.origin_django_type = getattr(field, 'origin_django_type', None)
         return new_field
 
-    def get_result(self, source, info, kwargs):
+    def get_result(self, source, info, args, kwargs):
         if self.base_resolver:
-            args, kwargs = self._get_arguments(source=source, info=info, kwargs=kwargs)
-            return self.base_resolver(*args, **kwargs)
-        return self.get_django_result(kwargs, info, source)
+            return super().get_result(source, info, args, kwargs)
+        return self.get_django_result(source, info, args, kwargs)
 
     @django_resolver
-    def get_django_result(self, kwargs, info, source):
-        kwargs = convert_arguments(kwargs, self.arguments)
-        return self.resolver(info=info, source=source, **kwargs)
+    def get_django_result(self, source, info, args, kwargs,):
+        return self.resolver(info=info, source=source, *args, **kwargs)
 
     def resolver(self, info, source, **kwargs):
         if source is None:
