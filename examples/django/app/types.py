@@ -2,15 +2,18 @@ import strawberry_django
 from strawberry_django import auto
 from typing import List
 from . import models
+from django.contrib.auth import get_user_model
 
 
 # filters
+
 
 @strawberry_django.filters.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
-    color: 'ColorFilter'
+    color: "ColorFilter"
+
 
 @strawberry_django.filters.filter(models.Color, lookups=True)
 class ColorFilter:
@@ -21,10 +24,12 @@ class ColorFilter:
 
 # order
 
+
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
     name: auto
-    color: 'ColorOrder'
+    color: "ColorOrder"
+
 
 @strawberry_django.ordering.order(models.Color)
 class ColorOrder:
@@ -34,26 +39,42 @@ class ColorOrder:
 
 # types
 
-@strawberry_django.type(models.Fruit, filters=FruitFilter, order=FruitOrder, pagination=True)
+
+@strawberry_django.type(
+    models.Fruit, filters=FruitFilter, order=FruitOrder, pagination=True
+)
 class Fruit:
     id: auto
     name: auto
-    color: 'Color'
+    color: "Color"
 
-@strawberry_django.type(models.Color, filters=ColorFilter, order=ColorOrder, pagination=True)
+
+@strawberry_django.type(
+    models.Color, filters=ColorFilter, order=ColorOrder, pagination=True
+)
 class Color:
     id: auto
     name: auto
     fruits: List[Fruit]
 
 
+@strawberry_django.type(get_user_model())
+class User:
+    id: auto
+    username: auto
+    password: auto
+    email: auto
+
+
 # input types
+
 
 @strawberry_django.input(models.Fruit)
 class FruitInput:
     id: auto
     name: auto
     color: auto
+
 
 @strawberry_django.input(models.Color)
 class ColorInput:
@@ -62,7 +83,15 @@ class ColorInput:
     fruits: auto
 
 
+@strawberry_django.input(get_user_model())
+class UserInput:
+    username: auto
+    password: auto
+    email: auto
+
+
 # partial input types
+
 
 @strawberry_django.input(models.Fruit, partial=True)
 class FruitPartialInput(FruitInput):
