@@ -38,8 +38,7 @@ class Mutation:
     updateColors: List[Color] = mutations.update(ColorPartialInput)
     deleteColors: List[Color] = mutations.delete()
 
-    register: User = auth.register(UserInput)  # type: ignore
-    # register: User = mutations.create(UserInput)
+    register: User = auth.register(UserInput)
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
