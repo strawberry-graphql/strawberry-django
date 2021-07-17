@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 
 # filters
 
-
 @strawberry_django.filters.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
@@ -23,7 +22,6 @@ class ColorFilter:
 
 
 # order
-
 
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
@@ -68,7 +66,6 @@ class User:
 
 # input types
 
-
 @strawberry_django.input(models.Fruit)
 class FruitInput:
     id: auto
@@ -91,7 +88,6 @@ class UserInput:
 
 
 # partial input types
-
 
 @strawberry_django.input(models.Fruit, partial=True)
 class FruitPartialInput(FruitInput):
