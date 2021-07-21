@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
 packages = [ { include = "strawberry_django" } ]
-version = "0.2.3"
+version = "0.2.4"
 description = "Strawberry GraphQL Django extension"
 authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
 repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
@@ -13,7 +13,7 @@ classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.0"
-strawberry-graphql = ">=0.68.2"
+strawberry-graphql = ">=0.68.2,<0.69"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.1"
