@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.4
+
+Depencies
+* Use `strawberry-graphql` earlier than v0.69, which introduced many backward incompatible changes.
+
+
 ## v0.2.3
 
 Improvements
