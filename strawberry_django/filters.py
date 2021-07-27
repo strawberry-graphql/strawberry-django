@@ -4,6 +4,8 @@ from strawberry.field import StrawberryField
 from strawberry.arguments import UNSET, is_unset, StrawberryArgument
 from typing import List
 
+from strawberry.type import StrawberryList, StrawberryContainer
+
 from . import utils
 from .arguments import argument
 from .fields.types import is_auto
@@ -157,6 +159,8 @@ class StrawberryDjangoFieldFilters:
         if not is_unset(self.filters):
             return self.filters
         type_ = self.type or self.child.type
+        while isinstance(type_, StrawberryContainer):
+            type_ = type_.of_type
         if utils.is_django_type(type_):
             return type_._django_type.filters
         return None

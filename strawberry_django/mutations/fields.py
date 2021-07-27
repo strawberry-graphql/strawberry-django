@@ -1,17 +1,29 @@
-from strawberry.arguments import StrawberryArgument, UNSET, convert_arguments, is_unset
 from typing import List
-from asgiref.sync import sync_to_async
-from ..resolvers import django_resolver
-from .. import utils, types
-from ..fields.field import StrawberryDjangoFieldBase, StrawberryDjangoFieldFilters, StrawberryField
-from ..fields.types import OneToOneInput, OneToManyInput, ManyToOneInput, ManyToManyInput
 
 from django.db import transaction
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.arguments import StrawberryArgument, is_unset
+from strawberry.type import StrawberryList, StrawberryOptional
+
+from .. import utils
+from ..fields.field import StrawberryDjangoFieldBase, StrawberryDjangoFieldFilters, StrawberryField
+from ..fields.types import OneToManyInput, ManyToOneInput, ManyToManyInput
+from ..resolvers import django_resolver
+
 
 class DjangoMutationBase:
     def __init__(self, input_type, **kwargs):
         self.input_type = input_type
-        super().__init__(graphql_name=None, python_name=None, type_=None, **kwargs)
+        super().__init__(graphql_name=None, python_name=None, type_annotation=None, **kwargs)
+
+    @property
+    def is_optional(self):
+        return isinstance(self.type, StrawberryOptional)
+
+    @property
+    def is_list(self):
+        return isinstance(self.type, StrawberryList) or \
+               (self.is_optional and isinstance(self.type.of_type, StrawberryList))
 
     @property
     def arguments(self):
@@ -31,9 +43,9 @@ class DjangoMutationBase:
 
 
 class DjangoCreateMutation(
-        DjangoMutationBase,
-        StrawberryDjangoFieldBase,
-        StrawberryField):
+    DjangoMutationBase,
+    StrawberryDjangoFieldBase,
+    StrawberryField):
 
     def create(self, data):
         input_data = get_input_data(self.input_type, data)
@@ -50,10 +62,10 @@ class DjangoCreateMutation(
 
 
 class DjangoUpdateMutation(
-        DjangoMutationBase,
-        StrawberryDjangoFieldFilters,
-        StrawberryDjangoFieldBase,
-        StrawberryField):
+    DjangoMutationBase,
+    StrawberryDjangoFieldFilters,
+    StrawberryDjangoFieldBase,
+    StrawberryField):
 
     @transaction.atomic
     def resolver(self, info, source, data, **kwargs):
@@ -66,10 +78,10 @@ class DjangoUpdateMutation(
 
 
 class DjangoDeleteMutation(
-        DjangoMutationBase,
-        StrawberryDjangoFieldFilters,
-        StrawberryDjangoFieldBase,
-        StrawberryField):
+    DjangoMutationBase,
+    StrawberryDjangoFieldFilters,
+    StrawberryDjangoFieldBase,
+    StrawberryField):
 
     @transaction.atomic
     def resolver(self, info, source, **kwargs):
@@ -83,17 +95,15 @@ class DjangoDeleteMutation(
 def get_argument(name, type_, is_list=False):
     if is_list:
         return StrawberryArgument(
-            python_name = name,
-            graphql_name = name,
-            type_ = None,
-            child = StrawberryArgument(graphql_name=None, python_name=None, type_=type_),
-            is_list = True,
+            python_name=name,
+            graphql_name=name,
+            type_annotation=StrawberryAnnotation(List[type_]),
         )
     else:
         return StrawberryArgument(
-            python_name = name,
-            graphql_name = name,
-            type_ = type_,
+            python_name=name,
+            graphql_name=name,
+            type_annotation=StrawberryAnnotation(type_),
         )
 
 
@@ -113,7 +123,7 @@ def get_input_data(input_type, data):
 
 
 def update_m2m(queryset, data):
-    #TODO: optimize
+    # TODO: optimize
     for field_name, field_value in vars(data).items():
         if not isinstance(field_value, (ManyToOneInput, ManyToManyInput)):
             continue

@@ -1,5 +1,6 @@
 import dataclasses
 import strawberry
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import is_unset, UNSET
 from strawberry.field import StrawberryField
 from django.db import models
@@ -71,5 +72,5 @@ def get_annotations(cls):
     annotations = {}
     for c in reversed(cls.__mro__):
         if '__annotations__' in c.__dict__:
-            annotations.update(c.__annotations__)
+            annotations.update({k: StrawberryAnnotation(v) for k, v in c.__annotations__.items()})
     return annotations

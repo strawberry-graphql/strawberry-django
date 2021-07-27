@@ -1,17 +1,21 @@
-import strawberry
 from django.db import models
-from strawberry.arguments import UNSET, convert_arguments
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
+from strawberry.type import StrawberryList, StrawberryContainer, StrawberryOptional
+
 from .. import utils
-from ..resolvers import django_resolver
 from ..filters import StrawberryDjangoFieldFilters
 from ..ordering import StrawberryDjangoFieldOrdering
 from ..pagination import StrawberryDjangoPagination
+from ..resolvers import django_resolver
 
 
 class StrawberryDjangoFieldBase:
     def get_queryset(self, queryset, info, **kwargs):
         type_ = self.type or self.child.type
+        while isinstance(type_, StrawberryContainer):
+            type_ = type_.of_type
         get_queryset = getattr(type_, 'get_queryset', None)
         if get_queryset:
             queryset = get_queryset(self, queryset, info, **kwargs)
@@ -19,16 +23,16 @@ class StrawberryDjangoFieldBase:
 
     @property
     def django_model(self):
-        type_ = self.type or self.child.type
+        type_ = (self.type.of_type if isinstance(self.type, StrawberryContainer) else self.type) or self.child.type
         return utils.get_django_model(type_)
 
 
 class StrawberryDjangoField(
-        StrawberryDjangoFieldOrdering,
-        StrawberryDjangoFieldFilters,
-        StrawberryDjangoPagination,
-        StrawberryDjangoFieldBase,
-        StrawberryField):
+    StrawberryDjangoFieldOrdering,
+    StrawberryDjangoFieldFilters,
+    StrawberryDjangoPagination,
+    StrawberryDjangoFieldBase,
+    StrawberryField):
     """Basic field
 
     StrawberryDjangoField inherits all features from StrawberryField and
@@ -53,11 +57,20 @@ class StrawberryDjangoField(
 
     def __init__(self, django_name=None, graphql_name=None, python_name=None, **kwargs):
         self.django_name = django_name
-        self.is_auto = utils.is_auto(kwargs.get('type_', None))
+        self.is_auto = utils.is_auto(kwargs.get('type_annotation', None))
         self.is_relation = False
         self.origin_django_type = None
-        self.input_type = None # used by mutations
+        self.input_type = None  # used by mutations
         super().__init__(graphql_name=graphql_name, python_name=python_name, **kwargs)
+
+    @property
+    def is_optional(self):
+        return isinstance(self.type, StrawberryOptional)
+
+    @property
+    def is_list(self):
+        return isinstance(self.type, StrawberryList) or \
+               (self.is_optional and isinstance(self.type.of_type, StrawberryList))
 
     @classmethod
     def from_field(cls, field, django_type):
@@ -72,7 +85,9 @@ class StrawberryDjangoField(
             django_name=getattr(field, 'django_name', field.name),
             graphql_name=getattr(field, 'graphql_name', None),
             python_name=field.name,
-            type_=field.type,
+            type_annotation=field.type_annotation \
+                if hasattr(field, 'type_annotation') \
+                else StrawberryAnnotation(field.type),
         )
         new_field.is_auto = getattr(field, 'is_auto', False)
         new_field.origin_django_type = getattr(field, 'origin_django_type', None)
@@ -84,12 +99,12 @@ class StrawberryDjangoField(
         return self.get_django_result(source, info, args, kwargs)
 
     @django_resolver
-    def get_django_result(self, source, info, args, kwargs,):
+    def get_django_result(self, source, info, args, kwargs, ):
         return self.resolver(info=info, source=source, *args, **kwargs)
 
     def resolver(self, info, source, **kwargs):
         if source is None:
-            #TODO: would there be better and safer way to detect root?
+            # TODO: would there be better and safer way to detect root?
             # root query object
             result = self.django_model.objects.all()
 
@@ -115,7 +130,7 @@ def field(resolver=None, *, name=None, field_name=None, filters=UNSET, default=U
     field_ = StrawberryDjangoField(
         python_name=None,
         graphql_name=name,
-        type_=None,
+        type_annotation=None,
         filters=filters,
         django_name=field_name,
         default=default,

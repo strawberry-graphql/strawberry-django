@@ -1,4 +1,4 @@
-from . import auth, filters, ordering
+from . import auth, filters, ordering, types
 from .fields.field import field
 from .fields.types import (
     auto, is_auto,

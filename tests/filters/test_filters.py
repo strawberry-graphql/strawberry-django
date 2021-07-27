@@ -1,5 +1,7 @@
 import pytest
 import strawberry
+from strawberry.annotation import StrawberryAnnotation
+
 import strawberry_django
 from strawberry_django import auto
 from typing import List
@@ -53,10 +55,10 @@ def query():
 
 def test_field_filter_definition():
     from strawberry_django.fields.field import StrawberryDjangoField
-    field = StrawberryDjangoField(type_=Fruit)
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(Fruit))
     assert field.get_filters() == FruitFilter
-    field = StrawberryDjangoField(type_=Fruit, filters=None)
-    assert field.get_filters() == None
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(Fruit), filters=None)
+    assert field.get_filters() is None
 
 def test_without_filtering(query, fruits):
     result = query('{ fruits { id name } }')
