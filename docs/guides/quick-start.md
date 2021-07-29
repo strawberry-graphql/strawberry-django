@@ -46,7 +46,7 @@ from .types import Fruit
 
 @strawberry.type
 class Query:
-    fruits: List[Fruit]
+    fruits: List[Fruit] = strawberry_django.field()
 
 schema = strawberry.Schema(query=Query)
 ```
