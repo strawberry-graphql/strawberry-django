@@ -5,7 +5,7 @@ from .fields import DjangoCreateMutation, DjangoUpdateMutation, DjangoDeleteMuta
 def mutations(*args, **kwargs):
     return mutations_legacy(*args, **kwargs)
 
-def create(input_type=UNSET,*args,types=None,pre_save=None,post_save=None,permission_classes=[]):
+def create(input_type=UNSET, *args, types=None, pre_save=None, post_save=None, permission_classes=[]):
     if args or types:
         args = (input_type,) + args
         return mutations_legacy.create(*args, types=types, pre_save=pre_save, post_save=post_save)
