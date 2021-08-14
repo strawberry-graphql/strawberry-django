@@ -11,11 +11,12 @@ from ..pagination import StrawberryDjangoPagination
 from ..resolvers import django_resolver
 
 
+
+
 class StrawberryDjangoFieldBase:
     def get_queryset(self, queryset, info, **kwargs):
         type_ = self.type or self.child.type
-        while isinstance(type_, StrawberryContainer):
-            type_ = type_.of_type
+        type_ = utils.unwrap_type(type_)
         get_queryset = getattr(type_, 'get_queryset', None)
         if get_queryset:
             queryset = get_queryset(self, queryset, info, **kwargs)
@@ -23,7 +24,7 @@ class StrawberryDjangoFieldBase:
 
     @property
     def django_model(self):
-        type_ = (self.type.of_type if isinstance(self.type, StrawberryContainer) else self.type) or self.child.type
+        type_ = utils.unwrap_type(self.type)
         return utils.get_django_model(type_)
 
 

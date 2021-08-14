@@ -40,9 +40,7 @@ class StrawberryDjangoPagination:
     def get_pagination(self):
         if not is_unset(self.pagination):
             return self.pagination
-        type_ = self.type or self.child.type
-        while isinstance(type_, StrawberryContainer):
-            type_ = type_.of_type
+        type_ = utils.unwrap_type(self.type or self.child.type)
         if utils.is_django_type(type_):
             return type_._django_type.pagination
         return None

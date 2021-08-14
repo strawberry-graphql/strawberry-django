@@ -7,6 +7,8 @@ from django.db import models
 import asyncio
 import warnings
 
+from strawberry.type import StrawberryContainer
+
 
 def is_async():
     # django uses the same method to detect async operation
@@ -74,3 +76,9 @@ def get_annotations(cls):
         if '__annotations__' in c.__dict__:
             annotations.update({k: StrawberryAnnotation(v) for k, v in c.__annotations__.items()})
     return annotations
+
+def unwrap_type(type_):
+    while isinstance(type_, StrawberryContainer):
+        type_ = type_.of_type
+
+    return type_
