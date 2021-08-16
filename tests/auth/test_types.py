@@ -1,7 +1,9 @@
+from django.contrib import auth
+from strawberry.type import StrawberryList, StrawberryOptional
+
 import strawberry_django
-from django.contrib import auth
-from django.contrib import auth
 from strawberry_django import auto, fields, DjangoModelType
+
 
 def test_user_type():
     @strawberry_django.type(auth.models.User)
@@ -13,8 +15,9 @@ def test_user_type():
     assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
         ('username', str),
         ('email', str),
-        ('groups', DjangoModelType),
+        ('groups', StrawberryList(DjangoModelType)),
     ]
+
 
 def test_group_type():
     @strawberry_django.type(auth.models.Group)
@@ -24,5 +27,5 @@ def test_group_type():
 
     assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
         ('name', str),
-        ('users', DjangoModelType),
+        ('users', StrawberryOptional(StrawberryList(DjangoModelType))),
     ]

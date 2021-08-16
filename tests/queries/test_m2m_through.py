@@ -2,7 +2,7 @@ import strawberry
 import strawberry_django
 from django.db import models
 from strawberry_django import auto
-from typing import List
+from typing import List, Optional
 
 class MemberModel(models.Model):
     name = models.CharField(max_length=50)
@@ -35,7 +35,7 @@ class Membership:
 
 @strawberry.type
 class Query:
-    projects: List[Project] = strawberry_django.field()
+    projects: Optional[List[Project]] = strawberry_django.field()
 
 schema = strawberry.Schema(query=Query)
 

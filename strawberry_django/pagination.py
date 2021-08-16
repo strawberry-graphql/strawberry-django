@@ -1,7 +1,10 @@
 import dataclasses
 import strawberry
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET, is_unset, StrawberryArgument
 from typing import List
+
+from strawberry.type import StrawberryContainer
 
 from . import utils
 from .arguments import argument
@@ -37,7 +40,7 @@ class StrawberryDjangoPagination:
     def get_pagination(self):
         if not is_unset(self.pagination):
             return self.pagination
-        type_ = self.type or self.child.type
+        type_ = utils.unwrap_type(self.type or self.child.type)
         if utils.is_django_type(type_):
             return type_._django_type.pagination
         return None

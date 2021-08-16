@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pytest
 import strawberry
 import strawberry_django
@@ -19,7 +21,7 @@ def user(db, group, tag):
 
 @strawberry.type
 class Mutation:
-    login: User = auth.login()
+    login: Optional[User] = auth.login()
     logout = auth.logout()
 
 @pytest.fixture

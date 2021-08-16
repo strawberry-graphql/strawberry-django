@@ -3,6 +3,7 @@ import django
 import strawberry
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
 from typing import List, Optional
 from .. import filters
@@ -144,7 +145,7 @@ def get_model_field(model, field_name):
 
 
 def is_auto(type_):
-    return type_ is auto
+    return (type_.annotation if isinstance(type_, StrawberryAnnotation) else type_) is auto
 
 
 def is_optional(model_field, is_input, partial):

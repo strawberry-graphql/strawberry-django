@@ -1,4 +1,6 @@
 from django.db import models
+from strawberry.type import StrawberryOptional
+
 from strawberry_django import auto, fields
 from typing import List
 import pytest
@@ -18,10 +20,10 @@ def test_filter():
         types: auto
 
     assert [(f.name, f.type) for f in fields(Filter)] == [
-        ('id', strawberry.ID),
-        ('name', str),
-        ('color', DjangoModelFilterInput),
-        ('types', DjangoModelFilterInput),
+        ('id', StrawberryOptional(strawberry.ID)),
+        ('name', StrawberryOptional(str)),
+        ('color', StrawberryOptional(DjangoModelFilterInput)),
+        ('types', StrawberryOptional(DjangoModelFilterInput)),
     ]
 
 def test_lookups():
@@ -32,7 +34,7 @@ def test_lookups():
         color: auto
         types: auto
 
-    assert [(f.name, f.type.__name__) for f in fields(Filter)] == [
+    assert [(f.name, f.type.of_type.__name__) for f in fields(Filter)] == [
         ('id', 'IDFilterLookup'),
         ('name', 'StrFilterLookup'),
         ('color', 'DjangoModelFilterInput'),
@@ -53,10 +55,10 @@ def test_inherit(testtype):
         pass
 
     assert [(f.name, f.type) for f in fields(Filter)] == [
-        ('id', strawberry.ID),
-        ('name', str),
-        ('color', DjangoModelFilterInput),
-        ('types', DjangoModelFilterInput),
+        ('id', StrawberryOptional(strawberry.ID)),
+        ('name', StrawberryOptional(str)),
+        ('color', StrawberryOptional(DjangoModelFilterInput)),
+        ('types', StrawberryOptional(DjangoModelFilterInput)),
     ]
 
 
@@ -70,7 +72,7 @@ def test_relationship():
         color: ColorFilter
 
     assert [(f.name, f.type) for f in fields(Filter)] == [
-        ('color', ColorFilter),
+        ('color', StrawberryOptional(ColorFilter)),
     ]
 
 
@@ -88,5 +90,5 @@ def test_relationship_with_inheritance():
         color: ColorFilter
 
     assert [(f.name, f.type) for f in fields(Filter)] == [
-        ('color', ColorFilter),
+        ('color', StrawberryOptional(ColorFilter)),
     ]

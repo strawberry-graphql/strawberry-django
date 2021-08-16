@@ -1,15 +1,22 @@
-import strawberry_django
-from django.db import models
 import pytest
 import strawberry
+from django.db import models
+from strawberry.type import StrawberryList, StrawberryOptional
+
+import strawberry_django
+from strawberry_django import TypeRegister
+from strawberry_django.legacy.types import LazyModelType
+
 
 @pytest.fixture
 def types():
     types = strawberry_django.TypeRegister()
     return types
 
+
 class Child(models.Model):
     child = models.ForeignKey('Child', on_delete=models.CASCADE)
+
 
 class Model(models.Model):
     string = models.TextField()
@@ -66,7 +73,7 @@ def test_model(types):
     assert [(f.name, f.type or f.child.type) for f in Type._type_definition.fields] == [
         ('foreign_key', ChildType),
         ('one_to_one', ChildType),
-        ('many_to_many', ChildType),
+        ('many_to_many', StrawberryList(ChildType)),
     ]
 
 
@@ -77,7 +84,7 @@ def test_self_reference(types):
         pass
 
     assert [(f.name, f.type or f.child.type) for f in Type._type_definition.fields] == [
-        ('child', Type),
+        ('child', StrawberryOptional(StrawberryList(LazyModelType(Child.child.field, TypeRegister, False)))),
     ]
 
 
@@ -101,6 +108,7 @@ def test_model_shortcut(types):
 def test_no_type_for_field(types):
     class MyField(models.TextField):
         pass
+
     class MyModel(models.Model):
         field = MyField()
 
@@ -112,12 +120,13 @@ def test_no_type_for_field(types):
 
 def test_no_type_for_model(types):
     with pytest.raises(TypeError, match="No type defined for field 'ForeignKey'"
-            " which has related model 'Child'"):
+                                        " which has related model 'Child'"):
         @strawberry_django.type(Model, types=types)
         class Type:
             pass
+
         # trigger lazy evaluation
-        Type._type_definition.fields
+        [f.type.resolve_type() for f in Type._type_definition.fields if isinstance(f.type, LazyModelType)]
 
 
 def test_input_and_output_types(types):

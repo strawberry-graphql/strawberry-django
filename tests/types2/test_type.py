@@ -1,20 +1,20 @@
-from django.db import models
-from strawberry_django import auto, fields
-from typing import List
-import pytest
 import strawberry
+from django.db import models
+from strawberry.type import StrawberryOptional, StrawberryList
+
 import strawberry_django
-from .. import utils
+from strawberry_django import auto, fields
+
 
 class TypeModel(models.Model):
     boolean = models.BooleanField()
     string = models.CharField(max_length=50)
     foreign_key = models.ForeignKey('TypeModel', blank=True,
-            related_name='related_foreign_key', on_delete=models.CASCADE)
+                                    related_name='related_foreign_key', on_delete=models.CASCADE)
     one_to_one = models.OneToOneField('TypeModel', blank=True,
-            related_name='related_one_to_one', on_delete=models.CASCADE)
+                                      related_name='related_one_to_one', on_delete=models.CASCADE)
     many_to_many = models.ManyToManyField('TypeModel',
-            related_name='related_many_to_many')
+                                          related_name='related_many_to_many')
 
 
 def test_type():
@@ -82,10 +82,10 @@ def test_relationship_inherit(testtype):
 
     assert [(f.name, f.type or f.child.type, f.is_list) for f in fields(Type)] == [
         ('foreign_key', strawberry_django.DjangoModelType, False),
-        ('related_foreign_key', strawberry_django.DjangoModelType, True),
+        ('related_foreign_key', StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)), True),
         ('one_to_one', strawberry_django.DjangoModelType, False),
-        ('related_one_to_one', strawberry_django.DjangoModelType, False),
-        ('many_to_many', strawberry_django.DjangoModelType, True),
-        ('related_many_to_many', strawberry_django.DjangoModelType, True),
+        ('related_one_to_one', StrawberryOptional(strawberry_django.DjangoModelType), False),
+        ('many_to_many', StrawberryList(strawberry_django.DjangoModelType), True),
+        ('related_many_to_many', StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)), True),
         ('another_name', strawberry_django.DjangoModelType, False),
     ]

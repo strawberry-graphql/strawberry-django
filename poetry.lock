@@ -280,7 +280,7 @@ watchdog = ">=0.6.0"
 
 [[package]]
 name = "python-dateutil"
-version = "2.8.1"
+version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
 category = "main"
 optional = false
@@ -326,7 +326,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.68.2"
+version = "0.70.0"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -393,7 +393,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<4.0"
-content-hash = "d73b40f33b3e1c94af0dddf7b1cb1c5ae0b0fe5ca3711c0cfe6897636f167859"
+content-hash = "6a3cb326541c8303a1a85702949a5da22e6d23288fe707e8f9b0fad0cb028c74"
 
 [metadata.files]
 asgiref = [
@@ -490,8 +490,8 @@ pytest-watch = [
     {file = "pytest-watch-4.2.0.tar.gz", hash = "sha256:06136f03d5b361718b8d0d234042f7b2f203910d8568f63df2f866b547b3d4b9"},
 ]
 python-dateutil = [
-    {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
-    {file = "python_dateutil-2.8.1-py2.py3-none-any.whl", hash = "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"},
+    {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
+    {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 python-multipart = [
     {file = "python-multipart-0.0.5.tar.gz", hash = "sha256:f7bb5f611fc600d15fa47b3974c8aa16e93724513b49b5f95c81e6624c83fa43"},
@@ -509,8 +509,8 @@ sqlparse = [
     {file = "sqlparse-0.4.1.tar.gz", hash = "sha256:0f91fd2e829c44362cbcfab3e9ae12e22badaa8a29ad5ff599f9ec109f0454e8"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.68.2.tar.gz", hash = "sha256:1118dd905dfe337c3a43fa7e57fdfab4eab7d59e9caaf1a9bada39d4786f19fa"},
-    {file = "strawberry_graphql-0.68.2-py3-none-any.whl", hash = "sha256:2e7a52d91e0f13556fb03371634a7354a3a3cef83237d1409f34bf0e05db6f69"},
+    {file = "strawberry-graphql-0.70.0.tar.gz", hash = "sha256:6b2a46cb4bdadf6f78a7b1dd2eed46ffa4b47af02fbad4b33af0b07f0e73cc81"},
+    {file = "strawberry_graphql-0.70.0-py3-none-any.whl", hash = "sha256:db9207fe0e2b6fed185d2e369a8ea04eb96f005f0470826bca8feeb2b4cb553e"},
 ]
 toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},

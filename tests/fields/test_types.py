@@ -1,12 +1,18 @@
-import datetime, decimal, enum, uuid
+import datetime
+import decimal
+import enum
+import uuid
+from typing import List
+
+import django
 import pytest
 import strawberry
+from django.db import models
+from strawberry.enum import EnumDefinition, EnumValue
+from strawberry.type import StrawberryOptional, StrawberryList
+
 import strawberry_django
 from strawberry_django import auto, fields
-from django.db import models
-import django
-from .. import utils
-from typing import List
 
 
 class FieldTypesModel(models.Model):
@@ -33,11 +39,11 @@ class FieldTypesModel(models.Model):
     url = models.URLField()
     uuid = models.UUIDField()
     foreign_key = models.ForeignKey('FieldTypesModel', blank=True,
-            related_name='related_foreign_key', on_delete=models.CASCADE)
+                                    related_name='related_foreign_key', on_delete=models.CASCADE)
     one_to_one = models.OneToOneField('FieldTypesModel', blank=True,
-            related_name='related_one_to_one', on_delete=models.CASCADE)
+                                      related_name='related_one_to_one', on_delete=models.CASCADE)
     many_to_many = models.ManyToManyField('FieldTypesModel',
-            related_name='related_many_to_many')
+                                          related_name='related_many_to_many')
 
 
 def test_field_types():
@@ -81,7 +87,7 @@ def test_field_types():
         ('generic_ip_address', str),
         ('integer', int),
         ('image', strawberry_django.DjangoImageType),
-        ('null_boolean', bool),
+        ('null_boolean', StrawberryOptional(bool)),
         ('positive_big_integer', int),
         ('positive_integer', int),
         ('positive_small_integer', int),
@@ -112,7 +118,9 @@ def test_type_extension():
     @strawberry_django.type(FieldTypesModel)
     class Type:
         char: auto
-        text: bytes # override type
+        text: bytes  # override type
+
+        @staticmethod
         @strawberry.field
         def my_field() -> int:
             return 0
@@ -141,7 +149,8 @@ def test_override_field_type():
         char: EnumType
 
     assert [(f.name, f.type) for f in fields(Type)] == [
-        ('char', EnumType),
+        ('char', EnumDefinition(wrapped_cls=EnumType, name='EnumType', values=[EnumValue(name='a', value='A')],
+                                description=None)),
     ]
 
 
@@ -170,10 +179,10 @@ def test_related_fields():
     assert [(f.name, f.type or f.child.type, f.is_list) for f in fields(Type)] == [
         ('foreign_key', strawberry_django.DjangoModelType, False),
         ('one_to_one', strawberry_django.DjangoModelType, False),
-        ('many_to_many', strawberry_django.DjangoModelType, True),
-        ('related_foreign_key', strawberry_django.DjangoModelType, True),
-        ('related_one_to_one', strawberry_django.DjangoModelType, False),
-        ('related_many_to_many', strawberry_django.DjangoModelType, True),
+        ('many_to_many', StrawberryList(strawberry_django.DjangoModelType), True),
+        ('related_foreign_key', StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)), True),
+        ('related_one_to_one', StrawberryOptional(strawberry_django.DjangoModelType), False),
+        ('related_many_to_many', StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)), True),
     ]
 
 
@@ -187,13 +196,13 @@ def test_related_input_fields():
         related_one_to_one: auto
         related_many_to_many: auto
 
-    assert [(f.name, f.type, f.is_optional) for f in fields(Input)] == [
-        ('foreign_key', strawberry_django.OneToManyInput, True),
-        ('one_to_one', strawberry_django.OneToOneInput, True),
-        ('many_to_many', strawberry_django.ManyToManyInput, True),
-        ('related_foreign_key', strawberry_django.ManyToOneInput, True),
-        ('related_one_to_one', strawberry_django.OneToOneInput, True),
-        ('related_many_to_many', strawberry_django.ManyToManyInput, True),
+    assert [(f.name, f.type_annotation, f.is_optional) for f in fields(Input)] == [
+        ('foreign_key', StrawberryOptional(strawberry_django.OneToManyInput), True),
+        ('one_to_one', StrawberryOptional(strawberry_django.OneToOneInput), True),
+        ('many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput), True),
+        ('related_foreign_key', StrawberryOptional(strawberry_django.ManyToOneInput), True),
+        ('related_one_to_one', StrawberryOptional(strawberry_django.OneToOneInput), True),
+        ('related_many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput), True),
     ]
 
 
@@ -212,7 +221,7 @@ def test_inherit_type():
     assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
         ('char', str),
         ('one_to_one', Type),
-        ('many_to_many', Type),
+        ('many_to_many', StrawberryList(Type)),
     ]
 
 
@@ -232,9 +241,9 @@ def test_inherit_input():
 
     assert [(f.name, f.type) for f in fields(Input)] == [
         ('char', str),
-        ('one_to_one', strawberry_django.OneToOneInput),
-        ('many_to_many', strawberry_django.ManyToManyInput),
-        ('id', strawberry.ID),
+        ('one_to_one', StrawberryOptional(strawberry_django.OneToOneInput)),
+        ('many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput)),
+        ('id', StrawberryOptional(strawberry.ID)),
         ('my_data', str),
     ]
 
@@ -256,8 +265,8 @@ def test_inherit_partial_input():
         pass
 
     assert [(f.name, f.type or f.child.type, f.is_optional) for f in fields(PartialInput)] == [
-        ('char', str, True),
-        ('one_to_one', strawberry_django.OneToOneInput, True),
+        ('char', StrawberryOptional(str), True),
+        ('one_to_one', StrawberryOptional(strawberry_django.OneToOneInput), True),
     ]
 
 
@@ -273,6 +282,6 @@ def test_type_from_type():
     FruitInput = strawberry_django.types.from_type(Type, is_input=True)
     assert [(f.name, f.type) for f in fields(FruitInput)] == [
         ('char', str),
-        ('one_to_one', strawberry_django.OneToOneInput),
-        ('many_to_many', strawberry_django.ManyToManyInput),
+        ('one_to_one', StrawberryOptional(strawberry_django.OneToOneInput)),
+        ('many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput)),
     ]

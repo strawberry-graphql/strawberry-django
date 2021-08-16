@@ -1,13 +1,17 @@
+from typing import Optional
+
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument, UNSET
 
+
 def argument(name, type_, is_optional=True, default=UNSET):
+    if is_optional:
+        type_ = Optional[type_]
     return StrawberryArgument(
         default=default,
         description=None,
         graphql_name=None,
-        is_optional=is_optional,
-        origin=None,
         python_name=name,
-        type_=type_,
+        type_annotation=StrawberryAnnotation(type_),
     )
 
