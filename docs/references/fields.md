@@ -20,7 +20,6 @@ class Fruit:
     name: str
 ```
 
-
 ## Relationships
 
 All one to one, one to many, many to one and many to many relationship types are supported. `typing.List` is used for many relationship. Default resolver of `strawberry_django.fields()` resolves the relationship based on given type information.

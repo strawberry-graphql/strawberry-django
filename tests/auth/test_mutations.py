@@ -1,15 +1,16 @@
 from typing import Optional
 
+import django.contrib.auth as django_auth
 import pytest
 import strawberry
-import strawberry_django
-import django.contrib.auth as django_auth
-from strawberry_django import auto, auth
 from django.core.exceptions import ObjectDoesNotExist
 
+import strawberry_django
+from strawberry_django import auth, auto
 from tests import utils
 
 UserModel = django_auth.get_user_model()
+
 
 @strawberry_django.type(UserModel)
 class User:
@@ -26,9 +27,7 @@ class UserInput:
 
 @pytest.fixture
 def user(db, group, tag):
-    user = UserModel.objects.create_user(
-        username="user", password="password"
-    )
+    user = UserModel.objects.create_user(username="user", password="password")
     return user
 
 
@@ -107,6 +106,7 @@ def test_register_new_user(mutation, user, context):
     assert result.data["register"] == {"username": "new_user"}
 
     assert UserModel.objects.get(username="new_user")
+
 
 def test_register_with_invalid_password(mutation, user, context):
     result = mutation(

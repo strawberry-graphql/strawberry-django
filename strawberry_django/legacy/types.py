@@ -1,10 +1,12 @@
-from strawberry.arguments import is_unset, UNSET
 from typing import List, Optional
+
 import strawberry
-from . import utils
-from .fields import DjangoField, field as strawberry_django_field
+from strawberry.arguments import UNSET, is_unset
 
 from ..fields.types import field_type_map, is_optional
+from .fields import DjangoField
+from .fields import field as strawberry_django_field
+
 
 class LazyModelType(strawberry.LazyType):
     def __init__(self, field, type_register, is_input):
@@ -19,8 +21,10 @@ class LazyModelType(strawberry.LazyType):
             return field_type
 
         db_field_type = type(self.field)
-        raise TypeError(f"No type defined for field '{db_field_type.__name__}'"
-                f" which has related model '{model._meta.object_name}'")
+        raise TypeError(
+            f"No type defined for field '{db_field_type.__name__}'"
+            f" which has related model '{model._meta.object_name}'"
+        )
 
 
 def get_field_type(field, type_register, is_input):
@@ -43,8 +47,10 @@ def get_field_type(field, type_register, is_input):
                 return field_type
 
             # TODO: show field name
-            raise TypeError(f"No type defined for field '{db_field_type.__name__}'"
-                    f" which has related model '{model._meta.object_name}'")
+            raise TypeError(
+                f"No type defined for field '{db_field_type.__name__}'"
+                f" which has related model '{model._meta.object_name}'"
+            )
 
     field_type = field_type_map.get(db_field_type, UNSET)
     if not is_unset(field_type):
@@ -76,9 +82,11 @@ def process_fields(fields, model):
         if isinstance(field, str):
             field_name = field
         else:
-            raise TypeError('Type of field parameter should be str')
+            raise TypeError("Type of field parameter should be str")
         if field_name not in model_field_names:
-            raise AttributeError(f"Django model '{model._meta.object_name}' has no field '{field_name}'")
+            raise AttributeError(
+                f"Django model '{model._meta.object_name}' has no field '{field_name}'"
+            )
         field_names.append(field_name)
     return field_names
 
@@ -87,7 +95,7 @@ def get_model_fields(cls, model, fields, types, is_input, partial):
     if fields == []:
         return []
 
-    field_names = process_fields(fields,  model)
+    field_names = process_fields(fields, model)
     type_register = types
 
     model_fields = []
@@ -103,11 +111,13 @@ def get_model_fields(cls, model, fields, types, is_input, partial):
                 if field.many_to_many or field.one_to_many:
                     field_type = Optional[List[strawberry.ID]]
                     field_value = UNSET
-                    model_fields.extend([
-                        (f'{field.name}_add', field_type, field_value),
-                        (f'{field.name}_set', field_type, field_value),
-                        (f'{field.name}_remove', field_type, field_value),
-                    ])
+                    model_fields.extend(
+                        [
+                            (f"{field.name}_add", field_type, field_value),
+                            (f"{field.name}_set", field_type, field_value),
+                            (f"{field.name}_remove", field_type, field_value),
+                        ]
+                    )
                 else:
                     field_name = field.attname
                     field_type = strawberry.ID

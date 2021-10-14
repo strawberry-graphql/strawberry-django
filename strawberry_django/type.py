@@ -9,8 +9,11 @@ from strawberry.arguments import UNSET
 from . import utils
 from .fields.field import StrawberryDjangoField
 from .fields.types import (
+    auto,
+    get_model_field,
     is_optional,
-    get_model_field, resolve_model_field_type, resolve_model_field_name, auto,
+    resolve_model_field_name,
+    resolve_model_field_type,
 )
 
 _type = type
@@ -19,7 +22,7 @@ _type = type
 def get_type_attr(type_, field_name):
     attr = getattr(type_, field_name, UNSET)
     if utils.is_unset(attr):
-        attr = getattr(type_, '__dataclass_fields__', {}).get(field_name, UNSET)
+        attr = getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
     return attr
 
 
@@ -37,7 +40,7 @@ def get_field(django_type, field_name, field_annotation=None):
         )
 
     field.python_name = field_name
-    if field_name in django_type.origin.__dict__.get('__annotations__', {}):
+    if field_name in django_type.origin.__dict__.get("__annotations__", {}):
         # store origin django type for futher usage
         field.origin_django_type = django_type
 
@@ -51,8 +54,9 @@ def get_field(django_type, field_name, field_annotation=None):
         # is used to access the field data in resolvers
         django_name = field.django_name or field_name
         model_field = get_model_field(django_type.model, django_name)
-        field.django_name = resolve_model_field_name(model_field,
-                                                     django_type.is_input, django_type.is_filter)
+        field.django_name = resolve_model_field_name(
+            model_field, django_type.is_input, django_type.is_filter
+        )
         field.is_relation = model_field.is_relation
     except django.core.exceptions.FieldDoesNotExist:
         if field.django_name or field.is_auto:
@@ -121,14 +125,14 @@ class StrawberryDjangoType:
 
 
 def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **kwargs):
-    original_annotations = cls.__dict__.get('__annotations__', {})
+    original_annotations = cls.__dict__.get("__annotations__", {})
 
     django_type = StrawberryDjangoType(
         origin=cls,
         model=model,
-        is_input=kwargs.get('is_input', False),
-        is_partial=kwargs.pop('partial', False),
-        is_filter=kwargs.pop('is_filter', False),
+        is_input=kwargs.get("is_input", False),
+        is_partial=kwargs.pop("partial", False),
+        is_filter=kwargs.pop("is_filter", False),
         filters=filters,
         order=order,
         pagination=pagination,
@@ -139,9 +143,11 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
     # update annotations and fields
     cls.__annotations__ = cls_annotations = {}
     for field in fields:
-        annotation = field.type \
-            if field.type_annotation is None \
+        annotation = (
+            field.type
+            if field.type_annotation is None
             else field.type_annotation.annotation
+        )
         if annotation is None:
             annotation = StrawberryAnnotation(auto)
         cls_annotations[field.name] = annotation
@@ -157,8 +163,9 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
 
 
 def type(model, *, filters=UNSET, **kwargs):
-    if 'fields' in kwargs or 'types' in kwargs:
+    if "fields" in kwargs or "types" in kwargs:
         from .legacy.type import type as type_legacy
+
         return type_legacy(model, **kwargs)
 
     def wrapper(cls):

@@ -52,6 +52,7 @@ schema = strawberry.Schema(query=Query)
 ```
 
 Finally we add `AsyncGraphQLView` view into our urls so that we can start making first queries.
+
 ```python
 # urls.py
 from django.urls import include, path
@@ -67,7 +68,10 @@ After that, once the development server is running, you can read your fruits fro
 
 ```graphql
 query {
-  fruits { name color }
+  fruits {
+    name
+    color
+  }
 }
 # -> fruits: [{ name: "strawberry", color: "red" }]
 ```
@@ -111,6 +115,7 @@ class Color:
 ```
 
 This generates schema like this
+
 ```graphql
 type Color {
   id: ID!

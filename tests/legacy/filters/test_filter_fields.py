@@ -1,7 +1,8 @@
-import pytest
-import strawberry_django
-from django.db import models
 import django_filters
+import pytest
+from django.db import models
+
+import strawberry_django
 
 
 class Related(models.Model):
@@ -36,20 +37,22 @@ def test_should_accept_string_formatted_inputs():
     related = Related.objects.create()
 
     # Should accept string formatted inputs
-    filter_instance = Filter(**{
-        "reverse_related": f"{related.pk}",
-        "one_related": f"{related.pk}",
-        "many_related": [related.pk],
-        "boolean": "true",
-        "char": "Some Text",
-        "date": "2021-01-01",
-        "date_time": "2021-01-01T00:09:00",
-        "decimal": "1.01",
-        "float": "1.239058",
-        "integer": "5231",
-        "time": "00:09:00",
-        "uuid": "6c9d3505-93c2-4d6c-af70-7a1b46a8bcb9",
-    })
+    filter_instance = Filter(
+        **{
+            "reverse_related": f"{related.pk}",
+            "one_related": f"{related.pk}",
+            "many_related": [related.pk],
+            "boolean": "true",
+            "char": "Some Text",
+            "date": "2021-01-01",
+            "date_time": "2021-01-01T00:09:00",
+            "decimal": "1.01",
+            "float": "1.239058",
+            "integer": "5231",
+            "time": "00:09:00",
+            "uuid": "6c9d3505-93c2-4d6c-af70-7a1b46a8bcb9",
+        }
+    )
     strawberry_django.filters.apply(filter_instance, qs)
 
 
@@ -58,14 +61,16 @@ def test_should_accept_native_inputs():
     qs = FilterModel.objects.all()
     related = Related.objects.create()
 
-    filter_instance = Filter(**{
-        "reverse_related": related.pk,
-        "one_related": related.pk,
-        "boolean": True,
-        "decimal": 1.01,
-        "float": 1.239058,
-        "integer": 5231,
-    })
+    filter_instance = Filter(
+        **{
+            "reverse_related": related.pk,
+            "one_related": related.pk,
+            "boolean": True,
+            "decimal": 1.01,
+            "float": 1.239058,
+            "integer": 5231,
+        }
+    )
     strawberry_django.filters.apply(filter_instance, qs)
 
 
@@ -74,24 +79,27 @@ def test_should_raise_filterset_error_for_invalid_input():
     qs = FilterModel.objects.all()
 
     # Should raise for invalid field
-    filter_instance = Filter(**{
-        "date_time": "2021-25-29T00:09:00",
-    })
+    filter_instance = Filter(
+        **{
+            "date_time": "2021-25-29T00:09:00",
+        }
+    )
     with pytest.raises(strawberry_django.legacy.filters.InvalidFilterError):
         strawberry_django.filters.apply(filter_instance, qs)
 
 
 @pytest.mark.django_db
 def test_lookup_definition_in_filterset_meta():
-
     @strawberry_django.filter
     class LookupFilter(django_filters.FilterSet):
         class Meta:
             model = FilterModel
-            fields = {'char': ['iexact']}
+            fields = {"char": ["iexact"]}
 
     qs = FilterModel.objects.all()
-    filter_instance = LookupFilter(**{
-        "char__iexact": "Some text",
-    })
+    filter_instance = LookupFilter(
+        **{
+            "char__iexact": "Some text",
+        }
+    )
     strawberry_django.filters.apply(filter_instance, qs)

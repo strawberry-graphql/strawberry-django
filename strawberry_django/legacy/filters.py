@@ -1,9 +1,9 @@
 import functools
-from typing import Type, Optional, List
+from typing import List, Optional, Type
+
 import strawberry
 from graphql import GraphQLError
 from strawberry.arguments import UNSET, is_unset
-
 
 __all__ = [
     "InvalidFilterError",
@@ -17,8 +17,9 @@ __all__ = [
 class DummyDjangoFilters:
     def __getattribute__(self, attr):
         # make mocker happy
-        if attr == '__enter__':
+        if attr == "__enter__":
             raise AttributeError
+
 
 try:
     import django_filters
@@ -35,6 +36,7 @@ def assert_django_filters_installed(fn):
                 "See https://django-filter.readthedocs.io/"
             )
         return fn(*args, **kwargs)
+
     return wrapper
 
 
@@ -61,7 +63,6 @@ filter_field_type_map = {
     django_filters.NumberFilter: Optional[str],
     django_filters.TimeFilter: Optional[str],
     django_filters.UUIDFilter: Optional[str],
-
     # Not implemented because its difficult or impossible to create input types:
     # django_filters.AllValuesFilter
     # django_filters.AllValuesMultipleFilter

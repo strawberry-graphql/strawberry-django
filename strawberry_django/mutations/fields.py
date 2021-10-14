@@ -6,15 +6,21 @@ from strawberry.arguments import StrawberryArgument, is_unset
 from strawberry.type import StrawberryList, StrawberryOptional
 
 from .. import utils
-from ..fields.field import StrawberryDjangoFieldBase, StrawberryDjangoFieldFilters, StrawberryField
-from ..fields.types import OneToManyInput, ManyToOneInput, ManyToManyInput
+from ..fields.field import (
+    StrawberryDjangoFieldBase,
+    StrawberryDjangoFieldFilters,
+    StrawberryField,
+)
+from ..fields.types import ManyToManyInput, ManyToOneInput, OneToManyInput
 from ..resolvers import django_resolver
 
 
 class DjangoMutationBase:
     def __init__(self, input_type, **kwargs):
         self.input_type = input_type
-        super().__init__(graphql_name=None, python_name=None, type_annotation=None, **kwargs)
+        super().__init__(
+            graphql_name=None, python_name=None, type_annotation=None, **kwargs
+        )
 
     @property
     def is_optional(self):
@@ -22,19 +28,21 @@ class DjangoMutationBase:
 
     @property
     def is_list(self):
-        return isinstance(self.type, StrawberryList) or \
-               (self.is_optional and isinstance(self.type.of_type, StrawberryList))
+        return isinstance(self.type, StrawberryList) or (
+            self.is_optional and isinstance(self.type.of_type, StrawberryList)
+        )
 
     @property
     def arguments(self):
         if self.input_type:
-            assert self.django_model == utils.get_django_model(self.input_type), (
-                'Input and output types should be from the same Django model')
+            assert self.django_model == utils.get_django_model(
+                self.input_type
+            ), "Input and output types should be from the same Django model"
 
         arguments = []
         if self.input_type:
             is_list = self.is_list and isinstance(self, DjangoCreateMutation)
-            arguments.append(get_argument('data', self.input_type, is_list))
+            arguments.append(get_argument("data", self.input_type, is_list))
         return arguments + super().arguments
 
     @django_resolver
@@ -43,10 +51,8 @@ class DjangoMutationBase:
 
 
 class DjangoCreateMutation(
-    DjangoMutationBase,
-    StrawberryDjangoFieldBase,
-    StrawberryField):
-
+    DjangoMutationBase, StrawberryDjangoFieldBase, StrawberryField
+):
     def create(self, data):
         input_data = get_input_data(self.input_type, data)
         instance = self.django_model.objects.create(**input_data)
@@ -65,8 +71,8 @@ class DjangoUpdateMutation(
     DjangoMutationBase,
     StrawberryDjangoFieldFilters,
     StrawberryDjangoFieldBase,
-    StrawberryField):
-
+    StrawberryField,
+):
     @transaction.atomic
     def resolver(self, info, source, data, **kwargs):
         queryset = self.django_model.objects.all()
@@ -81,8 +87,8 @@ class DjangoDeleteMutation(
     DjangoMutationBase,
     StrawberryDjangoFieldFilters,
     StrawberryDjangoFieldBase,
-    StrawberryField):
-
+    StrawberryField,
+):
     @transaction.atomic
     def resolver(self, info, source, **kwargs):
         queryset = self.django_model.objects.all()
@@ -109,7 +115,6 @@ def get_argument(name, type_, is_list=False):
 
 def get_input_data(input_type, data):
     input_data = {}
-    m2m_data = {}
     for field in input_type._type_definition.fields:
         value = getattr(data, field.name)
         if isinstance(value, (ManyToOneInput, ManyToManyInput)):

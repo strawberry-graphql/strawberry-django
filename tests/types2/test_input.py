@@ -3,6 +3,7 @@ from strawberry.type import StrawberryOptional
 
 import strawberry_django
 from strawberry_django import auto, fields
+
 from .test_type import TypeModel
 
 
@@ -14,9 +15,9 @@ def test_input():
         string: auto
 
     assert [(f.name, f.type) for f in fields(Input)] == [
-        ('id', StrawberryOptional(strawberry.ID)),
-        ('boolean', bool),
-        ('string', str),
+        ("id", StrawberryOptional(strawberry.ID)),
+        ("boolean", bool),
+        ("string", str),
     ]
 
 
@@ -31,9 +32,9 @@ def test_inherit(testtype):
         string: auto
 
     assert [(f.name, f.type) for f in fields(Input)] == [
-        ('id', StrawberryOptional(strawberry.ID)),
-        ('boolean', bool),
-        ('string', str),
+        ("id", StrawberryOptional(strawberry.ID)),
+        ("boolean", bool),
+        ("string", str),
     ]
 
 
@@ -48,12 +49,12 @@ def test_relationship(testtype):
         related_many_to_many: auto
 
     assert [(f.name, f.type) for f in fields(Input)] == [
-        ('foreign_key', StrawberryOptional(strawberry_django.OneToManyInput)),
-        ('related_foreign_key', StrawberryOptional(strawberry_django.ManyToOneInput)),
-        ('one_to_one', StrawberryOptional(strawberry_django.OneToOneInput)),
-        ('related_one_to_one', StrawberryOptional(strawberry_django.OneToOneInput)),
-        ('many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput)),
-        ('related_many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput)),
+        ("foreign_key", StrawberryOptional(strawberry_django.OneToManyInput)),
+        ("related_foreign_key", StrawberryOptional(strawberry_django.ManyToOneInput)),
+        ("one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
+        ("related_one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
+        ("many_to_many", StrawberryOptional(strawberry_django.ManyToManyInput)),
+        ("related_many_to_many", StrawberryOptional(strawberry_django.ManyToManyInput)),
     ]
 
 
@@ -66,18 +67,18 @@ def test_relationship_inherit(testtype):
         related_one_to_one: auto
         many_to_many: auto
         related_many_to_many: auto
-        another_name: auto = strawberry_django.field(field_name='foreign_key')
+        another_name: auto = strawberry_django.field(field_name="foreign_key")
 
     @strawberry_django.input(TypeModel)
     class Input(Base):
         pass
 
     assert [(f.name, f.type) for f in fields(Input)] == [
-        ('foreign_key', StrawberryOptional(strawberry_django.OneToManyInput)),
-        ('related_foreign_key', StrawberryOptional(strawberry_django.ManyToOneInput)),
-        ('one_to_one', StrawberryOptional(strawberry_django.OneToOneInput)),
-        ('related_one_to_one', StrawberryOptional(strawberry_django.OneToOneInput)),
-        ('many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput)),
-        ('related_many_to_many', StrawberryOptional(strawberry_django.ManyToManyInput)),
-        ('another_name', StrawberryOptional(strawberry_django.OneToManyInput)),
+        ("foreign_key", StrawberryOptional(strawberry_django.OneToManyInput)),
+        ("related_foreign_key", StrawberryOptional(strawberry_django.ManyToOneInput)),
+        ("one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
+        ("related_one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
+        ("many_to_many", StrawberryOptional(strawberry_django.ManyToManyInput)),
+        ("related_many_to_many", StrawberryOptional(strawberry_django.ManyToManyInput)),
+        ("another_name", StrawberryOptional(strawberry_django.OneToManyInput)),
     ]

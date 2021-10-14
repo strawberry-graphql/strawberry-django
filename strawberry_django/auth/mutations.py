@@ -1,9 +1,8 @@
+import strawberry
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
-import strawberry
 
-from strawberry_django.mutations.fields import get_input_data
-from strawberry_django.mutations.fields import DjangoCreateMutation
+from strawberry_django.mutations.fields import DjangoCreateMutation, get_input_data
 
 from ..resolvers import django_resolver
 

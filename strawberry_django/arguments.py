@@ -1,7 +1,7 @@
 from typing import Optional
 
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument, UNSET
+from strawberry.arguments import UNSET, StrawberryArgument
 
 
 def argument(name, type_, is_optional=True, default=UNSET):
@@ -14,4 +14,3 @@ def argument(name, type_, is_optional=True, default=UNSET):
         python_name=name,
         type_annotation=StrawberryAnnotation(type_),
     )
-

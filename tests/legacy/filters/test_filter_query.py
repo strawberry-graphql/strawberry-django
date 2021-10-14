@@ -1,11 +1,12 @@
 from typing import List, Optional
 
+import django_filters
 import pytest
 import strawberry
-import strawberry_django
 from django.db.models import Q
 from strawberry.arguments import UNSET
-import django_filters
+
+import strawberry_django
 from tests import models
 
 
@@ -25,15 +26,14 @@ def execute():
 
         def filter_search(self, queryset, name, value):
             return queryset.filter(
-                Q(name__icontains=value) |
-                Q(group__name__icontains=value) |
-                Q(tag__name__icontains=value)
+                Q(name__icontains=value)
+                | Q(group__name__icontains=value)
+                | Q(tag__name__icontains=value)
             )
 
         class Meta:
             model = models.User
             fields = ["name", "search"]
-
 
     @strawberry.type
     class Query:
