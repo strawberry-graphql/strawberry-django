@@ -8,7 +8,16 @@ DATABASES = {
 }
 
 INSTALLED_APPS = [
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'tests',
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "tests",
+]
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 2,
+        },
+    }
 ]

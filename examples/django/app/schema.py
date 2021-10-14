@@ -3,9 +3,19 @@ import strawberry_django
 from strawberry_django import mutations
 from typing import List
 from .types import (
-    Fruit, FruitInput, FruitPartialInput, FruitFilter,
-    Color, ColorInput, ColorPartialInput, ColorFilter,
+    Fruit,
+    FruitInput,
+    FruitPartialInput,
+    FruitFilter,
+    Color,
+    ColorInput,
+    ColorPartialInput,
+    ColorFilter,
+    UserInput,
+    User,
 )
+import strawberry_django.auth as auth
+
 
 @strawberry.type
 class Query:
@@ -14,6 +24,7 @@ class Query:
 
     color: Color = strawberry_django.field()
     colors: List[Color] = strawberry_django.field()
+
 
 @strawberry.type
 class Mutation:
@@ -26,5 +37,8 @@ class Mutation:
     createColors: List[Color] = mutations.create(ColorInput)
     updateColors: List[Color] = mutations.update(ColorPartialInput)
     deleteColors: List[Color] = mutations.delete()
+
+    register: User = auth.register(UserInput)
+
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

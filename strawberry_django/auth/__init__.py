@@ -1,2 +1,2 @@
-from .mutations import login, logout
+from .mutations import login, logout, register
 from .queries import current_user
