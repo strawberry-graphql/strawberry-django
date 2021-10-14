@@ -15,11 +15,6 @@ from ..resolvers import django_resolver
 
 class StrawberryDjangoFieldBase:
     def get_queryset(self, queryset, info, **kwargs):
-        type_ = self.type or self.child.type
-        type_ = utils.unwrap_type(type_)
-        get_queryset = getattr(type_, 'get_queryset', None)
-        if get_queryset:
-            queryset = get_queryset(self, queryset, info, **kwargs)
         return queryset
 
     @property
@@ -125,6 +120,14 @@ class StrawberryDjangoField(
                 result = result.get()
 
         return result
+
+    def get_queryset(self, queryset, info, order=UNSET, **kwargs):
+        type_ = self.type or self.child.type
+        type_ = utils.unwrap_type(type_)
+        get_queryset = getattr(type_, 'get_queryset', None)
+        if get_queryset:
+            queryset = get_queryset(self, queryset, info, **kwargs)
+        return super().get_queryset(queryset, info, order, **kwargs)
 
 
 def field(resolver=None, *, name=None, field_name=None, filters=UNSET, default=UNSET, **kwargs):
