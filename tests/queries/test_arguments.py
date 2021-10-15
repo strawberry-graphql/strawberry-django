@@ -2,7 +2,7 @@ import pytest
 
 from strawberry_django.legacy.queries.arguments import resolve_type_args
 
-from ..importmodels import types
+from .. import models, types
 
 
 def test_types():

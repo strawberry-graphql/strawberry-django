@@ -43,19 +43,6 @@ def mutation(db):
     return utils.generate_query(mutation=Mutation)
 
 
-@pytest.fixture
-def context(mocker):
-    class Session(dict):
-        def cycle_key(self):
-            pass
-
-        def flush(self):
-            pass
-
-    context = mocker.Mock()
-    context.request.session = Session()
-    django_auth.logout(context.request)
-    return context
 
 
 def test_login(mutation, user, context):

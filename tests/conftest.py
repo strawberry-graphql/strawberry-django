@@ -5,6 +5,7 @@ import strawberry_django
 
 from . import models, types, utils
 
+import django.contrib.auth as django_auth
 
 @pytest.fixture
 def fruits(db):
@@ -66,3 +67,18 @@ def schema():
 )
 def testtype(request):
     return request.param
+
+
+@pytest.fixture
+def context(mocker):
+    class Session(dict):
+        def cycle_key(self):
+            pass
+
+        def flush(self):
+            pass
+
+    context = mocker.Mock()
+    context.request.session = Session()
+    django_auth.logout(context.request)
+    return context

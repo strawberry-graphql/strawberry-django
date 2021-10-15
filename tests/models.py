@@ -25,3 +25,4 @@ class FruitType(models.Model):
 
 
 # TODO: remove later
+from .legacy.models import *  # noqa

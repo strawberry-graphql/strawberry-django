@@ -4,7 +4,7 @@ import strawberry
 
 from ..fields.types import is_auto
 from .types import get_model_fields, update_fields
-from .utils import deprecated
+from strawberry_django import utils
 
 _type = type
 
@@ -50,7 +50,7 @@ def type(model, *, fields=None, types=None, **kwargs):
 
 def input(model, *, fields=None, types=None, partial=False, **kwargs):
     if "is_update" in kwargs:
-        deprecated(
+        utils.deprecated(
             "'is_update' argument is deprecated, please use 'partial' instead",
             stacklevel=2,
         )
