@@ -6,6 +6,7 @@ import strawberry_django
 from . import models, types, utils
 
 import django.contrib.auth as django_auth
+UserModel = django_auth.get_user_model()
 
 @pytest.fixture
 def fruits(db):
@@ -27,9 +28,10 @@ def group(db, tag):
     return group
 
 
+
 @pytest.fixture
 def user(db, group, tag):
-    user = models.User.objects.create(name="user", group=group, tag=tag)
+    user = UserModel.objects.create_user(username="user", password="password")
     return user
 
 
@@ -49,13 +51,6 @@ def groups(db):
         models.Group.objects.create(name="group2"),
         models.Group.objects.create(name="group3"),
     ]
-
-
-@pytest.fixture
-def schema():
-    Query = strawberry_django.queries(types.User, types.Group, types.Tag)
-    schema = strawberry.Schema(query=Query)
-    return schema
 
 
 @pytest.fixture(

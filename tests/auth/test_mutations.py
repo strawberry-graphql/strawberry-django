@@ -12,6 +12,7 @@ from tests import utils
 UserModel = django_auth.get_user_model()
 
 
+
 @strawberry_django.type(UserModel)
 class User:
     username: auto
@@ -24,11 +25,6 @@ class UserInput:
     password: auto
     email: auto
 
-
-@pytest.fixture
-def user(db, group, tag):
-    user = UserModel.objects.create_user(username="user", password="password")
-    return user
 
 
 @strawberry.type
