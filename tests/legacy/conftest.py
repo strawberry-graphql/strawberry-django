@@ -1,5 +1,6 @@
 import pytest
 import strawberry
+
 import strawberry_django
 
 from ..utils import generate_query
@@ -43,13 +44,11 @@ def groups(db):
     ]
 
 
-
 @pytest.fixture
 def schema():
     Query = strawberry_django.queries(types.User, types.Group, types.Tag)
     schema = strawberry.Schema(query=Query)
     return schema
-
 
 
 @pytest.fixture

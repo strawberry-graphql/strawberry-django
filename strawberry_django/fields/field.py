@@ -2,7 +2,7 @@ from django.db import models
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
-from strawberry.type import StrawberryContainer, StrawberryList, StrawberryOptional
+from strawberry.type import StrawberryList, StrawberryOptional
 
 from .. import utils
 from ..filters import StrawberryDjangoFieldFilters

@@ -1,12 +1,12 @@
+import django.contrib.auth as django_auth
 import pytest
-import strawberry
 
 import strawberry_django
 
-from . import models, types, utils
+from . import models, utils
 
-import django.contrib.auth as django_auth
 UserModel = django_auth.get_user_model()
+
 
 @pytest.fixture
 def fruits(db):
@@ -26,7 +26,6 @@ def group(db, tag):
     group = models.Group.objects.create(name="group")
     group.tags.add(tag)
     return group
-
 
 
 @pytest.fixture

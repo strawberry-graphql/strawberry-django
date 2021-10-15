@@ -8,11 +8,9 @@ from strawberry_django import mutations
 
 from .types import (
     Color,
-    ColorFilter,
     ColorInput,
     ColorPartialInput,
     Fruit,
-    FruitFilter,
     FruitInput,
     FruitPartialInput,
     User,

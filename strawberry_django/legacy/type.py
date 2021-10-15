@@ -2,9 +2,10 @@ import typing
 
 import strawberry
 
+from strawberry_django import utils
+
 from ..fields.types import is_auto
 from .types import get_model_fields, update_fields
-from strawberry_django import utils
 
 _type = type
 

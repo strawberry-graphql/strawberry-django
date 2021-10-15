@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 import strawberry
 
-from . import queries, utils
+from . import queries
 
 
 @dataclasses.dataclass

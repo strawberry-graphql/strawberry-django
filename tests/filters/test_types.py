@@ -6,7 +6,7 @@ import strawberry_django
 from strawberry_django import auto, fields
 from strawberry_django.filters import DjangoModelFilterInput
 
-from .. import models, utils
+from .. import models
 
 
 def test_filter():

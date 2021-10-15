@@ -3,7 +3,7 @@ from typing import List, Optional
 import strawberry
 
 from ...resolvers import django_resolver
-from .. import fields, hooks, utils
+from .. import hooks, utils
 from ..queries.arguments import resolve_type_args
 from ..type import generate_partial_input
 

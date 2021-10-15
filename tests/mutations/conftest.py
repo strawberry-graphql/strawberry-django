@@ -6,7 +6,7 @@ import strawberry
 import strawberry_django
 from strawberry_django import auto, mutations
 
-from .. import models, types, utils
+from .. import models, utils
 from ..types import (
     Color,
     ColorInput,

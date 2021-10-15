@@ -12,7 +12,6 @@ from tests import utils
 UserModel = django_auth.get_user_model()
 
 
-
 @strawberry_django.type(UserModel)
 class User:
     username: auto
@@ -26,7 +25,6 @@ class UserInput:
     email: auto
 
 
-
 @strawberry.type
 class Mutation:
     login: Optional[User] = auth.login()
@@ -37,8 +35,6 @@ class Mutation:
 @pytest.fixture
 def mutation(db):
     return utils.generate_query(mutation=Mutation)
-
-
 
 
 def test_login(mutation, user, context):

@@ -2,10 +2,9 @@ import enum
 from typing import List, Optional
 
 import strawberry
-from strawberry.arguments import StrawberryArgument, UNSET, is_unset
+from strawberry.arguments import UNSET, StrawberryArgument, is_unset
 
 import strawberry_django
-
 
 from .arguments import argument
 
