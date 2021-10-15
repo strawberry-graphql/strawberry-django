@@ -2,7 +2,7 @@ from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
 import strawberry
 
-from strawberry_django.mutations.fields import get_input_data
+from strawberry_django.mutations.fields import get_input_data, update_m2m
 from strawberry_django.mutations.fields import DjangoCreateMutation
 
 from ..resolvers import django_resolver
@@ -45,5 +45,6 @@ class DjangoRegisterMutation(DjangoCreateMutation):
     def create(self, data):
         input_data = get_input_data(self.input_type, data)
         validate_password(input_data["password"])
-
-        return super().create(data)
+        instance = self.django_model.objects.create_user(**input_data)
+        update_m2m([instance], data)
+        return instance

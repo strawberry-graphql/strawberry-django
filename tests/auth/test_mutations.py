@@ -98,15 +98,18 @@ def test_logout_without_logged_in(mutation, user, context):
 
 
 def test_register_new_user(mutation, user, context):
+    password = "test_password"
     result = mutation(
-        '{ register(data: {username: "new_user", password: "test_password"}) { username } }',
+        '{ register(data: {username: "new_user", password: "%s"}) { username } }' % password,
         context_value=context,
     )
 
     assert not result.errors
     assert result.data["register"] == {"username": "new_user"}
 
-    assert UserModel.objects.get(username="new_user")
+    user = UserModel.objects.get(username="new_user")
+    assert user.id
+    assert user.check_password(password)
 
 def test_register_with_invalid_password(mutation, user, context):
     result = mutation(
