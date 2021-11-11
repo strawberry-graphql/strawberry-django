@@ -6,7 +6,7 @@ Install poetry
 pip install poetry
 ```
 
-Install example example project dependencies, execute migrations, load test data and start development server.
+Install project dependencies, run migrations, load test data and start development server.
 
 ```shell
 cd examples/django

@@ -1,11 +1,12 @@
 from typing import List, Optional
 
+import django_filters
 import pytest
 import strawberry
-import strawberry_django
 from django.db.models import Q
 from strawberry.arguments import UNSET
-import django_filters
+
+import strawberry_django
 from tests import models
 
 
@@ -25,15 +26,14 @@ def execute():
 
         def filter_search(self, queryset, name, value):
             return queryset.filter(
-                Q(name__icontains=value) |
-                Q(group__name__icontains=value) |
-                Q(tag__name__icontains=value)
+                Q(name__icontains=value)
+                | Q(group__name__icontains=value)
+                | Q(tag__name__icontains=value)
             )
 
         class Meta:
             model = models.User
             fields = ["name", "search"]
-
 
     @strawberry.type
     class Query:
@@ -62,7 +62,7 @@ def test_passing_no_filter(execute):
     result = execute(variable_values)
     assert result.data
     assert result.data["userIds"] == [1, 2, 3]
-    assert result.errors == None
+    assert not result.errors
 
 
 @pytest.mark.django_db
@@ -71,7 +71,7 @@ def test_passing_empty_filter(execute):
     result = execute(variable_values)
     assert result.data
     assert result.data.get("userIds", None) == [1, 2, 3]
-    assert result.errors == None
+    assert not result.errors
 
 
 @pytest.mark.django_db
@@ -80,7 +80,7 @@ def test_passing_none_filter(execute):
     result = execute(variable_values)
     assert result.data
     assert result.data.get("userIds", None) == [1, 2, 3]
-    assert result.errors == None
+    assert not result.errors
 
 
 @pytest.mark.django_db
@@ -89,7 +89,7 @@ def test_lookup_char_filter(execute):
     result = execute(variable_values)
     assert result.data
     assert result.data.get("userIds", None) == [1]
-    assert result.errors == None
+    assert not result.errors
 
 
 @pytest.mark.django_db
@@ -98,10 +98,10 @@ def test_custom_char_filter(execute):
     result = execute(variable_values)
     assert result.data
     assert result.data.get("userIds", None) == [2]
-    assert result.errors == None
+    assert not result.errors
 
     variable_values = {"filters": {"search": "group1"}}
     result = execute(variable_values)
     assert result.data
     assert result.data.get("userIds", None) == [1]
-    assert result.errors == None
+    assert not result.errors

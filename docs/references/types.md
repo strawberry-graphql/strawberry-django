@@ -25,7 +25,6 @@ class Color:
 
 Input types can be generated from models by using `strawberry_django.input` decorator. First parameter is always model, where the type is converted from.
 
-
 ```python
 @strawberry_django.input(models.Fruit)
 class FruitInput:

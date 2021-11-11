@@ -1,20 +1,21 @@
-import strawberry
-import strawberry_django
-from strawberry_django import mutations
 from typing import List
+
+import strawberry
+
+import strawberry_django
+import strawberry_django.auth as auth
+from strawberry_django import mutations
+
 from .types import (
-    Fruit,
-    FruitInput,
-    FruitPartialInput,
-    FruitFilter,
     Color,
     ColorInput,
     ColorPartialInput,
-    ColorFilter,
-    UserInput,
+    Fruit,
+    FruitInput,
+    FruitPartialInput,
     User,
+    UserInput,
 )
-import strawberry_django.auth as auth
 
 
 @strawberry.type

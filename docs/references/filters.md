@@ -17,6 +17,7 @@ class Fruit:
 ```
 
 Code above generates following schema
+
 ```schema
 input FruitFilter {
   id: ID
@@ -65,7 +66,6 @@ class ColorFilter:
 
 TODO
 
-
 ## Adding filters to type
 
 All fields and mutations are inheriting filters from type by default.
@@ -75,7 +75,6 @@ All fields and mutations are inheriting filters from type by default.
 class Fruit:
     ...
 ```
-
 
 ## Adding filters directly into field
 

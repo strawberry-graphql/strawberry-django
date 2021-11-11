@@ -1,21 +1,30 @@
+from typing import List
+
 import pytest
 import strawberry
+
 import strawberry_django
-from .. import models
-from .. import types
-from .. import utils
-from .. types import (
-    Fruit, FruitInput, FruitPartialInput,
-    Color, ColorInput, ColorPartialInput,
-    FruitType, FruitTypeInput, FruitTypePartialInput,
-)
 from strawberry_django import auto, mutations
-from typing import List
+
+from .. import models, utils
+from ..types import (
+    Color,
+    ColorInput,
+    ColorPartialInput,
+    Fruit,
+    FruitInput,
+    FruitPartialInput,
+    FruitType,
+    FruitTypeInput,
+    FruitTypePartialInput,
+)
+
 
 @strawberry_django.filters.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
+
 
 @strawberry.type
 class Mutation:
@@ -29,10 +38,11 @@ class Mutation:
     updateColors: List[Color] = mutations.update(ColorPartialInput)
     deleteColors: List[Color] = mutations.delete()
 
-    createFruitType: FruitType= mutations.create(FruitTypeInput)
+    createFruitType: FruitType = mutations.create(FruitTypeInput)
     createFruitTypes: List[FruitType] = mutations.create(FruitTypeInput)
     updateFruitTypes: List[FruitType] = mutations.update(FruitTypePartialInput)
     deleteFruitTypes: List[FruitType] = mutations.delete()
+
 
 @pytest.fixture
 def mutation(db):

@@ -8,9 +8,9 @@ This library provides toolset for GraphQL schema generation from Django models.
 pip install strawberry_graphql_django
 ```
 
-## Simple example
+## Sample project
 
-Let's start from simple Django model called Fruit, which has two attributes, name and color.
+Let's start from Django model called Fruit, which has two attributes, name and color.
 
 ```python
 # models.py
@@ -36,7 +36,7 @@ class Fruit:
     color: str
 ```
 
-Last step is to generate Query type and Schema. Our big brother `strawberry` helps us here.
+Last step is to generate Query type and Schema. Core package `strawberry` helps us here.
 
 ```python
 # schema.py
@@ -52,6 +52,7 @@ schema = strawberry.Schema(query=Query)
 ```
 
 Finally we add `AsyncGraphQLView` view into our urls so that we can start making first queries.
+
 ```python
 # urls.py
 from django.urls import include, path
@@ -67,7 +68,10 @@ After that, once the development server is running, you can read your fruits fro
 
 ```graphql
 query {
-  fruits { name color }
+  fruits {
+    name
+    color
+  }
 }
 # -> fruits: [{ name: "strawberry", color: "red" }]
 ```
@@ -111,6 +115,7 @@ class Color:
 ```
 
 This generates schema like this
+
 ```graphql
 type Color {
   id: ID!
