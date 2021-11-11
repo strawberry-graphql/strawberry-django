@@ -1,15 +1,21 @@
-import datetime, decimal, uuid
+import datetime
+import decimal
+import uuid
+from typing import List, Optional
+
 import django
 import strawberry
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
-from typing import List, Optional
+
 from .. import filters
+
 
 class auto:
     pass
+
 
 @strawberry.type
 class DjangoFileType:
@@ -18,22 +24,27 @@ class DjangoFileType:
     size: int
     url: str
 
+
 @strawberry.type
 class DjangoImageType(DjangoFileType):
     width: int
     height: int
 
+
 @strawberry.type
 class DjangoModelType:
     pk: strawberry.ID
+
 
 @strawberry.input
 class OneToOneInput:
     set: Optional[strawberry.ID]
 
+
 @strawberry.input
 class OneToManyInput:
     set: Optional[strawberry.ID]
+
 
 @strawberry.input
 class ManyToOneInput:
@@ -41,11 +52,13 @@ class ManyToOneInput:
     remove: Optional[List[strawberry.ID]] = UNSET
     set: Optional[List[strawberry.ID]] = UNSET
 
+
 @strawberry.input
 class ManyToManyInput:
     add: Optional[List[strawberry.ID]] = UNSET
     remove: Optional[List[strawberry.ID]] = UNSET
     set: Optional[List[strawberry.ID]] = UNSET
+
 
 field_type_map = {
     fields.AutoField: strawberry.ID,
@@ -82,10 +95,12 @@ field_type_map = {
 }
 
 if django.VERSION >= (3, 1):
-    field_type_map.update({
-        fields.json.JSONField: NotImplemented,
-        fields.PositiveBigIntegerField: int,
-    })
+    field_type_map.update(
+        {
+            fields.json.JSONField: NotImplemented,
+            fields.PositiveBigIntegerField: int,
+        }
+    )
 
 input_field_type_map = {
     fields.files.FileField: NotImplemented,
@@ -98,6 +113,7 @@ input_field_type_map = {
     fields.reverse_related.ManyToManyRel: ManyToManyInput,
 }
 
+
 def resolve_model_field_type(model_field, django_type):
     model_field_type = type(model_field)
     field_type = None
@@ -108,8 +124,10 @@ def resolve_model_field_type(model_field, django_type):
     if field_type is None:
         field_type = field_type_map[model_field_type]
     if field_type is NotImplemented:
-        raise NotImplementedError(f"GraphQL type for model field '{model_field}' has not been implemented")
-    if django_type.is_filter == 'lookups':
+        raise NotImplementedError(
+            f"GraphQL type for model field '{model_field}' has not been implemented"
+        )
+    if django_type.is_filter == "lookups":
         # TODO: could this be moved into filters.py
         if not model_field.is_relation and field_type is not bool:
             field_type = filters.FilterLookup[field_type]
@@ -139,13 +157,18 @@ def get_model_field(model, field_name):
                 return field
             model_field_names.append(model_field_name)
 
-        e.args = '{}, did you mean {}?'.format(e.args[0],
-                ', '.join([f"'{n}'" for n in model_field_names])),
+        e.args = (
+            "{}, did you mean {}?".format(
+                e.args[0], ", ".join([f"'{n}'" for n in model_field_names])
+            ),
+        )
         raise e
 
 
 def is_auto(type_):
-    return (type_.annotation if isinstance(type_, StrawberryAnnotation) else type_) is auto
+    return (
+        type_.annotation if isinstance(type_, StrawberryAnnotation) else type_
+    ) is auto
 
 
 def is_optional(model_field, is_input, partial):

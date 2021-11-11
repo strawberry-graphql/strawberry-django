@@ -1,5 +1,7 @@
-from ..registers import TypeRegister
 from django.db.models.base import ModelBase
+
+from ..registers import TypeRegister
+
 
 def resolve_type_args(args, types=None, is_input=False, single=False):
     arg_types = TypeRegister()
@@ -16,7 +18,7 @@ def resolve_type_args(args, types=None, is_input=False, single=False):
         arg_types.register(model, arg)
 
     if not models:
-        raise TypeError('No model defined for field generator')
+        raise TypeError("No model defined for field generator")
 
     return_args = []
     for model in models:
@@ -29,6 +31,7 @@ def resolve_type_args(args, types=None, is_input=False, single=False):
         if single:
             return return_args[0]
     return return_args
+
 
 def get_type(model, arg_types, types, is_input):
     type = arg_types.get(model, is_input=is_input)

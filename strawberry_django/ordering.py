@@ -1,34 +1,37 @@
 import enum
-import strawberry
-import strawberry_django
-from strawberry.arguments import UNSET, is_unset, StrawberryArgument
-from typing import Optional, List
+from typing import List, Optional
 
-from .arguments import argument
+import strawberry
+from strawberry.arguments import UNSET, StrawberryArgument
+
+import strawberry_django
+
 from . import utils
+from .arguments import argument
 
 
 @strawberry.enum
 class Ordering(enum.Enum):
-    ASC = 'ASC'
-    DESC = 'DESC'
+    ASC = "ASC"
+    DESC = "DESC"
 
 
-def generate_order_args(order, prefix=''):
+def generate_order_args(order, prefix=""):
     args = []
     for field in strawberry_django.fields(order):
         ordering = getattr(order, field.name, utils.UNSET)
         if utils.is_unset(ordering):
             continue
         if ordering == Ordering.ASC:
-            args.append(f'{prefix}{field.name}')
+            args.append(f"{prefix}{field.name}")
         elif ordering == Ordering.DESC:
-            args.append(f'-{prefix}{field.name}')
+            args.append(f"-{prefix}{field.name}")
         else:
-            prefix = f'{prefix}{field.name}__'
+            prefix = f"{prefix}{field.name}__"
             subargs = generate_order_args(ordering, prefix=prefix)
             args.extend(subargs)
     return args
+
 
 def order(model):
     def wrapper(cls):
@@ -38,6 +41,7 @@ def order(model):
             cls.__annotations__[name] = Optional[type_]
             setattr(cls, name, utils.UNSET)
         return strawberry.input(cls)
+
     return wrapper
 
 
@@ -60,9 +64,7 @@ class StrawberryDjangoFieldOrdering:
         arguments = []
         if not self.base_resolver:
             if self.order:
-                arguments.append(
-                    argument('order', self.order)
-                )
+                arguments.append(argument("order", self.order))
         return super().arguments + arguments
 
     def get_queryset(self, queryset, info, order=UNSET, **kwargs):

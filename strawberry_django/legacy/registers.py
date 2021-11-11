@@ -6,7 +6,7 @@ class TypeRegister:
 
     # key can be field name, django model field or django model
     def register(self, key, type=None):
-        django_model = getattr(key, '_django_model', None)
+        django_model = getattr(key, "_django_model", None)
         if type:
             self.add(key, type)
             return type
@@ -19,10 +19,11 @@ class TypeRegister:
         def wrapper(type):
             self.add(key, type)
             return type
+
         return wrapper
 
     def add(self, key, type):
-        if hasattr(type, '_type_definition'):
+        if hasattr(type, "_type_definition"):
             if type._type_definition.is_input:
                 self.inputs[key] = type
             else:

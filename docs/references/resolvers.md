@@ -1,10 +1,11 @@
 # Resolvers
 
-Basic resolvers are generated automatically. Developer just need to define the type and library handles the rest.
+Basic resolvers are generated automatically. Developer need to define the type and library handles the rest.
 
 However it is possible to overwrite them by writing own resolvers.
 
 ## Sync resolvers
+
 ```python
 @strawberry_django.type(models.Color)
 class Color:
@@ -17,6 +18,7 @@ class Color:
 ```
 
 ## Async resolvers
+
 ```python
 from asgiref.sync import sync_to_async
 

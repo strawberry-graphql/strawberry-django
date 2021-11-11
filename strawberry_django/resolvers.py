@@ -1,7 +1,9 @@
-from django.db import models
-from asgiref.sync import sync_to_async
 import functools
 import inspect
+
+from asgiref.sync import sync_to_async
+from django.db import models
+
 from . import utils
 
 

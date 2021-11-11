@@ -1,5 +1,6 @@
 import functools
-from typing import Type, Optional, List
+from typing import List, Optional, Type
+
 import strawberry
 from graphql import GraphQLError
 from strawberry.arguments import UNSET, is_unset
@@ -17,8 +18,9 @@ __all__ = [
 class DummyDjangoFilters:
     def __getattribute__(self, attr):
         # make mocker happy
-        if attr == '__enter__':
+        if attr == "__enter__":
             raise AttributeError
+
 
 try:
     import django_filters
@@ -35,6 +37,7 @@ def assert_django_filters_installed(fn):
                 "See https://django-filter.readthedocs.io/"
             )
         return fn(*args, **kwargs)
+
     return wrapper
 
 
@@ -61,7 +64,6 @@ filter_field_type_map = {
     django_filters.NumberFilter: Optional[str],
     django_filters.TimeFilter: Optional[str],
     django_filters.UUIDFilter: Optional[str],
-
     # Not implemented because its difficult or impossible to create input types:
     # django_filters.AllValuesFilter
     # django_filters.AllValuesMultipleFilter
@@ -87,7 +89,8 @@ class InvalidFilterError(GraphQLError):
 def get_field_type(field_type):
     if type(field_type) != type:
         raise TypeError(
-            f"expected 'type', received {type(field_type)}. Maybe you forgot to call type()?"
+            f"expected 'type', received {type(field_type)}."
+            " Maybe you forgot to call type()?"
         )
     try:
         return filter_field_type_map[field_type]
@@ -99,7 +102,8 @@ def get_field_type(field_type):
 def set_field_type(field_type, to_type):
     if type(field_type) != type:
         raise TypeError(
-            f"expected 'type', received {type(field_type)}. Maybe you forgot to call type()?"
+            f"expected 'type', received {type(field_type)}."
+            " Maybe you forgot to call type()?"
         )
     filter_field_type_map[field_type] = to_type
 
@@ -130,7 +134,8 @@ def apply(filter_instance, queryset):
 def filter(filterset_class: Type[django_filters.FilterSet], name=None):
     if not isinstance(filterset_class, django_filters.filterset.FilterSetMetaclass):
         raise TypeError(
-            "strawberry_django.filter expects a class that inherits django_filters.FilterSet, received %s",
+            "strawberry_django.filter expects a class that inherits django_filters"
+            " .FilterSet, received %s",
             type(filterset_class),
         )
 
