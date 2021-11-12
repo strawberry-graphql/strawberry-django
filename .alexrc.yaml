@@ -1,0 +1,15 @@
+allow:
+  - black
+  - color
+  - colors
+  - execute
+  - executed
+  - executes
+  - execution
+  - failure
+  - hook
+  - hooks
+  - invalid"
+  - period
+  - primitive
+  - special

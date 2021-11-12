@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 89
+per-file-ignores =
+    examples/django/app/settings.py:E501
