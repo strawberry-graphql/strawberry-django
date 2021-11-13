@@ -115,9 +115,18 @@ import strawberry.django
 ```
 
 ## Running unit tests
-```
+
+```shell
 poetry install
 poetry run pytest
+```
+
+## Pre commit hooks
+
+We have a configuration for pre-commit, to add the hook run the following command:
+
+```shell
+pre-commit install
 ```
 
 ## Contributing
