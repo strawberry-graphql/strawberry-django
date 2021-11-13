@@ -6,11 +6,6 @@ from strawberry.arguments import UNSET, StrawberryArgument, is_unset
 from . import utils
 from .arguments import argument
 
-# for backward compatibility
-from .legacy.filters import get_field_type, set_field_type
-
-
-__all__ = ["get_field_type", "set_field_type"]
 
 T = TypeVar("T")
 
@@ -55,22 +50,6 @@ lookup_name_conversion_map = {
 
 
 def filter(model, *, name=None, lookups=False):
-    try:
-        import django_filters
-    except ModuleNotFoundError:
-        pass
-    else:
-        filterset_class = model
-        if isinstance(filterset_class, django_filters.filterset.FilterSetMetaclass):
-            utils.deprecated(
-                "support for 'django-filters' is deprecated and"
-                " will removed in v0.3",
-                stacklevel=2,
-            )
-            from .legacy.filters import filter as filters_filter
-
-            return filters_filter(filterset_class, name)
-
     def wrapper(cls):
         is_filter = lookups and "lookups" or True
         from .type import process_type
@@ -136,15 +115,6 @@ def apply(filters, queryset, pk=UNSET):
         queryset = queryset.filter(pk=pk)
     if is_unset(filters) or filters is None:
         return queryset
-
-    if hasattr(filters, "filterset_class"):
-        utils.deprecated(
-            "support for 'django-filters' is deprecated and" " will removed in v0.3",
-            stacklevel=2,
-        )
-        from .legacy.filters import apply as filters_apply
-
-        return filters_apply(filters, queryset)
 
     filter_method = getattr(filters, "filter", None)
     if filter_method:
