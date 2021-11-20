@@ -1,3 +1,5 @@
+from typing import List
+
 import pytest
 import strawberry
 
@@ -52,7 +54,15 @@ def groups(db):
 
 @pytest.fixture
 def schema():
-    Query = strawberry_django.queries(types.User, types.Group, types.Tag)
+    @strawberry.type
+    class Query:
+        user: types.User = strawberry_django.field()
+        users: List[types.User] = strawberry_django.field()
+        group: types.Group = strawberry_django.field()
+        groups: List[types.Group] = strawberry_django.field()
+        tag: types.Tag = strawberry_django.field()
+        tags: List[types.Tag] = strawberry_django.field()
+
     schema = strawberry.Schema(query=Query)
     return schema
 

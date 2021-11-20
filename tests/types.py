@@ -2,12 +2,8 @@ from typing import List
 
 import strawberry_django
 from strawberry_django import auto
-from tests.legacy.types import Group, GroupInput, Tag, TagInput, User, UserInput
 
 from . import models
-
-
-__all__ = ["User", "Group", "GroupInput", "UserInput", "Tag", "TagInput"]
 
 
 @strawberry_django.type(models.Fruit)
@@ -60,3 +56,27 @@ class ColorPartialInput(ColorInput):
 @strawberry_django.input(models.FruitType, partial=True)
 class FruitTypePartialInput(FruitTypeInput):
     pass
+
+
+@strawberry_django.type(models.User)
+class User:
+    id: auto
+    name: auto
+    group: "Group"
+    tag: "Tag"
+
+
+@strawberry_django.type(models.Group)
+class Group:
+    id: auto
+    name: auto
+    tags: List["Tag"]
+    users: List[User]
+
+
+@strawberry_django.type(models.Tag)
+class Tag:
+    id: auto
+    name: auto
+    groups: List[Group]
+    user: User

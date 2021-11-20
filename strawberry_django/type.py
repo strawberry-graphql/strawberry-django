@@ -164,11 +164,6 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
 
 
 def type(model, *, filters=UNSET, **kwargs):
-    if "fields" in kwargs or "types" in kwargs:
-        from .legacy.type import type as type_legacy
-
-        return type_legacy(model, **kwargs)
-
     def wrapper(cls):
         return process_type(cls, model, filters=filters, **kwargs)
 
