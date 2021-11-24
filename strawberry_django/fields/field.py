@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.db import models
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
@@ -138,7 +140,7 @@ class StrawberryDjangoField(
 
 def field(
     resolver=None, *, name=None, field_name=None, filters=UNSET, default=UNSET, **kwargs
-):
+) -> Any:
     field_ = StrawberryDjangoField(
         python_name=None,
         graphql_name=name,
