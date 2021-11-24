@@ -1,3 +1,5 @@
+from typing import Any
+
 import strawberry
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
@@ -30,17 +32,17 @@ def resolve_logout(info) -> bool:
     return ret
 
 
-def login():
+def login() -> Any:
     mutation = strawberry.mutation(resolver=resolve_login)
     mutation.is_optional = True
     return mutation
 
 
-def logout():
+def logout() -> bool:
     return strawberry.mutation(resolver=resolve_logout)
 
 
-def register(user_type):
+def register(user_type) -> Any:
     return DjangoRegisterMutation(user_type)
 
 
