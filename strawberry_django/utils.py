@@ -12,17 +12,15 @@ from strawberry.type import StrawberryContainer
 __all__ = ["is_unset", "UNSET", "deprecated"]
 
 
-def is_async():
+def is_async() -> bool:
     # django uses the same method to detect async operation
-    # https://github.com/django/django/blob/76c0b32f826469320c59709d31e2f2126dd7c505/django/utils/asyncio.py
+    # https://github.com/django/django/blob/bb076476cf560b988f8d80dbbc4a3c85df54b1b9/django/utils/asyncio.py
     try:
-        event_loop = asyncio.get_event_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
-        pass
+        return False
     else:
-        if event_loop.is_running():
-            return True
-    return False
+        return True
 
 
 def deprecated(msg, stacklevel=1):
