@@ -166,9 +166,13 @@ def get_model_field(model, field_name):
 
 
 def is_auto(type_):
-    return (
-        type_.annotation if isinstance(type_, StrawberryAnnotation) else type_
-    ) is auto
+    if not isinstance(type_, StrawberryAnnotation):
+        return type_ is auto
+    annotation = type_.annotation
+    if isinstance(annotation, str):
+        namespace = type_.namespace
+        return namespace and namespace.get(annotation) is auto
+    return annotation is auto
 
 
 def is_optional(model_field, is_input, partial):
