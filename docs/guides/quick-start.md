@@ -1,6 +1,6 @@
 # Strawberry GraphQL Django extension
 
-This library provides toolset for GraphQL schema generation from Django models.
+This library provides a toolset for GraphQL schema generation from Django models.
 
 ## Installing the package
 
