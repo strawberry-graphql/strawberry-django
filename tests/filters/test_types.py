@@ -33,8 +33,8 @@ def test_lookups():
         types: auto
 
     assert [(f.name, f.type.of_type.__name__) for f in fields(Filter)] == [
-        ("id", "IDFilterLookup"),
-        ("name", "StrFilterLookup"),
+        ("id", "FilterLookup"),
+        ("name", "FilterLookup"),
         ("color", "DjangoModelFilterInput"),
         ("types", "DjangoModelFilterInput"),
     ]
