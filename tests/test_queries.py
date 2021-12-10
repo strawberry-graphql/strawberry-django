@@ -29,13 +29,16 @@ class Group:
     users: List[User]
 
 
-@strawberry_django.type(models.Fruit)
-class BerryFruit:
+@strawberry_django.type(models.Fruit, is_interface=True)
+class FruitInterface:
     id: auto
     name: auto
     name_upper: str
     name_lower: str
 
+
+@strawberry_django.type(models.Fruit)
+class BerryFruit(FruitInterface):
     def get_queryset(self, queryset, info):
         return queryset.filter(name__contains="berry")
 
