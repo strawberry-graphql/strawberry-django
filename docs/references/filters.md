@@ -85,4 +85,3 @@ Filters added into field is overriding default filters of type.
 class Query:
     fruit: Fruit = strawberry.django.field(filters=FruitFilter)
 ```
-

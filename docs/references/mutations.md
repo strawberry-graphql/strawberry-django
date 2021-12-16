@@ -10,7 +10,7 @@ class Mutation:
     createFruits: List[Fruit] = mutations.create(FruitInput)
     updateFruits: List[Fruit] = mutations.update(FruitPartialInput)
     deleteFruits: List[Fruit] = mutations.delete()
-    
+
 schema = strawberry.Schema(mutation=Mutation)
 ```
 
@@ -27,6 +27,6 @@ from strawberry_django import mutations
 class Mutation:
     updateFruits: List[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
     deleteFruits: List[Fruit] = mutations.delete(filters=FruitFilter)
-    
+
 schema = strawberry.Schema(mutation=Mutation)
 ```
