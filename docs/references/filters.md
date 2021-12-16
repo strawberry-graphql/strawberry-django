@@ -1,17 +1,17 @@
 # Filtering
 
 ```python
-import strawberry_django
-from strawberry_django import auto
+import strawberry
+from strawberry.django import auto
 
-@strawberry_django.filters.filter(models.Fruit)
+@strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
 ```
 
 ```python
-@strawberry_django.type(models.Fruit, filters=FruitFilter)
+@strawberry.django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
 ```
@@ -30,7 +30,7 @@ input FruitFilter {
 Lookups can be added to all fields with `lookups=True`.
 
 ```python
-@strawberry_django.filters.filter(models.Fruit, lookups=True)
+@strawberry.django.filters.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
@@ -39,9 +39,9 @@ class FruitFilter:
 Single field lookup can be annotated with `FilterLookup` generic type.
 
 ```python
-from strawberry_django.filters import FilterLookup
+from strawberry.django.filters import FilterLookup
 
-@strawberry_django.filters.filter(models.Fruit)
+@strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:
     name: FilterLookup[str]
 ```
@@ -49,13 +49,13 @@ class FruitFilter:
 ## Filtering over relationship
 
 ```python
-@strawberry_django.filters.filter(models.Fruit)
+@strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
     colors: 'ColorFilter'
 
-@strawberry_django.filters.filter(models.Color)
+@strawberry.django.filters.filter(models.Color)
 class ColorFilter:
     id: auto
     name: auto
@@ -71,7 +71,7 @@ TODO
 All fields and mutations are inheriting filters from type by default.
 
 ```python
-@strawberry_django.type(models.Fruit, filters=FruitFilter)
+@strawberry.django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
 ```
@@ -83,5 +83,6 @@ Filters added into field is overriding default filters of type.
 ```python
 @strawberry.type
 class Query:
-    fruit: Fruit = strawberry_django.field(filters=FruitFilter)
+    fruit: Fruit = strawberry.django.field(filters=FruitFilter)
 ```
+
