@@ -1,6 +1,6 @@
 # Fields
 
-Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box.
+Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box. If you use a library that designates a custom field you will need to define an equivalent type such as `str`, `float`, `bool`, `int` or `id`
 
 ```python
 import strawberry
