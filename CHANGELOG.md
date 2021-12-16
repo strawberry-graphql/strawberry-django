@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.3rc1
+
+This release adds couple of new features and contains few improvements. This also cleans deprecated API like `fields` parameter from `straberry.django.type`, `TypeRegister` and few other items which have been deprecated in v0.2.0.
+
+New features
+* add user registeration mutation (#45, @NeoLight1010)
+* add permissions to django mutations (#53, @wellzenon)
+
+Improvements
+* fix detecting `auto` annotations when postponed evaluation is used (#73, @illia-v)
+* updated the way event loop is detected in `is_async` (#72, @g-as)
+* fix return type of field (#64)
+
+Fixes
+* fix a bug related to creating users with unhashed passwords (#62, @illia-v)
+* fix filtering in `get_queryset` of types with enabled pagination (#60, @illia-v)
+
+Cleanup
+* Clean deprecated API (#69)
+
+
+## v0.2.5
+
+This release adds support for latest `strawberry-graphql`
+
+Depencies
+* update minimum required `strawberry-graphql` to v0.69.0
+
+
 ## v0.2.4
 
 Depencies
