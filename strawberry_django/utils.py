@@ -1,5 +1,6 @@
 import asyncio
 import dataclasses
+import sys
 import warnings
 
 from django.db import models
@@ -87,10 +88,14 @@ def is_similar_django_type(a, b):
 
 def get_annotations(cls):
     annotations = {}
+    namespace = sys.modules[cls.__module__].__dict__
     for c in reversed(cls.__mro__):
         if "__annotations__" in c.__dict__:
             annotations.update(
-                {k: StrawberryAnnotation(v) for k, v in c.__annotations__.items()}
+                {
+                    k: StrawberryAnnotation(v, namespace=namespace)
+                    for k, v in c.__annotations__.items()
+                }
             )
     return annotations
 

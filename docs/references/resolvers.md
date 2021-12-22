@@ -7,7 +7,13 @@ However it is possible to overwrite them by writing own resolvers.
 ## Sync resolvers
 
 ```python
-@strawberry_django.type(models.Color)
+#types.py
+
+from strawberry.django import auto
+from typing import List
+from . import models
+
+@strawberry.django.type(models.Color)
 class Color:
     id: auto
     name: auto
@@ -20,14 +26,19 @@ class Color:
 ## Async resolvers
 
 ```python
+#types.py
+
+from strawberry.django import auto
+from typing import List
+from . import models
 from asgiref.sync import sync_to_async
 
-@strawberry_django.type(models.Color)
+@strawberry.django.type(models.Color)
 class Color:
     id: auto
     name: auto
 
-    @strawberry_django.field
+    @strawberry.django.field
     async def fruits(self) -> List[Fruit]:
         @sync_to_async
         def query():
