@@ -1,7 +1,7 @@
 import datetime
 import decimal
 import uuid
-from typing import List, Optional
+from typing import List, Optional, NewType
 
 import django
 import strawberry
@@ -61,10 +61,11 @@ class ManyToManyInput:
     set: Optional[List[strawberry.ID]] = UNSET
 
 
-@strawberry.type
-class Point:
-    x: float
-    y: float
+Point = strawberry.scalar(
+    NewType("Point", (Optional(float), Optional(float), Optional(float))),
+    serialize=lambda v: v,
+    parse_value=lambda v: v,
+)
 
 
 field_type_map = {
