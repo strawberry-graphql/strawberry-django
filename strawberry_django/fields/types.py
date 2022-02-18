@@ -5,6 +5,7 @@ from typing import List, Optional
 
 import django
 import strawberry
+from django.contrib.gis.db import models as geos_fields
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
 from strawberry.annotation import StrawberryAnnotation
@@ -60,6 +61,12 @@ class ManyToManyInput:
     set: Optional[List[strawberry.ID]] = UNSET
 
 
+@strawberry.type
+class Point:
+    x: float
+    y: float
+
+
 field_type_map = {
     fields.AutoField: strawberry.ID,
     fields.BigAutoField: strawberry.ID,
@@ -92,6 +99,12 @@ field_type_map = {
     fields.reverse_related.OneToOneRel: DjangoModelType,
     fields.related.ManyToManyField: List[DjangoModelType],
     fields.reverse_related.ManyToManyRel: List[DjangoModelType],
+    geos_fields.PointField: Point,
+    geos_fields.LineStringField: List[Point],
+    geos_fields.PolygonField: List[Point],
+    geos_fields.MultiPointField: List[Point],
+    geos_fields.MultiLineStringField: List[List[Point]],
+    geos_fields.MultiPolygonField: List[List[Point]],
 }
 
 if django.VERSION >= (3, 1):
