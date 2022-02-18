@@ -1,7 +1,7 @@
 import datetime
 import decimal
 import uuid
-from typing import List, Optional, NewType
+from typing import List, NewType, Optional
 
 import django
 import strawberry
