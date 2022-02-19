@@ -27,8 +27,7 @@ def generate_order_args(order, prefix=""):
         elif ordering == Ordering.DESC:
             args.append(f"-{prefix}{field.name}")
         else:
-            prefix = f"{prefix}{field.name}__"
-            subargs = generate_order_args(ordering, prefix=prefix)
+            subargs = generate_order_args(ordering, prefix=f"{prefix}{field.name}__")
             args.extend(subargs)
     return args
 
