@@ -1,7 +1,7 @@
 import datetime
 import decimal
 import uuid
-from typing import List, NewType, Optional
+from typing import List, NewType, Optional, Tuple
 
 import django
 import strawberry
@@ -61,13 +61,6 @@ class ManyToManyInput:
     set: Optional[List[strawberry.ID]] = UNSET
 
 
-Point = strawberry.scalar(
-    NewType("Point", (Optional(float), Optional(float), Optional(float))),
-    serialize=lambda v: v,
-    parse_value=lambda v: v,
-)
-
-
 field_type_map = {
     fields.AutoField: strawberry.ID,
     fields.BigAutoField: strawberry.ID,
@@ -100,12 +93,6 @@ field_type_map = {
     fields.reverse_related.OneToOneRel: DjangoModelType,
     fields.related.ManyToManyField: List[DjangoModelType],
     fields.reverse_related.ManyToManyRel: List[DjangoModelType],
-    geos_fields.PointField: Point,
-    geos_fields.LineStringField: List[Point],
-    geos_fields.PolygonField: List[Point],
-    geos_fields.MultiPointField: List[Point],
-    geos_fields.MultiLineStringField: List[List[Point]],
-    geos_fields.MultiPolygonField: List[List[Point]],
 }
 
 if django.VERSION >= (3, 1):
@@ -115,6 +102,29 @@ if django.VERSION >= (3, 1):
             fields.PositiveBigIntegerField: int,
         }
     )
+
+try:
+    from django.contrib.gis.db import models as geos_fields
+
+    Point = strawberry.scalar(
+        NewType("Point", Tuple[float, ...]),
+        serialize=lambda v: v,
+        parse_value=lambda v: v,
+    )
+
+    field_type_map.update({
+        geos_fields.PointField: Point,
+        geos_fields.LineStringField: List[Point],
+        geos_fields.PolygonField: List[Point],
+        geos_fields.MultiPointField: List[Point],
+        geos_fields.MultiLineStringField: List[List[Point]],
+        geos_fields.MultiPolygonField: List[List[Point]],
+    })
+except django.core.exceptions.ImproperlyConfigured:
+    # in gdal is not available
+    # skip
+    pass
+
 
 input_field_type_map = {
     fields.files.FileField: NotImplemented,
