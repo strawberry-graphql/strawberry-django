@@ -121,8 +121,7 @@ try:
         geos_fields.MultiPolygonField: List[List[Point]],
     })
 except django.core.exceptions.ImproperlyConfigured:
-    # in gdal is not available
-    # skip
+    # If gdal is not available, skip.
     pass
 
 
