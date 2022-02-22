@@ -112,14 +112,16 @@ try:
         parse_value=lambda v: v,
     )
 
-    field_type_map.update({
-        geos_fields.PointField: Point,
-        geos_fields.LineStringField: List[Point],
-        geos_fields.PolygonField: List[Point],
-        geos_fields.MultiPointField: List[Point],
-        geos_fields.MultiLineStringField: List[List[Point]],
-        geos_fields.MultiPolygonField: List[List[Point]],
-    })
+    field_type_map.update(
+        {
+            geos_fields.PointField: Point,
+            geos_fields.LineStringField: List[Point],
+            geos_fields.PolygonField: List[Point],
+            geos_fields.MultiPointField: List[Point],
+            geos_fields.MultiLineStringField: List[List[Point]],
+            geos_fields.MultiPolygonField: List[List[Point]],
+        }
+    )
 except django.core.exceptions.ImproperlyConfigured:
     # in gdal is not available
     # skip
