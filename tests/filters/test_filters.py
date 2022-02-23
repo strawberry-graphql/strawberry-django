@@ -133,3 +133,19 @@ def test_type_filter_method(query, fruits):
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
     ]
+
+
+def test_resolver_filter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return strawberry_django.filters.apply(filters, queryset)
+
+    query = utils.generate_query(Query)
+    result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
