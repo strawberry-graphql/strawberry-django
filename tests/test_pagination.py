@@ -10,6 +10,7 @@ from tests import models, utils
 
 @strawberry_django.type(models.Fruit, pagination=True)
 class Fruit:
+    id: auto
     name: auto
 
 
@@ -45,4 +46,22 @@ def test_pagination_of_filtered_query(query, fruits):
     assert not result.errors
     assert result.data["berries"] == [
         {"name": "raspberry"},
+    ]
+
+
+def test_resolver_pagination(fruits):
+    from strawberry_django.pagination import OffsetPaginationInput
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(pagination: OffsetPaginationInput) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return strawberry_django.pagination.apply(pagination, queryset)
+
+    query = utils.generate_query(Query)
+    result = query("{ fruits(pagination: { limit: 1 }) { id name } }")
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
     ]
