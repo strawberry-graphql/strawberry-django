@@ -34,7 +34,7 @@ jobs:
         uses: abatilo/actions-poetry@v2.0.0
 
       - name: Install gdal to test geofields
-        run: sudo apt-get install gdal-bin spatialite-bin
+        run: sudo apt-get install gdal-bin
 
       - name: Install Dependencies
         run: poetry install
