@@ -1,7 +1,7 @@
 import datetime
 import decimal
 import uuid
-from typing import List, NewType, Optional, Tuple
+from typing import List, Union, Optional, Tuple
 
 import django
 import strawberry
@@ -106,11 +106,7 @@ if django.VERSION >= (3, 1):
 try:
     from django.contrib.gis.db import models as geos_fields
 
-    Point = strawberry.scalar(
-        NewType("Point", Tuple[float, ...]),
-        serialize=lambda v: v,
-        parse_value=lambda v: v,
-    )
+    Point = Union[Tuple[float, float], Tuple[float, float, float]]
 
     field_type_map.update(
         {
