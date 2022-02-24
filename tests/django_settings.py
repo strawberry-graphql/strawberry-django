@@ -1,7 +1,4 @@
-import django
-
 SECRET_KEY = 1
-
 
 DATABASES = {
     "default": {
