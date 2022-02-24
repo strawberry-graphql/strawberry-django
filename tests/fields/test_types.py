@@ -7,8 +7,8 @@ from typing import List, Tuple, Union
 import django
 import pytest
 import strawberry
-from django.db import models
 from django.contrib.gis.db import models as geos_fields
+from django.db import models
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.type import StrawberryList, StrawberryOptional
@@ -60,7 +60,7 @@ class FieldTypesModel(models.Model):
     polygon = geos_fields.PolygonField()
     multi_point = geos_fields.MultiPointField()
     multi_line_string = geos_fields.MultiLineStringField()
-    multi_polygon =  geos_fields.MultiPolygonField()
+    multi_polygon = geos_fields.MultiPolygonField()
 
 
 def test_field_types():
