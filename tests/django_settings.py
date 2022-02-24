@@ -1,8 +1,20 @@
+import django
+
 SECRET_KEY = 1
+
+ENGINE = "django.db.backends.sqlite3"
+try:
+    raise django.core.exceptions.ImproperlyConfigured
+    from django.contrib.gis.db import models as geos_fields
+
+    ENGINE = "django.contrib.gis.db.backends.spatialite"
+except django.core.exceptions.ImproperlyConfigured:
+    # If gdal is not available, use SQLite Backend
+    pass
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.contrib.gis.db.backends.spatialite",
+        "ENGINE": ENGINE,
         "NAME": ":memory:",
     }
 }

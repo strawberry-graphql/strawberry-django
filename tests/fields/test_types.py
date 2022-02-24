@@ -7,14 +7,20 @@ from typing import List, Tuple, Union
 import django
 import pytest
 import strawberry
-from django.contrib.gis.db import models as geos_fields
 from django.db import models
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.union import StrawberryUnion
 
 import strawberry_django
 from strawberry_django import auto, fields, is_auto
+
+try:
+    from django.contrib.gis.db import models as geos_fields
+    GEOS_IMPORTED = True
+except django.core.exceptions.ImproperlyConfigured:
+    GEOS_IMPORTED = False
 
 
 class FieldTypesModel(models.Model):
@@ -55,12 +61,6 @@ class FieldTypesModel(models.Model):
     many_to_many = models.ManyToManyField(
         "FieldTypesModel", related_name="related_many_to_many"
     )
-    point = geos_fields.PointField()
-    line_string = geos_fields.LineStringField()
-    polygon = geos_fields.PolygonField()
-    multi_point = geos_fields.MultiPointField()
-    multi_line_string = geos_fields.MultiLineStringField()
-    multi_polygon = geos_fields.MultiPolygonField()
 
 
 def test_field_types():
@@ -271,8 +271,17 @@ def test_related_input_fields():
     ]
 
 
+@pytest.mark.skipif(not GEOS_IMPORTED, reason="Test requires GEOS to be imported and properly configured")
 def test_geos_fields():
-    @strawberry_django.type(FieldTypesModel)
+    class GeosFieldsModel(models.Model):
+        point = geos_fields.PointField()
+        line_string = geos_fields.LineStringField()
+        polygon = geos_fields.PolygonField()
+        multi_point = geos_fields.MultiPointField()
+        multi_line_string = geos_fields.MultiLineStringField()
+        multi_polygon = geos_fields.MultiPolygonField()
+
+    @strawberry_django.type(GeosFieldsModel)
     class Type:
         point: auto
         line_string: auto
@@ -281,15 +290,20 @@ def test_geos_fields():
         multi_line_string: auto
         multi_polygon: auto
 
-    Point = Union[Tuple[float, float], Tuple[float, float, float]]
+    StrawberryPoint = StrawberryUnion(
+        type_annotations=(
+            StrawberryAnnotation(Tuple[float, float]),
+            StrawberryAnnotation(Tuple[float, float, float])
+        )
+    )
 
-    assert [(f.name, f.type or f.child.type, f.is_list) for f in fields(Type)] == [
-        ("point", Point),
-        ("line_string", List[Point]),
-        ("polygon", List[Point]),
-        ("multi_point", List[Point]),
-        ("multi_line_string", List[List[Point]]),
-        ("multi_polygon", List[List[Point]]),
+    assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
+        ("point", StrawberryPoint),
+        ("line_string", StrawberryList(StrawberryPoint)),
+        ("polygon", StrawberryList(StrawberryPoint)),
+        ("multi_point", StrawberryList(StrawberryPoint)),
+        ("multi_line_string", StrawberryList(StrawberryList(StrawberryPoint))),
+        ("multi_polygon", StrawberryList(StrawberryList(StrawberryPoint))),
     ]
 
 
