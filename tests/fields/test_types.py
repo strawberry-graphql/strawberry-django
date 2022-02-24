@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import django
 import pytest
@@ -16,8 +16,10 @@ from strawberry.union import StrawberryUnion
 import strawberry_django
 from strawberry_django import auto, fields, is_auto
 
+
 try:
     from django.contrib.gis.db import models as geos_fields
+
     GEOS_IMPORTED = True
 except django.core.exceptions.ImproperlyConfigured:
     GEOS_IMPORTED = False
@@ -271,7 +273,10 @@ def test_related_input_fields():
     ]
 
 
-@pytest.mark.skipif(not GEOS_IMPORTED, reason="Test requires GEOS to be imported and properly configured")
+@pytest.mark.skipif(
+    not GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
 def test_geos_fields():
     class GeosFieldsModel(models.Model):
         point = geos_fields.PointField()
@@ -293,7 +298,7 @@ def test_geos_fields():
     StrawberryPoint = StrawberryUnion(
         type_annotations=(
             StrawberryAnnotation(Tuple[float, float]),
-            StrawberryAnnotation(Tuple[float, float, float])
+            StrawberryAnnotation(Tuple[float, float, float]),
         )
     )
 
