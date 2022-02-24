@@ -2,12 +2,13 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import List
+from typing import List, Tuple, Union
 
 import django
 import pytest
 import strawberry
 from django.db import models
+from django.contrib.gis.db import models as geos_fields
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.type import StrawberryList, StrawberryOptional
@@ -54,6 +55,12 @@ class FieldTypesModel(models.Model):
     many_to_many = models.ManyToManyField(
         "FieldTypesModel", related_name="related_many_to_many"
     )
+    point = geos_fields.PointField()
+    line_string = geos_fields.LineStringField()
+    polygon = geos_fields.PolygonField()
+    multi_point = geos_fields.MultiPointField()
+    multi_line_string = geos_fields.MultiLineStringField()
+    multi_polygon =  geos_fields.MultiPolygonField()
 
 
 def test_field_types():
@@ -261,6 +268,28 @@ def test_related_input_fields():
             StrawberryOptional(strawberry_django.ManyToManyInput),
             True,
         ),
+    ]
+
+
+def test_geos_fields():
+    @strawberry_django.type(FieldTypesModel)
+    class Type:
+        point: auto
+        line_string: auto
+        polygon: auto
+        multi_point: auto
+        multi_line_string: auto
+        multi_polygon: auto
+
+    Point = Union[Tuple[float, float], Tuple[float, float, float]]
+
+    assert [(f.name, f.type or f.child.type, f.is_list) for f in fields(Type)] == [
+        ("point", Point),
+        ("line_string", List[Point]),
+        ("polygon", List[Point]),
+        ("multi_point", List[Point]),
+        ("multi_line_string", List[List[Point]]),
+        ("multi_polygon", List[List[Point]]),
     ]
 
 
