@@ -1,10 +1,9 @@
 from unittest.mock import patch
 
 import pytest
-
+import strawberry
 from graphql import parse, version as graphql_version
 
-import strawberry
 from strawberry_django.extensions import DjangoParserCache
 
 
@@ -13,7 +12,7 @@ from strawberry_django.extensions import DjangoParserCache
     reason=(
         "GraphQL document nodes cannot be unpickled in versions below 3.2. "
         "https://github.com/graphql-python/graphql-core/issues/112"
-    )
+    ),
 )
 @pytest.mark.filterwarnings("ignore::django.core.cache.backends.base.CacheKeyWarning")
 @patch("strawberry.schema.execute.parse", wraps=parse)

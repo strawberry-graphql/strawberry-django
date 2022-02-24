@@ -4,7 +4,7 @@ from .django_cache_base import DjangoCacheBase
 
 
 class DjangoValidationCache(DjangoCacheBase):
-   def on_validation_start(self) -> None:
+    def on_validation_start(self) -> None:
         execution_context = self.execution_context
 
         errors = self.execute_cached(
@@ -13,4 +13,4 @@ class DjangoValidationCache(DjangoCacheBase):
             execution_context.graphql_document,
             execution_context.validation_rules,
         )
-        execution_context.errors = errors 
+        execution_context.errors = errors
