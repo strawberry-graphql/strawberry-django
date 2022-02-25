@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple, Union
 
 import django
 import strawberry
-from django.contrib.gis.db import models as geos_fields
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
 from strawberry.annotation import StrawberryAnnotation
