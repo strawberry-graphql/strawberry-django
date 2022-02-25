@@ -54,6 +54,7 @@ is recommended to define a custom `get_queryset` on the Type
 (see [Django Model Types](django_model_types.md) for details).
 
 For example, if we wanted a look up for berries and one for non-berry fruits.
+
 ```python
 
 #types.py
@@ -74,7 +75,7 @@ class Fruit:
 class Berry(Fruit):
     def get_queryset(self, queryset, info):
         return queryset.filter(name__contains="berry")
-        
+
 
 @strawberry.django.type(models.Fruit)
 class NonBerry(Fruit):

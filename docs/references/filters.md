@@ -63,13 +63,14 @@ class ColorFilter:
 ```
 
 ## Custom filters and overriding default filtering method
+
 You can define custom filter methods and override default filter methods by defining your own resolver.
 
 ```python
 @strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:
     is_banana: bool
-    
+
     def is_banana(self, queryset):
         if self.is_banana:
             return queryset.filter(name='banana')
