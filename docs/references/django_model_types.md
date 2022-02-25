@@ -1,6 +1,6 @@
 # Django Model Types
 
-Django Models can easily be converted in Strawberry Types with the `@strawberry_django.type` decorator
+Django Models can be converted in Strawberry Types with the `@strawberry_django.type` decorator
 
 ```python
 import strawberry
