@@ -165,7 +165,7 @@ def test_resolver_filter(fruits):
 
 
 def test_enum(query, fruits):
-    result = query('{ fruits: enumFilter(filters: { name: strawberry }) { id name } }')
+    result = query("{ fruits: enumFilter(filters: { name: strawberry }) { id name } }")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
