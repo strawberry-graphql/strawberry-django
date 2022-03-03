@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List
 
 import pytest
@@ -20,6 +21,17 @@ class FruitFilter:
     id: auto
     name: auto
     color: ColorFilter
+
+
+@strawberry.enum
+class FruitEnum(Enum):
+    strawberry = "strawberry"
+    banana = "banana"
+
+
+@strawberry_django.filters.filter(models.Fruit)
+class EnumFiler:
+    name: FruitEnum
 
 
 @strawberry_django.filters.filter(models.Fruit)
@@ -51,6 +63,7 @@ class Query:
     fruits: List[Fruit] = strawberry_django.field()
     field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
     type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
+    enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFiler)
 
 
 @pytest.fixture
@@ -145,6 +158,14 @@ def test_resolver_filter(fruits):
 
     query = utils.generate_query(Query)
     result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_enum(query, fruits):
+    result = query('{ fruits: enumFilter(filters: { name: strawberry }) { id name } }')
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
