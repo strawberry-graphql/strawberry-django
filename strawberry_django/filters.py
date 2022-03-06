@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
 import strawberry
@@ -81,6 +82,9 @@ def build_filter_kwargs(filters):
 
         if is_unset(field_value):
             continue
+
+        if isinstance(field_value, Enum):
+            field_value = field_value.value
 
         filter_method = getattr(filters, f"filter_{field_name}", None)
         if filter_method:
