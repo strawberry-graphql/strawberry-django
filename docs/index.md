@@ -20,5 +20,4 @@
 - [Queries](references/queries.md) (TBD)
 - [Resolvers](references/resolvers.md)
 - [Subscriptions](references/subscriptions.md) (TBD, not supported yet)
-- [Django Model Types](reference/django_model_types.md)
 - [Types](references/types.md)

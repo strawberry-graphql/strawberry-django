@@ -69,9 +69,11 @@ You can define custom filter methods and override default filter methods by defi
 ```python
 @strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:
-    is_banana: bool
+    is_banana: bool | None
 
     def is_banana(self, queryset):
+        if self.is_banana is None:
+            return queryset
         if self.is_banana:
             return queryset.filter(name='banana')
         return queryset.exclude(name='banana')

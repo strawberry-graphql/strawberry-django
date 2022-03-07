@@ -7,7 +7,7 @@ However it is possible to overwrite them by writing own resolvers.
 ## Sync resolvers
 
 ```python
-#types.py
+# types.py
 
 from strawberry.django import auto
 from typing import List
@@ -26,7 +26,7 @@ class Color:
 ## Async resolvers
 
 ```python
-#types.py
+# types.py
 
 from strawberry.django import auto
 from typing import List
@@ -48,16 +48,15 @@ class Color:
 
 ## Issues with Resolvers
 
-It is important that if you override resolvers, you will lose access to all of the things that come by default
-with the library (e.g. `Pagination`, `Filter`). For Types that are attached to your base `Query`, it
-is recommended to define a custom `get_queryset` on the Type
-(see [Django Model Types](django_model_types.md) for details).
+It is important to note that if you override resolvers, you will lose access to all of the things that come by default
+with the library (e.g. `Pagination`, `Filter`). On your root `Query`, you can just use a custom `get_queryset` to achieve
+similar results, while keeping pagination and filtering intact.
 
 For example, if we wanted a look up for berries and one for non-berry fruits.
 
 ```python
 
-#types.py
+# types.py
 
 import strawberry
 import strawberry_django
