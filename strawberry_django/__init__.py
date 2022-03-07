@@ -1,3 +1,6 @@
+# FIXME: We should stop exporting this in the future and auto directly from strawberry
+from strawberry import auto
+
 from . import auth, filters, mutations, ordering, types
 from .fields.field import field
 from .fields.types import (
@@ -8,7 +11,6 @@ from .fields.types import (
     ManyToOneInput,
     OneToManyInput,
     OneToOneInput,
-    auto,
     is_auto,
 )
 from .filters import filter_deprecated as filter

@@ -1,9 +1,9 @@
 from typing import List
 
 from django.contrib.auth import get_user_model
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 
 from . import models
 

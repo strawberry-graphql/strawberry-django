@@ -97,7 +97,7 @@ We also need to add another type and modify existing one. Field type `auto` is u
 ```python
 # types.py
 import strawberry_django
-from strawberry_django import auto
+from strawberry import auto
 from typing import List
 from . import models
 

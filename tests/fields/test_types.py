@@ -8,12 +8,13 @@ import django
 import pytest
 import strawberry
 from django.db import models
+from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.type import StrawberryList, StrawberryOptional
 
 import strawberry_django
-from strawberry_django import auto, fields, is_auto
+from strawberry_django import fields, is_auto
 
 
 class FieldTypesModel(models.Model):
