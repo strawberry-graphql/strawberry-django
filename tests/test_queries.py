@@ -40,6 +40,18 @@ class BerryFruit:
         return queryset.filter(name__contains="berry")
 
 
+@strawberry_django.type(models.Fruit, is_interface=True)
+class FruitInterface:
+    id: auto
+    name: auto
+
+
+@strawberry_django.type(models.Fruit)
+class BananaFruit(FruitInterface):
+    def get_queryset(self, queryset, info):
+        return queryset.filter(name__contains="banana")
+
+
 @strawberry.type
 class Query:
     user: User = strawberry_django.field()
@@ -47,6 +59,7 @@ class Query:
     group: Group = strawberry_django.field()
     groups: List[Group] = strawberry_django.field()
     berries: List[BerryFruit] = strawberry_django.field()
+    bananas: List[BananaFruit] = strawberry_django.field()
 
 
 @pytest.fixture
@@ -108,6 +121,13 @@ async def test_type_queryset(query, fruits):
         {"name": "strawberry"},
         {"name": "raspberry"},
     ]
+
+
+async def test_querying_type_implementing_interface(query, fruits):
+    result = await query("{ bananas { name } }")
+
+    assert not result.errors
+    assert result.data["bananas"] == [{"name": "banana"}]
 
 
 async def test_model_properties(query, fruits):

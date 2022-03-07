@@ -154,6 +154,13 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
         cls_annotations[field.name] = annotation
         setattr(cls, field.name, field)
 
+    # Strawberry >= 0.92.0 defines `is_type_of` for types implementing
+    # interfaces if the attribute has not been set yet. It allows only
+    # instances of `cls` to be returned, we should allow model instances
+    # too.
+    if not hasattr(cls, "is_type_of"):
+        cls.is_type_of = lambda obj, _info: isinstance(obj, (cls, model))
+
     strawberry.type(cls, **kwargs)
 
     # restore original annotations for further use
