@@ -4,7 +4,7 @@ import pytest
 import strawberry
 from graphql import validate
 
-from strawberry_django.extensions import DjangoValidationCache
+from strawberry_django.extensions.django_validation_cache import DjangoValidationCache
 
 
 @pytest.mark.filterwarnings("ignore::django.core.cache.backends.base.CacheKeyWarning")
