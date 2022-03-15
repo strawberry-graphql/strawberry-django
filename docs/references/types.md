@@ -89,7 +89,7 @@ limit access to results based on the current user in the request:
 class Berry:
 
     def get_queryset(self, queryset, info):
-        if not info.context['request'].user.is_staff:
+        if not info.context.request.user.is_staff:
             # Limit access to top secret if the user is not a staff member
             queryset = queryset.filter(
                 is_top_secret=False,
