@@ -2,21 +2,14 @@ from unittest.mock import patch
 
 import pytest
 import strawberry
-from graphql import parse, version as graphql_version
+from graphql import validate
 
-from strawberry_django.extensions import DjangoParserCache
+from strawberry_django.extensions import DjangoValidationCache
 
 
-@pytest.mark.xfail(
-    graphql_version < "3.2.0",
-    reason=(
-        "GraphQL document nodes cannot be unpickled in versions below 3.2. "
-        "https://github.com/graphql-python/graphql-core/issues/112"
-    ),
-)
 @pytest.mark.filterwarnings("ignore::django.core.cache.backends.base.CacheKeyWarning")
-@patch("strawberry.schema.execute.parse", wraps=parse)
-def test_parser_cache_extension(mock_parse):
+@patch("strawberry.schema.execute.validate", wraps=validate)
+def test_validation_cache_extension(mock_validate):
     @strawberry.type
     class Query:
         @strawberry.field
@@ -27,7 +20,7 @@ def test_parser_cache_extension(mock_parse):
         def ping(self) -> str:
             return "pong"
 
-    schema = strawberry.Schema(query=Query, extensions=[DjangoParserCache()])
+    schema = strawberry.Schema(query=Query, extensions=[DjangoValidationCache()])
 
     query = "query { hello }"
 
@@ -36,7 +29,7 @@ def test_parser_cache_extension(mock_parse):
     assert not result.errors
     assert result.data == {"hello": "world"}
 
-    assert mock_parse.call_count == 1
+    assert mock_validate.call_count == 1
 
     # Run query multiple times
     for _ in range(3):
@@ -45,7 +38,7 @@ def test_parser_cache_extension(mock_parse):
         assert result.data == {"hello": "world"}
 
     # validate is still only called once
-    assert mock_parse.call_count == 1
+    assert mock_validate.call_count == 1
 
     # Running a second query doesn't cache
     query2 = "query { ping }"
@@ -54,4 +47,4 @@ def test_parser_cache_extension(mock_parse):
     assert not result.errors
     assert result.data == {"ping": "pong"}
 
-    assert mock_parse.call_count == 2
+    assert mock_validate.call_count == 2
