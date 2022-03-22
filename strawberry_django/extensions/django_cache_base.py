@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from typing import Callable, Optional, Union, Tuple, Dict
+    from typing import Callable, Optional, Tuple, Dict, Union
 
 from functools import _make_key
 
@@ -20,7 +20,7 @@ class DjangoCacheBase(Extension):
     `cache_name: str`
         Name of the Django Cache to use, defaults to 'default'
 
-    `timeout: Optional[int]`
+    `timeout: Optional[int | float]`
         How long to hold items in the cache. See the Django Cache docs for details
         https://docs.djangoproject.com/en/4.0/topics/cache/
 
