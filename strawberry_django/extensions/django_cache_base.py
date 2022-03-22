@@ -1,4 +1,6 @@
 from typing import TYPE_CHECKING
+
+
 if TYPE_CHECKING:
     from typing import Callable, Optional, Union, Tuple, Dict
 
@@ -29,7 +31,12 @@ class DjangoCacheBase(Extension):
         and will generate warnings
     """
 
-    def __init__(self, cache_name: str="default", timeout: Optional[Union[int, float]]=None, hash_fn: Optional[Callable[[Tuple, Dict], str]]=None):
+    def __init__(
+        self,
+        cache_name: str = "default",
+        timeout: Optional[Union[int, float]] = None,
+        hash_fn: Optional[Callable[[Tuple, Dict], str]] = None,
+    ):
         self.cache = caches[cache_name]
         self.timeout = timeout or DEFAULT_TIMEOUT
         # Use same key generating function as functools.lru_cache as default
