@@ -71,7 +71,7 @@ You can define custom filter methods and override default filter methods by defi
 class FruitFilter:
     is_banana: bool | None
 
-    def is_banana(self, queryset):
+    def filter_is_banana(self, queryset):
         if self.is_banana is None:
             return queryset
         if self.is_banana:
