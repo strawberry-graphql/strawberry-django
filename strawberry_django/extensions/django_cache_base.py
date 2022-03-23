@@ -34,7 +34,7 @@ class DjangoCacheBase(Extension):
     def __init__(
         self,
         cache_name: str = "default",
-        timeout: Optional[Union[int, float]] = None,
+        timeout: Optional[float] = None,
         hash_fn: Optional[Callable[[Tuple, Dict], str]] = None,
     ):
         self.cache = caches[cache_name]
