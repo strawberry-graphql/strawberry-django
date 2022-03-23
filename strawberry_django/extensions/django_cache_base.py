@@ -20,7 +20,7 @@ class DjangoCacheBase(Extension):
     `cache_name: str`
         Name of the Django Cache to use, defaults to 'default'
 
-    `timeout: Optional[int | float]`
+    `timeout: Optional[float]`
         How long to hold items in the cache. See the Django Cache docs for details
         https://docs.djangoproject.com/en/4.0/topics/cache/
 
