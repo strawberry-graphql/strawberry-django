@@ -49,7 +49,7 @@ class Color:
 ## Issues with Resolvers
 
 It is important to note that if you override resolvers, you will lose access to all of the things that come by default
-with the library (e.g. `Pagination`, `Filter`). On your root `Query`, you can just use a custom `get_queryset` to achieve
+with the library (e.g. `Pagination`, `Filter`). On your root `Query`, you can use a custom `get_queryset` to achieve
 similar results, while keeping pagination and filtering intact, but note that it will affect all root queries for that type.
 
 For example, if we wanted a look up for berries and one for non-berry fruits.
