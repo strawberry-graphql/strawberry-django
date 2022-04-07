@@ -46,3 +46,55 @@ class ColorPartialInput:
     name: auto
     fruits: List[FruitPartialInput]
 ```
+
+## Django Model Types
+
+Django Models can be converted in Strawberry Types with the `@strawberry_django.type` decorator
+
+```python
+import strawberry
+
+@strawberry.django.type(models.Fruit)
+class Fruit:
+    ...
+```
+
+### Fields
+
+By default, no fields are implemented on the new type. For details on adding fields,
+see the [Fields](fields.md) documentation.
+
+### QuerySet setup
+
+By default, a Strawberry Django type will pull data from the default manager for it's Django Model.
+You can implement a `get_queryset` to your type to do some extra processing to the queryset,
+like further filtering it.
+
+```python
+@strawberry.django.type(models.Fruit)
+class Berry:
+
+    def get_queryset(self, queryset, info):
+        return queryset.filter(name__contains="berry")
+```
+
+The `get_queryset` method is given a QuerySet to filter and
+a Strawberry `Info` object, containing details about the request.
+
+You can use that `info` parameter to, for example,
+limit access to results based on the current user in the request:
+
+```python
+@strawberry.django.type(models.Fruit)
+class Berry:
+
+    def get_queryset(self, queryset, info):
+        if not info.context.request.user.is_staff:
+            # Limit access to top secret if the user is not a staff member
+            queryset = queryset.filter(
+                is_top_secret=False,
+            )
+        return queryset.filter(
+            name__contains="berry",
+        )
+```
