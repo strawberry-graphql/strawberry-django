@@ -7,7 +7,7 @@ However it is possible to overwrite them by writing own resolvers.
 ## Sync resolvers
 
 ```python
-#types.py
+# types.py
 
 from strawberry.django import auto
 from typing import List
@@ -26,7 +26,7 @@ class Color:
 ## Async resolvers
 
 ```python
-#types.py
+# types.py
 
 from strawberry.django import auto
 from typing import List
@@ -44,4 +44,46 @@ class Color:
         def query():
             return list(self.fruits.objects.filter(...))
         return query()
+```
+
+## Issues with Resolvers
+
+It is important to note that if you override resolvers, you will lose access to all of the things that come by default
+with the library (e.g. `Pagination`, `Filter`). On your root `Query`, you can use a custom `get_queryset` to achieve
+similar results, while keeping pagination and filtering intact, but note that it will affect all root queries for that type.
+
+For example, if we wanted a look up for berries and one for non-berry fruits.
+
+```python
+
+# types.py
+
+import strawberry
+import strawberry_django
+from strawberry.django import auto
+from typing import List
+from . import models
+
+@strawberry.django.types(models.Fruit, interface=True)
+class Fruit:
+    id: auto
+    name: auto
+
+
+@strawberry.django.type(models.Fruit)
+class Berry(Fruit):
+    def get_queryset(self, queryset, info):
+        return queryset.filter(name__contains="berry")
+
+
+@strawberry.django.type(models.Fruit)
+class NonBerry(Fruit):
+    def get_queryset(self, queryset, info):
+        return queryset.exclude(name__contains="berry")
+
+
+@strawberry.type
+class Query:
+    berries: List[Berry]
+    non_berries: List[NonBerry]
 ```

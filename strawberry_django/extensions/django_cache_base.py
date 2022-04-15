@@ -1,10 +1,5 @@
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    from typing import Callable, Dict, Optional, Tuple
-
 from functools import _make_key
+from typing import Callable, Dict, Optional, Tuple
 
 from django.core.cache import caches
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
