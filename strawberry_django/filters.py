@@ -1,4 +1,6 @@
 from enum import Enum
+from functools import lru_cache
+from itertools import chain
 from typing import Generic, List, Optional, TypeVar
 
 import strawberry
@@ -72,6 +74,19 @@ def filter_deprecated(model, *, name=None, lookups=False):
     return filter(model, name=name, lookups=lookups)
 
 
+@lru_cache
+def get_field_names_from_opts(opts):
+    '''
+    copy from django.db.models.sql.query.get_field_names_from_opts
+    because get_field_names_from_opts not in django.db.models.sql.query.__all__
+    and no cache optimization
+    '''
+    return set(chain.from_iterable(
+        (f.name, f.attname) if f.concrete else (f.name,)
+        for f in opts.get_fields()
+    ))
+
+
 def build_filter_kwargs(filters):
     filter_kwargs = {}
     filter_methods = []
@@ -92,7 +107,7 @@ def build_filter_kwargs(filters):
             continue
 
         if django_model:
-            if field_name not in django_model._meta._forward_fields_map:
+            if field_name not in get_field_names_from_opts(django_model._meta):
                 continue
 
         if field_name in lookup_name_conversion_map:
