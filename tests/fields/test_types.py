@@ -9,12 +9,11 @@ import pytest
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.type import StrawberryList, StrawberryOptional
 
 import strawberry_django
-from strawberry_django import fields, is_auto
+from strawberry_django import fields
 
 
 class FieldTypesModel(models.Model):
@@ -356,33 +355,3 @@ def test_type_from_type():
             StrawberryOptional(strawberry_django.ManyToManyInput),
         ),
     ]
-
-
-def test_is_auto_passing_auto():
-    assert is_auto(auto)
-
-
-def test_is_auto_passing_non_auto():
-    assert not is_auto(int)
-
-
-def test_is_auto_passing_auto_strawberry_annotation():
-    assert is_auto(StrawberryAnnotation(auto))
-
-
-def test_is_auto_passing_non_auto_strawberry_annotation():
-    assert not is_auto(StrawberryAnnotation(int))
-
-
-def test_is_auto_passing_auto_as_str_strawberry_annotation():
-    assert is_auto(StrawberryAnnotation("auto", namespace={"auto": auto}))
-
-
-def test_is_auto_passing_aliased_auto_as_str_strawberry_annotation():
-    assert is_auto(
-        StrawberryAnnotation("aliased_auto", namespace={"aliased_auto": auto})
-    )
-
-
-def test_is_auto_passing_non_auto_as_str_strawberry_annotation():
-    assert not is_auto(StrawberryAnnotation("SomeType", namespace={"SomeType": type}))

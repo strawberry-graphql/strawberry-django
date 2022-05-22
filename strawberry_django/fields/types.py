@@ -1,16 +1,14 @@
 import datetime
 import decimal
 import uuid
-from typing import Any, List, Optional, get_args, get_origin
+from typing import List, Optional
 
 import django
 import strawberry
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
-from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import UNSET
-from strawberry.auto import StrawberryAuto, auto
-from typing_extensions import Annotated
+from strawberry.auto import StrawberryAuto
 
 from .. import filters
 
@@ -163,26 +161,8 @@ def get_model_field(model, field_name):
         raise e
 
 
-# FIXME: maybe this should be defined at strawberry/auto.py?
 def is_auto(type_):
-    if isinstance(type_, StrawberryAnnotation):
-        annotation = type_.annotation
-        if isinstance(annotation, str):
-            namespace = type_.namespace
-            type_ = namespace and namespace.get(annotation)
-        else:
-            type_ = annotation
-
-    if type_ is auto:
-        return True
-
-    # Support uses of Annotated[auto, something()]
-    if get_origin(type_) is Annotated:
-        args = get_args(type_)
-        if args[0] is Any:
-            return any(isinstance(arg, StrawberryAuto) for arg in args[1:])
-
-    return False
+    return isinstance(type_, StrawberryAuto)
 
 
 def is_optional(model_field, is_input, partial):
