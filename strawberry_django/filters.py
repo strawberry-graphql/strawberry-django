@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
 import strawberry
+from django.db.models.sql.query import get_field_names_from_opts
 from strawberry.arguments import UNSET, StrawberryArgument, is_unset
 
 from . import utils
@@ -92,7 +93,7 @@ def build_filter_kwargs(filters):
             continue
 
         if django_model:
-            if field_name not in django_model._meta._forward_fields_map:
+            if field_name not in get_field_names_from_opts(django_model._meta):
                 continue
 
         if field_name in lookup_name_conversion_map:
