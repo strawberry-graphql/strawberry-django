@@ -117,7 +117,12 @@ def build_filter_kwargs(filters):
 def apply(filters, queryset, pk=UNSET):
     if not is_unset(pk):
         queryset = queryset.filter(pk=pk)
-    if is_unset(filters) or filters is None:
+    if (
+        is_unset(filters)
+        or filters is None
+        or not hasattr(filters, "_django_type")
+        or not filters._django_type.is_filter
+    ):
         return queryset
 
     filter_method = getattr(filters, "filter", None)
