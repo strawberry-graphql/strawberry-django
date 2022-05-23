@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3+
+
+For newer versions, check the release notes at: https://github.com/strawberry-graphql/strawberry-graphql-django/releases
+
 ## v0.3rc1
 
 This release adds couple of new features and contains few improvements. This also cleans deprecated API like `fields` parameter from `straberry.django.type`, `TypeRegister` and few other items which have been deprecated in v0.2.0.
