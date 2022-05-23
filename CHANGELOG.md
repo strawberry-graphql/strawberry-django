@@ -77,8 +77,8 @@ This release adds new class oriented API where all fields are defined in class b
 Example above shows how the new API looks like.
 
 ```python
+from strawberry import auto
 import strawberry_django
-from strawberry_django import auto
 from . import models
 
 @strawberry_django.type(models.Color)

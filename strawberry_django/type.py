@@ -9,7 +9,6 @@ from strawberry.arguments import UNSET
 from . import utils
 from .fields.field import StrawberryDjangoField
 from .fields.types import (
-    auto,
     get_model_field,
     is_optional,
     resolve_model_field_name,
@@ -150,7 +149,7 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
             else field.type_annotation.annotation
         )
         if annotation is None:
-            annotation = StrawberryAnnotation(auto)
+            annotation = StrawberryAnnotation(strawberry.auto)
         cls_annotations[field.name] = annotation
         setattr(cls, field.name, field)
 

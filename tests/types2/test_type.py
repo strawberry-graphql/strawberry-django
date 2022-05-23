@@ -1,9 +1,10 @@
 import strawberry
 from django.db import models
+from strawberry import auto
 from strawberry.type import StrawberryList, StrawberryOptional
 
 import strawberry_django
-from strawberry_django import auto, fields
+from strawberry_django import fields
 
 
 class TypeModel(models.Model):

@@ -2,7 +2,7 @@
 
 ```python
 import strawberry
-from strawberry.django import auto
+from strawberry import auto
 
 @strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:

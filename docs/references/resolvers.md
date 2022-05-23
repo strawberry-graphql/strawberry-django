@@ -9,7 +9,7 @@ However it is possible to overwrite them by writing own resolvers.
 ```python
 # types.py
 
-from strawberry.django import auto
+from strawberry import auto
 from typing import List
 from . import models
 
@@ -28,7 +28,7 @@ class Color:
 ```python
 # types.py
 
-from strawberry.django import auto
+from strawberry import auto
 from typing import List
 from . import models
 from asgiref.sync import sync_to_async

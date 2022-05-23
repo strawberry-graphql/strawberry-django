@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
-packages = [ { include = "strawberry_django" } ]
+packages = [{ include = "strawberry_django" }]
 version = "0.3rc1"
 description = "Strawberry GraphQL Django extension"
 authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
@@ -8,16 +8,19 @@ repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
 license = "MIT"
 readme = "README.md"
 keywords = ["graphql", "api", "django"]
-classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Python Modules" ]
+classifiers = [
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.0"
-strawberry-graphql = ">=0.69.0"
+strawberry-graphql = ">=0.100.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.1.1"
-pytest-asyncio = "^0.14.0"
+pytest = "^7.1.2"
+pytest-asyncio = "^0.18.3"
 pytest-django = "^4.1.0"
 pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
@@ -37,6 +40,5 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
-python_paths = "."
 testpaths = ["tests"]
 filterwarnings = "ignore:.*is deprecated.*:DeprecationWarning"

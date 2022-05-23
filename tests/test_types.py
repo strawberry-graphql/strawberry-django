@@ -1,5 +1,6 @@
+from strawberry import auto
+
 import strawberry_django
-from strawberry_django import auto
 
 from .models import User
 

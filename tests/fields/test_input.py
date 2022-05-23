@@ -1,9 +1,9 @@
 import strawberry
 from django.db import models
+from strawberry import auto
 from strawberry.type import StrawberryOptional
 
 import strawberry_django
-from strawberry_django import auto
 
 
 class InputFieldsModel(models.Model):

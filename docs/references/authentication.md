@@ -7,7 +7,7 @@ validate_password().
 ```python
 # types.py
 import strawberry
-from strawberry.django import auto
+from strawberry import auto
 from django.contrib.auth import get_user_model
 
 @strawberry.django.type(get_user_model())

@@ -1,8 +1,9 @@
 import strawberry
+from strawberry import auto
 from strawberry.type import StrawberryOptional
 
 import strawberry_django
-from strawberry_django import auto, fields
+from strawberry_django import fields
 
 from .test_type import TypeModel
 
