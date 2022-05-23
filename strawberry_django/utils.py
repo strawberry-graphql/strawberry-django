@@ -5,12 +5,11 @@ import warnings
 
 from django.db import models
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, is_unset
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryContainer
 
 
-__all__ = ["is_unset", "UNSET", "deprecated"]
+__all__ = ["deprecated"]
 
 
 def is_async() -> bool:

@@ -16,7 +16,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.0"
-strawberry-graphql = ">=0.100.0"
+strawberry-graphql = ">=0.109.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

@@ -3,8 +3,8 @@ from typing import Any, Optional
 
 import django
 import strawberry
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
 
 from . import utils
 from .fields.field import StrawberryDjangoField
@@ -21,7 +21,7 @@ _type = type
 
 def get_type_attr(type_, field_name):
     attr = getattr(type_, field_name, UNSET)
-    if utils.is_unset(attr):
+    if attr is UNSET:
         attr = getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
     return attr
 

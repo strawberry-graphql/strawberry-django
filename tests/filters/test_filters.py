@@ -181,9 +181,7 @@ def test_resolver_nonfilter(fruits):
             return strawberry_django.filters.apply(filters, queryset)
 
     query = utils.generate_query(Query)
-    result = query(
-        '{ fruits(filters: { name: strawberry } ) { id name } }'
-    )
+    result = query("{ fruits(filters: { name: strawberry } ) { id name } }")
     assert not result.errors
 
 
