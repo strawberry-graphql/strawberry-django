@@ -1,8 +1,8 @@
 from typing import Any
 
 from django.db import models
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryList, StrawberryOptional
 

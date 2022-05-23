@@ -1,6 +1,6 @@
 from typing import Any
 
-from strawberry.arguments import UNSET
+from strawberry import UNSET
 
 from .fields import DjangoCreateMutation, DjangoDeleteMutation, DjangoUpdateMutation
 

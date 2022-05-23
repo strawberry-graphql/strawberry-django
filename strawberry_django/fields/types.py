@@ -7,7 +7,7 @@ import django
 import strawberry
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
-from strawberry.arguments import UNSET
+from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
 
 from .. import filters

@@ -3,7 +3,8 @@ from typing import Generic, List, Optional, TypeVar
 
 import strawberry
 from django.db.models.sql.query import get_field_names_from_opts
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from strawberry import UNSET
+from strawberry.arguments import StrawberryArgument
 
 from . import utils
 from .arguments import argument
@@ -81,7 +82,7 @@ def build_filter_kwargs(filters):
         field_name = field.name
         field_value = getattr(filters, field_name)
 
-        if is_unset(field_value):
+        if field_value is UNSET:
             continue
 
         if isinstance(field_value, Enum):
@@ -116,10 +117,11 @@ def build_filter_kwargs(filters):
 
 
 def apply(filters, queryset, pk=UNSET):
-    if not is_unset(pk):
+    if pk is not UNSET:
         queryset = queryset.filter(pk=pk)
+
     if (
-        is_unset(filters)
+        filters is UNSET
         or filters is None
         or not hasattr(filters, "_django_type")
         or not filters._django_type.is_filter
@@ -150,12 +152,12 @@ class StrawberryDjangoFieldFilters:
             if self.django_model and not self.is_list:
                 if self.is_relation is False:
                     arguments.append(argument("pk", strawberry.ID))
-            elif filters and not is_unset(filters):
+            elif filters and filters is not UNSET:
                 arguments.append(argument("filters", filters))
         return super().arguments + arguments
 
     def get_filters(self):
-        if not is_unset(self.filters):
+        if self.filters is not UNSET:
             return self.filters
         type_ = utils.unwrap_type(self.type or self.child.type)
 
