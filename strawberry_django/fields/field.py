@@ -24,8 +24,8 @@ class StrawberryDjangoFieldBase:
 
 
 class StrawberryDjangoField(
-    StrawberryDjangoFieldOrdering,
     StrawberryDjangoFieldFilters,
+    StrawberryDjangoFieldOrdering,
     StrawberryDjangoPagination,
     StrawberryDjangoFieldBase,
     StrawberryField,
@@ -135,7 +135,7 @@ class StrawberryDjangoField(
         get_queryset = getattr(type_, "get_queryset", None)
         if get_queryset:
             queryset = get_queryset(self, queryset, info, **kwargs)
-        return super().get_queryset(queryset, info, order, **kwargs)
+        return super().get_queryset(queryset, info, order=order, **kwargs)
 
 
 def field(
