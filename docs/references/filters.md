@@ -79,6 +79,25 @@ class FruitFilter:
         return queryset.exclude(name='banana')
 ```
 
+## Overriding the filter method
+
+For overriding the default filter logic you can provide the filter method.
+Note that no default filtering will be done anymore, which means your custom
+method is responsible for handling all the all filter related operations.
+
+```python
+@strawberry.django.filters.filter(models.Fruit)
+class FruitFilter:
+    is_banana: bool | None
+
+    def filter(self, queryset):
+        if self.is_banana is None:
+            return queryset
+        if self.is_banana:
+            return queryset.filter(name='banana')
+        return queryset.exclude(name='banana')
+```
+
 ## Adding filters to type
 
 All fields and mutations are inheriting filters from type by default.
