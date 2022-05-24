@@ -79,10 +79,11 @@ class FruitFilter:
         return queryset.exclude(name='banana')
 ```
 
-## Custom filter logic
+## Overriding the filter method
 
 For overriding the default filter logic you can provide the filter method.
-Other filter methods are not executed anymore (default as well as custom).
+Note that no default filtering will be done anymore, which means your custom
+method is responsible for handling all the all filter related operations.
 
 ```python
 @strawberry.django.filters.filter(models.Fruit)
