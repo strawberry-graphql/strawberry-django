@@ -9,7 +9,7 @@ For newer versions, check the release notes at: https://github.com/strawberry-gr
 This release adds couple of new features and contains few improvements. This also cleans deprecated API like `fields` parameter from `straberry.django.type`, `TypeRegister` and few other items which have been deprecated in v0.2.0.
 
 New features
-* add user registeration mutation (#45, @NeoLight1010)
+* add user registration mutation (#45, @NeoLight1010)
 * add permissions to django mutations (#53, @wellzenon)
 
 Improvements
@@ -29,13 +29,13 @@ Cleanup
 
 This release adds support for latest `strawberry-graphql`
 
-Depencies
+Dependencies
 * update minimum required `strawberry-graphql` to v0.69.0
 
 
 ## v0.2.4
 
-Depencies
+Dependencies
 * Use `strawberry-graphql` earlier than v0.69, which introduced many backward incompatible changes.
 
 
@@ -48,7 +48,7 @@ Improvements
 Fixes
 * fix breaking changes in `strawberry-graphql` (#42)
 
-Depencies
+Dependencies
 * update minimum required `strawberry-graphql` to v0.68.2
 
 
@@ -64,7 +64,7 @@ Improvements
 * update README.md examples to use django namespace
 * integrate to `strawberry-graphql` v0.64.4
 
-Depencies
+Dependencies
 * update minimum required `strawberry-graphql` to v0.64.4
 
 

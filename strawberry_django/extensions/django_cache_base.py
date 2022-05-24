@@ -10,7 +10,7 @@ class DjangoCacheBase(Extension):
     """
     Base for a Cache that uses Django built in cache instead of an in memory cache
 
-    Arguements:
+    Arguments:
 
     `cache_name: str`
         Name of the Django Cache to use, defaults to 'default'

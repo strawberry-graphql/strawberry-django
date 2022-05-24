@@ -41,7 +41,7 @@ def get_field(django_type, field_name, field_annotation=None):
 
     field.python_name = field_name
     if field_name in django_type.origin.__dict__.get("__annotations__", {}):
-        # store origin django type for futher usage
+        # store origin django type for further usage
         field.origin_django_type = django_type
 
     if field_annotation:
@@ -60,7 +60,7 @@ def get_field(django_type, field_name, field_annotation=None):
         field.is_relation = model_field.is_relation
     except django.core.exceptions.FieldDoesNotExist:
         if field.django_name or field.is_auto:
-            raise  # field should exist, reraise catched exception
+            raise  # field should exist, reraise caught exception
         model_field = None
 
     if field.is_relation:
