@@ -26,8 +26,8 @@ class StrawberryDjangoFieldBase:
 class StrawberryDjangoField(
     StrawberryDjangoFieldFilters,
     StrawberryDjangoFieldOrdering,
-    StrawberryDjangoPagination,
     StrawberryDjangoFieldBase,
+    StrawberryDjangoPagination,
     StrawberryField,
 ):
     """Basic field
