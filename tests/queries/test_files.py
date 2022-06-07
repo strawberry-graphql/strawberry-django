@@ -3,9 +3,9 @@ from typing import List
 import pytest
 import strawberry
 from django.db import models
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 
 from .. import utils
 

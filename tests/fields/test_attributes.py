@@ -1,7 +1,7 @@
 from django.db import models
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 
 
 class FieldAttributeModel(models.Model):

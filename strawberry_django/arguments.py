@@ -1,7 +1,8 @@
 from typing import Optional
 
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry.arguments import StrawberryArgument
 
 
 def argument(name, type_, is_optional=True, default=UNSET):

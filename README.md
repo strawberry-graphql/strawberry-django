@@ -7,22 +7,21 @@
 This package provides powerful tools to generate GraphQL types, queries, mutations and resolvers from Django models.
 
 Installing `strawberry-graphql-django` package from the python package repository.
+
 ```shell
 pip install strawberry-graphql-django
 ```
 
 Full documentation is available under [docs](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/docs/index.md) github folder.
 
-
 ## Supported features
 
-* GraphQL type generation from models
-* Filtering, pagination and ordering
-* Basic create, retrieve, update and delete (CRUD) types and mutations
-* Basic Django auth support, current user query, login and logout mutations
-* Django sync and async views
-* Unit test integration
-
+- GraphQL type generation from models
+- Filtering, pagination and ordering
+- Basic create, retrieve, update and delete (CRUD) types and mutations
+- Basic Django auth support, current user query, login and logout mutations
+- Django sync and async views
+- Unit test integration
 
 ## Basic Usage
 
@@ -42,7 +41,7 @@ class Color(models.Model):
 ```python
 # types.py
 import strawberry
-from strawberry.django import auto
+from strawberry import auto
 from typing import List
 from . import models
 
@@ -104,7 +103,6 @@ urlpatterns = [
 ```
 
 See complete Django project from github repository folder [examples/django](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django).
-
 
 ## Autocompletion with editors
 

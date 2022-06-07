@@ -1,7 +1,7 @@
 from django.db import models
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 
 
 def test_forward_reference():

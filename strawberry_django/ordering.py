@@ -2,11 +2,11 @@ import enum
 from typing import List, Optional
 
 import strawberry
-from strawberry.arguments import UNSET, StrawberryArgument
+from strawberry import UNSET
+from strawberry.arguments import StrawberryArgument
 
 import strawberry_django
 
-from . import utils
 from .arguments import argument
 
 
@@ -19,8 +19,8 @@ class Ordering(enum.Enum):
 def generate_order_args(order, prefix=""):
     args = []
     for field in strawberry_django.fields(order):
-        ordering = getattr(order, field.name, utils.UNSET)
-        if utils.is_unset(ordering):
+        ordering = getattr(order, field.name, UNSET)
+        if ordering is UNSET:
             continue
         if ordering == Ordering.ASC:
             args.append(f"{prefix}{field.name}")
@@ -38,14 +38,14 @@ def order(model):
             if strawberry_django.is_auto(type_):
                 type_ = Ordering
             cls.__annotations__[name] = Optional[type_]
-            setattr(cls, name, utils.UNSET)
+            setattr(cls, name, UNSET)
         return strawberry.input(cls)
 
     return wrapper
 
 
 def apply(order, queryset):
-    if utils.is_unset(order) or order is None:
+    if order is UNSET or order is None:
         return queryset
     args = generate_order_args(order)
     if not args:

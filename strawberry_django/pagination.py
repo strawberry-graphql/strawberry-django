@@ -1,7 +1,8 @@
 from typing import List
 
 import strawberry
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from strawberry import UNSET
+from strawberry.arguments import StrawberryArgument
 
 from . import utils
 from .arguments import argument
@@ -14,8 +15,9 @@ class OffsetPaginationInput:
 
 
 def apply(pagination, queryset):
-    if is_unset(pagination) or pagination is None:
+    if pagination is UNSET or pagination is None:
         return queryset
+
     start = pagination.offset
     stop = start + pagination.limit
     return queryset[start:stop]
@@ -31,13 +33,14 @@ class StrawberryDjangoPagination:
         arguments = []
         if not self.base_resolver:
             pagination = self.get_pagination()
-            if pagination and not is_unset(pagination):
+            if pagination and pagination is not UNSET:
                 arguments.append(argument("pagination", OffsetPaginationInput))
         return super().arguments + arguments
 
     def get_pagination(self):
-        if not is_unset(self.pagination):
+        if self.pagination is not UNSET:
             return self.pagination
+
         type_ = utils.unwrap_type(self.type or self.child.type)
         if utils.is_django_type(type_):
             return type_._django_type.pagination

@@ -7,14 +7,10 @@ import django
 import strawberry
 from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
-from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
+from strawberry import UNSET
+from strawberry.auto import StrawberryAuto
 
 from .. import filters
-
-
-class auto:
-    pass
 
 
 @strawberry.type
@@ -166,13 +162,7 @@ def get_model_field(model, field_name):
 
 
 def is_auto(type_):
-    if not isinstance(type_, StrawberryAnnotation):
-        return type_ is auto
-    annotation = type_.annotation
-    if isinstance(annotation, str):
-        namespace = type_.namespace
-        return namespace and namespace.get(annotation) is auto
-    return annotation is auto
+    return isinstance(type_, StrawberryAuto)
 
 
 def is_optional(model_field, is_input, partial):

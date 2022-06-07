@@ -1,8 +1,8 @@
 from typing import Any
 
 from django.db import models
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryList, StrawberryOptional
 
@@ -24,10 +24,10 @@ class StrawberryDjangoFieldBase:
 
 
 class StrawberryDjangoField(
-    StrawberryDjangoFieldOrdering,
     StrawberryDjangoFieldFilters,
-    StrawberryDjangoPagination,
+    StrawberryDjangoFieldOrdering,
     StrawberryDjangoFieldBase,
+    StrawberryDjangoPagination,
     StrawberryField,
 ):
     """Basic field
@@ -135,7 +135,7 @@ class StrawberryDjangoField(
         get_queryset = getattr(type_, "get_queryset", None)
         if get_queryset:
             queryset = get_queryset(self, queryset, info, **kwargs)
-        return super().get_queryset(queryset, info, order, **kwargs)
+        return super().get_queryset(queryset, info, order=order, **kwargs)
 
 
 def field(

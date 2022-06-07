@@ -3,10 +3,10 @@ from typing import List
 
 import pytest
 import strawberry
+from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 
 import strawberry_django
-from strawberry_django import auto
 from tests import models, utils
 
 
@@ -32,6 +32,14 @@ class FruitEnum(Enum):
 @strawberry_django.filters.filter(models.Fruit)
 class EnumFiler:
     name: FruitEnum
+
+
+@strawberry.input
+class NonFilter:
+    name: FruitEnum
+
+    def filter(self, queryset):
+        raise NotImplementedError
 
 
 @strawberry_django.filters.filter(models.Fruit)
@@ -162,6 +170,19 @@ def test_resolver_filter(fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+def test_resolver_nonfilter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(filters: NonFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return strawberry_django.filters.apply(filters, queryset)
+
+    query = utils.generate_query(Query)
+    result = query("{ fruits(filters: { name: strawberry } ) { id name } }")
+    assert not result.errors
 
 
 def test_enum(query, fruits):

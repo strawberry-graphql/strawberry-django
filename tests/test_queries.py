@@ -2,9 +2,9 @@ from typing import List
 
 import pytest
 import strawberry
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 
 from . import models, utils
 

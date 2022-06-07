@@ -6,7 +6,7 @@ Fields can be defined manually or `auto` type can be used for automatic type res
 #types.py
 
 import strawberry
-from strawberry.django import auto
+from strawberry import auto
 
 @strawberry.django.type(models.Fruit)
 class Fruit:
