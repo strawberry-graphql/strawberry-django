@@ -67,5 +67,5 @@ class StrawberryDjangoFieldOrdering:
         return super().arguments + arguments
 
     def get_queryset(self, queryset, info, order=UNSET, **kwargs):
-        queryset = apply(order, queryset)
-        return super().get_queryset(queryset, info, **kwargs)
+        queryset = super().get_queryset(queryset, info, **kwargs)
+        return apply(order, queryset)

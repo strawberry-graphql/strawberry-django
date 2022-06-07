@@ -47,5 +47,5 @@ class StrawberryDjangoPagination:
         return None
 
     def get_queryset(self, queryset, info, pagination=UNSET, **kwargs):
-        queryset = apply(pagination, queryset)
-        return super().get_queryset(queryset, info, **kwargs)
+        queryset = super().get_queryset(queryset, info, **kwargs)
+        return apply(pagination, queryset)

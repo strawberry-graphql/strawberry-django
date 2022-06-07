@@ -24,10 +24,10 @@ class StrawberryDjangoFieldBase:
 
 
 class StrawberryDjangoField(
-    StrawberryDjangoFieldFilters,
-    StrawberryDjangoFieldOrdering,
-    StrawberryDjangoFieldBase,
     StrawberryDjangoPagination,
+    StrawberryDjangoFieldOrdering,
+    StrawberryDjangoFieldFilters,
+    StrawberryDjangoFieldBase,
     StrawberryField,
 ):
     """Basic field

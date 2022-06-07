@@ -166,5 +166,5 @@ class StrawberryDjangoFieldFilters:
         return None
 
     def get_queryset(self, queryset, info, pk=UNSET, filters=UNSET, **kwargs):
-        queryset = apply(filters, queryset, pk)
-        return super().get_queryset(queryset, info, **kwargs)
+        queryset = super().get_queryset(queryset, info, **kwargs)
+        return apply(filters, queryset, pk)
