@@ -24,9 +24,9 @@ class StrawberryDjangoFieldBase:
 
 
 class StrawberryDjangoField(
-    StrawberryDjangoFieldFilters,
-    StrawberryDjangoFieldOrdering,
     StrawberryDjangoPagination,
+    StrawberryDjangoFieldOrdering,
+    StrawberryDjangoFieldFilters,
     StrawberryDjangoFieldBase,
     StrawberryField,
 ):
