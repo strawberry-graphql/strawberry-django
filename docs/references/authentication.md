@@ -1,8 +1,7 @@
 # Authentication
 
-strawberry_django provides mutations to get authentication going right
-away. The auth.register mutation performs password validation using Django's
-validate_password().
+`strawberry_django` provides mutations to get authentication going right away.
+The `auth.register` mutation performs password validation using Django's `validate_password` method.
 
 ```python
 # types.py

@@ -2,16 +2,16 @@
 
 ## How to access Django request object in resolvers?
 
-Request object is accessible from `info.context.request` object.
+The request object is accessible via the `info.context.request` object.
 
 ```python
 def resolver(root, info: Info):
     request = info.context.request
 ```
 
-## How to access current user object in resolvers?
+## How to access the current user object in resolvers?
 
-Request object is accessible via `info.context.request.user` object.
+The current user object is accessible via the `info.context.request.user` object.
 
 ```python
 def resolver(root, info: Info):

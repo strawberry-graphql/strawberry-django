@@ -1,14 +1,13 @@
 # Resolvers
 
-Basic resolvers are generated automatically. Developer need to define the type and library handles the rest.
+Basic resolvers are generated automatically once the types are declared.
 
-However it is possible to overwrite them by writing own resolvers.
+However it is possible to override them with custom resolvers.
 
 ## Sync resolvers
 
 ```python
 # types.py
-
 from strawberry import auto
 from typing import List
 from . import models
@@ -27,7 +26,6 @@ class Color:
 
 ```python
 # types.py
-
 from strawberry import auto
 from typing import List
 from . import models
@@ -48,16 +46,14 @@ class Color:
 
 ## Issues with Resolvers
 
-It is important to note that if you override resolvers, you will lose access to all of the things that come by default
-with the library (e.g. `Pagination`, `Filter`). On your root `Query`, you can use a custom `get_queryset` to achieve
-similar results, while keeping pagination and filtering intact, but note that it will affect all root queries for that type.
+It is important to note that overriding resolvers also removes default capabilities
+(e.g. `Pagination`, `Filter`). On your root `Query`, you can use a custom `get_queryset` to achieve
+similar results, but note that it will affect all root queries for that type.
 
-For example, if we wanted a look up for berries and one for non-berry fruits.
+For example, if we wanted a query for berries and one for non-berry fruits, we could do the following:
 
 ```python
-
 # types.py
-
 import strawberry
 import strawberry_django
 from strawberry.django import auto
