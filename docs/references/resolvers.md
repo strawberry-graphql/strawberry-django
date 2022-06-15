@@ -60,7 +60,7 @@ from strawberry.django import auto
 from typing import List
 from . import models
 
-@strawberry.django.types(models.Fruit, interface=True)
+@strawberry.django.type(models.Fruit, is_interface=True)
 class Fruit:
     id: auto
     name: auto
