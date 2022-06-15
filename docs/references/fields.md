@@ -1,10 +1,9 @@
 # Fields
 
-Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box. If you use a library that designates a custom field you will need to define an equivalent type such as `str`, `float`, `bool`, `int` or `id`
+Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box. If you use a library that defines a custom field you will need to define an equivalent type such as `str`, `float`, `bool`, `int` or `id`.
 
 ```python
-#types.py
-
+# types.py
 import strawberry
 from strawberry import auto
 
@@ -13,7 +12,7 @@ class Fruit:
     id: auto
     name: auto
 
-# equivalent type
+# equivalent type, inferred by `strawberry`
 
 @strawberry.django.type(models.Fruit)
 class Fruit:
@@ -23,11 +22,11 @@ class Fruit:
 
 ## Relationships
 
-All one to one, one to many, many to one and many to many relationship types are supported. `typing.List` is used for many relationship. Default resolver of `strawberry.django.fields()` resolves the relationship based on given type information.
+All one-to-one, one-to-many, many-to-one and many-to-many relationship types are supported, and the many-to-many relation is described using the `typing.List` annotation.
+The default resolver of `strawberry.django.fields()` resolves the relationship based on given type information.
 
 ```python
-#types.py
-
+# types.py
 from typing import List
 
 @strawberry.django.type(models.Fruit)
@@ -45,11 +44,10 @@ class Color:
 
 ## Field customization
 
-All django types are using `strawberry.django.field()` field type by default. Fields can be customized with various parameters.
+All Django types are encoded using the `strawberry.django.field()` field type by default. Fields can be customized with various parameters.
 
 ```python
-#types.py
-
+# types.py
 @strawberry.django.type(models.Color)
 class Color:
     another_name: auto = strawberry.django.field(field_name='name')
