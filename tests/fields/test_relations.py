@@ -3,7 +3,7 @@ from typing import List
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.type import StrawberryList
 
 import strawberry_django
 
@@ -38,7 +38,7 @@ def test_relation():
     ] == [
         ("id", strawberry.ID, False),
         ("name", str, False),
-        ("children", StrawberryOptional(StrawberryList(Child)), True),
+        ("children", StrawberryList(Child), True),
     ]
 
 

@@ -204,7 +204,7 @@ def test_related_fields():
         ),
         (
             "related_foreign_key",
-            StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)),
+            StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
         (
@@ -214,7 +214,7 @@ def test_related_fields():
         ),
         (
             "related_many_to_many",
-            StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)),
+            StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
     ]
