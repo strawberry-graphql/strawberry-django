@@ -1,5 +1,6 @@
+import strawberry
 from django.db import models
-from strawberry import auto
+from strawberry import BasePermission, auto
 
 import strawberry_django
 
@@ -18,3 +19,25 @@ def test_default_django_name():
         ("field", "field"),
         ("field2", "field"),
     ]
+
+
+def test_field_permission_classes():
+    class TestPermission(BasePermission):
+        pass
+
+    @strawberry_django.type(FieldAttributeModel)
+    class Type:
+        field: auto = strawberry.field(permission_classes=[TestPermission])
+
+        @strawberry.field(permission_classes=[TestPermission])
+        def custom_resolved_field(self):
+            return self.field
+
+    assert sorted(
+        [(f.name, f.permission_classes) for f in Type._type_definition.fields]
+    ) == sorted(
+        [
+            ("field", [TestPermission]),
+            ("custom_resolved_field", [TestPermission]),
+        ]
+    )

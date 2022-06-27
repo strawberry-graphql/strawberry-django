@@ -75,17 +75,20 @@ class StrawberryDjangoField(
         if utils.is_strawberry_django_field(field) and not field.origin_django_type:
             return field
 
-        default = getattr(field, "default", getattr(field, "default", UNSET))
         new_field = StrawberryDjangoField(
-            base_resolver=getattr(field, "base_resolver", None),
-            default_factory=field.default_factory,
-            default=default,
-            django_name=getattr(field, "django_name", field.name),
-            graphql_name=getattr(field, "graphql_name", None),
             python_name=field.name,
+            graphql_name=getattr(field, "graphql_name", None),
             type_annotation=field.type_annotation
             if hasattr(field, "type_annotation")
             else StrawberryAnnotation(field.type),
+            description=getattr(field, "description", None),
+            base_resolver=getattr(field, "base_resolver", None),
+            permission_classes=getattr(field, "permission_classes", []),
+            default=getattr(field, "default", UNSET),
+            default_factory=field.default_factory,
+            deprecation_reason=getattr(field, "deprecation_reason", None),
+            directives=getattr(field, "directives", []),
+            django_name=getattr(field, "django_name", field.name),
         )
         new_field.is_auto = getattr(field, "is_auto", False)
         new_field.origin_django_type = getattr(field, "origin_django_type", None)
