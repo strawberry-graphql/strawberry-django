@@ -180,6 +180,10 @@ def is_optional(model_field, is_input, partial):
         has_default = model_field.default is not fields.NOT_PROVIDED
         if model_field.blank or has_default:
             return True
-    if model_field.null:
-        return True
+    if not isinstance(
+        model_field,
+        (fields.reverse_related.ManyToManyRel, fields.reverse_related.ManyToOneRel),
+    ) or isinstance(model_field, fields.reverse_related.OneToOneRel):
+        # OneToOneRel is the subclass of ManyToOneRel, so additional check is needed
+        return model_field.null
     return False

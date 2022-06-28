@@ -94,7 +94,7 @@ def test_relationship_inherit(testtype):
         ("foreign_key", strawberry_django.DjangoModelType, False),
         (
             "related_foreign_key",
-            StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)),
+            StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
         ("one_to_one", strawberry_django.DjangoModelType, False),
@@ -110,7 +110,7 @@ def test_relationship_inherit(testtype):
         ),
         (
             "related_many_to_many",
-            StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)),
+            StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
         ("another_name", strawberry_django.DjangoModelType, False),

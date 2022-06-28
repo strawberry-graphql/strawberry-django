@@ -1,5 +1,5 @@
 from django.contrib import auth
-from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.type import StrawberryList
 
 import strawberry_django
 from strawberry_django import DjangoModelType, auto, fields
@@ -27,5 +27,5 @@ def test_group_type():
 
     assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
         ("name", str),
-        ("users", StrawberryOptional(StrawberryList(DjangoModelType))),
+        ("users", StrawberryList(DjangoModelType)),
     ]
