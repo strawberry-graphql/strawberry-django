@@ -1,8 +1,10 @@
 from strawberry import auto
 
 import strawberry_django
+from strawberry_django.fields.field import StrawberryDjangoField
 
 from .models import User
+from .utils import get_field
 
 
 def test_type_instance():
@@ -36,3 +38,36 @@ def test_input_instance():
     user = InputType(1, "user")
     assert user.id == 1
     assert user.name == "user"
+
+
+def test_custom_field_cls():
+    """Custom field_cls is applied to all fields."""
+
+    class CustomStrawberryDjangoField(StrawberryDjangoField):
+        pass
+
+    @strawberry_django.type(User, field_cls=CustomStrawberryDjangoField)
+    class UserType:
+        id: int
+        name: auto
+
+    assert all(
+        isinstance(field, CustomStrawberryDjangoField)
+        for field in UserType._type_definition.fields
+    )
+
+
+def test_custom_field_cls__explicit_field_type():
+    """Custom field_cls is applied to all fields."""
+
+    class CustomStrawberryDjangoField(StrawberryDjangoField):
+        pass
+
+    @strawberry_django.type(User, field_cls=CustomStrawberryDjangoField)
+    class UserType:
+        id: int
+        name: auto = strawberry_django.field()
+
+    assert isinstance(get_field(UserType, "id"), CustomStrawberryDjangoField)
+    assert isinstance(get_field(UserType, "name"), StrawberryDjangoField)
+    assert not isinstance(get_field(UserType, "name"), CustomStrawberryDjangoField)

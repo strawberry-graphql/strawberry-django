@@ -22,6 +22,10 @@ class StrawberryDjangoFieldBase:
         type_ = utils.unwrap_type(self.type)
         return utils.get_django_model(type_)
 
+    @classmethod
+    def from_field(cls, field, django_type):
+        raise NotImplementedError
+
 
 class StrawberryDjangoField(
     StrawberryDjangoPagination,

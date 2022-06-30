@@ -47,3 +47,13 @@ def dataclass(model):
         return dataclasses.dataclass(cls)
 
     return wrapper
+
+
+def get_field(cls, field_name):
+    matches = [
+        field for field in cls._type_definition.fields if field.name == field_name
+    ]
+    try:
+        return matches[0]
+    except IndexError:
+        raise ValueError(f"{cls} does cont contain a field named {field_name}")
