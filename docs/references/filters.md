@@ -8,17 +8,15 @@ from strawberry import auto
 class FruitFilter:
     id: auto
     name: auto
-```
 
-```python
 @strawberry.django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
 ```
 
-Code above generates following schema
+The code above generates the following schema:
 
-```schema
+```graphql
 input FruitFilter {
   id: ID
   name: String
@@ -36,7 +34,7 @@ class FruitFilter:
     name: auto
 ```
 
-Single field lookup can be annotated with `FilterLookup` generic type.
+Single-field lookup can be annotated with the `FilterLookup` generic type.
 
 ```python
 from strawberry.django.filters import FilterLookup
@@ -46,7 +44,7 @@ class FruitFilter:
     name: FilterLookup[str]
 ```
 
-## Filtering over relationship
+## Filtering over relationships
 
 ```python
 @strawberry.django.filters.filter(models.Fruit)
@@ -62,7 +60,7 @@ class ColorFilter:
     fruits: FruitFilter
 ```
 
-## Custom filters and overriding default filtering method
+## Custom filters and overriding default filtering methods
 
 You can define custom filter methods and override default filter methods by defining your own resolver.
 
@@ -79,28 +77,26 @@ class FruitFilter:
         return queryset.exclude(name='banana')
 ```
 
-## Overriding the filter method
+## Overriding the default `filter` method
 
 For overriding the default filter logic you can provide the filter method.
-Note that no default filtering will be done anymore, which means your custom
-method is responsible for handling all the all filter related operations.
+Note that this completely disables the default filtering, which means your custom
+method is responsible for handling _all_ filter-related operations.
 
 ```python
 @strawberry.django.filters.filter(models.Fruit)
 class FruitFilter:
-    is_banana: bool | None
+    is_apple: bool
 
     def filter(self, queryset):
-        if self.is_banana is None:
-            return queryset
-        if self.is_banana:
-            return queryset.filter(name='banana')
-        return queryset.exclude(name='banana')
+        if self.is_apple:
+            return queryset.filter(name='apple')
+        return queryset.exclude(name='apple')
 ```
 
-## Adding filters to type
+## Adding filters to types
 
-All fields and mutations are inheriting filters from type by default.
+All fields and mutations inherit filters from the underlying type by default.
 
 ```python
 @strawberry.django.type(models.Fruit, filters=FruitFilter)
@@ -108,9 +104,9 @@ class Fruit:
     ...
 ```
 
-## Adding filters directly into field
+## Adding filters directly into a field
 
-Filters added into field is overriding default filters of type.
+Filters added into a field override the default filters of this type.
 
 ```python
 @strawberry.type
