@@ -60,11 +60,9 @@ class ColorFilter:
     fruits: FruitFilter
 ```
 
-## Custom filters and overriding default filtering method
+## Custom filters and overriding default filtering methods
 
 You can define custom filter methods and override default filter methods by defining your own resolver.
-Note that this completely disables the default filtering, which means your custom
-method is responsible for handling _all_ filter-related operations.
 
 ```python
 @strawberry.django.filters.filter(models.Fruit)
@@ -79,9 +77,26 @@ class FruitFilter:
         return queryset.exclude(name='banana')
 ```
 
+## Overriding the default `filter` method
+
+For overriding the default filter logic you can provide the filter method.
+Note that this completely disables the default filtering, which means your custom
+method is responsible for handling _all_ filter-related operations.
+
+```python
+@strawberry.django.filters.filter(models.Fruit)
+class FruitFilter:
+    is_apple: bool
+
+    def filter(self, queryset):
+        if self.is_apple:
+            return queryset.filter(name='apple')
+        return queryset.exclude(name='apple')
+```
+
 ## Adding filters to types
 
-All fields and mutations inherit filters from type by default.
+All fields and mutations inherit filters from the underlying type by default.
 
 ```python
 @strawberry.django.type(models.Fruit, filters=FruitFilter)
