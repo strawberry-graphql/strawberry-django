@@ -22,7 +22,9 @@ class TypeModel(models.Model):
         related_name="related_one_to_one",
         on_delete=models.CASCADE,
     )
-    many_to_many = models.ManyToManyField("TypeModel", related_name="related_many_to_many")
+    many_to_many = models.ManyToManyField(
+        "TypeModel", related_name="related_many_to_many"
+    )
 
 
 def test_type():

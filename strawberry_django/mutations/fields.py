@@ -19,7 +19,9 @@ from ..resolvers import django_resolver
 class DjangoMutationBase:
     def __init__(self, input_type, **kwargs):
         self.input_type = input_type
-        super().__init__(graphql_name=None, python_name=None, type_annotation=None, **kwargs)
+        super().__init__(
+            graphql_name=None, python_name=None, type_annotation=None, **kwargs
+        )
 
     @property
     def is_optional(self):
@@ -49,7 +51,9 @@ class DjangoMutationBase:
         return self.resolver(info=info, source=source, *args, **kwargs)
 
 
-class DjangoCreateMutation(DjangoMutationBase, StrawberryDjangoFieldBase, StrawberryField):
+class DjangoCreateMutation(
+    DjangoMutationBase, StrawberryDjangoFieldBase, StrawberryField
+):
     def create(self, data):
         input_data = get_input_data(self.input_type, data)
         instance = self.django_model.objects.create(**input_data)

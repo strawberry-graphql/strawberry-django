@@ -144,7 +144,9 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
     cls.__annotations__ = cls_annotations = {}
     for field in fields:
         annotation = (
-            field.type if field.type_annotation is None else field.type_annotation.annotation
+            field.type
+            if field.type_annotation is None
+            else field.type_annotation.annotation
         )
         if annotation is None:
             annotation = StrawberryAnnotation(strawberry.auto)

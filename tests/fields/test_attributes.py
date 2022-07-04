@@ -33,7 +33,9 @@ def test_field_permission_classes():
         def custom_resolved_field(self):
             return self.field
 
-    assert sorted([(f.name, f.permission_classes) for f in Type._type_definition.fields]) == sorted(
+    assert sorted(
+        [(f.name, f.permission_classes) for f in Type._type_definition.fields]
+    ) == sorted(
         [
             ("field", [TestPermission]),
             ("custom_resolved_field", [TestPermission]),

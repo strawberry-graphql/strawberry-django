@@ -33,7 +33,9 @@ def query(db):
 
 @pytest.fixture
 def instance(mocker):
-    mocker.patch("django.core.files.images.ImageFile._get_image_dimensions").return_value = [
+    mocker.patch(
+        "django.core.files.images.ImageFile._get_image_dimensions"
+    ).return_value = [
         800,
         600,
     ]

@@ -78,7 +78,8 @@ def test_logout_without_logged_in(mutation, user, context):
 
 def test_register_new_user(mutation, user, context):
     result = mutation(
-        '{ register(data: {username: "new_user",' ' password: "test_password"}) { username } }',
+        '{ register(data: {username: "new_user",'
+        ' password: "test_password"}) { username } }',
         context_value=context,
     )
 

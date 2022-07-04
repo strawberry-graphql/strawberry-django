@@ -84,7 +84,9 @@ def test_field_filter_definition():
 
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(Fruit))
     assert field.get_filters() == FruitFilter
-    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(Fruit), filters=None)
+    field = StrawberryDjangoField(
+        type_annotation=StrawberryAnnotation(Fruit), filters=None
+    )
     assert field.get_filters() is None
 
 
@@ -127,7 +129,9 @@ def test_relationship(query, fruits):
     color = models.Color.objects.create(name="red")
     color.fruits.set([fruits[0], fruits[1]])
 
-    result = query('{ fruits(filters: { color: { name: { iExact: "RED" } } })' " { id name } }")
+    result = query(
+        '{ fruits(filters: { color: { name: { iExact: "RED" } } })' " { id name } }"
+    )
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},

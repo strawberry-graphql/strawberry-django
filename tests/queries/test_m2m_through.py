@@ -24,13 +24,17 @@ class MembershipModel(models.Model):
 @strawberry_django.type(ProjectModel)
 class Project:
     name: auto
-    membership: List["Membership"] = strawberry_django.field(field_name="membershipmodel_set")
+    membership: List["Membership"] = strawberry_django.field(
+        field_name="membershipmodel_set"
+    )
 
 
 @strawberry_django.type(MemberModel)
 class Member:
     name: auto
-    membership: List["Membership"] = strawberry_django.field(field_name="membershipmodel_set")
+    membership: List["Membership"] = strawberry_django.field(
+        field_name="membershipmodel_set"
+    )
 
 
 @strawberry_django.type(MembershipModel)

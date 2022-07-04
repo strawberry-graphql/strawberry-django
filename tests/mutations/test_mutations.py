@@ -4,7 +4,9 @@ from tests import models
 
 
 def test_create(mutation):
-    result = mutation('{ fruit: createFruit(data: { name: "strawberry" }) { id name } }')
+    result = mutation(
+        '{ fruit: createFruit(data: { name: "strawberry" }) { id name } }'
+    )
     assert not result.errors
     assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
     assert list(models.Fruit.objects.values("id", "name")) == [
@@ -15,7 +17,9 @@ def test_create(mutation):
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_create_async(mutation):
-    result = await mutation('{ fruit: createFruit(data: { name: "strawberry" }) { name } }')
+    result = await mutation(
+        '{ fruit: createFruit(data: { name: "strawberry" }) { name } }'
+    )
     assert not result.errors
     assert result.data["fruit"] == {"name": "strawberry"}
 

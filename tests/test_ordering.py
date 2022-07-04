@@ -58,7 +58,9 @@ def test_relationship(query, fruits):
     color_names = ["red", "dark red", "yellow"]
     for fruit, color_name in zip(fruits, color_names):
         add_color(fruit, color_name)
-    result = query("{ fruits(order: { color: { name: DESC } }) { id name color { name } } }")
+    result = query(
+        "{ fruits(order: { color: { name: DESC } }) { id name color { name } } }"
+    )
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana", "color": {"name": "yellow"}},
