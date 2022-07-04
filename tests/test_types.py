@@ -4,7 +4,6 @@ import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 
 from .models import User
-from .utils import get_field
 
 
 def test_type_instance():
@@ -68,6 +67,12 @@ def test_custom_field_cls__explicit_field_type():
         id: int
         name: auto = strawberry_django.field()
 
-    assert isinstance(get_field(UserType, "id"), CustomStrawberryDjangoField)
-    assert isinstance(get_field(UserType, "name"), StrawberryDjangoField)
-    assert not isinstance(get_field(UserType, "name"), CustomStrawberryDjangoField)
+    assert isinstance(
+        UserType._type_definition.get_field("id"), CustomStrawberryDjangoField
+    )
+    assert isinstance(
+        UserType._type_definition.get_field("name"), StrawberryDjangoField
+    )
+    assert not isinstance(
+        UserType._type_definition.get_field("name"), CustomStrawberryDjangoField
+    )
