@@ -1,0 +1,105 @@
+site_name: Strawberry Django +
+site_description: Strawberry-Django with extra features
+#site_url: https://nrbnlulu.github.io/strawberry-django-auth/
+site_author: community
+repo_name: strawberry-django-plus
+repo_url: https://github.com/blb-ventures/strawberry-django-plus/
+
+theme:
+  name: material
+  language: en
+  palette:
+  - scheme: default
+    primary: purple
+    accent: indigo
+    toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+
+  - scheme: slate
+    primary: black
+    accent: purple
+    toggle:
+      icon: material/toggle-switch
+      name: Switch to dark mode
+
+
+
+  logo: images/logo.png
+  favicon: images/logo.png
+  features:
+    - content.code.annotate
+extra:
+#  analytics:
+#    provider: google
+#    property: G-XYFSBNLH00
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            <a href="https://github.com/blb-ventures/strawberry-django-plus/issues" target=_blank>posting an issue</a>.
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - attr_list
+  - pymdownx.superfences
+  - md_in_html
+  - pymdownx.tabbed:
+      alternate_style: true
+
+  - toc:
+      permalink: true
+  - pymdownx.caret
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+  - markdownextradata:
+        data: docs/data
+
+dev_addr: 127.0.0.1:7000
+
+nav:
+  - Start here: index.md
+  - FAQ: faq.md
+  - Guides:
+       - Query optimizer: ./guides/quick-start.md
+#      TBD's
+       - UnitTesting: ./guides/unit-testing.md
+       - Realtionships: ./guides/relationships.md
+  - References:
+      - Authentication: ./references/authentication.md
+      - Fields: ./references/fields.md
+      - Filters: ./references/filters.md
+      - Mutations: ./references/mutations.md
+      - Ordering: ./references/ordering.md
+      - Pagination: ./references/pagination.md
+      - Resolvers: ./references/resolvers.md
+      - Types: ./references/types.md
+      - Views: ./references/views.md
+#      (TBD's)
+      - Permissions: ./references/permissions.md
+      - Subscriptions: ./references/subscriptions.md
+      - Queries: ./references/queries.md
