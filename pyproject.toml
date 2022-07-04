@@ -62,27 +62,6 @@ docs = [
 requires = ["poetry-core>=1.0.0", "setuptools"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.black]
-line-length = 100
-target-version = ['py38', 'py39', 'py310']
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | __pycached__
-  | _build
-  | buck-out
-  | build
-  | dist
-  | docs
-  | site
-)/
-'''
-
 [tool.isort]
 profile = "black"
 indent = 4

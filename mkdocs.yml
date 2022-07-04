@@ -10,15 +10,15 @@ theme:
   language: en
   palette:
   - scheme: default
-    primary: purple
-    accent: indigo
+    primary: red
+    accent: green
     toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to light mode
 
   - scheme: slate
-    primary: black
-    accent: purple
+    primary: green
+    accent: red
     toggle:
       icon: material/toggle-switch
       name: Switch to dark mode
@@ -82,7 +82,7 @@ plugins:
 dev_addr: 127.0.0.1:7000
 
 nav:
-  - Start here: index.md
+  - Strawberry GraphQL Django: index.md
   - FAQ: faq.md
   - Guides:
        - Query optimizer: ./guides/quick-start.md
@@ -103,3 +103,4 @@ nav:
       - Permissions: ./references/permissions.md
       - Subscriptions: ./references/subscriptions.md
       - Queries: ./references/queries.md
+  - Contributing: Contributing.md
