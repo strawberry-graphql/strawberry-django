@@ -57,9 +57,7 @@ def filter(model, *, name=None, lookups=False):
         is_filter = lookups and "lookups" or True
         from .type import process_type
 
-        type_ = process_type(
-            cls, model, is_input=True, partial=True, is_filter=is_filter
-        )
+        type_ = process_type(cls, model, is_input=True, partial=True, is_filter=is_filter)
         return type_
 
     return wrapper

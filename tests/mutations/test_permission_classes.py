@@ -18,9 +18,7 @@ class PermissionClass(BasePermission):
 
 @strawberry.type
 class Mutation:
-    createFruits: List[Fruit] = mutations.create(
-        FruitInput, permission_classes=[PermissionClass]
-    )
+    createFruits: List[Fruit] = mutations.create(FruitInput, permission_classes=[PermissionClass])
     updateFruits: List[Fruit] = mutations.update(
         FruitPartialInput, permission_classes=[PermissionClass]
     )

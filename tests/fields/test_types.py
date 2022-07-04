@@ -51,9 +51,7 @@ class FieldTypesModel(models.Model):
         related_name="related_one_to_one",
         on_delete=models.CASCADE,
     )
-    many_to_many = models.ManyToManyField(
-        "FieldTypesModel", related_name="related_many_to_many"
-    )
+    many_to_many = models.ManyToManyField("FieldTypesModel", related_name="related_many_to_many")
 
 
 def test_field_types():
@@ -325,9 +323,7 @@ def test_inherit_partial_input():
     class PartialInput(Input):
         pass
 
-    assert [
-        (f.name, f.type or f.child.type, f.is_optional) for f in fields(PartialInput)
-    ] == [
+    assert [(f.name, f.type or f.child.type, f.is_optional) for f in fields(PartialInput)] == [
         ("char", StrawberryOptional(str), True),
         (
             "one_to_one",

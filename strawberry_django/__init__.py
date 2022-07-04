@@ -26,9 +26,7 @@ _deprecated_names: Dict[str, str] = {
         "importing `auto` from `strawberry_django` is deprecated, "
         "import instead from `strawberry` directly."
     ),
-    "is_auto": (
-        "`is_auto` is deprecated use `isinstance(value, StrawberryAuto)` instead."
-    ),
+    "is_auto": ("`is_auto` is deprecated use `isinstance(value, StrawberryAuto)` instead."),
 }
 
 
