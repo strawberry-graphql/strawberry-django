@@ -1,9 +1,9 @@
-site_name: Strawberry Django +
-site_description: Strawberry-Django with extra features
+site_name: Strawberry Django
+site_description: Strawberry integration with Django.
 #site_url: https://nrbnlulu.github.io/strawberry-django-auth/
 site_author: community
-repo_name: strawberry-django-plus
-repo_url: https://github.com/blb-ventures/strawberry-django-plus/
+repo_name: strawberry-django
+repo_url: https://github.com/strawberry-graphql/strawberry-graphql-django
 
 theme:
   name: material
