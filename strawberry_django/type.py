@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 import django
 import strawberry
@@ -7,7 +7,7 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 
 from . import utils
-from .fields.field import StrawberryDjangoField
+from .fields.field import StrawberryDjangoField, StrawberryDjangoFieldBase
 from .fields.types import (
     get_model_field,
     is_optional,
@@ -17,6 +17,10 @@ from .fields.types import (
 
 
 _type = type
+
+StrawberryDjangoFieldType = TypeVar(
+    "StrawberryDjangoFieldType", bound=StrawberryDjangoFieldBase
+)
 
 
 def get_type_attr(type_, field_name):
@@ -32,9 +36,9 @@ def get_field(django_type, field_name, field_annotation=None):
     attr = get_type_attr(django_type.origin, field_name)
 
     if utils.is_field(attr):
-        field = StrawberryDjangoField.from_field(attr, django_type)
+        field = django_type.field_cls.from_field(attr, django_type)
     else:
-        field = StrawberryDjangoField(
+        field = django_type.field_cls(
             default=attr,
             type_annotation=field_annotation,
         )
@@ -122,10 +126,23 @@ class StrawberryDjangoType:
     filters: Any
     order: Any
     pagination: Any
+    field_cls: StrawberryDjangoFieldType
 
 
-def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **kwargs):
+def process_type(
+    cls,
+    model,
+    *,
+    filters=UNSET,
+    pagination=UNSET,
+    order=UNSET,
+    field_cls=UNSET,
+    **kwargs
+):
     original_annotations = cls.__dict__.get("__annotations__", {})
+
+    if not field_cls or field_cls is UNSET:
+        field_cls = StrawberryDjangoField
 
     django_type = StrawberryDjangoType(
         origin=cls,
@@ -136,6 +153,7 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
         filters=filters,
         order=order,
         pagination=pagination,
+        field_cls=field_cls,
     )
 
     fields = get_fields(django_type)
