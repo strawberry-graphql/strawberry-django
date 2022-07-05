@@ -12,5 +12,5 @@ test:
 	${POETRY} run pytest
 
 serve-docs:
-	poetry install --extras "docs"
+	poetry install
 	${MKDOCS} serve
