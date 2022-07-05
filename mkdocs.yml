@@ -23,35 +23,19 @@ theme:
       icon: material/toggle-switch
       name: Switch to dark mode
 
-
-
   logo: images/logo.png
   favicon: images/logo.png
   features:
     - content.code.annotate
-extra:
-#  analytics:
-#    provider: google
-#    property: G-XYFSBNLH00
-    feedback:
-      title: Was this page helpful?
-      ratings:
-        - icon: material/emoticon-happy-outline
-          name: This page was helpful
-          data: 1
-          note: >-
-            Thanks for your feedback!
-        - icon: material/emoticon-sad-outline
-          name: This page could be improved
-          data: 0
-          note: >-
-            Thanks for your feedback! Help us improve this page by
-            <a href="https://github.com/blb-ventures/strawberry-django-plus/issues" target=_blank>posting an issue</a>.
 
 markdown_extensions:
+  - tables
   - admonition
   - codehilite
   - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
   - pymdownx.superfences
   - md_in_html
   - pymdownx.tabbed:
@@ -103,4 +87,5 @@ nav:
       - Permissions: ./references/permissions.md
       - Subscriptions: ./references/subscriptions.md
       - Queries: ./references/queries.md
+  - Community projects: ./community-projects.md
   - Contributing: Contributing.md

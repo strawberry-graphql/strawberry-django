@@ -1,3 +1,5 @@
+---
+
 We use [poetry](https://github.com/sdispater/poetry) to manage dependencies, to
 get started follow these steps:
 
@@ -21,6 +23,8 @@ pre-commit install
 ```
 
 ### Docs setup and local server:
+
+We use Material for MkDocs, you can read the documentation [here](https://squidfunk.github.io/mkdocs-material/)
 
 ```shell
 make serve-docs
