@@ -70,7 +70,7 @@ nav:
   - FAQ: faq.md
   - Guides:
        - Query optimizer: ./guides/quick-start.md
-#      TBD's
+#      (TBD's)
        - UnitTesting: ./guides/unit-testing.md
        - Realtionships: ./guides/relationships.md
   - References:

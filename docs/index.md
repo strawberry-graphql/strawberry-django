@@ -1,7 +1,7 @@
-![Logo](./images/logo.png){ align=left }
+![Logo](./images/logo.png){ align=center }
 Strawberry integration with Django.
 
-Strawberry-Django "makes it easier to build better web apps more quickly and with less code."
+> makes it easier to build better web apps more quickly and with less code.
 
 ---
 
