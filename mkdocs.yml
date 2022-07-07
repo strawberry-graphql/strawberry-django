@@ -1,0 +1,91 @@
+site_name: Strawberry Django
+site_description: Strawberry integration with Django.
+#site_url: https://nrbnlulu.github.io/strawberry-django-auth/
+site_author: community
+repo_name: strawberry-django
+repo_url: https://github.com/strawberry-graphql/strawberry-graphql-django
+
+theme:
+  name: material
+  language: en
+  palette:
+  - scheme: default
+    primary: red
+    accent: green
+    toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+
+  - scheme: slate
+    primary: green
+    accent: red
+    toggle:
+      icon: material/toggle-switch
+      name: Switch to dark mode
+
+  logo: images/logo.png
+  favicon: images/logo.png
+  features:
+    - content.code.annotate
+
+markdown_extensions:
+  - tables
+  - admonition
+  - codehilite
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.superfences
+  - md_in_html
+  - pymdownx.tabbed:
+      alternate_style: true
+
+  - toc:
+      permalink: true
+  - pymdownx.caret
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+  - markdownextradata:
+        data: docs/data
+
+dev_addr: 127.0.0.1:7000
+
+nav:
+  - Strawberry GraphQL Django: index.md
+  - FAQ: faq.md
+  - Guides:
+       - Query optimizer: ./guides/quick-start.md
+#      (TBD's)
+       - UnitTesting: ./guides/unit-testing.md
+       - Realtionships: ./guides/relationships.md
+  - References:
+      - Authentication: ./references/authentication.md
+      - Fields: ./references/fields.md
+      - Filters: ./references/filters.md
+      - Mutations: ./references/mutations.md
+      - Ordering: ./references/ordering.md
+      - Pagination: ./references/pagination.md
+      - Resolvers: ./references/resolvers.md
+      - Types: ./references/types.md
+      - Views: ./references/views.md
+#      (TBD's)
+      - Permissions: ./references/permissions.md
+      - Subscriptions: ./references/subscriptions.md
+      - Queries: ./references/queries.md
+  - Community projects: ./community-projects.md
+  - Contributing: contributing.md

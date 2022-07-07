@@ -155,7 +155,7 @@ def field(
         filters=filters,
         django_name=field_name,
         default=default,
-        **kwargs
+        **kwargs,
     )
     if resolver:
         resolver = django_resolver(resolver)
