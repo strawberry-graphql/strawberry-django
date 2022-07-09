@@ -9,6 +9,7 @@ from django.db.models import fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
 from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
+from strawberry.scalars import JSON
 
 from .. import filters
 
@@ -93,7 +94,7 @@ field_type_map = {
 if django.VERSION >= (3, 1):
     field_type_map.update(
         {
-            fields.json.JSONField: NotImplemented,
+            fields.json.JSONField: JSON,
             fields.PositiveBigIntegerField: int,
         }
     )

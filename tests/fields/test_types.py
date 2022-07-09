@@ -10,6 +10,7 @@ import strawberry
 from django.db import models
 from strawberry import auto
 from strawberry.enum import EnumDefinition, EnumValue
+from strawberry.scalars import JSON
 from strawberry.type import StrawberryList, StrawberryOptional
 
 import strawberry_django
@@ -39,6 +40,7 @@ class FieldTypesModel(models.Model):
     time = models.TimeField()
     url = models.URLField()
     uuid = models.UUIDField()
+    json = models.JSONField()
     foreign_key = models.ForeignKey(
         "FieldTypesModel",
         blank=True,
@@ -82,6 +84,7 @@ def test_field_types():
         time: auto
         url: auto
         uuid: auto
+        json: auto
 
     assert [(f.name, f.type) for f in fields(Type)] == [
         ("id", strawberry.ID),
@@ -107,6 +110,7 @@ def test_field_types():
         ("time", datetime.time),
         ("url", str),
         ("uuid", uuid.UUID),
+        ("json", JSON),
     ]
 
 
