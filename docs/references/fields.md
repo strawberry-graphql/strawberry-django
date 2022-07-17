@@ -19,7 +19,9 @@ class Fruit:
     id: strawberry.ID
     name: str
 ```
+
 # Choice fields
+
 For IntegerChoices Enum can be used to display the value
 
 ```python
@@ -37,7 +39,7 @@ class FruitColor(Enum):
   Red = 1
   Yellow = 2
   Green = 3
-  
+
 @strawberry.django.type(models.Fruit)
 class Fruit:
     id: auto
