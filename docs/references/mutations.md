@@ -1,4 +1,5 @@
 # Mutations
+
 Mutations are used to create, update or delete objects in GraphQL
 
 In the `types.py` create Input fields for the classes that are going to be used for mutations. Note that `partial=True` should be for foreign keys fields so that their fields are not set to required by default.
@@ -17,17 +18,17 @@ class Fruit:
 class Color:
     id: auto
     name: auto
-    
+
 @strawberry.django.input(models.Color, partial=True)
 class ColorInput:
     id: auto
     name: auto
-    
+
 @strawberry.django.input(models.Fruit)
 class FruitInput:
     id: auto
     name: auto
-    color: 'ColorInput'    
+    color: 'ColorInput'
 
 ```
 
