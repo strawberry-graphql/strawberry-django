@@ -12,7 +12,7 @@ Installing `strawberry-graphql-django` package from the python package repositor
 pip install strawberry-graphql-django
 ```
 
-Full documentation is available under [docs](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/docs/index.md) github folder.
+Full documentation is available under [docs](https://strawberry-graphql.github.io/strawberry-graphql-django/) github folder.
 
 * [x] GraphQL type generation from models
 * [x] Filtering, pagination and ordering
