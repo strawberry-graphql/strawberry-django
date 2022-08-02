@@ -1,17 +1,21 @@
 import datetime
 import decimal
 import uuid
-from typing import List, Optional, Type
+from typing import TYPE_CHECKING, Any, List, Optional, Type, Union
 
 import django
 import strawberry
-from django.db.models import Model, fields
+from django.db.models import Field, Model, fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
 from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
 from strawberry.scalars import JSON
 
 from .. import filters
+
+
+if TYPE_CHECKING:
+    from strawberry_django.type import StrawberryDjangoType
 
 
 @strawberry.type
@@ -111,9 +115,11 @@ input_field_type_map = {
 }
 
 
-def resolve_model_field_type(model_field, django_type):
+def resolve_model_field_type(
+    model_field: Union[Field, ForeignObjectRel], django_type: "StrawberryDjangoType"
+):
     model_field_type = type(model_field)
-    field_type = None
+    field_type: Any = None
     if django_type.is_filter and model_field.is_relation:
         field_type = filters.DjangoModelFilterInput
     elif django_type.is_input:
