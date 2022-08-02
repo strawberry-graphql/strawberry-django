@@ -25,12 +25,14 @@ Strawberry integration with Django.
 from django.db import models
 
 class Fruit(models.Model):
+    """A tasty treat"""
     name = models.CharField(max_length=20)
     color = models.ForeignKey('Color', blank=True, null=True,
             related_name='fruits', on_delete=models.CASCADE)
 
 class Color(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=20,
+           help_text="field description")
 ```
 
 ```python
@@ -69,6 +71,9 @@ schema = strawberry.Schema(query=Query)
 Code above generates following schema.
 
 ```schema
+"""
+A tasty treat
+"""
 type Fruit {
   id: ID!
   name: String!
@@ -77,6 +82,9 @@ type Fruit {
 
 type Color {
   id: ID!
+  """
+  field description
+  """
   name: String!
   fruits: [Fruit!]
 }
