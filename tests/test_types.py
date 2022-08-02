@@ -1,3 +1,4 @@
+from pytest import MonkeyPatch
 from strawberry import auto
 
 import strawberry_django
@@ -108,3 +109,15 @@ def test_field_metadata_overridden():
     assert (
         Book._type_definition.get_field("title").description == "The name of the story"
     )
+
+def test_field_no_empty_strings(monkeypatch: MonkeyPatch):
+    """
+    Test that an empty Django model docstring doesn't get used for the description.
+    """
+    monkeypatch.setattr(BookModel, "__doc__", "")
+
+    @strawberry_django.type(BookModel)
+    class Book:
+        title: auto
+
+    assert Book._type_definition.description is None

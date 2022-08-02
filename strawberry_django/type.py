@@ -185,7 +185,7 @@ def process_type(
         cls.is_type_of = lambda obj, _info: isinstance(obj, (cls, model))
 
     # Get type description from either kwargs, or the model's docstring
-    description = kwargs.pop("description", cleandoc(model.__doc__))
+    description = kwargs.pop("description", cleandoc(model.__doc__)) or None
 
     strawberry.type(cls, description=description, **kwargs)
 
