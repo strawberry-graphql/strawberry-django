@@ -1,4 +1,4 @@
-from typing import Any, Type, TypeVar
+from typing import Any, Optional, Type, TypeVar
 
 from django.db import models
 from strawberry import UNSET
@@ -58,7 +58,13 @@ class StrawberryDjangoField(
     StrawberryField super classes.
     """
 
-    def __init__(self, django_name=None, graphql_name=None, python_name=None, **kwargs):
+    def __init__(
+        self,
+        django_name: Optional[str] = None,
+        graphql_name: Optional[str] = None,
+        python_name: Optional[str] = None,
+        **kwargs
+    ):
         self.django_name = django_name
         self.is_auto = utils.is_auto(kwargs.get("type_annotation", None))
         self.is_relation = False
