@@ -124,6 +124,8 @@ class StrawberryDjangoType:
     is_partial: bool
     is_filter: bool
     filters: Any
+    lookup_key: Any
+    lookup_key_type: Any
     order: Any
     pagination: Any
     field_cls: StrawberryDjangoFieldType
@@ -134,6 +136,8 @@ def process_type(
     model,
     *,
     filters=UNSET,
+    lookup_key=UNSET,
+    lookup_key_type=UNSET,
     pagination=UNSET,
     order=UNSET,
     field_cls=UNSET,
@@ -151,6 +155,8 @@ def process_type(
         is_partial=kwargs.pop("partial", False),
         is_filter=kwargs.pop("is_filter", False),
         filters=filters,
+        lookup_key=lookup_key,
+        lookup_key_type=lookup_key_type,
         order=order,
         pagination=pagination,
         field_cls=field_cls,

@@ -73,6 +73,9 @@ class Query:
     type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
     enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFiler)
 
+    fruit: Fruit = strawberry_django.field()
+    fruit_named: Fruit = strawberry_django.field(lookup_key="name", lookup_key_type=str)
+
 
 @pytest.fixture
 def query():
@@ -191,3 +194,21 @@ def test_enum(query, fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+def test_resolve_by_pk(query, fruits):
+    result = query("{ fruit(pk: 1) { id name } }")
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
+
+
+def test_resolve_by_pk__no_match(query, fruits):
+    result = query("{ fruit(pk: 1234) { id name } }")
+    assert result.errors
+    assert result.errors[0].message == "Fruit matching query does not exist."
+
+
+def test_resolve_by_custom_lookup(query, fruits):
+    result = query('{ fruit: fruitNamed(name: "strawberry") { id name } }')
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
