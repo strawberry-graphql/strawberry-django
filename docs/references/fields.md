@@ -84,4 +84,5 @@ class UserQuery:
 
 ```
 
-In this example, each of the fields of the `UserType` will be automatically crated with the `CustomStrawberryDjangoField` which may implement anything from custom pagination of relationships to altering the field permissions.
+In this example, each of the fields of the `UserType` will be automatically created by `CustomStrawberryDjangoField`,
+which may implement anything from custom pagination of relationships to altering the field permissions.
