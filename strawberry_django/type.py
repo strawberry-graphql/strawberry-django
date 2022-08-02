@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, Type
 
 import django
 import strawberry
@@ -7,7 +7,7 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 
 from . import utils
-from .fields.field import StrawberryDjangoField, StrawberryDjangoFieldBase
+from .fields.field import StrawberryDjangoField
 from .fields.types import (
     get_model_field,
     is_optional,
@@ -17,10 +17,6 @@ from .fields.types import (
 
 
 _type = type
-
-StrawberryDjangoFieldType = TypeVar(
-    "StrawberryDjangoFieldType", bound=StrawberryDjangoFieldBase
-)
 
 
 def get_type_attr(type_, field_name: str):
@@ -130,7 +126,7 @@ class StrawberryDjangoType:
     filters: Any
     order: Any
     pagination: Any
-    field_cls: StrawberryDjangoFieldType
+    field_cls: Type[StrawberryDjangoField]
 
 
 def process_type(
