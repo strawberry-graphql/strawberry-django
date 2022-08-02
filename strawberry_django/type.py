@@ -30,7 +30,11 @@ def get_type_attr(type_, field_name):
     return attr
 
 
-def get_field(django_type, field_name, field_annotation=None):
+def get_field(
+    django_type: "StrawberryDjangoType",
+    field_name: str,
+    field_annotation: Optional[StrawberryAnnotation] = None,
+):
     if field_annotation is None:
         field_annotation = StrawberryAnnotation(None)
     attr = get_type_attr(django_type.origin, field_name)
