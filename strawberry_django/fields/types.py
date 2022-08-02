@@ -1,11 +1,11 @@
 import datetime
 import decimal
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Type
 
 import django
 import strawberry
-from django.db.models import fields
+from django.db.models import Model, fields
 from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
 from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
@@ -140,7 +140,7 @@ def resolve_model_field_name(model_field, is_input=False, is_filter=False):
         return model_field.name
 
 
-def get_model_field(model, field_name):
+def get_model_field(model: Type[Model], field_name: str):
     try:
         return model._meta.get_field(field_name)
     except django.core.exceptions.FieldDoesNotExist as e:
