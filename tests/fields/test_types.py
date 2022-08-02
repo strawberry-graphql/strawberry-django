@@ -359,3 +359,21 @@ def test_type_from_type():
             StrawberryOptional(strawberry_django.ManyToManyInput),
         ),
     ]
+
+
+def test_notimplemented():
+    """Test that an unrecognized field raises `NotImplementedError`."""
+
+    class UnknownField(models.Field):
+        """A field unknown to Strawberry."""
+
+    class UnknownModel(models.Model):
+        """A model with UnknownField."""
+
+        field = UnknownField()
+
+    with pytest.raises(NotImplementedError, match=r"UnknownModel\.field"):
+
+        @strawberry_django.type(UnknownModel)
+        class UnknownType:
+            field: auto
