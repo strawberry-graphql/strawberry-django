@@ -34,8 +34,10 @@ class Fruit(models.Model):
             related_name='fruits', on_delete=models.CASCADE)
 
 class Color(models.Model):
-    name = models.CharField(max_length=20,
-           help_text="field description")
+    name = models.CharField(
+      max_length=20,
+      help_text="field description",
+    )
 ```
 
 ```python
