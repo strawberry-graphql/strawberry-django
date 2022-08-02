@@ -110,6 +110,7 @@ def test_field_metadata_overridden():
         Book._type_definition.get_field("title").description == "The name of the story"
     )
 
+
 def test_field_no_empty_strings(monkeypatch: MonkeyPatch):
     """
     Test that an empty Django model docstring doesn't get used for the description.
