@@ -23,7 +23,7 @@ StrawberryDjangoFieldType = TypeVar(
 )
 
 
-def get_type_attr(type_, field_name):
+def get_type_attr(type_, field_name: str):
     attr = getattr(type_, field_name, UNSET)
     if attr is UNSET:
         attr = getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
