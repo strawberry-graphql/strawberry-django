@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 import django
 import strawberry
@@ -94,9 +94,9 @@ def get_field(
     return field
 
 
-def get_fields(django_type):
+def get_fields(django_type: "StrawberryDjangoType"):
     annotations = utils.get_annotations(django_type.origin)
-    fields = {}
+    fields: Dict[str, StrawberryDjangoField] = {}
 
     # collect all annotated fields
     for field_name, field_annotation in annotations.items():
