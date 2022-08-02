@@ -2,6 +2,7 @@ import dataclasses
 from typing import Any, Dict, Optional, Type
 
 import django
+import django.db.models
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
@@ -119,7 +120,7 @@ def get_fields(django_type: "StrawberryDjangoType"):
 @dataclasses.dataclass
 class StrawberryDjangoType:
     origin: Any
-    model: Any
+    model: Type[django.db.models.Model]
     is_input: bool
     is_partial: bool
     is_filter: bool
@@ -131,7 +132,7 @@ class StrawberryDjangoType:
 
 def process_type(
     cls,
-    model,
+    model: Type[django.db.models.Model],
     *,
     filters=UNSET,
     pagination=UNSET,
