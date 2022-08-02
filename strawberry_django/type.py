@@ -125,6 +125,7 @@ class StrawberryDjangoType:
     is_filter: bool
     filters: Any
     lookup_key: Any
+    lookup_key_django_name: Any
     lookup_key_type: Any
     order: Any
     pagination: Any
@@ -137,6 +138,7 @@ def process_type(
     *,
     filters=UNSET,
     lookup_key=UNSET,
+    lookup_key_django_name=UNSET,
     lookup_key_type=UNSET,
     pagination=UNSET,
     order=UNSET,
@@ -156,6 +158,7 @@ def process_type(
         is_filter=kwargs.pop("is_filter", False),
         filters=filters,
         lookup_key=lookup_key,
+        lookup_key_django_name=lookup_key_django_name,
         lookup_key_type=lookup_key_type,
         order=order,
         pagination=pagination,
