@@ -64,7 +64,8 @@ class Color:
 
 ## Overriding the field class (advanced)
 
-If in your project, you want to change/add some of the standard `strawberry.django.field()` behaviour, it is possible to use your own custom field class when decorating a `strawberry.django.type` with the `field_cls` argument, e.g.
+If in your project, you want to change/add some of the standard `strawberry.django.field()` behaviour,
+it is possible to use your own custom field class when decorating a `strawberry.django.type` with the `field_cls` argument, e.g.
 
 ```python
 class CustomStrawberryDjangoField(StrawberryDjangoField):
