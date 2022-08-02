@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Type, TypeVar
 
 from django.db import models
 from strawberry import UNSET
@@ -12,9 +12,11 @@ from ..ordering import StrawberryDjangoFieldOrdering
 from ..pagination import StrawberryDjangoPagination
 from ..resolvers import django_resolver
 
+T = TypeVar("T", bound="StrawberryDjangoFieldBase")
+
 
 class StrawberryDjangoFieldBase:
-    def get_queryset(self, queryset, info, **kwargs):
+    def get_queryset(self, queryset: models.QuerySet, info, **kwargs):
         return queryset
 
     @property
@@ -23,7 +25,7 @@ class StrawberryDjangoFieldBase:
         return utils.get_django_model(type_)
 
     @classmethod
-    def from_field(cls, field, django_type):
+    def from_field(cls: Type[T], field, django_type) -> T:
         raise NotImplementedError
 
 
