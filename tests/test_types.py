@@ -3,7 +3,7 @@ from strawberry import auto
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 
-from .models import User
+from .models import Book as BookModel, User
 
 
 def test_type_instance():
@@ -75,4 +75,36 @@ def test_custom_field_cls__explicit_field_type():
     )
     assert not isinstance(
         UserType._type_definition.get_field("name"), CustomStrawberryDjangoField
+    )
+
+
+def test_field_metadata_preserved():
+    """
+    Test that textual metadata from the Django model is reflected in the Strawberry type.
+    """
+
+    @strawberry_django.type(BookModel)
+    class Book:
+        title: auto
+
+    assert Book._type_definition.description == BookModel.__doc__
+    assert (
+        Book._type_definition.get_field("title").description
+        == BookModel._meta.get_field("title").help_text
+    )
+
+
+def test_field_metadata_overridden():
+    """
+    Test that the textual metadata from the Django model can be ignored in favor of
+    custom metadata.
+    """
+
+    @strawberry_django.type(BookModel, description="A story with pages")
+    class Book:
+        title: auto = strawberry_django.field(description="The name of the story")
+
+    assert Book._type_definition.description == "A story with pages"
+    assert (
+        Book._type_definition.get_field("title").description == "The name of the story"
     )
