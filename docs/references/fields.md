@@ -60,3 +60,29 @@ class Color:
         description="A list of fruits with this color"
     )
 ```
+
+## Overriding the field class (advanced)
+
+If in your project, you want to change/add some of the standard `strawberry.django.field()` behaviour,
+it is possible to use your own custom field class when decorating a `strawberry.django.type` with the `field_cls` argument, e.g.
+
+```python
+class CustomStrawberryDjangoField(StrawberryDjangoField):
+    """Your custom behaviour goes here."""
+
+@strawberry_django.type(User, field_cls=CustomStrawberryDjangoField)
+class UserType:
+    # Each of these fields will be an instance of `CustomStrawberryDjangoField`.
+    id: int
+    name: auto
+
+
+@strawberry.type
+class UserQuery:
+    # You can directly create your custom field class on a plain strawberry type
+    user: UserType = CustomStrawberryDjangoField()
+
+```
+
+In this example, each of the fields of the `UserType` will be automatically created by `CustomStrawberryDjangoField`,
+which may implement anything from custom pagination of relationships to altering the field permissions.

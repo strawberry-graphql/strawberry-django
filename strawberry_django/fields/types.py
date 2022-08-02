@@ -119,7 +119,7 @@ def resolve_model_field_type(model_field, django_type):
     elif django_type.is_input:
         field_type = input_field_type_map.get(model_field_type, None)
     if field_type is None:
-        field_type = field_type_map[model_field_type]
+        field_type = field_type_map.get(model_field_type, NotImplemented)
     if field_type is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented"
