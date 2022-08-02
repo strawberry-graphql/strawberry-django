@@ -83,7 +83,7 @@ class StrawberryDjangoField(
         )
 
     @classmethod
-    def from_field(cls, field, django_type):
+    def from_field(cls, field: "StrawberryDjangoField", django_type):
         if utils.is_strawberry_django_field(field) and not field.origin_django_type:
             return field
 
