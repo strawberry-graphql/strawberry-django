@@ -32,8 +32,8 @@ class Fruit(models.Model):
 
 class Color(models.Model):
     name = models.CharField(
-      max_length=20,
-      help_text="field description",
+        max_length=20,
+        help_text="field description",
     )
 ```
 
