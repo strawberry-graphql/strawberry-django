@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
 import django
 import django.db.models
@@ -117,10 +117,14 @@ def get_fields(django_type: "StrawberryDjangoType"):
     return list(fields.values())
 
 
+_O = TypeVar("_O", bound=type)
+_M = TypeVar("_M", bound=django.db.models.Model)
+
+
 @dataclasses.dataclass
-class StrawberryDjangoType:
-    origin: Any
-    model: Type[django.db.models.Model]
+class StrawberryDjangoType(Generic[_O, _M]):
+    origin: _O
+    model: Type[_M]
     is_input: bool
     is_partial: bool
     is_filter: bool
