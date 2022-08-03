@@ -1,13 +1,14 @@
 import dataclasses
-from typing import Any, Optional, TypeVar
+from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
 import django
+import django.db.models
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 
 from . import utils
-from .fields.field import StrawberryDjangoField, StrawberryDjangoFieldBase
+from .fields.field import StrawberryDjangoField
 from .fields.types import (
     get_model_field,
     is_optional,
@@ -18,19 +19,19 @@ from .fields.types import (
 
 _type = type
 
-StrawberryDjangoFieldType = TypeVar(
-    "StrawberryDjangoFieldType", bound=StrawberryDjangoFieldBase
-)
 
-
-def get_type_attr(type_, field_name):
+def get_type_attr(type_, field_name: str):
     attr = getattr(type_, field_name, UNSET)
     if attr is UNSET:
         attr = getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
     return attr
 
 
-def get_field(django_type, field_name, field_annotation=None):
+def get_field(
+    django_type: "StrawberryDjangoType",
+    field_name: str,
+    field_annotation: Optional[StrawberryAnnotation] = None,
+):
     if field_annotation is None:
         field_annotation = StrawberryAnnotation(None)
     attr = get_type_attr(django_type.origin, field_name)
@@ -94,9 +95,9 @@ def get_field(django_type, field_name, field_annotation=None):
     return field
 
 
-def get_fields(django_type):
+def get_fields(django_type: "StrawberryDjangoType"):
     annotations = utils.get_annotations(django_type.origin)
-    fields = {}
+    fields: Dict[str, StrawberryDjangoField] = {}
 
     # collect all annotated fields
     for field_name, field_annotation in annotations.items():
@@ -116,22 +117,26 @@ def get_fields(django_type):
     return list(fields.values())
 
 
+_O = TypeVar("_O", bound=type)
+_M = TypeVar("_M", bound=django.db.models.Model)
+
+
 @dataclasses.dataclass
-class StrawberryDjangoType:
-    origin: Any
-    model: Any
+class StrawberryDjangoType(Generic[_O, _M]):
+    origin: _O
+    model: Type[_M]
     is_input: bool
     is_partial: bool
     is_filter: bool
     filters: Any
     order: Any
     pagination: Any
-    field_cls: StrawberryDjangoFieldType
+    field_cls: Type[StrawberryDjangoField]
 
 
 def process_type(
     cls,
-    model,
+    model: Type[django.db.models.Model],
     *,
     filters=UNSET,
     pagination=UNSET,

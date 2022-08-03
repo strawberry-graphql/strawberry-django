@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional, Type, TypeVar
 
 from django.db import models
 from strawberry import UNSET
@@ -13,8 +13,11 @@ from ..pagination import StrawberryDjangoPagination
 from ..resolvers import django_resolver
 
 
+T = TypeVar("T", bound="StrawberryDjangoFieldBase")
+
+
 class StrawberryDjangoFieldBase:
-    def get_queryset(self, queryset, info, **kwargs):
+    def get_queryset(self, queryset: models.QuerySet, info, **kwargs):
         return queryset
 
     @property
@@ -23,7 +26,7 @@ class StrawberryDjangoFieldBase:
         return utils.get_django_model(type_)
 
     @classmethod
-    def from_field(cls, field, django_type):
+    def from_field(cls: Type[T], field, django_type) -> T:
         raise NotImplementedError
 
 
@@ -56,7 +59,13 @@ class StrawberryDjangoField(
     StrawberryField super classes.
     """
 
-    def __init__(self, django_name=None, graphql_name=None, python_name=None, **kwargs):
+    def __init__(
+        self,
+        django_name: Optional[str] = None,
+        graphql_name: Optional[str] = None,
+        python_name: Optional[str] = None,
+        **kwargs
+    ):
         self.django_name = django_name
         self.is_auto = utils.is_auto(kwargs.get("type_annotation", None))
         self.is_relation = False
@@ -75,7 +84,7 @@ class StrawberryDjangoField(
         )
 
     @classmethod
-    def from_field(cls, field, django_type):
+    def from_field(cls, field: "StrawberryDjangoField", django_type):
         if utils.is_strawberry_django_field(field) and not field.origin_django_type:
             return field
 
