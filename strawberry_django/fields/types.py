@@ -1,17 +1,21 @@
 import datetime
 import decimal
 import uuid
-from typing import List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Type, Union
 
 import django
 import strawberry
-from django.db.models import fields
-from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
+from django.db.models import Field, Model, fields
+from django.db.models.fields.reverse_related import ForeignObjectRel
 from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
 from strawberry.scalars import JSON
 
 from .. import filters
+
+
+if TYPE_CHECKING:
+    from strawberry_django.type import StrawberryDjangoType
 
 
 @strawberry.type
@@ -111,9 +115,11 @@ input_field_type_map = {
 }
 
 
-def resolve_model_field_type(model_field, django_type):
+def resolve_model_field_type(
+    model_field: Union[Field, ForeignObjectRel], django_type: "StrawberryDjangoType"
+):
     model_field_type = type(model_field)
-    field_type = None
+    field_type: Any = None
     if django_type.is_filter and model_field.is_relation:
         field_type = filters.DjangoModelFilterInput
     elif django_type.is_input:
@@ -131,8 +137,10 @@ def resolve_model_field_type(model_field, django_type):
     return field_type
 
 
-def resolve_model_field_name(model_field, is_input=False, is_filter=False):
-    if isinstance(model_field, (ForeignObjectRel, ManyToOneRel)):
+def resolve_model_field_name(
+    model_field: Union[Field, ForeignObjectRel], is_input=False, is_filter=False
+):
+    if isinstance(model_field, ForeignObjectRel):
         return model_field.get_accessor_name()
     if is_input and not is_filter:
         return model_field.attname
@@ -140,7 +148,7 @@ def resolve_model_field_name(model_field, is_input=False, is_filter=False):
         return model_field.name
 
 
-def get_model_field(model, field_name):
+def get_model_field(model: Type[Model], field_name: str):
     try:
         return model._meta.get_field(field_name)
     except django.core.exceptions.FieldDoesNotExist as e:

@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import sys
 import warnings
+from typing import Dict
 
 from django.db import models
 from strawberry.annotation import StrawberryAnnotation
@@ -86,7 +87,7 @@ def is_similar_django_type(a, b):
 
 
 def get_annotations(cls):
-    annotations = {}
+    annotations: Dict[str, StrawberryAnnotation] = {}
     namespace = sys.modules[cls.__module__].__dict__
     for c in reversed(cls.__mro__):
         if "__annotations__" in c.__dict__:
