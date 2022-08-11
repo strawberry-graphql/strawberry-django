@@ -18,6 +18,12 @@ Strawberry integration with Django.
 - [x] Django sync and async views
 - [x] Unit test integration
 
+## Installation
+
+```python
+pip install strawberry-graphql-django
+```
+
 ## Basic Usage
 
 ```python
