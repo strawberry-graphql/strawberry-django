@@ -37,9 +37,9 @@ def is_strawberry_field(obj):
 
 
 def is_strawberry_django_field(obj):
-    from strawberry_django.fields.field import StrawberryDjangoField
+    from strawberry_django.fields.field import StrawberryDjangoFieldBase
 
-    return isinstance(obj, StrawberryDjangoField)
+    return isinstance(obj, StrawberryDjangoFieldBase)
 
 
 def is_django_type(obj):
