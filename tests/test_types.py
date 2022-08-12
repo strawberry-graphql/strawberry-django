@@ -1,8 +1,10 @@
+from django.test import override_settings
 from pytest import MonkeyPatch
 from strawberry import auto
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.settings import StrawberryDjangoSettings
 
 from .models import Book as BookModel, User
 
@@ -79,9 +81,30 @@ def test_custom_field_cls__explicit_field_type():
     )
 
 
+def test_field_metadata_default():
+    """
+    Test that textual metadata from the Django model isn't reflected in the Strawberry
+    type by default.
+    """
+
+    @strawberry_django.type(BookModel)
+    class Book:
+        title: auto
+
+    assert Book._type_definition.description is None
+    assert Book._type_definition.get_field("title").description is None
+
+
+@override_settings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+        FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
+        TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
+    )
+)
 def test_field_metadata_preserved():
     """
-    Test that textual metadata from the Django model is reflected in the Strawberry type.
+    Test that textual metadata from the Django model is reflected in the Strawberry type
+    if the settings are enabled.
     """
 
     @strawberry_django.type(BookModel)
@@ -95,6 +118,12 @@ def test_field_metadata_preserved():
     )
 
 
+@override_settings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+        FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
+        TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
+    )
+)
 def test_field_metadata_overridden():
     """
     Test that the textual metadata from the Django model can be ignored in favor of
@@ -111,6 +140,12 @@ def test_field_metadata_overridden():
     )
 
 
+@override_settings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+        FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
+        TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
+    )
+)
 def test_field_no_empty_strings(monkeypatch: MonkeyPatch):
     """
     Test that an empty Django model docstring doesn't get used for the description.
