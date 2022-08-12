@@ -16,6 +16,7 @@ from .fields.types import (
     resolve_model_field_name,
     resolve_model_field_type,
 )
+from .settings import strawberry_django_settings as django_settings
 
 
 _type = type
@@ -66,7 +67,8 @@ def get_field(
         field.is_relation = model_field.is_relation
 
         # Use the Django field help_text if no other description is available.
-        if not field.description:
+        settings = django_settings()
+        if not field.description and settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]:
             model_field_help_text = getattr(model_field, "help_text", "")
             field.description = str(model_field_help_text) or None
     except django.core.exceptions.FieldDoesNotExist:
@@ -190,7 +192,10 @@ def process_type(
         cls.is_type_of = lambda obj, _info: isinstance(obj, (cls, model))
 
     # Get type description from either kwargs, or the model's docstring
-    description = kwargs.pop("description", cleandoc(model.__doc__)) or None
+    settings = django_settings()
+    description = kwargs.pop("description", None)
+    if not description and settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]:
+        description = cleandoc(model.__doc__) or None
 
     strawberry.type(cls, description=description, **kwargs)
 
