@@ -76,6 +76,14 @@ class Query:
 schema = strawberry.Schema(query=Query)
 ```
 
+```python
+# settings.py
+STRAWBERRY_DJANGO = {
+    "FIELD_DESCRIPTION_FROM_HELP_TEXT": True,
+    "TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING": True,
+}
+```
+
 Code above generates following schema.
 
 ```schema
