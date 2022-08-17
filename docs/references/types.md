@@ -55,12 +55,12 @@ class ColorPartialInput:
 
 ## Types from Django models
 
-Django models can be converted to `strawberry` Types with the `strawberry_django.type` decorator.
+Django models can be converted to `strawberry` Types with the `strawberry_django.type` decorator. Custom descriptions can be added using the `description` keyword argument (See: [`strawberry.type` decorator API](https://strawberry.rocks/docs/types/object-types#api)).
 
 ```python
 import strawberry
 
-@strawberry.django.type(models.Fruit)
+@strawberry.django.type(models.Fruit, description="A tasty snack")
 class Fruit:
     ...
 ```

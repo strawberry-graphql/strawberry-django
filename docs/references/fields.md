@@ -56,7 +56,8 @@ class Color:
         field_name='fruit_set',
         filters=FruitFilter,
         order=FruitOrder,
-        pagination=True
+        pagination=True,
+        description="A list of fruits with this color"
     )
 ```
 

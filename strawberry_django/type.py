@@ -1,4 +1,5 @@
 import dataclasses
+from inspect import cleandoc
 from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
 import django
@@ -15,6 +16,7 @@ from .fields.types import (
     resolve_model_field_name,
     resolve_model_field_type,
 )
+from .settings import strawberry_django_settings as django_settings
 
 
 _type = type
@@ -63,6 +65,12 @@ def get_field(
             model_field, django_type.is_input, django_type.is_filter
         )
         field.is_relation = model_field.is_relation
+
+        # Use the Django field help_text if no other description is available.
+        settings = django_settings()
+        if not field.description and settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]:
+            model_field_help_text = getattr(model_field, "help_text", "")
+            field.description = str(model_field_help_text) or None
     except django.core.exceptions.FieldDoesNotExist:
         if field.django_name or field.is_auto:
             raise  # field should exist, reraise caught exception
@@ -183,7 +191,13 @@ def process_type(
     if not hasattr(cls, "is_type_of"):
         cls.is_type_of = lambda obj, _info: isinstance(obj, (cls, model))
 
-    strawberry.type(cls, **kwargs)
+    # Get type description from either kwargs, or the model's docstring
+    settings = django_settings()
+    description = kwargs.pop("description", None)
+    if not description and settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]:
+        description = cleandoc(model.__doc__) or None
+
+    strawberry.type(cls, description=description, **kwargs)
 
     # restore original annotations for further use
     cls.__annotations__ = original_annotations

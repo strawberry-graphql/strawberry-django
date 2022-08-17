@@ -83,6 +83,7 @@ nav:
       - Resolvers: ./references/resolvers.md
       - Types: ./references/types.md
       - Views: ./references/views.md
+      - Settings: ./references/settings.md
 #      (TBD's)
       - Permissions: ./references/permissions.md
       - Subscriptions: ./references/subscriptions.md
