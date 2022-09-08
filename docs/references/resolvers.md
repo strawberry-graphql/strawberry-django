@@ -17,7 +17,7 @@ class Color:
     id: auto
     name: auto
 
-    @strawberry_django.field
+    @strawberry.django.field
     def fruits(self) -> List[Fruit]:
         return self.fruits.objects.filter(...)
 ```
