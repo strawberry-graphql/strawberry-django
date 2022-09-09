@@ -7,6 +7,7 @@ from strawberry.arguments import StrawberryArgument
 
 import strawberry_django
 
+from . import utils
 from .arguments import argument
 
 
@@ -54,7 +55,7 @@ def apply(order, queryset):
 
 
 class StrawberryDjangoFieldOrdering:
-    def __init__(self, order=None, **kwargs):
+    def __init__(self, order=UNSET, **kwargs):
         self.order = order
         super().__init__(**kwargs)
 
@@ -62,9 +63,19 @@ class StrawberryDjangoFieldOrdering:
     def arguments(self) -> List[StrawberryArgument]:
         arguments = []
         if not self.base_resolver:
-            if self.order:
-                arguments.append(argument("order", self.order))
+            order = self.get_order()
+            if order and order is not UNSET:
+                arguments.append(argument("order", order))
         return super().arguments + arguments
+
+    def get_order(self):
+        if self.order is not UNSET:
+            return self.order
+        type_ = utils.unwrap_type(self.type or self.child.type)
+
+        if utils.is_django_type(type_):
+            return type_._django_type.order
+        return None
 
     def get_queryset(self, queryset, info, order=UNSET, **kwargs):
         queryset = super().get_queryset(queryset, info, **kwargs)
