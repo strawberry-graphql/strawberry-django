@@ -4,6 +4,7 @@ site_description: Strawberry integration with Django.
 site_author: community
 repo_name: strawberry-django
 repo_url: https://github.com/strawberry-graphql/strawberry-graphql-django
+edit_uri: edit/main/docs/
 
 theme:
   name: material
