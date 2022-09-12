@@ -64,7 +64,7 @@ class StrawberryDjangoFieldOrdering:
         arguments = []
         if not self.base_resolver:
             order = self.get_order()
-            if order and order is not UNSET:
+            if order and order is not UNSET and self.is_list:
                 arguments.append(argument("order", order))
         return super().arguments + arguments
 
