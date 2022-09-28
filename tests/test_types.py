@@ -15,7 +15,7 @@ def test_type_instance():
         id: auto
         name: auto
 
-    user = UserType(1, "user")
+    user = UserType(id=1, name="user")
     assert user.id == 1
     assert user.name == "user"
 
@@ -26,7 +26,7 @@ def test_type_instance_auto_as_str():
         id: "auto"
         name: "auto"
 
-    user = UserType(1, "user")
+    user = UserType(id=1, name="user")
     assert user.id == 1
     assert user.name == "user"
 
@@ -37,7 +37,7 @@ def test_input_instance():
         id: auto
         name: auto
 
-    user = InputType(1, "user")
+    user = InputType(id=1, name="user")
     assert user.id == 1
     assert user.name == "user"
 

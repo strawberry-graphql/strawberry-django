@@ -50,6 +50,13 @@ class DjangoMutationBase:
     def get_result(self, source, info, args, kwargs):
         return self.resolver(info=info, source=source, *args, **kwargs)
 
+    @property
+    def is_basic_field(self) -> bool:
+        """
+        Since all mutations define a resolver function they are never basic
+        fields so always return False here.
+        """
+        return False
 
 class DjangoCreateMutation(
     DjangoMutationBase, StrawberryDjangoFieldBase, StrawberryField

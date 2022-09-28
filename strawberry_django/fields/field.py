@@ -153,6 +153,14 @@ class StrawberryDjangoField(
             queryset = get_queryset(self, queryset, info, **kwargs)
         return super().get_queryset(queryset, info, order=order, **kwargs)
 
+    @property
+    def is_basic_field(self) -> bool:
+        """
+        All StrawberryDjango fields define a custom resolver that needs to be
+        run, so always return False here.
+        """
+        return False
+
 
 def field(
     resolver=None, *, name=None, field_name=None, filters=UNSET, default=UNSET, **kwargs
