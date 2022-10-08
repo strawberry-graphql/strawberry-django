@@ -150,7 +150,7 @@ class StrawberryDjangoField(
         type_ = utils.unwrap_type(type_)
         get_queryset = getattr(type_, "get_queryset", None)
         if get_queryset:
-            queryset = get_queryset(self, queryset, info, **kwargs)
+            queryset = get_queryset(queryset, info, **kwargs)
         return super().get_queryset(queryset, info, order=order, **kwargs)
 
     @property
