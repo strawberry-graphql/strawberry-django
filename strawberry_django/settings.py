@@ -1,7 +1,10 @@
 """
 Code for interacting with Django settings.
 """
-from typing import TypedDict
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extension import TypedDict
 
 from django.conf import settings
 
