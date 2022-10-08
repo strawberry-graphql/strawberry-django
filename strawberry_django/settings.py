@@ -4,7 +4,7 @@ Code for interacting with Django settings.
 try:
     from typing import TypedDict
 except ImportError:
-    from typing_extension import TypedDict
+    from typing_extensions import TypedDict
 
 from django.conf import settings
 
