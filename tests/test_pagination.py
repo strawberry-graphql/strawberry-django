@@ -18,7 +18,8 @@ class Fruit:
 class BerryFruit:
     name: auto
 
-    def get_queryset(self, queryset, info, **kwargs):
+    @classmethod
+    def get_queryset(cls, queryset, info, **kwargs):
         return queryset.filter(name__contains="berry")
 
 

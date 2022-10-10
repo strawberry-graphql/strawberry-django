@@ -36,7 +36,8 @@ class BerryFruit:
     name_upper: str
     name_lower: str
 
-    def get_queryset(self, queryset, info):
+    @classmethod
+    def get_queryset(cls, queryset, info):
         return queryset.filter(name__contains="berry")
 
 
@@ -48,7 +49,8 @@ class FruitInterface:
 
 @strawberry_django.type(models.Fruit)
 class BananaFruit(FruitInterface):
-    def get_queryset(self, queryset, info):
+    @classmethod
+    def get_queryset(cls, queryset, info):
         return queryset.filter(name__contains="banana")
 
 
