@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/PyCQA/autoflake
-    rev: "v1.6.1"
+    rev: "v1.7.1"
     hooks:
       - id: autoflake
         args:
@@ -33,7 +33,7 @@ repos:
         exclude: CHANGELOG.md
 
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0-alpha.0
+    rev: v3.0.0-alpha.1
     hooks:
       - id: prettier
         files: '^docs/.*\.mdx?$'
@@ -58,6 +58,6 @@ repos:
           ]
 
   - repo: https://github.com/psf/black
-    rev: 22.8.0
+    rev: 22.10.0
     hooks:
       - id: black
