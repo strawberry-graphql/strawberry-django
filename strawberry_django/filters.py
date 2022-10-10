@@ -1,3 +1,4 @@
+import inspect
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar
 
@@ -118,7 +119,7 @@ def build_filter_kwargs(filters):
     return filter_kwargs, filter_methods
 
 
-def apply(filters, queryset, pk=UNSET):
+def apply(filters, queryset, info=UNSET, pk=UNSET):
     if pk is not UNSET:
         queryset = queryset.filter(pk=pk)
 
@@ -137,7 +138,16 @@ def apply(filters, queryset, pk=UNSET):
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
     for filter_method in filter_methods:
-        queryset = filter_method(queryset=queryset)
+        argspec = inspect.getfullargspec(filter_method)
+
+        if "info" in getattr(argspec, "args", []) or "info" in getattr(
+            argspec, "kwargs", []
+        ):
+            queryset = filter_method(queryset=queryset, info=info)
+
+        else:
+            queryset = filter_method(queryset=queryset)
+
     return queryset
 
 
@@ -169,4 +179,4 @@ class StrawberryDjangoFieldFilters:
 
     def get_queryset(self, queryset, info, pk=UNSET, filters=UNSET, **kwargs):
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return apply(filters, queryset, pk)
+        return apply(filters, queryset, info, pk)
