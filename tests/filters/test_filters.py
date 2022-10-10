@@ -66,12 +66,26 @@ class Fruit:
     name: auto
 
 
+# For demonstrating options set on the type.
+@strawberry_django.type(models.Fruit, lookup_key="name", lookup_key_type=str)
+class FruitNameLookup:
+    id: auto
+    name: auto
+
+
 @strawberry.type
 class Query:
     fruits: List[Fruit] = strawberry_django.field()
     field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
     type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
     enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFiler)
+
+    fruit: Fruit = strawberry_django.field()
+    fruit_id: Fruit = strawberry_django.field(
+        lookup_key="fruit_id", lookup_key_django_name="pk"
+    )
+    fruit_named: Fruit = strawberry_django.field(lookup_key="name", lookup_key_type=str)
+    fruit_name_lookup_type: FruitNameLookup = strawberry_django.field()
 
 
 @pytest.fixture
@@ -191,3 +205,33 @@ def test_enum(query, fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+def test_resolve_by_pk(query, fruits):
+    result = query("{ fruit(pk: 1) { id name } }")
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
+
+
+def test_resolve_by_pk__no_match(query, fruits):
+    result = query("{ fruit(pk: 1234) { id name } }")
+    assert result.errors
+    assert result.errors[0].message == "Fruit matching query does not exist."
+
+
+def test_resolve_by_fruit_id(query, fruits):
+    result = query("{ fruit: fruitId(fruitId: 1) { id name } }")
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
+
+
+def test_resolve_by_custom_lookup(query, fruits):
+    result = query('{ fruit: fruitNamed(name: "strawberry") { id name } }')
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
+
+
+def test_resolve_by_type_name_lookup(query, fruits):
+    result = query('{ fruit: fruitNameLookupType(name: "strawberry") { id name } }')
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
