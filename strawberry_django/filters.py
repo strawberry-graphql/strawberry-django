@@ -127,12 +127,9 @@ def build_filter_kwargs(filters):
 def function_allow_passing_info(filter_method: FunctionType) -> bool:
     argspec = inspect.getfullargspec(filter_method)
 
-    if "info" in getattr(argspec, "args", []) or "info" in getattr(
+    return "info" in getattr(argspec, "args", []) or "info" in getattr(
         argspec, "kwargs", []
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
