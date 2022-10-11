@@ -59,3 +59,4 @@ lines_after_imports = 2
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
 testpaths = ["tests"]
 filterwarnings = "ignore:.*is deprecated.*:DeprecationWarning"
+asyncio_mode = "strict"
