@@ -1,10 +1,12 @@
 from enum import Enum
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, List, Optional, Type, TypeVar
 
 import strawberry
+from django.db.models import QuerySet
 from django.db.models.sql.query import get_field_names_from_opts
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
+from strawberry.types import Info
 
 from . import utils
 from .arguments import argument
@@ -118,7 +120,7 @@ def build_filter_kwargs(filters):
     return filter_kwargs, filter_methods
 
 
-def apply(filters, queryset, pk=UNSET):
+def apply(filters, queryset: QuerySet, pk=UNSET) -> QuerySet:
     if pk is not UNSET:
         queryset = queryset.filter(pk=pk)
 
@@ -158,7 +160,7 @@ class StrawberryDjangoFieldFilters:
                 arguments.append(argument("filters", filters))
         return super().arguments + arguments
 
-    def get_filters(self):
+    def get_filters(self) -> Optional[Type]:
         if self.filters is not UNSET:
             return self.filters
         type_ = utils.unwrap_type(self.type or self.child.type)
@@ -167,6 +169,13 @@ class StrawberryDjangoFieldFilters:
             return type_._django_type.filters
         return None
 
-    def get_queryset(self, queryset, info, pk=UNSET, filters=UNSET, **kwargs):
-        queryset = super().get_queryset(queryset, info, **kwargs)
+    def apply_filters(
+        self, queryset: QuerySet, filters: Type = UNSET, pk=UNSET
+    ) -> QuerySet:
         return apply(filters, queryset, pk)
+
+    def get_queryset(
+        self, queryset: QuerySet, info: Info, pk=UNSET, filters: Type = UNSET, **kwargs
+    ):
+        queryset = super().get_queryset(queryset, info, **kwargs)
+        return self.apply_filters(queryset, filters, pk)

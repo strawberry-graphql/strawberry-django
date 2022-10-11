@@ -5,6 +5,7 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.types import Info
 
 from .. import utils
 from ..filters import StrawberryDjangoFieldFilters
@@ -17,7 +18,7 @@ T = TypeVar("T", bound="StrawberryDjangoFieldBase")
 
 
 class StrawberryDjangoFieldBase:
-    def get_queryset(self, queryset: models.QuerySet, info, **kwargs):
+    def get_queryset(self, queryset: models.QuerySet, info: Info, **kwargs):
         return queryset
 
     @property
