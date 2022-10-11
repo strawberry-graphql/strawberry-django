@@ -169,7 +169,7 @@ class StrawberryDjangoFieldFilters:
             return type_._django_type.filters
         return None
 
-    def _apply_filters(
+    def apply_filters(
         self, queryset: QuerySet, filters: Type = UNSET, pk=UNSET
     ) -> QuerySet:
         return apply(filters, queryset, pk)
@@ -178,4 +178,4 @@ class StrawberryDjangoFieldFilters:
         self, queryset: QuerySet, info: Info, pk=UNSET, filters: Type = UNSET, **kwargs
     ):
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return self._apply_filters(queryset, filters, pk)
+        return self.apply_filters(queryset, filters, pk)
