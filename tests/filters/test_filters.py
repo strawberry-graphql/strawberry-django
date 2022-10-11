@@ -183,6 +183,7 @@ def test_resolver_filter_with_info(fruits):
 
         def filter_custom_field(self, queryset, info: Info):
             # Test here is to prove that info can be passed properly
+            assert isinstance(info, Info)
             return queryset
 
     @strawberry.type
