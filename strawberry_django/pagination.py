@@ -1,8 +1,10 @@
-from typing import List
+from typing import List, Optional, Type
 
 import strawberry
+from django.db.models import QuerySet
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
+from strawberry.types import Info
 
 from . import utils
 from .arguments import argument
@@ -37,7 +39,7 @@ class StrawberryDjangoPagination:
                 arguments.append(argument("pagination", OffsetPaginationInput))
         return super().arguments + arguments
 
-    def get_pagination(self):
+    def get_pagination(self) -> Optional[Type]:
         if self.pagination is not UNSET:
             return self.pagination
 
@@ -46,6 +48,11 @@ class StrawberryDjangoPagination:
             return type_._django_type.pagination
         return None
 
-    def get_queryset(self, queryset, info, pagination=UNSET, **kwargs):
+    def _apply_pagination(self, queryset: QuerySet, pagination):
+        return apply(pagination, queryset)
+
+    def get_queryset(
+        self, queryset: QuerySet, info: Info, pagination: Type = UNSET, **kwargs
+    ):
         queryset = super().get_queryset(queryset, info, **kwargs)
         return apply(pagination, queryset)
