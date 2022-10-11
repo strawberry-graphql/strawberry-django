@@ -1,4 +1,7 @@
+import functools
+import inspect
 from enum import Enum
+from types import FunctionType
 from typing import Generic, List, Optional, Type, TypeVar
 
 import strawberry
@@ -120,7 +123,16 @@ def build_filter_kwargs(filters):
     return filter_kwargs, filter_methods
 
 
-def apply(filters, queryset: QuerySet, pk=UNSET) -> QuerySet:
+@functools.cache()
+def function_allow_passing_info(filter_method: FunctionType) -> bool:
+    argspec = inspect.getfullargspec(filter_method)
+
+    return "info" in getattr(argspec, "args", []) or "info" in getattr(
+        argspec, "kwargs", []
+    )
+
+
+def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
     if pk is not UNSET:
         queryset = queryset.filter(pk=pk)
 
@@ -139,7 +151,12 @@ def apply(filters, queryset: QuerySet, pk=UNSET) -> QuerySet:
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
     for filter_method in filter_methods:
-        queryset = filter_method(queryset=queryset)
+        if function_allow_passing_info(filter_method):
+            queryset = filter_method(queryset=queryset, info=info)
+
+        else:
+            queryset = filter_method(queryset=queryset)
+
     return queryset
 
 
@@ -170,12 +187,12 @@ class StrawberryDjangoFieldFilters:
         return None
 
     def apply_filters(
-        self, queryset: QuerySet, filters: Type = UNSET, pk=UNSET
+        self, queryset: QuerySet, filters: Type = UNSET, pk=UNSET, info: Info = UNSET
     ) -> QuerySet:
-        return apply(filters, queryset, pk)
+        return apply(filters, queryset, info, pk)
 
     def get_queryset(
         self, queryset: QuerySet, info: Info, pk=UNSET, filters: Type = UNSET, **kwargs
     ):
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return self.apply_filters(queryset, filters, pk)
+        return self.apply_filters(queryset, filters, pk, info)
