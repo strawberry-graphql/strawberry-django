@@ -173,6 +173,7 @@ def test_resolver_filter(fruits):
 
 
 def test_resolver_filter_with_info(fruits):
+    from strawberry import UNSET
     from strawberry.types.info import Info
 
     @strawberry_django.filters.filter(models.Fruit, lookups=True)
@@ -182,8 +183,9 @@ def test_resolver_filter_with_info(fruits):
         custom_field: bool
 
         def filter_custom_field(self, queryset, info: Info):
-            # Test here is to prove that info can be passed properly
-            assert isinstance(info, Info)
+            # Test here is to prove that info can be passed properly,
+            # but as this is not passed during test, it is UNSET
+            assert info == UNSET
             return queryset
 
     @strawberry.type
@@ -194,10 +196,12 @@ def test_resolver_filter_with_info(fruits):
             return strawberry_django.filters.apply(filters, queryset)
 
     query = utils.generate_query(Query)
-    result = query("{ fruits(filters: customField: true }) { id name } }")
+    result = query("{ fruits(filters: { customField: true }) { id name } }")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
+        {"id": "2", "name": "raspberry"},
+        {"id": "3", "name": "banana"},
     ]
 
 
