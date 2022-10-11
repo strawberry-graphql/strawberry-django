@@ -184,20 +184,20 @@ def test_resolver_filter_with_info(fruits):
         def filter_custom_field(self, queryset, info: Info):
             # Test here is to prove that info can be passed properly
             assert isinstance(info, Info)
-            return queryset
+            return queryset.filter(name="banana")
 
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(filters: FruitFilterWithInfo) -> List[Fruit]:
+        def fruits(filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return strawberry_django.filters.apply(filters, queryset)
+            return strawberry_django.filters.apply(filters, queryset, info=info)
 
     query = utils.generate_query(Query)
-    result = query("{ fruits(filters: customField: true }) { id name } }")
+    result = query("{ fruits(filters: { customField: true }) { id name } }")
     assert not result.errors
     assert result.data["fruits"] == [
-        {"id": "1", "name": "strawberry"},
+        {"id": "3", "name": "banana"},
     ]
 
 

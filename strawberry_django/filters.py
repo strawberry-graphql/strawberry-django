@@ -123,7 +123,7 @@ def build_filter_kwargs(filters):
     return filter_kwargs, filter_methods
 
 
-@functools.cache()
+@functools.lru_cache(maxsize=None)
 def function_allow_passing_info(filter_method: FunctionType) -> bool:
     argspec = inspect.getfullargspec(filter_method)
 
