@@ -8,7 +8,7 @@ from strawberry.arguments import StrawberryArgument
 from strawberry.auto import StrawberryAuto
 from strawberry.types import Info
 
-from strawberry_django import fields
+from strawberry_django.utils import fields
 
 from . import utils
 from .arguments import argument
