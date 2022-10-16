@@ -146,7 +146,11 @@ def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
 
     filter_method = getattr(filters, "filter", None)
     if filter_method:
-        return filter_method(queryset)
+        if function_allow_passing_info(filter_method):
+            return filter_method(queryset=queryset, info=info)
+
+        else:
+            return filter_method(queryset=queryset)
 
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
