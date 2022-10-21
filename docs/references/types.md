@@ -76,7 +76,7 @@ By default, a `strawberry_django` type will get data from the default manager fo
 You can implement a custom `get_queryset` to your type to do some extra processing to the default queryset,
 like filtering it further.
 
-> Warning! The `self` parameter was removed in version: [`0.5.4`](https://github.com/strawberry-graphql/strawberry-graphql-django/releases/tag/v0.5.4). Previously, the method signature looked like: `get_queryset(self, queryset, info):`.
+> Warning! This function is no longer a classmethod as of release: [`0.5.4`](https://github.com/strawberry-graphql/strawberry-graphql-django/releases/tag/v0.5.4). Previously, the method signature looked like: `get_queryset(cls, queryset, info):`.
 
 ```python
 @strawberry.django.type(models.Fruit)
