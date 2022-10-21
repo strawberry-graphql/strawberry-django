@@ -73,16 +73,17 @@ see the [Fields](fields.md) documentation.
 ### `QuerySet` setup
 
 By default, a `strawberry_django` type will get data from the default manager for its Django Model.
-You can implement a custom `get_queryset` to your type to do some extra processing to the default queryset,
+You can implement a custom `get_queryset` class method to your type to do some extra processing to the default queryset,
 like filtering it further.
 
-> Warning! This function is no longer a classmethod as of release: [`0.5.4`](https://github.com/strawberry-graphql/strawberry-graphql-django/releases/tag/v0.5.4). Previously, the method signature looked like: `get_queryset(cls, queryset, info):`.
+> **Warning** This function was implemented as an instance method prior to release: [`0.5.4`](https://github.com/strawberry-graphql/strawberry-graphql-django/releases/tag/v0.5.4). Previously, the method signature looked like: `get_queryset(self, queryset, info):` It has since changed to a class method.
 
 ```python
 @strawberry.django.type(models.Fruit)
 class Berry:
 
-    def get_queryset(queryset, info):
+    @classmethod
+    def get_queryset(cls, queryset, info):
         return queryset.filter(name__contains="berry")
 ```
 
