@@ -87,7 +87,7 @@ class Berry:
         return queryset.filter(name__contains="berry")
 ```
 
-The `get_queryset` method is given a `QuerySet` to filter and
+The `get_queryset` classmethod is given a `QuerySet` to filter and
 a `strawberry` `Info` object containing details about the request.
 
 You can use that `info` parameter to, for example,
