@@ -73,18 +73,21 @@ see the [Fields](fields.md) documentation.
 ### `QuerySet` setup
 
 By default, a `strawberry_django` type will get data from the default manager for its Django Model.
-You can implement a custom `get_queryset` to your type to do some extra processing to the default queryset,
+You can implement a custom `get_queryset` classmethod to your type to do some extra processing to the default queryset,
 like filtering it further.
+
+> **Warning** This function was improperly documented prior to release: [`0.5.4`](https://github.com/strawberry-graphql/strawberry-graphql-django/releases/tag/v0.5.4). Previously, the method signature was documented as: `get_queryset(self, queryset, info):` It has since changed.
 
 ```python
 @strawberry.django.type(models.Fruit)
 class Berry:
 
-    def get_queryset(self, queryset, info):
+    @classmethod
+    def get_queryset(cls, queryset, info):
         return queryset.filter(name__contains="berry")
 ```
 
-The `get_queryset` method is given a `QuerySet` to filter and
+The `get_queryset` classmethod is given a `QuerySet` to filter and
 a `strawberry` `Info` object containing details about the request.
 
 You can use that `info` parameter to, for example,
@@ -94,7 +97,8 @@ limit access to results based on the current user in the request:
 @strawberry.django.type(models.Fruit)
 class Berry:
 
-    def get_queryset(self, queryset, info):
+    @classmethod
+    def get_queryset(cls, queryset, info):
         if not info.context.request.user.is_staff:
             # Restrict access to top secret berries if the user is not a staff member
             queryset = queryset.filter(is_top_secret=False)
