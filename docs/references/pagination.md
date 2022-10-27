@@ -8,7 +8,6 @@ class Fruit:
     name: auto
 ```
 
-
 ```graphql
 query {
   fruits(pagination: { offset: 0, limit: 2 }) {
