@@ -123,7 +123,7 @@ def build_filter_kwargs(filters):
     return filter_kwargs, filter_methods
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=256)
 def function_allow_passing_info(filter_method: FunctionType) -> bool:
     argspec = inspect.getfullargspec(filter_method)
 
@@ -146,7 +146,10 @@ def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
 
     filter_method = getattr(filters, "filter", None)
     if filter_method:
-        if function_allow_passing_info(filter_method):
+        if function_allow_passing_info(
+            # Pass the original __func__ which is always the same
+            getattr(filter_method, "__func__", filter_method)
+        ):
             return filter_method(queryset=queryset, info=info)
 
         else:
@@ -155,7 +158,10 @@ def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
     for filter_method in filter_methods:
-        if function_allow_passing_info(filter_method):
+        if function_allow_passing_info(
+            # Pass the original __func__ which is always the same
+            getattr(filter_method, "__func__", filter_method)
+        ):
             queryset = filter_method(queryset=queryset, info=info)
 
         else:
