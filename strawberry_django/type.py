@@ -180,8 +180,8 @@ def process_type(
             annotation = field.type_annotation.annotation
         elif field.base_resolver and  field.base_resolver.type_annotation:
             annotation = field.base_resolver.type_annotation.annotation
-        else:
-            annotation = field.type
+
+        # TODO: should we raise an error if annotation is None here?
 
         cls_annotations[field.name] = annotation
         setattr(cls, field.name, field)
