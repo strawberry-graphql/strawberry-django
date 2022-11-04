@@ -178,7 +178,7 @@ def process_type(
 
         if field.type_annotation and field.type_annotation.annotation:
             annotation = field.type_annotation.annotation
-        elif field.base_resolver and  field.base_resolver.type_annotation:
+        elif field.base_resolver and field.base_resolver.type_annotation:
             annotation = field.base_resolver.type_annotation.annotation
 
         # TODO: should we raise an error if annotation is None here?
