@@ -174,13 +174,15 @@ def process_type(
     # update annotations and fields
     cls.__annotations__ = cls_annotations = {}
     for field in fields:
-        annotation = (
-            field.type
-            if field.type_annotation is None
-            else field.type_annotation.annotation
-        )
-        if annotation is None:
-            annotation = StrawberryAnnotation(strawberry.auto)
+        annotation = None
+
+        if field.type_annotation and field.type_annotation.annotation:
+            annotation = field.type_annotation.annotation
+        elif field.base_resolver and field.base_resolver.type_annotation:
+            annotation = field.base_resolver.type_annotation.annotation
+
+        # TODO: should we raise an error if annotation is None here?
+
         cls_annotations[field.name] = annotation
         setattr(cls, field.name, field)
 

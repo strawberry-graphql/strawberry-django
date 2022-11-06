@@ -13,6 +13,7 @@ def test_default_django_name():
     @strawberry_django.type(FieldAttributeModel)
     class Type:
         field: auto
+        # TODO: should this fail?
         field2 = strawberry_django.field(field_name="field")
 
     assert [(f.name, f.django_name) for f in Type._type_definition.fields] == [
@@ -30,7 +31,7 @@ def test_field_permission_classes():
         field: auto = strawberry.field(permission_classes=[TestPermission])
 
         @strawberry.field(permission_classes=[TestPermission])
-        def custom_resolved_field(self):
+        def custom_resolved_field(self) -> str:
             return self.field
 
     assert sorted(
