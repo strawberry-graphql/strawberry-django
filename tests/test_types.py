@@ -161,28 +161,6 @@ def test_field_no_empty_strings(monkeypatch: MonkeyPatch):
     assert Book._type_definition.description is None
 
 
-def test_custom_field_cls__explicit_field_type():
-    """Custom field_cls is applied to all fields."""
-
-    class CustomStrawberryDjangoField(StrawberryDjangoField):
-        pass
-
-    @strawberry_django.type(User, field_cls=CustomStrawberryDjangoField)
-    class UserType:
-        id: int
-        name: auto = strawberry_django.field()
-
-    assert isinstance(
-        UserType._type_definition.get_field("id"), CustomStrawberryDjangoField
-    )
-    assert isinstance(
-        UserType._type_definition.get_field("name"), StrawberryDjangoField
-    )
-    assert not isinstance(
-        UserType._type_definition.get_field("name"), CustomStrawberryDjangoField
-    )
-
-
 @strawberry_django.type(Color)
 class ColorType:
     id: auto
