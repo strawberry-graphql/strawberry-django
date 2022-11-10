@@ -7,6 +7,7 @@ import django.db.models
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.field import UNRESOLVED
 
 from . import utils
 from .fields.field import StrawberryDjangoField
@@ -34,8 +35,6 @@ def get_field(
     field_name: str,
     field_annotation: Optional[StrawberryAnnotation] = None,
 ):
-    if field_annotation is None:
-        field_annotation = StrawberryAnnotation(None)
     attr = get_type_attr(django_type.origin, field_name)
 
     if utils.is_field(attr):
@@ -83,12 +82,18 @@ def get_field(
         if not utils.is_similar_django_type(django_type, field.origin_django_type):
             field.is_auto = True
 
-    if field.is_auto:
+    # Only set the type_annotation for auto fields if they don't have a base_resolver.
+    # Since strawberry 0.139 the type_annotation has a higher priority than the
+    # resolver's annotation, and that would force our automatic model resolution to be
+    # used instead of the resolver's type annotation.
+    if field.is_auto and not field.base_resolver:
         # resolve type of auto field
         field_type = resolve_model_field_type(model_field, django_type)
         field.type_annotation = StrawberryAnnotation(field_type)
 
-    if is_optional(model_field, django_type.is_input, django_type.is_partial):
+    if field.type_annotation and is_optional(
+        model_field, django_type.is_input, django_type.is_partial
+    ):
         field.type_annotation.annotation = Optional[field.type_annotation.annotation]
 
     if django_type.is_input:
@@ -180,6 +185,11 @@ def process_type(
             annotation = field.type_annotation.annotation
         elif field.base_resolver and field.base_resolver.type_annotation:
             annotation = field.base_resolver.type_annotation.annotation
+
+        # UNRESOLVED is not a valid annotation, it is just an indication that the type
+        # could not be resolved. In this case just fallback to None
+        if annotation is UNRESOLVED:
+            annotation = None
 
         # TODO: should we raise an error if annotation is None here?
 
