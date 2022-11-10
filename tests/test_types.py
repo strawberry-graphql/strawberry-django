@@ -1,12 +1,14 @@
+import strawberry
 from django.test import override_settings
 from pytest import MonkeyPatch
 from strawberry import auto
+from strawberry.object_type import TypeDefinition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.settings import StrawberryDjangoSettings
 
-from .models import Book as BookModel, User
+from .models import Book as BookModel, Color, Fruit, User
 
 
 def test_type_instance():
@@ -157,3 +159,54 @@ def test_field_no_empty_strings(monkeypatch: MonkeyPatch):
         title: auto
 
     assert Book._type_definition.description is None
+
+
+def test_custom_field_cls__explicit_field_type():
+    """Custom field_cls is applied to all fields."""
+
+    class CustomStrawberryDjangoField(StrawberryDjangoField):
+        pass
+
+    @strawberry_django.type(User, field_cls=CustomStrawberryDjangoField)
+    class UserType:
+        id: int
+        name: auto = strawberry_django.field()
+
+    assert isinstance(
+        UserType._type_definition.get_field("id"), CustomStrawberryDjangoField
+    )
+    assert isinstance(
+        UserType._type_definition.get_field("name"), StrawberryDjangoField
+    )
+    assert not isinstance(
+        UserType._type_definition.get_field("name"), CustomStrawberryDjangoField
+    )
+
+
+@strawberry_django.type(Color)
+class ColorType:
+    id: auto
+    name: auto
+
+
+@strawberry_django.type(Fruit)
+class FruitType:
+    id: auto
+    name: auto
+
+    @strawberry.field
+    def color(self, info, root) -> "ColorType":
+        return root.color
+
+
+def test_type_resolution_with_resolvers():
+    @strawberry.type
+    class Query:
+        fruit: FruitType = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    type_def = schema.get_type_by_name("FruitType")
+    assert isinstance(type_def, TypeDefinition)
+    field = type_def.get_field("color")
+    assert field
+    assert field.type is ColorType
