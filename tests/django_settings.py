@@ -1,6 +1,3 @@
-from django.core.exceptions import ImproperlyConfigured
-
-
 SECRET_KEY = 1
 
 DATABASES = {
@@ -32,11 +29,3 @@ CACHES = {
         "LOCATION": "unique-snowflake",
     }
 }
-
-try:
-    from django.contrib.gis.db import models as geos_fields  # noqa
-
-    GEOS_IMPORTED = True
-
-except ImproperlyConfigured:
-    GEOS_IMPORTED = False
