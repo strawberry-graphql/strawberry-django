@@ -276,15 +276,7 @@ def test_related_input_fields():
     reason="Test requires GEOS to be imported and properly configured",
 )
 def test_geos_fields():
-    from django.contrib.gis.db import models as geos_fields
-
-    class GeosFieldsModel(models.Model):
-        point = geos_fields.PointField()
-        line_string = geos_fields.LineStringField()
-        polygon = geos_fields.PolygonField()
-        multi_point = geos_fields.MultiPointField()
-        multi_line_string = geos_fields.MultiLineStringField()
-        multi_polygon = geos_fields.MultiPolygonField()
+    from tests.models import GeosFieldsModel
 
     @strawberry_django.type(GeosFieldsModel)
     class Type:
