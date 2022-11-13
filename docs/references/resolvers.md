@@ -1,15 +1,14 @@
 # Resolvers
 
-Basic resolvers are generated automatically. Developer need to define the type and library handles the rest.
+Basic resolvers are generated automatically once the types are declared.
 
-However it is possible to overwrite them by writing own resolvers.
+However it is possible to override them with custom resolvers.
 
 ## Sync resolvers
 
 ```python
-#types.py
-
-from strawberry.django import auto
+# types.py
+from strawberry import auto
 from typing import List
 from . import models
 
@@ -26,9 +25,8 @@ class Color:
 ## Async resolvers
 
 ```python
-#types.py
-
-from strawberry.django import auto
+# types.py
+from strawberry import auto
 from typing import List
 from . import models
 from asgiref.sync import sync_to_async
@@ -44,4 +42,44 @@ class Color:
         def query():
             return list(self.fruits.objects.filter(...))
         return query()
+```
+
+## Issues with Resolvers
+
+It is important to note that overriding resolvers also removes default capabilities
+(e.g. `Pagination`, `Filter`). On your root `Query`, you can use a custom `get_queryset` to achieve
+similar results, but note that it will affect all root queries for that type.
+
+For example, if we wanted a query for berries and one for non-berry fruits, we could do the following:
+
+```python
+# types.py
+import strawberry
+import strawberry_django
+from strawberry.django import auto
+from typing import List
+from . import models
+
+@strawberry.django.type(models.Fruit, is_interface=True)
+class Fruit:
+    id: auto
+    name: auto
+
+
+@strawberry.django.type(models.Fruit)
+class Berry(Fruit):
+    def get_queryset(self, queryset, info):
+        return queryset.filter(name__contains="berry")
+
+
+@strawberry.django.type(models.Fruit)
+class NonBerry(Fruit):
+    def get_queryset(self, queryset, info):
+        return queryset.exclude(name__contains="berry")
+
+
+@strawberry.type
+class Query:
+    berries: List[Berry]
+    non_berries: List[NonBerry]
 ```

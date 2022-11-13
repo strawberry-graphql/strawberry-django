@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, Optional, Type, TypeVar
 
 from django.db import models
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.types import Info
 
 from .. import utils
 from ..filters import StrawberryDjangoFieldFilters
@@ -13,8 +14,11 @@ from ..pagination import StrawberryDjangoPagination
 from ..resolvers import django_resolver
 
 
+T = TypeVar("T", bound="StrawberryDjangoFieldBase")
+
+
 class StrawberryDjangoFieldBase:
-    def get_queryset(self, queryset, info, **kwargs):
+    def get_queryset(self, queryset: models.QuerySet, info: Info, **kwargs):
         return queryset
 
     @property
@@ -22,11 +26,15 @@ class StrawberryDjangoFieldBase:
         type_ = utils.unwrap_type(self.type)
         return utils.get_django_model(type_)
 
+    @classmethod
+    def from_field(cls: Type[T], field, django_type) -> T:
+        raise NotImplementedError
+
 
 class StrawberryDjangoField(
+    StrawberryDjangoPagination,
     StrawberryDjangoFieldOrdering,
     StrawberryDjangoFieldFilters,
-    StrawberryDjangoPagination,
     StrawberryDjangoFieldBase,
     StrawberryField,
 ):
@@ -52,7 +60,13 @@ class StrawberryDjangoField(
     StrawberryField super classes.
     """
 
-    def __init__(self, django_name=None, graphql_name=None, python_name=None, **kwargs):
+    def __init__(
+        self,
+        django_name: Optional[str] = None,
+        graphql_name: Optional[str] = None,
+        python_name: Optional[str] = None,
+        **kwargs
+    ):
         self.django_name = django_name
         self.is_auto = utils.is_auto(kwargs.get("type_annotation", None))
         self.is_relation = False
@@ -71,21 +85,24 @@ class StrawberryDjangoField(
         )
 
     @classmethod
-    def from_field(cls, field, django_type):
+    def from_field(cls, field: "StrawberryDjangoField", django_type):
         if utils.is_strawberry_django_field(field) and not field.origin_django_type:
             return field
 
-        default = getattr(field, "default", getattr(field, "default", UNSET))
         new_field = StrawberryDjangoField(
-            base_resolver=getattr(field, "base_resolver", None),
-            default_factory=field.default_factory,
-            default=default,
-            django_name=getattr(field, "django_name", field.name),
-            graphql_name=getattr(field, "graphql_name", None),
             python_name=field.name,
+            graphql_name=getattr(field, "graphql_name", None),
             type_annotation=field.type_annotation
             if hasattr(field, "type_annotation")
             else StrawberryAnnotation(field.type),
+            description=getattr(field, "description", None),
+            base_resolver=getattr(field, "base_resolver", None),
+            permission_classes=getattr(field, "permission_classes", []),
+            default=getattr(field, "default", UNSET),
+            default_factory=field.default_factory,
+            deprecation_reason=getattr(field, "deprecation_reason", None),
+            directives=getattr(field, "directives", []),
+            django_name=getattr(field, "django_name", field.name),
         )
         new_field.is_auto = getattr(field, "is_auto", False)
         new_field.origin_django_type = getattr(field, "origin_django_type", None)
@@ -134,8 +151,16 @@ class StrawberryDjangoField(
         type_ = utils.unwrap_type(type_)
         get_queryset = getattr(type_, "get_queryset", None)
         if get_queryset:
-            queryset = get_queryset(self, queryset, info, **kwargs)
-        return super().get_queryset(queryset, info, order, **kwargs)
+            queryset = get_queryset(queryset, info, **kwargs)
+        return super().get_queryset(queryset, info, order=order, **kwargs)
+
+    @property
+    def is_basic_field(self) -> bool:
+        """
+        All StrawberryDjango fields define a custom resolver that needs to be
+        run, so always return False here.
+        """
+        return False
 
 
 def field(
@@ -148,7 +173,7 @@ def field(
         filters=filters,
         django_name=field_name,
         default=default,
-        **kwargs
+        **kwargs,
     )
     if resolver:
         resolver = django_resolver(resolver)

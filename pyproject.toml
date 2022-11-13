@@ -1,28 +1,48 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
-packages = [ { include = "strawberry_django" } ]
-version = "0.3rc1"
+packages = [{ include = "strawberry_django" }]
+version = "0.8.1"
 description = "Strawberry GraphQL Django extension"
 authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
 repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
 license = "MIT"
 readme = "README.md"
 keywords = ["graphql", "api", "django"]
-classifiers = [ "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Python Modules" ]
+classifiers = [
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Framework :: Django",
+  "Framework :: Django :: 3.2",
+  "Framework :: Django :: 4.0",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.0"
-strawberry-graphql = ">=0.69.0"
+strawberry-graphql = ">=0.139.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.1.1"
-pytest-asyncio = "^0.14.0"
+pytest = "^7.1.2"
+pytest-asyncio = "^0.18.3"
 pytest-django = "^4.1.0"
 pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 django-filter = "^2.4.0"
 pytest-mock = "^3.5.1"
+#docs requires
+mkdocs = "^1.3.0"
+mkdocs-markdownextradata-plugin = "^0.2.5"
+mkdocs-material = "^8.3.9"
+mkdocs-minify-plugin = "^0.5.0"
+pymdown-extensions = "^9.5"
+Markdown = "^3.3.7"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "setuptools"]
@@ -37,6 +57,6 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
-python_paths = "."
 testpaths = ["tests"]
 filterwarnings = "ignore:.*is deprecated.*:DeprecationWarning"
+asyncio_mode = "strict"

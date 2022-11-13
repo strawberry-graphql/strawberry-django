@@ -2,15 +2,15 @@ import asyncio
 import dataclasses
 import sys
 import warnings
+from typing import Dict
 
 from django.db import models
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET, is_unset
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryContainer
 
 
-__all__ = ["is_unset", "UNSET", "deprecated"]
+__all__ = ["deprecated"]
 
 
 def is_async() -> bool:
@@ -37,9 +37,9 @@ def is_strawberry_field(obj):
 
 
 def is_strawberry_django_field(obj):
-    from strawberry_django.fields.field import StrawberryDjangoField
+    from strawberry_django.fields.field import StrawberryDjangoFieldBase
 
-    return isinstance(obj, StrawberryDjangoField)
+    return isinstance(obj, StrawberryDjangoFieldBase)
 
 
 def is_django_type(obj):
@@ -87,7 +87,7 @@ def is_similar_django_type(a, b):
 
 
 def get_annotations(cls):
-    annotations = {}
+    annotations: Dict[str, StrawberryAnnotation] = {}
     namespace = sys.modules[cls.__module__].__dict__
     for c in reversed(cls.__mro__):
         if "__annotations__" in c.__dict__:

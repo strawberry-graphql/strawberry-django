@@ -1,7 +1,7 @@
 # Mutations
 
 ```python
-#schema.py
+# schema.py
 from strawberry_django import mutations
 
 @strawberry.type
@@ -16,11 +16,10 @@ schema = strawberry.Schema(mutation=Mutation)
 
 ## Filtering
 
-Filters can be addedd to update and delete mutations. See more information about [filtering](filters.md).
+Filters can be added to update and delete mutations. More information in the [filtering](filters.md) section.
 
 ```python
-#schema.py
-
+# schema.py
 from strawberry_django import mutations
 
 @strawberry.type

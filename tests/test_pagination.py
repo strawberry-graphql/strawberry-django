@@ -2,9 +2,9 @@ from typing import List
 
 import pytest
 import strawberry
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 from tests import models, utils
 
 
@@ -18,7 +18,8 @@ class Fruit:
 class BerryFruit:
     name: auto
 
-    def get_queryset(self, queryset, info, **kwargs):
+    @classmethod
+    def get_queryset(cls, queryset, info, **kwargs):
         return queryset.filter(name__contains="berry")
 
 

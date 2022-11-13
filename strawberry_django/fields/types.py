@@ -1,20 +1,21 @@
 import datetime
 import decimal
 import uuid
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
 
 import django
 import strawberry
-from django.db.models import fields
-from django.db.models.fields.reverse_related import ForeignObjectRel, ManyToOneRel
-from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
+from django.db.models import Field, Model, fields
+from django.db.models.fields.reverse_related import ForeignObjectRel
+from strawberry import UNSET
+from strawberry.auto import StrawberryAuto
+from strawberry.scalars import JSON
 
 from .. import filters
 
 
-class auto:
-    pass
+if TYPE_CHECKING:
+    from strawberry_django.type import StrawberryDjangoType
 
 
 @strawberry.type
@@ -97,7 +98,7 @@ field_type_map = {
 if django.VERSION >= (3, 1):
     field_type_map.update(
         {
-            fields.json.JSONField: NotImplemented,
+            fields.json.JSONField: JSON,
             fields.PositiveBigIntegerField: int,
         }
     )
@@ -134,15 +135,17 @@ input_field_type_map = {
 }
 
 
-def resolve_model_field_type(model_field, django_type):
+def resolve_model_field_type(
+    model_field: Union[Field, ForeignObjectRel], django_type: "StrawberryDjangoType"
+):
     model_field_type = type(model_field)
-    field_type = None
+    field_type: Any = None
     if django_type.is_filter and model_field.is_relation:
         field_type = filters.DjangoModelFilterInput
     elif django_type.is_input:
         field_type = input_field_type_map.get(model_field_type, None)
     if field_type is None:
-        field_type = field_type_map[model_field_type]
+        field_type = field_type_map.get(model_field_type, NotImplemented)
     if field_type is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented"
@@ -154,8 +157,10 @@ def resolve_model_field_type(model_field, django_type):
     return field_type
 
 
-def resolve_model_field_name(model_field, is_input=False, is_filter=False):
-    if isinstance(model_field, (ForeignObjectRel, ManyToOneRel)):
+def resolve_model_field_name(
+    model_field: Union[Field, ForeignObjectRel], is_input=False, is_filter=False
+):
+    if isinstance(model_field, ForeignObjectRel):
         return model_field.get_accessor_name()
     if is_input and not is_filter:
         return model_field.attname
@@ -163,7 +168,7 @@ def resolve_model_field_name(model_field, is_input=False, is_filter=False):
         return model_field.name
 
 
-def get_model_field(model, field_name):
+def get_model_field(model: Type[Model], field_name: str):
     try:
         return model._meta.get_field(field_name)
     except django.core.exceptions.FieldDoesNotExist as e:
@@ -186,13 +191,7 @@ def get_model_field(model, field_name):
 
 
 def is_auto(type_):
-    if not isinstance(type_, StrawberryAnnotation):
-        return type_ is auto
-    annotation = type_.annotation
-    if isinstance(annotation, str):
-        namespace = type_.namespace
-        return namespace and namespace.get(annotation) is auto
-    return annotation is auto
+    return isinstance(type_, StrawberryAuto)
 
 
 def is_optional(model_field, is_input, partial):
@@ -210,6 +209,10 @@ def is_optional(model_field, is_input, partial):
         has_default = model_field.default is not fields.NOT_PROVIDED
         if model_field.blank or has_default:
             return True
-    if model_field.null:
-        return True
+    if not isinstance(
+        model_field,
+        (fields.reverse_related.ManyToManyRel, fields.reverse_related.ManyToOneRel),
+    ) or isinstance(model_field, fields.reverse_related.OneToOneRel):
+        # OneToOneRel is the subclass of ManyToOneRel, so additional check is needed
+        return model_field.null
     return False

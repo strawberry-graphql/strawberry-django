@@ -104,6 +104,9 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 
+# intelejea
+.idea
+
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
@@ -120,6 +123,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Direnv config
+.envrc
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -129,6 +135,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+
 
 # mypy
 .mypy_cache/
@@ -143,3 +150,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Pyenv version
+.python-version

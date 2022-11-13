@@ -3,10 +3,10 @@ from typing import List
 
 import pytest
 import strawberry
+from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 
 import strawberry_django
-from strawberry_django import auto
 from tests import models, utils
 
 
@@ -32,6 +32,14 @@ class FruitEnum(Enum):
 @strawberry_django.filters.filter(models.Fruit)
 class EnumFiler:
     name: FruitEnum
+
+
+@strawberry.input
+class NonFilter:
+    name: FruitEnum
+
+    def filter(self, queryset):
+        raise NotImplementedError
 
 
 @strawberry_django.filters.filter(models.Fruit)
@@ -162,6 +170,75 @@ def test_resolver_filter(fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+def test_resolver_filter_with_info(fruits):
+    from strawberry.types.info import Info
+
+    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    class FruitFilterWithInfo:
+        id: auto
+        name: auto
+        custom_field: bool
+
+        def filter_custom_field(self, queryset, info: Info):
+            # Test here is to prove that info can be passed properly
+            assert isinstance(info, Info)
+            return queryset.filter(name="banana")
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return strawberry_django.filters.apply(filters, queryset, info=info)
+
+    query = utils.generate_query(Query)
+    result = query("{ fruits(filters: { customField: true }) { id name } }")
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_resolver_filter_override_with_info(fruits):
+    from strawberry.types.info import Info
+
+    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    class FruitFilterWithInfo:
+        custom_field: bool
+
+        def filter(self, queryset, info: Info):
+            # Test here is to prove that info can be passed properly
+            assert isinstance(info, Info)
+            return queryset.filter(name="banana")
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return strawberry_django.filters.apply(filters, queryset, info=info)
+
+    query = utils.generate_query(Query)
+    result = query("{ fruits(filters: { customField: true }) { id name } }")
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_resolver_nonfilter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(filters: NonFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return strawberry_django.filters.apply(filters, queryset)
+
+    query = utils.generate_query(Query)
+    result = query("{ fruits(filters: { name: strawberry } ) { id name } }")
+    assert not result.errors
 
 
 def test_enum(query, fruits):

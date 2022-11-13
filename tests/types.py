@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import List
 
+from strawberry import auto
+
 import strawberry_django
-from strawberry_django import auto
 
 from . import models
 

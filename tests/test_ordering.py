@@ -2,9 +2,10 @@ from typing import List
 
 import pytest
 import strawberry
+from strawberry import auto
+from strawberry.annotation import StrawberryAnnotation
 
 import strawberry_django
-from strawberry_django import auto
 from tests import models, utils
 from tests.types import Fruit
 
@@ -20,6 +21,12 @@ class FruitOrder:
     color: ColorOrder
 
 
+@strawberry_django.type(models.Fruit, order=FruitOrder)
+class FruitWithOrder:
+    id: auto
+    name: auto
+
+
 @strawberry.type
 class Query:
     fruits: List[Fruit] = strawberry_django.field(order=FruitOrder)
@@ -28,6 +35,17 @@ class Query:
 @pytest.fixture
 def query():
     return utils.generate_query(Query)
+
+
+def test_field_order_definition():
+    from strawberry_django.fields.field import StrawberryDjangoField
+
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(FruitWithOrder))
+    assert field.get_order() == FruitOrder
+    field = StrawberryDjangoField(
+        type_annotation=StrawberryAnnotation(FruitWithOrder), filters=None
+    )
+    assert field.get_filters() is None
 
 
 def test_asc(query, fruits):

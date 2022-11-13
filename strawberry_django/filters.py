@@ -1,8 +1,15 @@
+import functools
+import inspect
 from enum import Enum
-from typing import Generic, List, Optional, TypeVar
+from types import FunctionType
+from typing import Generic, List, Optional, Type, TypeVar
 
 import strawberry
-from strawberry.arguments import UNSET, StrawberryArgument, is_unset
+from django.db.models import QuerySet
+from django.db.models.sql.query import get_field_names_from_opts
+from strawberry import UNSET
+from strawberry.arguments import StrawberryArgument
+from strawberry.types import Info
 
 from . import utils
 from .arguments import argument
@@ -80,7 +87,7 @@ def build_filter_kwargs(filters):
         field_name = field.name
         field_value = getattr(filters, field_name)
 
-        if is_unset(field_value):
+        if field_value is UNSET:
             continue
 
         if isinstance(field_value, Enum):
@@ -92,7 +99,7 @@ def build_filter_kwargs(filters):
             continue
 
         if django_model:
-            if field_name not in django_model._meta._forward_fields_map:
+            if field_name not in get_field_names_from_opts(django_model._meta):
                 continue
 
         if field_name in lookup_name_conversion_map:
@@ -106,6 +113,8 @@ def build_filter_kwargs(filters):
                 subfield_name,
                 subfield_value,
             ) in subfield_filter_kwargs.items():
+                if isinstance(subfield_value, Enum):
+                    subfield_value = subfield_value.value
                 filter_kwargs[f"{field_name}__{subfield_name}"] = subfield_value
             filter_methods.extend(subfield_filter_methods)
         else:
@@ -114,20 +123,50 @@ def build_filter_kwargs(filters):
     return filter_kwargs, filter_methods
 
 
-def apply(filters, queryset, pk=UNSET):
-    if not is_unset(pk):
+@functools.lru_cache(maxsize=256)
+def function_allow_passing_info(filter_method: FunctionType) -> bool:
+    argspec = inspect.getfullargspec(filter_method)
+
+    return "info" in getattr(argspec, "args", []) or "info" in getattr(
+        argspec, "kwargs", []
+    )
+
+
+def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
+    if pk is not UNSET:
         queryset = queryset.filter(pk=pk)
-    if is_unset(filters) or filters is None:
+
+    if (
+        filters is UNSET
+        or filters is None
+        or not hasattr(filters, "_django_type")
+        or not filters._django_type.is_filter
+    ):
         return queryset
 
     filter_method = getattr(filters, "filter", None)
     if filter_method:
-        return filter_method(queryset)
+        if function_allow_passing_info(
+            # Pass the original __func__ which is always the same
+            getattr(filter_method, "__func__", filter_method)
+        ):
+            return filter_method(queryset=queryset, info=info)
+
+        else:
+            return filter_method(queryset=queryset)
 
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
     for filter_method in filter_methods:
-        queryset = filter_method(queryset=queryset)
+        if function_allow_passing_info(
+            # Pass the original __func__ which is always the same
+            getattr(filter_method, "__func__", filter_method)
+        ):
+            queryset = filter_method(queryset=queryset, info=info)
+
+        else:
+            queryset = filter_method(queryset=queryset)
+
     return queryset
 
 
@@ -144,12 +183,12 @@ class StrawberryDjangoFieldFilters:
             if self.django_model and not self.is_list:
                 if self.is_relation is False:
                     arguments.append(argument("pk", strawberry.ID))
-            elif filters and not is_unset(filters):
+            elif filters and filters is not UNSET:
                 arguments.append(argument("filters", filters))
         return super().arguments + arguments
 
-    def get_filters(self):
-        if not is_unset(self.filters):
+    def get_filters(self) -> Optional[Type]:
+        if self.filters is not UNSET:
             return self.filters
         type_ = utils.unwrap_type(self.type or self.child.type)
 
@@ -157,6 +196,13 @@ class StrawberryDjangoFieldFilters:
             return type_._django_type.filters
         return None
 
-    def get_queryset(self, queryset, info, pk=UNSET, filters=UNSET, **kwargs):
-        queryset = apply(filters, queryset, pk)
-        return super().get_queryset(queryset, info, **kwargs)
+    def apply_filters(
+        self, queryset: QuerySet, filters: Type = UNSET, pk=UNSET, info: Info = UNSET
+    ) -> QuerySet:
+        return apply(filters, queryset, info, pk)
+
+    def get_queryset(
+        self, queryset: QuerySet, info: Info, pk=UNSET, filters: Type = UNSET, **kwargs
+    ):
+        queryset = super().get_queryset(queryset, info, **kwargs)
+        return self.apply_filters(queryset, filters, pk, info)

@@ -1,8 +1,9 @@
 from typing import List
 
 from django.db import transaction
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument, is_unset
+from strawberry.arguments import StrawberryArgument
 from strawberry.type import StrawberryList, StrawberryOptional
 
 from .. import utils
@@ -48,6 +49,14 @@ class DjangoMutationBase:
     @django_resolver
     def get_result(self, source, info, args, kwargs):
         return self.resolver(info=info, source=source, *args, **kwargs)
+
+    @property
+    def is_basic_field(self) -> bool:
+        """
+        Since all mutations define a resolver function they are never basic
+        fields so always return False here.
+        """
+        return False
 
 
 class DjangoCreateMutation(
@@ -119,7 +128,7 @@ def get_input_data(input_type, data):
         value = getattr(data, field.name)
         if isinstance(value, (ManyToOneInput, ManyToManyInput)):
             continue
-        if is_unset(value):
+        if value is UNSET:
             continue
         if isinstance(value, OneToManyInput):
             value = value.set
@@ -134,7 +143,7 @@ def update_m2m(queryset, data):
 
         for instance in queryset:
             f = getattr(instance, field_name)
-            if not is_unset(field_value.set):
+            if field_value.set is not UNSET:
                 if field_value.add:
                     raise ValueError("'add' cannot be used together with 'set'")
                 if field_value.remove:

@@ -39,3 +39,14 @@ class Group(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=50)
+
+
+class Book(models.Model):
+    """Model with lots of extra metadata."""
+
+    title = models.CharField(
+        max_length=20,
+        blank=False,
+        null=False,
+        help_text="The name by which the book is known.",
+    )

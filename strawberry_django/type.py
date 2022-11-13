@@ -1,48 +1,53 @@
 import dataclasses
-from typing import Any, Optional
+from inspect import cleandoc
+from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
 import django
+import django.db.models
 import strawberry
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import UNSET
+from strawberry.field import UNRESOLVED
 
 from . import utils
 from .fields.field import StrawberryDjangoField
 from .fields.types import (
-    auto,
     get_model_field,
     is_optional,
     resolve_model_field_name,
     resolve_model_field_type,
 )
+from .settings import strawberry_django_settings as django_settings
 
 
 _type = type
 
 
-def get_type_attr(type_, field_name):
+def get_type_attr(type_, field_name: str):
     attr = getattr(type_, field_name, UNSET)
-    if utils.is_unset(attr):
+    if attr is UNSET:
         attr = getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
     return attr
 
 
-def get_field(django_type, field_name, field_annotation=None):
-    if field_annotation is None:
-        field_annotation = StrawberryAnnotation(None)
+def get_field(
+    django_type: "StrawberryDjangoType",
+    field_name: str,
+    field_annotation: Optional[StrawberryAnnotation] = None,
+):
     attr = get_type_attr(django_type.origin, field_name)
 
     if utils.is_field(attr):
-        field = StrawberryDjangoField.from_field(attr, django_type)
+        field = django_type.field_cls.from_field(attr, django_type)
     else:
-        field = StrawberryDjangoField(
+        field = django_type.field_cls(
             default=attr,
             type_annotation=field_annotation,
         )
 
     field.python_name = field_name
     if field_name in django_type.origin.__dict__.get("__annotations__", {}):
-        # store origin django type for futher usage
+        # store origin django type for further usage
         field.origin_django_type = django_type
 
     if field_annotation:
@@ -59,9 +64,15 @@ def get_field(django_type, field_name, field_annotation=None):
             model_field, django_type.is_input, django_type.is_filter
         )
         field.is_relation = model_field.is_relation
+
+        # Use the Django field help_text if no other description is available.
+        settings = django_settings()
+        if not field.description and settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]:
+            model_field_help_text = getattr(model_field, "help_text", "")
+            field.description = str(model_field_help_text) or None
     except django.core.exceptions.FieldDoesNotExist:
         if field.django_name or field.is_auto:
-            raise  # field should exist, reraise catched exception
+            raise  # field should exist, reraise caught exception
         model_field = None
 
     if field.is_relation:
@@ -71,12 +82,18 @@ def get_field(django_type, field_name, field_annotation=None):
         if not utils.is_similar_django_type(django_type, field.origin_django_type):
             field.is_auto = True
 
-    if field.is_auto:
+    # Only set the type_annotation for auto fields if they don't have a base_resolver.
+    # Since strawberry 0.139 the type_annotation has a higher priority than the
+    # resolver's annotation, and that would force our automatic model resolution to be
+    # used instead of the resolver's type annotation.
+    if field.is_auto and not field.base_resolver:
         # resolve type of auto field
         field_type = resolve_model_field_type(model_field, django_type)
         field.type_annotation = StrawberryAnnotation(field_type)
 
-    if is_optional(model_field, django_type.is_input, django_type.is_partial):
+    if field.type_annotation and is_optional(
+        model_field, django_type.is_input, django_type.is_partial
+    ):
         field.type_annotation.annotation = Optional[field.type_annotation.annotation]
 
     if django_type.is_input:
@@ -91,9 +108,9 @@ def get_field(django_type, field_name, field_annotation=None):
     return field
 
 
-def get_fields(django_type):
+def get_fields(django_type: "StrawberryDjangoType"):
     annotations = utils.get_annotations(django_type.origin)
-    fields = {}
+    fields: Dict[str, StrawberryDjangoField] = {}
 
     # collect all annotated fields
     for field_name, field_annotation in annotations.items():
@@ -113,20 +130,37 @@ def get_fields(django_type):
     return list(fields.values())
 
 
+_O = TypeVar("_O", bound=type)
+_M = TypeVar("_M", bound=django.db.models.Model)
+
+
 @dataclasses.dataclass
-class StrawberryDjangoType:
-    origin: Any
-    model: Any
+class StrawberryDjangoType(Generic[_O, _M]):
+    origin: _O
+    model: Type[_M]
     is_input: bool
     is_partial: bool
     is_filter: bool
     filters: Any
     order: Any
     pagination: Any
+    field_cls: Type[StrawberryDjangoField]
 
 
-def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **kwargs):
+def process_type(
+    cls,
+    model: Type[django.db.models.Model],
+    *,
+    filters=UNSET,
+    pagination=UNSET,
+    order=UNSET,
+    field_cls=UNSET,
+    **kwargs
+):
     original_annotations = cls.__dict__.get("__annotations__", {})
+
+    if not field_cls or field_cls is UNSET:
+        field_cls = StrawberryDjangoField
 
     django_type = StrawberryDjangoType(
         origin=cls,
@@ -137,6 +171,7 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
         filters=filters,
         order=order,
         pagination=pagination,
+        field_cls=field_cls,
     )
 
     fields = get_fields(django_type)
@@ -144,13 +179,20 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
     # update annotations and fields
     cls.__annotations__ = cls_annotations = {}
     for field in fields:
-        annotation = (
-            field.type
-            if field.type_annotation is None
-            else field.type_annotation.annotation
-        )
-        if annotation is None:
-            annotation = StrawberryAnnotation(auto)
+        annotation = None
+
+        if field.type_annotation and field.type_annotation.annotation:
+            annotation = field.type_annotation.annotation
+        elif field.base_resolver and field.base_resolver.type_annotation:
+            annotation = field.base_resolver.type_annotation.annotation
+
+        # UNRESOLVED is not a valid annotation, it is just an indication that the type
+        # could not be resolved. In this case just fallback to None
+        if annotation is UNRESOLVED:
+            annotation = None
+
+        # TODO: should we raise an error if annotation is None here?
+
         cls_annotations[field.name] = annotation
         setattr(cls, field.name, field)
 
@@ -161,7 +203,13 @@ def process_type(cls, model, *, filters=UNSET, pagination=UNSET, order=UNSET, **
     if not hasattr(cls, "is_type_of"):
         cls.is_type_of = lambda obj, _info: isinstance(obj, (cls, model))
 
-    strawberry.type(cls, **kwargs)
+    # Get type description from either kwargs, or the model's docstring
+    settings = django_settings()
+    description = kwargs.pop("description", None)
+    if not description and settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]:
+        description = cleandoc(model.__doc__) or None
+
+    strawberry.type(cls, description=description, **kwargs)
 
     # restore original annotations for further use
     cls.__annotations__ = original_annotations

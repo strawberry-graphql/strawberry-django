@@ -1,4 +1,4 @@
-# Strawberry GraphQL Django extension
+# Strawberry GraphQL Django integration
 
 [![CI](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml/badge.svg)](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml)
 [![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
@@ -7,22 +7,19 @@
 This package provides powerful tools to generate GraphQL types, queries, mutations and resolvers from Django models.
 
 Installing `strawberry-graphql-django` package from the python package repository.
+
 ```shell
 pip install strawberry-graphql-django
 ```
 
-Full documentation is available under [docs](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/docs/index.md) github folder.
+Full documentation is available under [docs](https://strawberry-graphql.github.io/strawberry-graphql-django/) github folder.
 
-
-## Supported features
-
-* GraphQL type generation from models
-* Filtering, pagination and ordering
-* Basic create, retrieve, update and delete (CRUD) types and mutations
-* Basic Django auth support, current user query, login and logout mutations
-* Django sync and async views
-* Unit test integration
-
+* [x] GraphQL type generation from models
+* [x] Filtering, pagination and ordering
+* [x] Basic create, retrieve, update and delete (CRUD) types and mutations
+* [x] Basic Django auth support, current user query, login and logout mutations
+* [x] Django sync and async views
+* [x] Unit test integration
 
 ## Basic Usage
 
@@ -31,18 +28,22 @@ Full documentation is available under [docs](https://github.com/strawberry-graph
 from django.db import models
 
 class Fruit(models.Model):
+    """A tasty treat"""
     name = models.CharField(max_length=20)
     color = models.ForeignKey('Color', blank=True, null=True,
             related_name='fruits', on_delete=models.CASCADE)
 
 class Color(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(
+        max_length=20,
+        help_text="field description",
+    )
 ```
 
 ```python
 # types.py
 import strawberry
-from strawberry.django import auto
+from strawberry import auto
 from typing import List
 from . import models
 
@@ -75,6 +76,9 @@ schema = strawberry.Schema(query=Query)
 Code above generates following schema.
 
 ```schema
+"""
+A tasty treat
+"""
 type Fruit {
   id: ID!
   name: String!
@@ -83,6 +87,9 @@ type Fruit {
 
 type Color {
   id: ID!
+  """
+  field description
+  """
   name: String!
   fruits: [Fruit!]
 }
@@ -102,33 +109,3 @@ urlpatterns = [
     path('graphql', AsyncGraphQLView.as_view(schema=schema)),
 ]
 ```
-
-See complete Django project from github repository folder [examples/django](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django).
-
-
-## Autocompletion with editors
-
-Some editors like VSCode may not be able to resolve symbols and types without explicit `strawberry.django` import. Adding following line to code fixes that problem.
-
-```python
-import strawberry.django
-```
-
-## Running unit tests
-
-```shell
-poetry install
-poetry run pytest
-```
-
-## Pre commit hooks
-
-We have a configuration for pre-commit, to add the hook run the following command:
-
-```shell
-pre-commit install
-```
-
-## Contributing
-
-We are happy to get pull requests and feedback from you.

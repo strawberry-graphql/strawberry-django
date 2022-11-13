@@ -3,9 +3,9 @@ from typing import List
 import pytest
 import strawberry
 from django.db import models
+from strawberry import auto
 
 import strawberry_django
-from strawberry_django import auto
 
 from .. import utils
 
@@ -35,7 +35,10 @@ def query(db):
 def instance(mocker):
     mocker.patch(
         "django.core.files.images.ImageFile._get_image_dimensions"
-    ).return_value = [800, 600]
+    ).return_value = [
+        800,
+        600,
+    ]
     mocker.patch("os.stat")().st_size = 10
     return FileModel.objects.create(file="file", image="image")
 

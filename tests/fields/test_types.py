@@ -8,13 +8,15 @@ import django
 import pytest
 import strawberry
 from django.db import models
+from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
+from strawberry.scalars import JSON
 from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.union import StrawberryUnion
 
 import strawberry_django
-from strawberry_django import auto, fields, is_auto
+from strawberry_django import fields
 
 
 try:
@@ -48,6 +50,7 @@ class FieldTypesModel(models.Model):
     time = models.TimeField()
     url = models.URLField()
     uuid = models.UUIDField()
+    json = models.JSONField()
     foreign_key = models.ForeignKey(
         "FieldTypesModel",
         blank=True,
@@ -91,6 +94,7 @@ def test_field_types():
         time: auto
         url: auto
         uuid: auto
+        json: auto
 
     assert [(f.name, f.type) for f in fields(Type)] == [
         ("id", strawberry.ID),
@@ -116,6 +120,7 @@ def test_field_types():
         ("time", datetime.time),
         ("url", str),
         ("uuid", uuid.UUID),
+        ("json", JSON),
     ]
 
 
@@ -213,7 +218,7 @@ def test_related_fields():
         ),
         (
             "related_foreign_key",
-            StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)),
+            StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
         (
@@ -223,7 +228,7 @@ def test_related_fields():
         ),
         (
             "related_many_to_many",
-            StrawberryOptional(StrawberryList(strawberry_django.DjangoModelType)),
+            StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
     ]
@@ -405,31 +410,19 @@ def test_type_from_type():
     ]
 
 
-def test_is_auto_passing_auto():
-    assert is_auto(auto)
+def test_notimplemented():
+    """Test that an unrecognized field raises `NotImplementedError`."""
 
+    class UnknownField(models.Field):
+        """A field unknown to Strawberry."""
 
-def test_is_auto_passing_non_auto():
-    assert not is_auto(int)
+    class UnknownModel(models.Model):
+        """A model with UnknownField."""
 
+        field = UnknownField()
 
-def test_is_auto_passing_auto_strawberry_annotation():
-    assert is_auto(StrawberryAnnotation(auto))
+    with pytest.raises(NotImplementedError, match=r"UnknownModel\.field"):
 
-
-def test_is_auto_passing_non_auto_strawberry_annotation():
-    assert not is_auto(StrawberryAnnotation(int))
-
-
-def test_is_auto_passing_auto_as_str_strawberry_annotation():
-    assert is_auto(StrawberryAnnotation("auto", namespace={"auto": auto}))
-
-
-def test_is_auto_passing_aliased_auto_as_str_strawberry_annotation():
-    assert is_auto(
-        StrawberryAnnotation("aliased_auto", namespace={"aliased_auto": auto})
-    )
-
-
-def test_is_auto_passing_non_auto_as_str_strawberry_annotation():
-    assert not is_auto(StrawberryAnnotation("SomeType", namespace={"SomeType": type}))
+        @strawberry_django.type(UnknownModel)
+        class UnknownType:
+            field: auto
