@@ -7,6 +7,7 @@ from typing import List, Tuple
 import django
 import pytest
 import strawberry
+from django.conf import settings
 from django.db import models
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
@@ -270,6 +271,10 @@ def test_related_input_fields():
     ]
 
 
+@pytest.mark.skipif(
+    not settings.GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
 def test_geos_fields():
     from tests.models import GeosFieldsModel
 
