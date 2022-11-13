@@ -7,6 +7,7 @@ from typing import List, Tuple
 import django
 import pytest
 import strawberry
+from django.conf import settings
 from django.db import models
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
@@ -17,14 +18,6 @@ from strawberry.union import StrawberryUnion
 
 import strawberry_django
 from strawberry_django import fields
-
-
-try:
-    from django.contrib.gis.db import models as geos_fields
-
-    GEOS_IMPORTED = True
-except django.core.exceptions.ImproperlyConfigured:
-    GEOS_IMPORTED = False
 
 
 class FieldTypesModel(models.Model):
@@ -279,10 +272,12 @@ def test_related_input_fields():
 
 
 @pytest.mark.skipif(
-    not GEOS_IMPORTED,
+    not settings.GEOS_IMPORTED,
     reason="Test requires GEOS to be imported and properly configured",
 )
 def test_geos_fields():
+    from django.contrib.gis.db import models as geos_fields
+
     class GeosFieldsModel(models.Model):
         point = geos_fields.PointField()
         line_string = geos_fields.LineStringField()
