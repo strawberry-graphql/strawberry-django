@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 import strawberry
+from django.conf import settings
 
 import strawberry_django
 
@@ -72,3 +73,16 @@ async def test_async_resolver(user, group):
     result = await query("{ users { myGroup { name } } }")
     assert not result.errors
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
+
+
+@pytest.mark.skipif(
+    not settings.GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
+def test_geo_data(query):
+    print(query)
+
+    result = query("{ geofield { id } }")
+    print(result)
+
+    assert False
