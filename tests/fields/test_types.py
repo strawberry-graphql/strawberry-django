@@ -279,7 +279,7 @@ def test_geos_fields():
     from tests.models import GeosFieldsModel
 
     @strawberry_django.type(GeosFieldsModel)
-    class Type:
+    class GeoFieldType:
         point: auto
         line_string: auto
         polygon: auto
@@ -294,7 +294,7 @@ def test_geos_fields():
         )
     )
 
-    assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
+    assert [(f.name, f.type or f.child.type) for f in fields(GeoFieldType)] == [
         ("point", StrawberryPoint),
         ("line_string", StrawberryList(StrawberryPoint)),
         ("polygon", StrawberryList(StrawberryPoint)),
