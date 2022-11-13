@@ -33,8 +33,8 @@ jobs:
       - name: Run image
         uses: abatilo/actions-poetry@v2.0.0
 
-      - name: Install gdal to test geofields
-        run: sudo apt-get install gdal-bin
+      - name: Install dependencies to test geofields on sqlite
+        run: sudo apt-get install gdal-bin libsqlite3-mod-spatialite
 
       - name: Install Dependencies
         run: poetry install
