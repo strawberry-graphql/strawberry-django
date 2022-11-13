@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 import strawberry
+from django.conf import settings
 
 import strawberry_django
 
@@ -53,6 +54,23 @@ def groups(db):
 
 
 @pytest.fixture
+def geofield(db):
+    from django.contrib.gis.geos import Point
+
+    return models.GeosFieldsModel.objects.create(point=Point(x=0, y=0, z=0))
+
+
+@pytest.fixture
+def geofields(db):
+    from django.contrib.gis.geos import Point
+
+    return [
+        models.GeosFieldsModel.objects.create(point=Point(x=0, y=0, z=0)),
+        models.GeosFieldsModel.objects.create(point=Point(x=1, y=1, z=1)),
+    ]
+
+
+@pytest.fixture
 def schema():
     @strawberry.type
     class Query:
@@ -63,7 +81,12 @@ def schema():
         tag: types.Tag = strawberry_django.field()
         tags: List[types.Tag] = strawberry_django.field()
 
-    schema = strawberry.Schema(query=Query)
+    @strawberry.type
+    class GeoQuery(Query):
+        geofield: types.GeoField = strawberry_django.field()
+        geofields: List[types.GeoField] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=GeoQuery if settings.GEOS_IMPORTED else Query)
     return schema
 
 
