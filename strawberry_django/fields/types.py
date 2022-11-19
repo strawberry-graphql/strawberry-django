@@ -110,18 +110,56 @@ try:
     Point = strawberry.scalar(
         NewType("Point", Tuple[float, float, Optional[float]]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
-        parse_value=lambda v: v,
+        parse_value=lambda v: geos.Point(v),
         description="Represents a point as `(x, y, z)` or `(x, y)`.",
+    )
+
+    LineString = strawberry.scalar(
+        NewType("GeoLineString", Tuple[Point]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
+        parse_value=lambda v: geos.LineString(v),
+        description="""
+            A geographical line that gets multiple 'x, y' or 'x, y, z' tuples
+            to form a line.
+        """,
+    )
+
+    LinearRing = strawberry.scalar(
+        NewType("GeoLinearRing", Tuple[Point]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
+        parse_value=lambda v: geos.LinearRing(v),
+        description="""
+            A geographical line that gets multiple 'x, y' or 'x, y, z' tuples
+            to form a line. It must be a circle.
+            E.g. It maps back to itself.
+        """,
+    )
+
+    Polygon = strawberry.scalar(
+        NewType("GeoPolygon", Tuple[LinearRing]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
+        parse_value=lambda v: geos.Polygon(v),
+        description="""
+            A geographical object that gets 2 LinearRing objects,
+            as external and internal rings.
+        """,
+    )
+
+    MultiPoint = strawberry.scalar(
+        NewType("GeoLineString", Tuple[Point]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
+        parse_value=lambda v: geos.MultiPoint(*[Point(x) for x in v]),
+        description="A geographical object that contains multiple Points.",
     )
 
     field_type_map.update(
         {
             geos_fields.PointField: Point,
-            geos_fields.LineStringField: List[Point],
-            geos_fields.PolygonField: List[Point],
-            geos_fields.MultiPointField: List[Point],
-            geos_fields.MultiLineStringField: List[List[Point]],
-            geos_fields.MultiPolygonField: List[List[Point]],
+            geos_fields.LineStringField: LineString,
+            geos_fields.PolygonField: Polygon,
+            geos_fields.MultiPointField: MultiPoint,
+            geos_fields.MultiLineStringField: List[LineString],
+            geos_fields.MultiPolygonField: List[LineString],
         }
     )
 except django.core.exceptions.ImproperlyConfigured:

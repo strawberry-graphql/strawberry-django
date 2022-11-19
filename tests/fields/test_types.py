@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import List, Tuple
+from typing import List
 
 import django
 import pytest
@@ -10,11 +10,9 @@ import strawberry
 from django.conf import settings
 from django.db import models
 from strawberry import auto
-from strawberry.annotation import StrawberryAnnotation
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.scalars import JSON
 from strawberry.type import StrawberryList, StrawberryOptional
-from strawberry.union import StrawberryUnion
 
 import strawberry_django
 from strawberry_django import fields
@@ -287,20 +285,19 @@ def test_geos_fields():
         multi_line_string: auto
         multi_polygon: auto
 
-    StrawberryPoint = StrawberryUnion(
-        type_annotations=(
-            StrawberryAnnotation(Tuple[float, float]),
-            StrawberryAnnotation(Tuple[float, float, float]),
-        )
-    )
-
     assert [(f.name, f.type or f.child.type) for f in fields(GeoFieldType)] == [
-        ("point", StrawberryPoint),
-        ("line_string", StrawberryList(StrawberryPoint)),
-        ("polygon", StrawberryList(StrawberryPoint)),
-        ("multi_point", StrawberryList(StrawberryPoint)),
-        ("multi_line_string", StrawberryList(StrawberryList(StrawberryPoint))),
-        ("multi_polygon", StrawberryList(StrawberryList(StrawberryPoint))),
+        ("point", StrawberryOptional(strawberry_django.Point)),
+        ("line_string", StrawberryOptional(strawberry_django.LineString)),
+        ("polygon", StrawberryOptional(strawberry_django.Polygon)),
+        ("multi_point", StrawberryOptional(strawberry_django.MultiPoint)),
+        (
+            "multi_line_string",
+            StrawberryOptional(StrawberryList(strawberry_django.LineString)),
+        ),
+        (
+            "multi_polygon",
+            StrawberryOptional(StrawberryList(strawberry_django.LineString)),
+        ),
     ]
 
 
