@@ -182,7 +182,7 @@ class StrawberryDjangoFieldFilters:
             filters = self.get_filters()
             if self.django_model and not self.is_list:
                 if self.is_relation is False:
-                    arguments.append(argument("pk", strawberry.ID))
+                    arguments.append(argument("pk", strawberry.ID, is_optional=False))
             elif filters and filters is not UNSET:
                 arguments.append(argument("filters", filters))
         return super().arguments + arguments

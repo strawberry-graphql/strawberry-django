@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 import strawberry
+from graphql import GraphQLError
 from strawberry import auto
 
 import strawberry_django
@@ -80,6 +81,18 @@ async def test_single(query, users):
 
     assert not result.errors
     assert result.data["user"] == {"name": users[0].name}
+
+
+async def test_required_pk_single(query, users):
+    result = await query("{ user { name } }")
+
+    assert bool(result.errors)
+    assert len(result.errors) == 1
+    assert isinstance(result.errors[0], GraphQLError)
+    assert (
+        result.errors[0].message == "Field 'user' argument 'pk' of type 'ID!' is "
+        "required, but it was not provided."
+    )
 
 
 async def test_many(query, users):
