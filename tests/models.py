@@ -59,12 +59,12 @@ try:
     GEOS_IMPORTED = True
 
     class GeosFieldsModel(models.Model):
-        point = geos_fields.PointField()
-        line_string = geos_fields.LineStringField()
-        polygon = geos_fields.PolygonField()
-        multi_point = geos_fields.MultiPointField()
-        multi_line_string = geos_fields.MultiLineStringField()
-        multi_polygon = geos_fields.MultiPolygonField()
+        point = geos_fields.PointField(null=True)
+        line_string = geos_fields.LineStringField(null=True)
+        polygon = geos_fields.PolygonField(null=True)
+        multi_point = geos_fields.MultiPointField(null=True)
+        multi_line_string = geos_fields.MultiLineStringField(null=True)
+        multi_polygon = geos_fields.MultiPolygonField(null=True)
 
 except ImproperlyConfigured:
     GEOS_IMPORTED = False
