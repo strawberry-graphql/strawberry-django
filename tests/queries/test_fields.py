@@ -79,9 +79,9 @@ async def test_async_resolver(user, group):
     not settings.GEOS_IMPORTED,
     reason="Test requires GEOS to be imported and properly configured",
 )
-def test_geo_data(query):
-    print(query)
-
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+def test_geo_data(query, geofield):
     result = query("{ geofield { id } }")
     print(result)
 
