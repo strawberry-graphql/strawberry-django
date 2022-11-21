@@ -115,7 +115,7 @@ try:
     )
 
     LineString = strawberry.scalar(
-        NewType("GeoLineString", Tuple[Point]),
+        NewType("LineString", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
         parse_value=lambda v: geos.LineString(v),
         description="""
@@ -125,7 +125,7 @@ try:
     )
 
     LinearRing = strawberry.scalar(
-        NewType("GeoLinearRing", Tuple[Point]),
+        NewType("LinearRing", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
         parse_value=lambda v: geos.LinearRing(v),
         description="""
@@ -136,7 +136,7 @@ try:
     )
 
     Polygon = strawberry.scalar(
-        NewType("GeoPolygon", Tuple[LinearRing]),
+        NewType("Polygon", Tuple[LinearRing]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
         parse_value=lambda v: geos.Polygon(v),
         description="""
@@ -146,7 +146,7 @@ try:
     )
 
     MultiPoint = strawberry.scalar(
-        NewType("GeoLineString", Tuple[Point]),
+        NewType("MultiPoint", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
         parse_value=lambda v: geos.MultiPoint(*[Point(x) for x in v]),
         description="A geographical object that contains multiple Points.",
