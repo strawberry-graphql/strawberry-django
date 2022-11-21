@@ -54,19 +54,55 @@ def groups(db):
 
 
 @pytest.fixture
-def geofield(db):
-    from django.contrib.gis.geos import Point
-
-    return models.GeosFieldsModel.objects.create(point=Point(x=0, y=0, z=0))
-
-
-@pytest.fixture
 def geofields(db):
-    from django.contrib.gis.geos import Point
+    from django.contrib.gis.geos import (
+        LineString,
+        MultiLineString,
+        MultiPoint,
+        MultiPolygon,
+        Point,
+        Polygon,
+    )
 
     return [
-        models.GeosFieldsModel.objects.create(point=Point(x=0, y=0, z=0)),
-        models.GeosFieldsModel.objects.create(point=Point(x=1, y=1, z=1)),
+        models.GeosFieldsModel.objects.create(
+            point=Point(x=0, y=0),
+            line_string=LineString((0, 0), (1, 1)),
+            polygon=Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+            multi_point=MultiPoint(Point(x=0, y=0), Point(x=1, y=1)),
+            multi_line_string=MultiLineString(
+                LineString((0, 0), (1, 1)),
+                LineString((1, 1), (-1, -1)),
+            ),
+            multi_polygon=MultiPolygon(
+                Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+            ),
+        ),
+        models.GeosFieldsModel.objects.create(
+            point=Point(x=1, y=1),
+            line_string=LineString((1, 1), (2, 2), (3, 3)),
+            polygon=Polygon(
+                ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+            ),
+            multi_point=MultiPoint(Point(x=0, y=0), Point(x=-1, y=-1), Point(x=1, y=1)),
+            multi_line_string=MultiLineString(
+                LineString((0, 0), (1, 1)),
+                LineString((1, 1), (-1, -1)),
+                LineString((2, 2), (-2, -2)),
+            ),
+            multi_polygon=MultiPolygon(
+                Polygon(
+                    ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                    ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                ),
+                Polygon(
+                    ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                    ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                ),
+            ),
+        ),
     ]
 
 
