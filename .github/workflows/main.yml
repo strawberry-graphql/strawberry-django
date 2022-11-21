@@ -22,7 +22,7 @@ jobs:
 
     strategy:
       matrix:
-        version: [3.9, 3.10, 3.11]
+        version: ["3.9", "3.10", "3.11"]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -52,7 +52,7 @@ jobs:
 
     strategy:
       matrix:
-        version: [3.9, 3.10, 3.11]
+        version: ["3.9", "3.10", "3.11"]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
