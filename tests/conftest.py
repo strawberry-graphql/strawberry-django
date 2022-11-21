@@ -120,7 +120,6 @@ def schema():
 
     @strawberry.type
     class GeoQuery(Query):
-        geofield: types.GeoField = strawberry_django.field()
         geofields: List[types.GeoField] = strawberry_django.field()
 
     schema = strawberry.Schema(query=GeoQuery if settings.GEOS_IMPORTED else Query)
