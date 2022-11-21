@@ -103,6 +103,7 @@ def geofields(db):
                 ),
             ),
         ),
+        models.GeosFieldsModel.objects.create(),
     ]
 
 

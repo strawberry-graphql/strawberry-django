@@ -88,6 +88,7 @@ def test_geo_data(query, geofields):
     assert result.data["geofields"] == [
         {"point": (0.0, 0.0)},
         {"point": (1.0, 1.0)},
+        {"point": None},
     ]
 
     # Test fo lineString
@@ -97,6 +98,7 @@ def test_geo_data(query, geofields):
     assert result.data["geofields"] == [
         {"lineString": ((0.0, 0.0), (1.0, 1.0))},
         {"lineString": ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))},
+        {"lineString": None},
     ]
 
     # Test for polygon
@@ -115,6 +117,7 @@ def test_geo_data(query, geofields):
                 ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
             )
         },
+        {"polygon": None},
     ]
 
     # Test for multiPoint
@@ -124,6 +127,7 @@ def test_geo_data(query, geofields):
     assert result.data["geofields"] == [
         {"multiPoint": ((0.0, 0.0), (1.0, 1.0))},
         {"multiPoint": ((0.0, 0.0), (-1.0, -1.0), (1.0, 1.0))},
+        {"multiPoint": None},
     ]
 
     # Test for multiLineString
@@ -139,6 +143,7 @@ def test_geo_data(query, geofields):
                 ((2.0, 2.0), (-2.0, -2.0)),
             ]
         },
+        {"multiLineString": None},
     ]
 
     # Test for multiPolygon
@@ -164,4 +169,5 @@ def test_geo_data(query, geofields):
                 ),
             ]
         },
+        {"multiPolygon": None},
     ]
