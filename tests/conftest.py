@@ -53,58 +53,62 @@ def groups(db):
     ]
 
 
-@pytest.fixture
-def geofields(db):
-    from django.contrib.gis.geos import (
-        LineString,
-        MultiLineString,
-        MultiPoint,
-        MultiPolygon,
-        Point,
-        Polygon,
-    )
+if settings.GEOS_IMPORTED:
 
-    return [
-        models.GeosFieldsModel.objects.create(
-            point=Point(x=0, y=0),
-            line_string=LineString((0, 0), (1, 1)),
-            polygon=Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
-            multi_point=MultiPoint(Point(x=0, y=0), Point(x=1, y=1)),
-            multi_line_string=MultiLineString(
-                LineString((0, 0), (1, 1)),
-                LineString((1, 1), (-1, -1)),
+    @pytest.fixture
+    def geofields(db):
+        from django.contrib.gis.geos import (
+            LineString,
+            MultiLineString,
+            MultiPoint,
+            MultiPolygon,
+            Point,
+            Polygon,
+        )
+
+        return [
+            models.GeosFieldsModel.objects.create(
+                point=Point(x=0, y=0),
+                line_string=LineString((0, 0), (1, 1)),
+                polygon=Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                multi_point=MultiPoint(Point(x=0, y=0), Point(x=1, y=1)),
+                multi_line_string=MultiLineString(
+                    LineString((0, 0), (1, 1)),
+                    LineString((1, 1), (-1, -1)),
+                ),
+                multi_polygon=MultiPolygon(
+                    Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                    Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                ),
             ),
-            multi_polygon=MultiPolygon(
-                Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
-                Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
-            ),
-        ),
-        models.GeosFieldsModel.objects.create(
-            point=Point(x=1, y=1),
-            line_string=LineString((1, 1), (2, 2), (3, 3)),
-            polygon=Polygon(
-                ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
-                ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
-            ),
-            multi_point=MultiPoint(Point(x=0, y=0), Point(x=-1, y=-1), Point(x=1, y=1)),
-            multi_line_string=MultiLineString(
-                LineString((0, 0), (1, 1)),
-                LineString((1, 1), (-1, -1)),
-                LineString((2, 2), (-2, -2)),
-            ),
-            multi_polygon=MultiPolygon(
-                Polygon(
+            models.GeosFieldsModel.objects.create(
+                point=Point(x=1, y=1),
+                line_string=LineString((1, 1), (2, 2), (3, 3)),
+                polygon=Polygon(
                     ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
                     ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
                 ),
-                Polygon(
-                    ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
-                    ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                multi_point=MultiPoint(
+                    Point(x=0, y=0), Point(x=-1, y=-1), Point(x=1, y=1)
+                ),
+                multi_line_string=MultiLineString(
+                    LineString((0, 0), (1, 1)),
+                    LineString((1, 1), (-1, -1)),
+                    LineString((2, 2), (-2, -2)),
+                ),
+                multi_polygon=MultiPolygon(
+                    Polygon(
+                        ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                        ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                    ),
+                    Polygon(
+                        ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                        ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                    ),
                 ),
             ),
-        ),
-        models.GeosFieldsModel.objects.create(),
-    ]
+            models.GeosFieldsModel.objects.create(),
+        ]
 
 
 @pytest.fixture
