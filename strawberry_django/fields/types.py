@@ -159,7 +159,7 @@ try:
             geos_fields.PolygonField: Polygon,
             geos_fields.MultiPointField: MultiPoint,
             geos_fields.MultiLineStringField: List[LineString],
-            geos_fields.MultiPolygonField: List[LineString],
+            geos_fields.MultiPolygonField: List[Polygon],
         }
     )
 except django.core.exceptions.ImproperlyConfigured:
