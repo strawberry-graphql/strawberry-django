@@ -16,25 +16,56 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  tests:
+  geotests:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        version: [3.9, 3.10, 3.11]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.9
+          python-version: ${{ matrix.version }}
 
       - name: Run image
         uses: abatilo/actions-poetry@v2.0.0
 
       - name: Install dependencies to test geofields on sqlite
-        run: sudo apt-get install gdal-bin libsqlite3-mod-spatialite
+        run: sudo apt-get install binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+
+      - name: Install Dependencies
+        run: poetry install
+
+      - name: Test with pytest
+        run: poetry run pytest
+
+  tests:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        version: [3.9, 3.10, 3.11]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.version }}
+
+      - name: Run image
+        uses: abatilo/actions-poetry@v2.0.0
 
       - name: Install Dependencies
         run: poetry install
