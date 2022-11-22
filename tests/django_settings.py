@@ -5,7 +5,7 @@ SECRET_KEY = 1
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.contrib.gis.db.backends.spatialite",
+        "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     }
 }
@@ -13,8 +13,6 @@ DATABASES = {
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.gis",
-    "tests",
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -34,9 +32,15 @@ CACHES = {
 }
 
 try:
-    from django.contrib.gis.db import models as geos_fields  # noqa
+    from django.contrib.gis.db import models  # noqa
+
+    DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.spatialite"
+    INSTALLED_APPS.append("django.contrib.gis")
 
     GEOS_IMPORTED = True
 
 except ImproperlyConfigured:
     GEOS_IMPORTED = False
+
+
+INSTALLED_APPS.append("tests")
