@@ -28,7 +28,9 @@ try:
     from .fields.types import (  # noqa: F401
         LinearRing,
         LineString,
+        MultiLineString,
         MultiPoint,
+        MultiPolygon,
         Point,
         Polygon,
     )

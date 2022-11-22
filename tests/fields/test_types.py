@@ -290,14 +290,8 @@ def test_geos_fields():
         ("line_string", StrawberryOptional(strawberry_django.LineString)),
         ("polygon", StrawberryOptional(strawberry_django.Polygon)),
         ("multi_point", StrawberryOptional(strawberry_django.MultiPoint)),
-        (
-            "multi_line_string",
-            StrawberryOptional(StrawberryList(strawberry_django.LineString)),
-        ),
-        (
-            "multi_polygon",
-            StrawberryOptional(StrawberryList(strawberry_django.Polygon)),
-        ),
+        ("multi_line_string", StrawberryOptional(strawberry_django.MultiLineString)),
+        ("multi_polygon", StrawberryOptional(strawberry_django.MultiPolygon)),
     ]
 
 

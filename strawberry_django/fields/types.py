@@ -152,14 +152,28 @@ try:
         description="A geographical object that contains multiple Points.",
     )
 
+    MultiLineString = strawberry.scalar(
+        NewType("MultiLineString", Tuple[LineString]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.MultiLineString) else v,
+        parse_value=lambda v: geos.MultiLineString(*[geos.LineString(x) for x in v]),
+        description="A geographical object that contains multiple line strings.",
+    )
+
+    MultiPolygon = strawberry.scalar(
+        NewType("MultiPolygon", Tuple[Polygon]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
+        parse_value=lambda v: geos.MultiPolygon(*[geos.Polygon(x) for x in v]),
+        description="A geographical object that contains multiple line strings.",
+    )
+
     field_type_map.update(
         {
             geos_fields.PointField: Point,
             geos_fields.LineStringField: LineString,
             geos_fields.PolygonField: Polygon,
             geos_fields.MultiPointField: MultiPoint,
-            geos_fields.MultiLineStringField: List[LineString],
-            geos_fields.MultiPolygonField: List[Polygon],
+            geos_fields.MultiLineStringField: MultiLineString,
+            geos_fields.MultiPolygonField: MultiPolygon,
         }
     )
 except django.core.exceptions.ImproperlyConfigured:
