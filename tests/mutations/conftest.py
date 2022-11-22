@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 import strawberry
+from django.conf import settings
 from strawberry import auto
 
 import strawberry_django
@@ -47,4 +48,16 @@ class Mutation:
 
 @pytest.fixture
 def mutation(db):
-    return utils.generate_query(mutation=Mutation)
+    mutation = Mutation
+
+    if settings.GEOS_IMPORTED:
+        from ..types import GeoField, GeoFieldInput, GeoFieldPartialInput
+
+        @strawberry.type
+        class GeoMutation(Mutation):
+            createGeoField: GeoField = mutations.create(GeoFieldInput)
+            updateGeoFields: List[GeoField] = mutations.update(GeoFieldPartialInput)
+
+        mutation = GeoMutation
+
+    return utils.generate_query(mutation=mutation)
