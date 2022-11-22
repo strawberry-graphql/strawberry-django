@@ -138,7 +138,7 @@ try:
     Polygon = strawberry.scalar(
         NewType("Polygon", Tuple[LinearRing]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
-        parse_value=lambda v: geos.Polygon(v),
+        parse_value=lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
         description="""
             A geographical object that gets 2 LinearRing objects,
             as external and internal rings.
@@ -148,7 +148,7 @@ try:
     MultiPoint = strawberry.scalar(
         NewType("MultiPoint", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
-        parse_value=lambda v: geos.MultiPoint(*[Point(x) for x in v]),
+        parse_value=lambda v: geos.MultiPoint(*[geos.Point(x) for x in v]),
         description="A geographical object that contains multiple Points.",
     )
 
@@ -162,7 +162,9 @@ try:
     MultiPolygon = strawberry.scalar(
         NewType("MultiPolygon", Tuple[Polygon]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
-        parse_value=lambda v: geos.MultiPolygon(*[geos.Polygon(x) for x in v]),
+        parse_value=lambda v: geos.MultiPolygon(
+            *[geos.Polygon(*[y for y in x]) for x in v]
+        ),
         description="A geographical object that contains multiple line strings.",
     )
 
