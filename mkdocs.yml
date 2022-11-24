@@ -73,7 +73,7 @@ nav:
        - Query optimizer: ./guides/quick-start.md
 #      (TBD's)
        - UnitTesting: ./guides/unit-testing.md
-       - Realtionships: ./guides/relationships.md
+       - Relationships: ./guides/relationships.md
   - References:
       - Authentication: ./references/authentication.md
       - Fields: ./references/fields.md
