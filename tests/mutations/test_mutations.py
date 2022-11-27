@@ -240,11 +240,15 @@ def test_update_geo(mutation):
     # Test for point
     point = [0.0, 1.0]
     result = mutation(
-        "{ geofield: updateGeoFields(data: { id: "
-        + id
-        + ", point: "
-        + str(point)
-        + " }) { id } }"
+        """
+        { geofield: updateGeoFields(data: {
+            id: %(id)s ,
+            point: %(point)s
+            }) {
+                id
+            } }
+        """
+        % locals()
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -253,11 +257,15 @@ def test_update_geo(mutation):
     # Test for lineString
     line_string = [[0.0, 0.0], [1.0, 1.0]]
     result = mutation(
-        "{ geofield: updateGeoFields(data: { id: "
-        + id
-        + ", lineString: "
-        + str(line_string)
-        + " }) { id } }"
+        """
+        { geofield: updateGeoFields(data: {
+            id: %(id)s ,
+            lineString: %(line_string)s
+            }) {
+                id
+            } }
+        """
+        % locals()
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -269,11 +277,15 @@ def test_update_geo(mutation):
         [[-2.0, -2.0], [-2.0, 2.0], [2.0, 2.0], [2.0, -2.0], [-2.0, -2.0]],
     ]
     result = mutation(
-        "{ geofield: updateGeoFields(data: { id: "
-        + id
-        + ", polygon: "
-        + str(polygon)
-        + " }) { id } }"
+        """
+        { geofield: updateGeoFields(data: {
+            id: %(id)s ,
+            polygon: %(polygon)s
+            }) {
+                id
+            } }
+        """
+        % locals()
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -282,11 +294,15 @@ def test_update_geo(mutation):
     # Test for multi_point
     multi_point = [[0.0, 0.0], [-1.0, -1.0], [1.0, 1.0]]
     result = mutation(
-        "{ geofield: updateGeoFields(data: { id: "
-        + id
-        + ", multiPoint: "
-        + str(multi_point)
-        + " }) { id } }"
+        """
+        { geofield: updateGeoFields(data: {
+            id: %(id)s ,
+            multiPoint: %(multi_point)s
+            }) {
+                id
+            } }
+        """
+        % locals()
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -299,11 +315,15 @@ def test_update_geo(mutation):
         [[2.0, 2.0], [-2.0, -2.0]],
     ]
     result = mutation(
-        "{ geofield: updateGeoFields(data: { id: "
-        + id
-        + ", multiLineString: "
-        + str(multi_line_string)
-        + " }) { id } }"
+        """
+        { geofield: updateGeoFields(data: {
+            id: %(id)s ,
+            multiLineString: %(multi_line_string)s
+            }) {
+                id
+            } }
+        """
+        % locals()
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -321,11 +341,15 @@ def test_update_geo(mutation):
         ],
     ]
     result = mutation(
-        "{ geofield: updateGeoFields(data: { id: "
-        + id
-        + ", multiPolygon: "
-        + str(multi_polygon)
-        + " }) { id } }"
+        """
+        { geofield: updateGeoFields(data: {
+            id: %(id)s ,
+            multiPolygon: %(multi_polygon)s
+            }) {
+                id
+            } }
+        """
+        % locals()
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
