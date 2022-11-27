@@ -118,31 +118,31 @@ try:
         NewType("LineString", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
         parse_value=lambda v: geos.LineString(v),
-        description="""
-            A geographical line that gets multiple 'x, y' or 'x, y, z' tuples
-            to form a line.
-        """,
+        description=(
+            "A geographical line that gets multiple 'x, y' or 'x, y, z'",
+            " tuples to form a line.",
+        ),
     )
 
     LinearRing = strawberry.scalar(
         NewType("LinearRing", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
         parse_value=lambda v: geos.LinearRing(v),
-        description="""
-            A geographical line that gets multiple 'x, y' or 'x, y, z' tuples
-            to form a line. It must be a circle.
-            E.g. It maps back to itself.
-        """,
+        description=(
+            "A geographical line that gets multiple 'x, y' or 'x, y, z' ",
+            "tuples to form a line. It must be a circle. ",
+            "E.g. It maps back to itself.",
+        ),
     )
 
     Polygon = strawberry.scalar(
         NewType("Polygon", Tuple[LinearRing]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
         parse_value=lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
-        description="""
-            A geographical object that gets 2 LinearRing objects,
-            as external and internal rings.
-        """,
+        description=(
+            "A geographical object that gets 1 or 2 LinearRing objects",
+            " as external and internal rings.",
+        ),
     )
 
     MultiPoint = strawberry.scalar(
@@ -165,7 +165,7 @@ try:
         parse_value=lambda v: geos.MultiPolygon(
             *[geos.Polygon(*[y for y in x]) for x in v]
         ),
-        description="A geographical object that contains multiple line strings.",
+        description="A geographical object that contains multiple polygons.",
     )
 
     field_type_map.update(
