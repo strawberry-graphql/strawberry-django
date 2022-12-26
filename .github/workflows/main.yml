@@ -70,8 +70,6 @@ jobs:
       - name: Install library
         run: poetry install --no-interaction
 
-      - name: pre-commit hooks
-        run: poetry run pre-commit run -a
 
       - name: Test with pytest
         run: poetry run pytest
