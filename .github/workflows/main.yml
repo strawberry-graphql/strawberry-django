@@ -28,6 +28,9 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -35,8 +38,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'poetry'
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
 
       - run: poetry install
       - name: Install django version
