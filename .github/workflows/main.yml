@@ -88,9 +88,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies to test geofields on sqlite
-        run: sudo apt-get install binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+      - name: Install OS Dependencies
+              uses: daaku/gh-action-apt-install@v4
+              with:
+                packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
 
       #----------------------------------------------
       #        load pip cache if cache exists
