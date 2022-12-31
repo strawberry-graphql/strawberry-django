@@ -103,10 +103,18 @@ if django.VERSION >= (3, 1):
         }
     )
 
+geo = False
 try:
     from django.contrib.gis import geos
     from django.contrib.gis.db import models as geos_fields
 
+    geo = True
+
+except django.core.exceptions.ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass
+
+if geo:
     Point = strawberry.scalar(
         NewType("Point", Tuple[float, float, Optional[float]]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
@@ -178,9 +186,6 @@ try:
             geos_fields.MultiPolygonField: MultiPolygon,
         }
     )
-except django.core.exceptions.ImproperlyConfigured:
-    # If gdal is not available, skip.
-    pass
 
 
 input_field_type_map = {
