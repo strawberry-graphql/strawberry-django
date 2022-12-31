@@ -110,7 +110,7 @@ def test_create_geo(mutation):
     # Test for point
     point = [0.0, 1.0]
     result = mutation(
-        "{ geofield: createGeoField(data: { point: " + str(point) + " }) { id } }"
+        f"{{ geofield: createGeoField(data: {{ point: {point} }} ) {{ id }} }}"
     )
     assert not result.errors
     assert (
@@ -123,9 +123,11 @@ def test_create_geo(mutation):
     # Test for lineString
     line_string = [[0.0, 0.0], [1.0, 1.0]]
     result = mutation(
-        "{ geofield: createGeoField(data: { lineString: "
-        + str(line_string)
-        + " }) { id } }"
+        f"""
+        {{ geofield: createGeoField(data: {{ lineString:
+            {line_string}
+         }}) {{ id }} }}
+        """
     )
     assert not result.errors
     assert (
@@ -143,7 +145,9 @@ def test_create_geo(mutation):
         [[-2.0, -2.0], [-2.0, 2.0], [2.0, 2.0], [2.0, -2.0], [-2.0, -2.0]],
     ]
     result = mutation(
-        "{ geofield: createGeoField(data: { polygon: " + str(polygon) + " }) { id } }"
+        f"""
+        {{ geofield: createGeoField(data: {{ polygon: {polygon} }}) {{ id }} }}
+        """
     )
     assert not result.errors
     assert (
@@ -156,9 +160,11 @@ def test_create_geo(mutation):
     # Test for multi_point
     multi_point = [[0.0, 0.0], [-1.0, -1.0], [1.0, 1.0]]
     result = mutation(
-        "{ geofield: createGeoField(data: { multiPoint: "
-        + str(multi_point)
-        + " }) { id } }"
+        f"""
+        {{ geofield: createGeoField(data: {{ multiPoint:
+            {multi_point}
+        }}) {{ id }} }}
+        """
     )
     assert not result.errors
     assert (
@@ -177,9 +183,11 @@ def test_create_geo(mutation):
         [[2.0, 2.0], [-2.0, -2.0]],
     ]
     result = mutation(
-        "{ geofield: createGeoField(data: { multiLineString: "
-        + str(multi_line_string)
-        + " }) { id } }"
+        f"""
+        {{ geofield: createGeoField(data: {{ multiLineString:
+            {multi_line_string}
+        }}) {{ id }} }}
+        """
     )
     assert not result.errors
     assert (
@@ -203,9 +211,11 @@ def test_create_geo(mutation):
         ],
     ]
     result = mutation(
-        "{ geofield: createGeoField(data: { multiPolygon: "
-        + str(multi_polygon)
-        + " }) { id } }"
+        f"""
+        {{ geofield: createGeoField(data: {{ multiPolygon:
+            {multi_polygon}
+        }}) {{ id }} }}
+        """
     )
     assert not result.errors
     assert (
