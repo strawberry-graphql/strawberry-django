@@ -30,7 +30,7 @@ class FruitEnum(Enum):
 
 
 @strawberry_django.filters.filter(models.Fruit)
-class EnumFiler:
+class EnumFilter:
     name: FruitEnum
 
 
@@ -71,7 +71,7 @@ class Query:
     fruits: List[Fruit] = strawberry_django.field()
     field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
     type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
-    enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFiler)
+    enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
 
 
 @pytest.fixture
