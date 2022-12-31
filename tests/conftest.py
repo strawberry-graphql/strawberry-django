@@ -122,8 +122,6 @@ def schema():
         tag: types.Tag = strawberry_django.field()
         tags: List[types.Tag] = strawberry_django.field()
 
-    schema = strawberry.Schema(query=Query)
-
     if settings.GEOS_IMPORTED:
 
         @strawberry.type
@@ -131,6 +129,10 @@ def schema():
             geofields: List[types.GeoField] = strawberry_django.field()
 
         schema = strawberry.Schema(query=GeoQuery)
+
+    else:
+
+        schema = strawberry.Schema(query=Query)
 
     return schema
 
