@@ -108,122 +108,108 @@ def test_create_geo(mutation):
     from tests.models import GeosFieldsModel
 
     # Test for point
-    point = [0.0, 1.0]
+    point = (0.0, 1.0)
     result = mutation(
-        f"{{ geofield: createGeoField(data: {{ point: {point} }} ) {{ id }} }}"
+        f"{{ geofield: createGeoField(data: {{ point: {list(point)} }} ) {{ id }} }}"
     )
     assert not result.errors
     assert (
-        deep_tuple_to_list(
-            GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).point.tuple
-        )
+        GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).point.tuple
         == point
     )
 
     # Test for lineString
-    line_string = [[0.0, 0.0], [1.0, 1.0]]
+    line_string = ((0.0, 0.0), (1.0, 1.0))
     result = mutation(
         f"""
         {{ geofield: createGeoField(data: {{ lineString:
-            {line_string}
+            {deep_tuple_to_list(line_string)}
          }}) {{ id }} }}
         """
     )
     assert not result.errors
     assert (
-        deep_tuple_to_list(
-            GeosFieldsModel.objects.get(
-                id=result.data["geofield"]["id"]
-            ).line_string.tuple
-        )
+        GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).line_string.tuple
         == line_string
     )
 
     # Test for polygon
-    polygon = [
-        [[-1.0, -1.0], [-1.0, 1.0], [1.0, 1.0], [1.0, -1.0], [-1.0, -1.0]],
-        [[-2.0, -2.0], [-2.0, 2.0], [2.0, 2.0], [2.0, -2.0], [-2.0, -2.0]],
-    ]
+    polygon = (
+        ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+        ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
+    )
     result = mutation(
         f"""
-        {{ geofield: createGeoField(data: {{ polygon: {polygon} }}) {{ id }} }}
+        {{ geofield: createGeoField(data: {{
+            polygon: {deep_tuple_to_list(polygon)}
+        }}) {{ id }} }}
         """
     )
     assert not result.errors
     assert (
-        deep_tuple_to_list(
-            GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).polygon.tuple
-        )
+        GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).polygon.tuple
         == polygon
     )
 
     # Test for multi_point
-    multi_point = [[0.0, 0.0], [-1.0, -1.0], [1.0, 1.0]]
+    multi_point = ((0.0, 0.0), (-1.0, -1.0), (1.0, 1.0))
     result = mutation(
         f"""
         {{ geofield: createGeoField(data: {{ multiPoint:
-            {multi_point}
+            {deep_tuple_to_list(multi_point)}
         }}) {{ id }} }}
         """
     )
     assert not result.errors
     assert (
-        deep_tuple_to_list(
-            GeosFieldsModel.objects.get(
-                id=result.data["geofield"]["id"]
-            ).multi_point.tuple
-        )
+        GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).multi_point.tuple
         == multi_point
     )
 
     # Test for multiLineString
-    multi_line_string = [
-        [[0.0, 0.0], [1.0, 1.0]],
-        [[1.0, 1.0], [-1.0, -1.0]],
-        [[2.0, 2.0], [-2.0, -2.0]],
-    ]
+    multi_line_string = (
+        ((0.0, 0.0), (1.0, 1.0)),
+        ((1.0, 1.0), (-1.0, -1.0)),
+        ((2.0, 2.0), (-2.0, -2.0)),
+    )
     result = mutation(
         f"""
         {{ geofield: createGeoField(data: {{ multiLineString:
-            {multi_line_string}
+            {deep_tuple_to_list(multi_line_string)}
         }}) {{ id }} }}
         """
     )
     assert not result.errors
     assert (
-        deep_tuple_to_list(
-            GeosFieldsModel.objects.get(
-                id=result.data["geofield"]["id"]
-            ).multi_line_string.tuple
-        )
+        GeosFieldsModel.objects.get(
+            id=result.data["geofield"]["id"]
+        ).multi_line_string.tuple
         == multi_line_string
     )
 
     # Test for multiPolygon
-    multi_polygon = [
-        [
-            [[-1.0, -1.0], [-1.0, 1.0], [1.0, 1.0], [1.0, -1.0], [-1.0, -1.0]],
-            [[-2.0, -2.0], [-2.0, 2.0], [2.0, 2.0], [2.0, -2.0], [-2.0, -2.0]],
-        ],
-        [
-            [[-1.0, -1.0], [-1.0, 1.0], [1.0, 1.0], [1.0, -1.0], [-1.0, -1.0]],
-            [[-2.0, -2.0], [-2.0, 2.0], [2.0, 2.0], [2.0, -2.0], [-2.0, -2.0]],
-        ],
-    ]
+    multi_polygon = (
+        (
+            ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+            ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
+        ),
+        (
+            ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+            ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
+        ),
+    )
     result = mutation(
         f"""
         {{ geofield: createGeoField(data: {{ multiPolygon:
-            {multi_polygon}
+            {deep_tuple_to_list(multi_polygon)}
         }}) {{ id }} }}
         """
     )
     assert not result.errors
     assert (
-        deep_tuple_to_list(
-            GeosFieldsModel.objects.get(
-                id=result.data["geofield"]["id"]
-            ).multi_polygon.tuple
-        )
+        GeosFieldsModel.objects.get(
+            id=result.data["geofield"]["id"]
+        ).multi_polygon.tuple
         == multi_polygon
     )
 
