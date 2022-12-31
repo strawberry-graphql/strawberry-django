@@ -50,7 +50,6 @@ class Mutation:
 
 @pytest.fixture
 def mutation(db):
-    mutation = Mutation
 
     if settings.GEOS_IMPORTED:
         from ..types import GeoField, GeoFieldInput, GeoFieldPartialInput
@@ -61,5 +60,8 @@ def mutation(db):
             update_geo_fields: List[GeoField] = mutations.update(GeoFieldPartialInput)
 
         mutation = GeoMutation
+
+    else:
+        mutation = Mutation
 
     return utils.generate_query(mutation=mutation)
