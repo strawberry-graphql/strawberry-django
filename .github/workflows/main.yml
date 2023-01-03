@@ -47,9 +47,18 @@ jobs:
       - name: Install Poetry
         uses: abatilo/actions-poetry@v2
 
-      - run: poetry install
+      - name: Cache dependencies
+        id: cache-deps
+        uses: allanchain/poetry-cache-action@release
+        with:
+          cache-key-prefix: python${{ matrix.python-version }}-django${{ matrix.django-version }}
 
-      - name: Install django version
+      - name: Install dependencies
+        if: ${{ !steps.cache-deps.outputs.cache-hit }}
+        run: poetry install
+
+      - name: Install Django ${{ matrix.django-version }}
+        if: ${{ !steps.cache-deps.outputs.cache-hit }}
         run: poetry run pip install django==${{ matrix.django-version }}
 
       - name: Test with pytest
