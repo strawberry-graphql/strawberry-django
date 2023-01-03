@@ -47,7 +47,7 @@ jobs:
       - name: Install Poetry
         uses: abatilo/actions-poetry@v2
 
-      - name: Cache dependencies
+      - name: Install & Cache Dependencies
         id: cache-deps
         uses: allanchain/poetry-cache-action@release
         with:
