@@ -51,11 +51,8 @@ jobs:
         id: cache-deps
         uses: allanchain/poetry-cache-action@release
         with:
+          upload-strategy: "on-success"
           cache-key-prefix: python${{ matrix.python-version }}-django${{ matrix.django-version }}
-
-      - name: Install dependencies
-        if: ${{ !steps.cache-deps.outputs.cache-hit }}
-        run: poetry install
 
       - name: Install Django ${{ matrix.django-version }}
         if: ${{ !steps.cache-deps.outputs.cache-hit }}
