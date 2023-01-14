@@ -110,6 +110,7 @@ try:
 except django.core.exceptions.ImproperlyConfigured:
     # If gdal is not available, skip.
     pass
+
 else:
     Point = strawberry.scalar(
         NewType("Point", Tuple[float, float, Optional[float]]),
