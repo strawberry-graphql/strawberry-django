@@ -47,3 +47,15 @@ def dataclass(model):
         return dataclasses.dataclass(cls)
 
     return wrapper
+
+
+def deep_tuple_to_list(data: tuple) -> list:
+    return_list = []
+    for elem in data:
+        if isinstance(elem, tuple):
+            return_list.append(deep_tuple_to_list(elem))
+
+        else:
+            return_list.append(elem)
+
+    return return_list

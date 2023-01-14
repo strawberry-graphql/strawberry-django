@@ -1,7 +1,7 @@
 import datetime
 import decimal
 import uuid
-from typing import TYPE_CHECKING, Any, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, List, NewType, Optional, Tuple, Type, Union
 
 import django
 import strawberry
@@ -102,6 +102,88 @@ if django.VERSION >= (3, 1):
             fields.PositiveBigIntegerField: int,
         }
     )
+
+try:
+    from django.contrib.gis import geos
+    from django.contrib.gis.db import models as geos_fields
+
+except django.core.exceptions.ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass
+
+else:
+    Point = strawberry.scalar(
+        NewType("Point", Tuple[float, float, Optional[float]]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
+        parse_value=lambda v: geos.Point(v),
+        description="Represents a point as `(x, y, z)` or `(x, y)`.",
+    )
+
+    LineString = strawberry.scalar(
+        NewType("LineString", Tuple[Point]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
+        parse_value=lambda v: geos.LineString(v),
+        description=(
+            "A geographical line that gets multiple 'x, y' or 'x, y, z'"
+            " tuples to form a line."
+        ),
+    )
+
+    LinearRing = strawberry.scalar(
+        NewType("LinearRing", Tuple[Point]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
+        parse_value=lambda v: geos.LinearRing(v),
+        description=(
+            "A geographical line that gets multiple 'x, y' or 'x, y, z' "
+            "tuples to form a line. It must be a circle. "
+            "E.g. It maps back to itself."
+        ),
+    )
+
+    Polygon = strawberry.scalar(
+        NewType("Polygon", Tuple[LinearRing]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
+        parse_value=lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
+        description=(
+            "A geographical object that gets 1 or 2 LinearRing objects"
+            " as external and internal rings."
+        ),
+    )
+
+    MultiPoint = strawberry.scalar(
+        NewType("MultiPoint", Tuple[Point]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
+        parse_value=lambda v: geos.MultiPoint(*[geos.Point(x) for x in v]),
+        description="A geographical object that contains multiple Points.",
+    )
+
+    MultiLineString = strawberry.scalar(
+        NewType("MultiLineString", Tuple[LineString]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.MultiLineString) else v,
+        parse_value=lambda v: geos.MultiLineString(*[geos.LineString(x) for x in v]),
+        description="A geographical object that contains multiple line strings.",
+    )
+
+    MultiPolygon = strawberry.scalar(
+        NewType("MultiPolygon", Tuple[Polygon]),
+        serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
+        parse_value=lambda v: geos.MultiPolygon(
+            *[geos.Polygon(*[y for y in x]) for x in v]
+        ),
+        description="A geographical object that contains multiple polygons.",
+    )
+
+    field_type_map.update(
+        {
+            geos_fields.PointField: Point,
+            geos_fields.LineStringField: LineString,
+            geos_fields.PolygonField: Polygon,
+            geos_fields.MultiPointField: MultiPoint,
+            geos_fields.MultiLineStringField: MultiLineString,
+            geos_fields.MultiPolygonField: MultiPolygon,
+        }
+    )
+
 
 input_field_type_map = {
     fields.files.FileField: NotImplemented,

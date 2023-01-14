@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
+from django.conf import settings
 from strawberry import auto
 
 import strawberry_django
@@ -29,6 +30,27 @@ class FruitType:
     id: auto
     name: auto
     fruits: List[Fruit]
+
+
+if settings.GEOS_IMPORTED:
+
+    @strawberry_django.type(models.GeosFieldsModel)
+    class GeoField:
+        id: auto
+        point: auto
+        line_string: auto
+        polygon: auto
+        multi_point: auto
+        multi_line_string: auto
+        multi_polygon: auto
+
+    @strawberry_django.input(models.GeosFieldsModel)
+    class GeoFieldInput(GeoField):
+        pass
+
+    @strawberry_django.input(models.GeosFieldsModel, partial=True)
+    class GeoFieldPartialInput(GeoField):
+        pass
 
 
 @strawberry_django.input(models.Fruit)

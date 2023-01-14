@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 import strawberry
+from django.conf import settings
 
 import strawberry_django
 
@@ -52,6 +53,64 @@ def groups(db):
     ]
 
 
+if settings.GEOS_IMPORTED:
+
+    @pytest.fixture
+    def geofields(db):
+        from django.contrib.gis.geos import (
+            LineString,
+            MultiLineString,
+            MultiPoint,
+            MultiPolygon,
+            Point,
+            Polygon,
+        )
+
+        return [
+            models.GeosFieldsModel.objects.create(
+                point=Point(x=0, y=0),
+                line_string=LineString((0, 0), (1, 1)),
+                polygon=Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                multi_point=MultiPoint(Point(x=0, y=0), Point(x=1, y=1)),
+                multi_line_string=MultiLineString(
+                    LineString((0, 0), (1, 1)),
+                    LineString((1, 1), (-1, -1)),
+                ),
+                multi_polygon=MultiPolygon(
+                    Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                    Polygon(((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1))),
+                ),
+            ),
+            models.GeosFieldsModel.objects.create(
+                point=Point(x=1, y=1),
+                line_string=LineString((1, 1), (2, 2), (3, 3)),
+                polygon=Polygon(
+                    ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                    ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                ),
+                multi_point=MultiPoint(
+                    Point(x=0, y=0), Point(x=-1, y=-1), Point(x=1, y=1)
+                ),
+                multi_line_string=MultiLineString(
+                    LineString((0, 0), (1, 1)),
+                    LineString((1, 1), (-1, -1)),
+                    LineString((2, 2), (-2, -2)),
+                ),
+                multi_polygon=MultiPolygon(
+                    Polygon(
+                        ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                        ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                    ),
+                    Polygon(
+                        ((-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)),
+                        ((-2, -2), (-2, 2), (2, 2), (2, -2), (-2, -2)),
+                    ),
+                ),
+            ),
+            models.GeosFieldsModel.objects.create(),
+        ]
+
+
 @pytest.fixture
 def schema():
     @strawberry.type
@@ -63,7 +122,18 @@ def schema():
         tag: types.Tag = strawberry_django.field()
         tags: List[types.Tag] = strawberry_django.field()
 
-    schema = strawberry.Schema(query=Query)
+    if settings.GEOS_IMPORTED:
+
+        @strawberry.type
+        class GeoQuery(Query):
+            geofields: List[types.GeoField] = strawberry_django.field()
+
+        schema = strawberry.Schema(query=GeoQuery)
+
+    else:
+
+        schema = strawberry.Schema(query=Query)
+
     return schema
 
 

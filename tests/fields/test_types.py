@@ -7,6 +7,7 @@ from typing import List
 import django
 import pytest
 import strawberry
+from django.conf import settings
 from django.db import models
 from strawberry import auto
 from strawberry.enum import EnumDefinition, EnumValue
@@ -265,6 +266,32 @@ def test_related_input_fields():
             StrawberryOptional(strawberry_django.ManyToManyInput),
             True,
         ),
+    ]
+
+
+@pytest.mark.skipif(
+    not settings.GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
+def test_geos_fields():
+    from tests.models import GeosFieldsModel
+
+    @strawberry_django.type(GeosFieldsModel)
+    class GeoFieldType:
+        point: auto
+        line_string: auto
+        polygon: auto
+        multi_point: auto
+        multi_line_string: auto
+        multi_polygon: auto
+
+    assert [(f.name, f.type or f.child.type) for f in fields(GeoFieldType)] == [
+        ("point", StrawberryOptional(strawberry_django.Point)),
+        ("line_string", StrawberryOptional(strawberry_django.LineString)),
+        ("polygon", StrawberryOptional(strawberry_django.Polygon)),
+        ("multi_point", StrawberryOptional(strawberry_django.MultiPoint)),
+        ("multi_line_string", StrawberryOptional(strawberry_django.MultiLineString)),
+        ("multi_polygon", StrawberryOptional(strawberry_django.MultiPolygon)),
     ]
 
 

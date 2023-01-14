@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 
 
@@ -50,3 +51,20 @@ class Book(models.Model):
         null=False,
         help_text="The name by which the book is known.",
     )
+
+
+try:
+    from django.contrib.gis.db import models as geos_fields
+
+    GEOS_IMPORTED = True
+
+    class GeosFieldsModel(models.Model):
+        point = geos_fields.PointField(null=True)
+        line_string = geos_fields.LineStringField(null=True)
+        polygon = geos_fields.PolygonField(null=True)
+        multi_point = geos_fields.MultiPointField(null=True)
+        multi_line_string = geos_fields.MultiLineStringField(null=True)
+        multi_polygon = geos_fields.MultiPolygonField(null=True)
+
+except ImproperlyConfigured:
+    GEOS_IMPORTED = False

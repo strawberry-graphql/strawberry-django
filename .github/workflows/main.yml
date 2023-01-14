@@ -3,7 +3,7 @@ name: Run Tests
 
 on:
   push:
-    branches: [ main, 'v*']
+    branches: [main, "v*"]
   pull_request:
     branches: [main, "v*"]
   release:
@@ -26,23 +26,37 @@ jobs:
       matrix:
         django-version: ["3.2.16", "4.1.3"]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+        mode: ["std", "geos"]
 
     steps:
-
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Install OS Dependencies
+        if: ${{ matrix.mode == 'geos' }}
+        uses: daaku/gh-action-apt-install@v4
+        with:
+          packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install Poetry
         uses: abatilo/actions-poetry@v2
 
-      - run: poetry install
-      - name: Install django version
-        run: poetry run pip install django==${{ matrix.django-version }}
+      - name: Install & Cache Dependencies
+        id: cache-deps
+        uses: allanchain/poetry-cache-action@release
+        with:
+          upload-strategy: "on-success"
+          cache-key-prefix: python${{ matrix.python-version }}-django${{ matrix.django-version }}
 
+      - name: Install Django ${{ matrix.django-version }}
+        if: ${{ !steps.cache-deps.outputs.cache-hit }}
+        run: poetry run pip install django==${{ matrix.django-version }}
 
       - name: Test with pytest
         run: poetry run pytest

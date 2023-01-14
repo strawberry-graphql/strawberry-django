@@ -1,6 +1,7 @@
 import warnings
 from typing import Any, Dict
 
+from django.core.exceptions import ImproperlyConfigured
 from strawberry import auto as _deprecated_auto  # noqa: F401
 
 from . import auth, filters, mutations, ordering, types
@@ -20,6 +21,22 @@ from .resolvers import django_resolver
 from .type import input, mutation, type
 from .utils import fields
 
+
+try:
+    from django.contrib.gis import geos  # noqa: F401
+
+    from .fields.types import (  # noqa: F401
+        LinearRing,
+        LineString,
+        MultiLineString,
+        MultiPoint,
+        MultiPolygon,
+        Point,
+        Polygon,
+    )
+except ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass
 
 _deprecated_names: Dict[str, str] = {
     "auto": (

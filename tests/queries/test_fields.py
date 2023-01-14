@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 import strawberry
+from django.conf import settings
 
 import strawberry_django
 
@@ -72,3 +73,101 @@ async def test_async_resolver(user, group):
     result = await query("{ users { myGroup { name } } }")
     assert not result.errors
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
+
+
+@pytest.mark.skipif(
+    not settings.GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
+@pytest.mark.django_db(transaction=True)
+def test_geo_data(query, geofields):
+    # Test for point
+    result = query("{ geofields { point } }")
+    assert not result.errors
+
+    assert result.data["geofields"] == [
+        {"point": (0.0, 0.0)},
+        {"point": (1.0, 1.0)},
+        {"point": None},
+    ]
+
+    # Test for lineString
+    result = query("{ geofields { lineString } }")
+    assert not result.errors
+
+    assert result.data["geofields"] == [
+        {"lineString": ((0.0, 0.0), (1.0, 1.0))},
+        {"lineString": ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))},
+        {"lineString": None},
+    ]
+
+    # Test for polygon
+    result = query("{ geofields { polygon } }")
+    assert not result.errors
+
+    assert result.data["geofields"] == [
+        {
+            "polygon": (
+                ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+            )
+        },
+        {
+            "polygon": (
+                ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+                ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
+            )
+        },
+        {"polygon": None},
+    ]
+
+    # Test for multiPoint
+    result = query("{ geofields { multiPoint } }")
+    assert not result.errors
+
+    assert result.data["geofields"] == [
+        {"multiPoint": ((0.0, 0.0), (1.0, 1.0))},
+        {"multiPoint": ((0.0, 0.0), (-1.0, -1.0), (1.0, 1.0))},
+        {"multiPoint": None},
+    ]
+
+    # Test for multiLineString
+    result = query("{ geofields { multiLineString } }")
+    assert not result.errors
+
+    assert result.data["geofields"] == [
+        {"multiLineString": (((0.0, 0.0), (1.0, 1.0)), ((1.0, 1.0), (-1.0, -1.0)))},
+        {
+            "multiLineString": (
+                ((0.0, 0.0), (1.0, 1.0)),
+                ((1.0, 1.0), (-1.0, -1.0)),
+                ((2.0, 2.0), (-2.0, -2.0)),
+            )
+        },
+        {"multiLineString": None},
+    ]
+
+    # Test for multiPolygon
+    result = query("{ geofields { multiPolygon } }")
+    assert not result.errors
+
+    assert result.data["geofields"] == [
+        {
+            "multiPolygon": (
+                ((((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0))),),
+                ((((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0))),),
+            )
+        },
+        {
+            "multiPolygon": (
+                (
+                    ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+                    ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
+                ),
+                (
+                    ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
+                    ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
+                ),
+            )
+        },
+        {"multiPolygon": None},
+    ]
