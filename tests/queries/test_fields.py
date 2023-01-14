@@ -19,10 +19,10 @@ def generate_query(UserType):
 
 def test_field_name(user):
     @strawberry_django.type(models.User)
-    class User:
+    class MyUser:
         my_name: str = strawberry_django.field(field_name="name")
 
-    query = generate_query(User)
+    query = generate_query(MyUser)
 
     result = query("{ users { myName } }")
     assert not result.errors
@@ -31,10 +31,10 @@ def test_field_name(user):
 
 def test_relational_field_name(user, group):
     @strawberry_django.type(models.User)
-    class User:
+    class MyUser:
         my_group: types.Group = strawberry_django.field(field_name="group")
 
-    query = generate_query(User)
+    query = generate_query(MyUser)
 
     result = query("{ users { myGroup { name } } }")
     assert not result.errors
@@ -45,12 +45,12 @@ def test_relational_field_name(user, group):
 @pytest.mark.django_db(transaction=True)
 async def test_sync_resolver(user, group):
     @strawberry_django.type(models.User)
-    class User:
+    class MyUser:
         @strawberry_django.field
         def my_group(self, info) -> types.Group:
             return models.Group.objects.get()
 
-    query = generate_query(User)
+    query = generate_query(MyUser)
 
     result = await query("{ users { myGroup { name } } }")
     assert not result.errors
@@ -61,14 +61,14 @@ async def test_sync_resolver(user, group):
 @pytest.mark.django_db(transaction=True)
 async def test_async_resolver(user, group):
     @strawberry_django.type(models.User)
-    class User:
+    class MyUser:
         @strawberry_django.field
         async def my_group(self, info) -> types.Group:
             from asgiref.sync import sync_to_async
 
             return await sync_to_async(models.Group.objects.get)()
 
-    query = generate_query(User)
+    query = generate_query(MyUser)
 
     result = await query("{ users { myGroup { name } } }")
     assert not result.errors

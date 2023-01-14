@@ -1,3 +1,4 @@
+---
 repos:
   - repo: https://github.com/PyCQA/autoflake
     rev: "v2.0.0"
@@ -47,7 +48,7 @@ repos:
       - id: check-toml
 
   - repo: https://github.com/humitos/mirrors-autoflake.git
-    rev: v1.1
+    rev: v1.3
     hooks:
       - id: autoflake
         args:
