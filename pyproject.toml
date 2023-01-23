@@ -18,15 +18,18 @@ classifiers = [
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Framework :: Django",
   "Framework :: Django :: 3.2",
   "Framework :: Django :: 4.0",
+  "Framework :: Django :: 4.1",
+  "Framework :: Django :: 4.2",
 ]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
-Django = ">=3.0"
-strawberry-graphql = ">=0.139.0"
+Django = ">=3.2,<4.2"
+strawberry-graphql = "^0.154.0"
 
 
 [tool.poetry.group.dev.dependencies]
