@@ -90,7 +90,8 @@ async def test_required_pk_single(query, users):
     assert len(result.errors) == 1
     assert isinstance(result.errors[0], GraphQLError)
     assert (
-        result.errors[0].message == "Field 'user' argument 'pk' of type 'ID!' is "
+        result.errors[0].message
+        == "Field 'user' argument 'pk' of type 'ID!' is "
         "required, but it was not provided."
     )
 

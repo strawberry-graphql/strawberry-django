@@ -72,8 +72,10 @@ def filter(model, *, name=None, lookups=False):
 
 def filter_deprecated(model, *, name=None, lookups=False):
     utils.deprecated(
-        "'strawberry_django.filter' is deprecated,"
-        " use 'strawberry_django.filters.filter' instead",
+        (
+            "'strawberry_django.filter' is deprecated,"
+            " use 'strawberry_django.filters.filter' instead"
+        ),
         stacklevel=2,
     )
     return filter(model, name=name, lookups=lookups)

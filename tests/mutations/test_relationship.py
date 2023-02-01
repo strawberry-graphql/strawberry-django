@@ -49,7 +49,8 @@ def test_update_many_to_one(mutation, fruit, color):
     assert result.data["colors"] == [{"fruits": [{"name": fruit.name}]}]
 
     result = mutation(
-        "{ colors: updateColors(data: { fruits: { remove: [1] } }) { fruits { name } } }"
+        "{ colors: updateColors(data: { fruits: { remove: [1] } }) { fruits { name"
+        " } } }"
     )
     assert not result.errors
     assert result.data["colors"] == [{"fruits": []}]
@@ -78,7 +79,8 @@ def test_create_many_to_many(mutation, fruit):
 
 def test_update_many_to_many(mutation, fruit, fruit_type):
     result = mutation(
-        "{ types: updateFruitTypes(data: { fruits: { add: [1] } }) { fruits { name } } }"
+        "{ types: updateFruitTypes(data: { fruits: { add: [1] } }) { fruits { name"
+        " } } }"
     )
     assert not result.errors
     assert result.data["types"] == [{"fruits": [{"name": fruit.name}]}]
@@ -91,7 +93,8 @@ def test_update_many_to_many(mutation, fruit, fruit_type):
     assert result.data["types"] == [{"fruits": []}]
 
     result = mutation(
-        "{ types: updateFruitTypes(data: { fruits: { set: [1] } }) { fruits { name } } }"
+        "{ types: updateFruitTypes(data: { fruits: { set: [1] } }) { fruits { name"
+        " } } }"
     )
     assert not result.errors
     assert result.data["types"] == [{"fruits": [{"name": fruit.name}]}]

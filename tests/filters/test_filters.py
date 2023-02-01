@@ -130,7 +130,7 @@ def test_relationship(query, fruits):
     color.fruits.set([fruits[0], fruits[1]])
 
     result = query(
-        '{ fruits(filters: { color: { name: { iExact: "RED" } } })' " { id name } }"
+        '{ fruits(filters: { color: { name: { iExact: "RED" } } }) { id name } }'
     )
     assert not result.errors
     assert result.data["fruits"] == [

@@ -131,7 +131,6 @@ def schema():
         schema = strawberry.Schema(query=GeoQuery)
 
     else:
-
         schema = strawberry.Schema(query=Query)
 
     return schema

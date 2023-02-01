@@ -60,6 +60,10 @@ combine_star = true
 combine_as_imports = true
 lines_after_imports = 2
 
+[tool.black]
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311']
+preview = true
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
 testpaths = ["tests"]

@@ -155,7 +155,7 @@ def process_type(
     pagination=UNSET,
     order=UNSET,
     field_cls=UNSET,
-    **kwargs
+    **kwargs,
 ):
     original_annotations = cls.__dict__.get("__annotations__", {})
 

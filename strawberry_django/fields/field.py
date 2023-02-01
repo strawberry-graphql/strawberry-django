@@ -65,7 +65,7 @@ class StrawberryDjangoField(
         django_name: Optional[str] = None,
         graphql_name: Optional[str] = None,
         python_name: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         self.django_name = django_name
         self.is_auto = utils.is_auto(kwargs.get("type_annotation", None))
@@ -92,9 +92,11 @@ class StrawberryDjangoField(
         new_field = StrawberryDjangoField(
             python_name=field.name,
             graphql_name=getattr(field, "graphql_name", None),
-            type_annotation=field.type_annotation
-            if hasattr(field, "type_annotation")
-            else StrawberryAnnotation(field.type),
+            type_annotation=(
+                field.type_annotation
+                if hasattr(field, "type_annotation")
+                else StrawberryAnnotation(field.type)
+            ),
             description=getattr(field, "description", None),
             base_resolver=getattr(field, "base_resolver", None),
             permission_classes=getattr(field, "permission_classes", []),

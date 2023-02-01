@@ -50,7 +50,6 @@ class Mutation:
 
 @pytest.fixture
 def mutation(db):
-
     if settings.GEOS_IMPORTED:
         from ..types import GeoField, GeoFieldInput, GeoFieldPartialInput
 

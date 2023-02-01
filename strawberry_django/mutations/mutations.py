@@ -22,5 +22,5 @@ def delete(filters=UNSET, permission_classes=[], **kwargs) -> Any:
         input_type=None,
         filters=filters,
         permission_classes=permission_classes,
-        **kwargs
+        **kwargs,
     )
