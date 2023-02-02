@@ -121,8 +121,7 @@ def get_fields(django_type: "StrawberryDjangoType"):
     # collect all annotated fields
     for field_name, field_annotation in annotations.items():
         with suppress(PrivateStrawberryFieldError):
-            field = get_field(django_type, field_name, field_annotation)
-            fields[field_name] = field
+            fields[field_name] = get_field(django_type, field_name, field_annotation)
         seen_fields.add(field_name)
 
     # collect non-annotated strawberry fields
