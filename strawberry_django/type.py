@@ -1,4 +1,5 @@
 import dataclasses
+from contextlib import suppress
 from inspect import cleandoc
 from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
@@ -7,7 +8,9 @@ import django.db.models
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.exceptions import PrivateStrawberryFieldError
 from strawberry.field import UNRESOLVED
+from strawberry.private import is_private
 
 from . import utils
 from .fields.field import StrawberryDjangoField
@@ -35,6 +38,8 @@ def get_field(
     field_name: str,
     field_annotation: Optional[StrawberryAnnotation] = None,
 ):
+    if field_annotation and is_private(field_annotation.annotation):
+        raise PrivateStrawberryFieldError(field_name, django_type.origin)
     attr = get_type_attr(django_type.origin, field_name)
 
     if utils.is_field(attr):
@@ -111,15 +116,17 @@ def get_field(
 def get_fields(django_type: "StrawberryDjangoType"):
     annotations = utils.get_annotations(django_type.origin)
     fields: Dict[str, StrawberryDjangoField] = {}
+    seen_fields = set()
 
     # collect all annotated fields
     for field_name, field_annotation in annotations.items():
-        field = get_field(django_type, field_name, field_annotation)
-        fields[field_name] = field
+        with suppress(PrivateStrawberryFieldError):
+            fields[field_name] = get_field(django_type, field_name, field_annotation)
+        seen_fields.add(field_name)
 
     # collect non-annotated strawberry fields
     for field_name in dir(django_type.origin):
-        if field_name in fields:
+        if field_name in seen_fields:
             continue
         attr = getattr(django_type.origin, field_name)
         if not utils.is_strawberry_field(attr):
