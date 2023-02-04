@@ -1089,14 +1089,14 @@ files = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.154.1"
+version = "0.155.3"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "strawberry_graphql-0.154.1-py3-none-any.whl", hash = "sha256:361005dd8c3b26051b9bee848156fda259bb8aaf8b3187038df450fed4a19270"},
-    {file = "strawberry_graphql-0.154.1.tar.gz", hash = "sha256:a41f332fb1299c612d7e92f970d709b5dfd9a23770c418fba7aab21f71eb6272"},
+    {file = "strawberry_graphql-0.155.3-py3-none-any.whl", hash = "sha256:ec258f2821e7ce2d73aeb499a4be603cc8642e5806c4682e5c34b0625dcab90e"},
+    {file = "strawberry_graphql-0.155.3.tar.gz", hash = "sha256:bf41d91ab2858360ca26d06cf21ddb3b4ff831017cd9eb11290aeb69a9e7a59c"},
 ]
 
 [package.dependencies]
@@ -1243,4 +1243,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.7,<4.0"
-content-hash = "020b338c049378d515d935183c29685b12631aaa62ddc0b3860e98d778b1fb3f"
+content-hash = "380ecb11d307b269543b0308f8bda79c5f9bf1e7165bce821d1a38908ca9931d"
