@@ -1,19 +1,23 @@
+from __future__ import annotations
+
 import functools
 import inspect
 from enum import Enum
-from types import FunctionType
-from typing import Generic, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 import strawberry
-from django.db.models import QuerySet
 from django.db.models.sql.query import get_field_names_from_opts
 from strawberry import UNSET
-from strawberry.arguments import StrawberryArgument
-from strawberry.types import Info
 
 from . import utils
 from .arguments import argument
 
+if TYPE_CHECKING:
+    from types import FunctionType
+
+    from django.db.models import QuerySet
+    from strawberry.arguments import StrawberryArgument
+    from strawberry.types import Info
 
 T = TypeVar("T")
 
@@ -25,23 +29,23 @@ class DjangoModelFilterInput:
 
 @strawberry.input
 class FilterLookup(Generic[T]):
-    exact: Optional[T] = UNSET
-    i_exact: Optional[T] = UNSET
-    contains: Optional[T] = UNSET
-    i_contains: Optional[T] = UNSET
-    in_list: Optional[List[T]] = UNSET
-    gt: Optional[T] = UNSET
-    gte: Optional[T] = UNSET
-    lt: Optional[T] = UNSET
-    lte: Optional[T] = UNSET
-    starts_with: Optional[T] = UNSET
-    i_starts_with: Optional[T] = UNSET
-    ends_with: Optional[T] = UNSET
-    i_ends_with: Optional[T] = UNSET
-    range: Optional[List[T]] = UNSET
-    is_null: Optional[bool] = UNSET
-    regex: Optional[str] = UNSET
-    i_regex: Optional[str] = UNSET
+    exact: T | None = UNSET
+    i_exact: T | None = UNSET
+    contains: T | None = UNSET
+    i_contains: T | None = UNSET
+    in_list: list[T] | None = UNSET
+    gt: T | None = UNSET
+    gte: T | None = UNSET
+    lt: T | None = UNSET
+    lte: T | None = UNSET
+    starts_with: T | None = UNSET
+    i_starts_with: T | None = UNSET
+    ends_with: T | None = UNSET
+    i_ends_with: T | None = UNSET
+    range: list[T] | None = UNSET  # noqa: A003
+    is_null: bool | None = UNSET
+    regex: str | None = UNSET
+    i_regex: str | None = UNSET
 
 
 lookup_name_conversion_map = {
@@ -57,15 +61,18 @@ lookup_name_conversion_map = {
 }
 
 
-def filter(model, *, name=None, lookups=False):
+def filter(model, *, name=None, lookups=False):  # noqa: A001
     def wrapper(cls):
-        is_filter = lookups and "lookups" or True
         from .type import process_type
 
-        type_ = process_type(
-            cls, model, is_input=True, partial=True, is_filter=is_filter
+        is_filter = "lookups" if lookups else True
+        return process_type(
+            cls,
+            model,
+            is_input=True,
+            partial=True,
+            is_filter=is_filter,
         )
-        return type_
 
     return wrapper
 
@@ -100,9 +107,10 @@ def build_filter_kwargs(filters):
             filter_methods.append(filter_method)
             continue
 
-        if django_model:
-            if field_name not in get_field_names_from_opts(django_model._meta):
-                continue
+        if django_model and field_name not in get_field_names_from_opts(
+            django_model._meta,
+        ):
+            continue
 
         if field_name in lookup_name_conversion_map:
             field_name = lookup_name_conversion_map[field_name]
@@ -115,9 +123,11 @@ def build_filter_kwargs(filters):
                 subfield_name,
                 subfield_value,
             ) in subfield_filter_kwargs.items():
-                if isinstance(subfield_value, Enum):
-                    subfield_value = subfield_value.value
-                filter_kwargs[f"{field_name}__{subfield_name}"] = subfield_value
+                filter_kwargs[f"{field_name}__{subfield_name}"] = (
+                    subfield_value.value
+                    if isinstance(subfield_value, Enum)
+                    else subfield_value
+                )
             filter_methods.extend(subfield_filter_methods)
         else:
             filter_kwargs[field_name] = field_value
@@ -130,7 +140,9 @@ def function_allow_passing_info(filter_method: FunctionType) -> bool:
     argspec = inspect.getfullargspec(filter_method)
 
     return "info" in getattr(argspec, "args", []) or "info" in getattr(
-        argspec, "kwargs", []
+        argspec,
+        "kwargs",
+        [],
     )
 
 
@@ -150,22 +162,20 @@ def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
     if filter_method:
         if function_allow_passing_info(
             # Pass the original __func__ which is always the same
-            getattr(filter_method, "__func__", filter_method)
+            getattr(filter_method, "__func__", filter_method),
         ):
             return filter_method(queryset=queryset, info=info)
 
-        else:
-            return filter_method(queryset=queryset)
+        return filter_method(queryset=queryset)
 
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
     for filter_method in filter_methods:
         if function_allow_passing_info(
             # Pass the original __func__ which is always the same
-            getattr(filter_method, "__func__", filter_method)
+            getattr(filter_method, "__func__", filter_method),
         ):
             queryset = filter_method(queryset=queryset, info=info)
-
         else:
             queryset = filter_method(queryset=queryset)
 
@@ -178,7 +188,7 @@ class StrawberryDjangoFieldFilters:
         super().__init__(**kwargs)
 
     @property
-    def arguments(self) -> List[StrawberryArgument]:
+    def arguments(self) -> list[StrawberryArgument]:
         arguments = []
         if not self.base_resolver:
             filters = self.get_filters()
@@ -189,7 +199,7 @@ class StrawberryDjangoFieldFilters:
                 arguments.append(argument("filters", filters))
         return super().arguments + arguments
 
-    def get_filters(self) -> Optional[Type]:
+    def get_filters(self) -> type | None:
         if self.filters is not UNSET:
             return self.filters
         type_ = utils.unwrap_type(self.type or self.child.type)
@@ -199,12 +209,21 @@ class StrawberryDjangoFieldFilters:
         return None
 
     def apply_filters(
-        self, queryset: QuerySet, filters: Type = UNSET, pk=UNSET, info: Info = UNSET
+        self,
+        queryset: QuerySet,
+        filters: type = UNSET,
+        pk=UNSET,
+        info: Info = UNSET,
     ) -> QuerySet:
         return apply(filters, queryset, info, pk)
 
     def get_queryset(
-        self, queryset: QuerySet, info: Info, pk=UNSET, filters: Type = UNSET, **kwargs
+        self,
+        queryset: QuerySet,
+        info: Info,
+        pk=UNSET,
+        filters: type = UNSET,
+        **kwargs,
     ):
         queryset = super().get_queryset(queryset, info, **kwargs)
         return self.apply_filters(queryset, filters, pk, info)

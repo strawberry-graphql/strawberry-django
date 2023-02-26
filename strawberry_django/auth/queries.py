@@ -8,5 +8,4 @@ def resolve_current_user(info):
 
 
 def current_user():
-    field = strawberry_django.field(resolver=resolve_current_user)
-    return field
+    return strawberry_django.field(resolver=resolve_current_user)

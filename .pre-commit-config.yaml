@@ -1,31 +1,37 @@
 ---
 repos:
-  - repo: https://github.com/PyCQA/autoflake
-    rev: "v2.0.1"
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
     hooks:
-      - id: autoflake
-        args:
-          [
-            "--in-place",
-            "--remove-all-unused-imports",
-            "--ignore-init-module-imports",
-          ]
-        name: autoflake
-        entry: autoflake
-        language: python
-        "types": [python]
-        require_serial: true
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-docstring-first
+      - id: check-merge-conflict
+      - id: check-yaml
+        exclude: mkdocs.yml
+      - id: check-toml
+      - id: check-json
+      - id: check-xml
+      - id: check-symlinks
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.4
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.3.1
     hooks:
-      - id: flake8
-        additional_dependencies: ["flake8-eradicate==1.3.0"]
+      - id: pyupgrade
+        args: ["--py37-plus"]
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.252
     hooks:
-      - id: isort
+      - id: ruff
+        args: ["--fix"]
+
+  - repo: https://github.com/psf/black
+    rev: 23.1.0
+    hooks:
+      - id: black
 
   - repo: https://github.com/patrick91/pre-commit-alex
     rev: aa5da9e54b92ab7284feddeaf52edf14b1690de3
@@ -38,27 +44,3 @@ repos:
     hooks:
       - id: prettier
         files: '^docs/.*\.mdx?$'
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: trailing-whitespace
-      - id: check-merge-conflict
-      - id: end-of-file-fixer
-      - id: check-toml
-
-  - repo: https://github.com/humitos/mirrors-autoflake.git
-    rev: v1.1
-    hooks:
-      - id: autoflake
-        args:
-          [
-            "--in-place",
-            "--remove-all-unused-imports",
-            "--remove-unused-variable",
-          ]
-
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-      - id: black

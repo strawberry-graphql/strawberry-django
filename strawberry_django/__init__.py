@@ -6,7 +6,7 @@ from strawberry import auto as _deprecated_auto  # noqa: F401
 
 from . import auth, filters, mutations, ordering, types
 from .fields.field import field
-from .fields.types import (  # noqa: F401
+from .fields.types import (
     DjangoFileType,
     DjangoImageType,
     DjangoModelType,
@@ -14,13 +14,11 @@ from .fields.types import (  # noqa: F401
     ManyToOneInput,
     OneToManyInput,
     OneToOneInput,
-    is_auto as _deprecated_is_auto,
 )
-from .filters import filter_deprecated as filter
+from .filters import filter_deprecated as filter  # noqa: A001
 from .resolvers import django_resolver
 from .type import input, mutation, type
 from .utils import fields
-
 
 try:
     from django.contrib.gis import geos  # noqa: F401

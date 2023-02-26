@@ -9,7 +9,6 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryContainer
 
-
 __all__ = ["deprecated"]
 
 
@@ -72,7 +71,7 @@ def is_auto(obj):
 
 def get_django_model(type_):
     if not is_django_type(type_):
-        return
+        return None
     return type_._django_type.model
 
 
@@ -95,7 +94,7 @@ def get_annotations(cls):
                 {
                     k: StrawberryAnnotation(v, namespace=namespace)
                     for k, v in c.__annotations__.items()
-                }
+                },
             )
     return annotations
 

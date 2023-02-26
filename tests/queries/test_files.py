@@ -6,8 +6,7 @@ from django.db import models
 from strawberry import auto
 
 import strawberry_django
-
-from .. import utils
+from tests import utils
 
 
 class FileModel(models.Model):
@@ -26,15 +25,15 @@ class Query:
     files: List[File] = strawberry_django.field()
 
 
-@pytest.fixture
+@pytest.fixture()
 def query(db):
     return utils.generate_query(Query)
 
 
-@pytest.fixture
+@pytest.fixture()
 def instance(mocker):
     mocker.patch(
-        "django.core.files.images.ImageFile._get_image_dimensions"
+        "django.core.files.images.ImageFile._get_image_dimensions",
     ).return_value = [
         800,
         600,
@@ -52,7 +51,7 @@ def test_file(query, instance):
                 "name": "file",
                 "size": 10,
                 "url": "/file",
-            }
+            },
         },
     ]
 
@@ -68,6 +67,6 @@ def test_image(query, instance):
                 "url": "/image",
                 "width": 800,
                 "height": 600,
-            }
+            },
         },
     ]

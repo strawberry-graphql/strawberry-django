@@ -1,13 +1,12 @@
-"""
-Tests for `strawberry_django/settings.py`.
-"""
+"""Tests for `strawberry_django/settings.py`."""
 from django.test import override_settings
 
 from strawberry_django import settings
 
 
 def test_defaults():
-    """
+    """Test defaults.
+
     Test that `strawberry_django_settings()` provides the default settings if they don't
     exist in the Django settings file.
     """
@@ -15,7 +14,8 @@ def test_defaults():
 
 
 def test_non_defaults():
-    """
+    """Test non defaults.
+
     Test that `strawberry_django_settings()` provides the user's settings if they are
     defined in the Django settings file.
     """
@@ -23,7 +23,7 @@ def test_non_defaults():
         STRAWBERRY_DJANGO=settings.StrawberryDjangoSettings(
             FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
             TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
-        )
+        ),
     ):
         assert (
             settings.strawberry_django_settings()

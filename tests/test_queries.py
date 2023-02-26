@@ -10,8 +10,8 @@ import strawberry_django
 from . import models, utils
 
 
-@pytest.fixture
-def user_group(users, groups):
+@pytest.fixture()
+def user_group(users, groups):  # noqa: PT004
     users[0].group = groups[0]
     users[0].save()
 
@@ -65,7 +65,7 @@ class Query:
     bananas: List[BananaFruit] = strawberry_django.field()
 
 
-@pytest.fixture
+@pytest.fixture()
 def query(db):
     return utils.generate_query(Query)
 

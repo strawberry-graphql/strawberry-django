@@ -7,7 +7,7 @@ def test_foreign_key_relation(query, user, group):
             "group": {
                 "name": "group",
             },
-        }
+        },
     ]
 
 
@@ -20,9 +20,9 @@ def test_foreign_key_relation_reversed(query, user, group):
             "users": [
                 {
                     "name": "user",
-                }
+                },
             ],
-        }
+        },
     ]
 
 
@@ -35,7 +35,7 @@ def test_one_to_one_relation(query, user, tag):
             "tag": {
                 "name": "tag",
             },
-        }
+        },
     ]
 
 
@@ -48,7 +48,7 @@ def test_one_to_one_relation_reversed(query, user, tag):
             "user": {
                 "name": "user",
             },
-        }
+        },
     ]
 
 
@@ -61,9 +61,9 @@ def test_many_to_many_relation(query, group, tag):
             "tags": [
                 {
                     "name": "tag",
-                }
+                },
             ],
-        }
+        },
     ]
 
 
@@ -76,7 +76,7 @@ def test_many_to_many_relation_reversed(query, group):
             "groups": [
                 {
                     "name": "group",
-                }
+                },
             ],
-        }
+        },
     ]

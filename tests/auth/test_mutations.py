@@ -9,7 +9,6 @@ import strawberry_django
 from strawberry_django import auth, auto
 from tests import utils
 
-
 UserModel = django_auth.get_user_model()
 
 
@@ -33,7 +32,7 @@ class Mutation:
     register: User = auth.register(UserInput)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mutation(db):
     return utils.generate_query(mutation=Mutation)
 

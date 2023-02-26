@@ -22,14 +22,13 @@ from .fields.types import (
 )
 from .settings import strawberry_django_settings as django_settings
 
-
 _type = type
 
 
 def get_type_attr(type_, field_name: str):
     attr = getattr(type_, field_name, UNSET)
     if attr is UNSET:
-        attr = getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
+        return getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
     return attr
 
 
@@ -66,7 +65,9 @@ def get_field(
         django_name = field.django_name or field_name
         model_field = get_model_field(django_type.model, django_name)
         field.django_name = resolve_model_field_name(
-            model_field, django_type.is_input, django_type.is_filter
+            model_field,
+            django_type.is_input,
+            django_type.is_filter,
         )
         field.is_relation = model_field.is_relation
 
@@ -80,12 +81,14 @@ def get_field(
             raise  # field should exist, reraise caught exception
         model_field = None
 
-    if field.is_relation:
-        # change relation field type to auto if field is inherited from another
-        # type. for example if field is inherited from output type but we are
-        # configuring field for input type
-        if not utils.is_similar_django_type(django_type, field.origin_django_type):
-            field.is_auto = True
+    # change relation field type to auto if field is inherited from another
+    # type. for example if field is inherited from output type but we are
+    # configuring field for input type
+    if field.is_relation and not utils.is_similar_django_type(
+        django_type,
+        field.origin_django_type,
+    ):
+        field.is_auto = True
 
     # Only set the type_annotation for auto fields if they don't have a base_resolver.
     # Since strawberry 0.139 the type_annotation has a higher priority than the
@@ -97,18 +100,19 @@ def get_field(
         field.type_annotation = StrawberryAnnotation(field_type)
 
     if field.type_annotation and is_optional(
-        model_field, django_type.is_input, django_type.is_partial
+        model_field,
+        django_type.is_input,
+        django_type.is_partial,
     ):
         field.type_annotation.annotation = Optional[field.type_annotation.annotation]
 
-    if django_type.is_input:
-        if field.default is dataclasses.MISSING:
-            # strawberry converts UNSET value to MISSING, let's set
-            # it back to UNSET. this is important especially for partial
-            # input types
-            # TODO: could strawberry support UNSET default value?
-            field.default_value = UNSET
-            field.default = UNSET
+    if django_type.is_input and field.default is dataclasses.MISSING:
+        # strawberry converts UNSET value to MISSING, let's set
+        # it back to UNSET. this is important especially for partial
+        # input types
+        # TODO: could strawberry support UNSET default value?
+        field.default_value = UNSET
+        field.default = UNSET
 
     return field
 
@@ -225,16 +229,19 @@ def process_type(
     return cls
 
 
-def type(model, *, filters=UNSET, **kwargs):
+# FIXME: This needs proper typing
+def type(model, *, filters=UNSET, **kwargs):  # noqa: A001
     def wrapper(cls):
         return process_type(cls, model, filters=filters, **kwargs)
 
     return wrapper
 
 
-def input(model, *, partial=False, **kwargs):
+# FIXME: This needs proper typing
+def input(model, *, partial=False, **kwargs):  # noqa: A001
     return type(model, partial=partial, is_input=True, **kwargs)
 
 
+# FIXME: This needs proper typing
 def mutation(model, **kwargs):
     return type(model, **kwargs)

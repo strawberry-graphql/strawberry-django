@@ -6,21 +6,28 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.type import StrawberryList, StrawberryOptional
 
-from .. import utils
-from ..fields.field import (
+from strawberry_django import utils
+from strawberry_django.fields.field import (
     StrawberryDjangoFieldBase,
     StrawberryDjangoFieldFilters,
     StrawberryField,
 )
-from ..fields.types import ManyToManyInput, ManyToOneInput, OneToManyInput
-from ..resolvers import django_resolver
+from strawberry_django.fields.types import (
+    ManyToManyInput,
+    ManyToOneInput,
+    OneToManyInput,
+)
+from strawberry_django.resolvers import django_resolver
 
 
 class DjangoMutationBase:
     def __init__(self, input_type, **kwargs):
         self.input_type = input_type
         super().__init__(
-            graphql_name=None, python_name=None, type_annotation=None, **kwargs
+            graphql_name=None,
+            python_name=None,
+            type_annotation=None,
+            **kwargs,
         )
 
     @property
@@ -37,7 +44,7 @@ class DjangoMutationBase:
     def arguments(self):
         if self.input_type:
             assert self.django_model == utils.get_django_model(
-                self.input_type
+                self.input_type,
             ), "Input and output types should be from the same Django model"
 
         arguments = []
@@ -48,19 +55,22 @@ class DjangoMutationBase:
 
     @django_resolver
     def get_result(self, source, info, args, kwargs):
-        return self.resolver(info=info, source=source, *args, **kwargs)
+        return self.resolver(info, source, *args, **kwargs)
 
     @property
     def is_basic_field(self) -> bool:
-        """
-        Since all mutations define a resolver function they are never basic
-        fields so always return False here.
+        """Mark this field as not basic.
+
+        All StrawberryDjango fields define a custom resolver that needs to be
+        run, so always return False here.
         """
         return False
 
 
 class DjangoCreateMutation(
-    DjangoMutationBase, StrawberryDjangoFieldBase, StrawberryField
+    DjangoMutationBase,
+    StrawberryDjangoFieldBase,
+    StrawberryField,
 ):
     def create(self, data):
         input_data = get_input_data(self.input_type, data)
@@ -72,8 +82,8 @@ class DjangoCreateMutation(
     def resolver(self, info, source, data):
         if self.is_list:
             return [self.create(d) for d in data]
-        else:
-            return self.create(data)
+
+        return self.create(data)
 
 
 class DjangoUpdateMutation(
@@ -108,18 +118,12 @@ class DjangoDeleteMutation(
 
 
 def get_argument(name, type_, is_list=False):
-    if is_list:
-        return StrawberryArgument(
-            python_name=name,
-            graphql_name=name,
-            type_annotation=StrawberryAnnotation(List[type_]),
-        )
-    else:
-        return StrawberryArgument(
-            python_name=name,
-            graphql_name=name,
-            type_annotation=StrawberryAnnotation(type_),
-        )
+    annotation = StrawberryAnnotation(List[type_] if is_list else type_)
+    return StrawberryArgument(
+        python_name=name,
+        graphql_name=name,
+        type_annotation=annotation,
+    )
 
 
 def get_input_data(input_type, data):

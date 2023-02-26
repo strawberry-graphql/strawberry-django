@@ -25,7 +25,7 @@ class MembershipModel(models.Model):
 class Project:
     name: auto
     membership: List["Membership"] = strawberry_django.field(
-        field_name="membershipmodel_set"
+        field_name="membershipmodel_set",
     )
 
 
@@ -33,7 +33,7 @@ class Project:
 class Member:
     name: auto
     membership: List["Membership"] = strawberry_django.field(
-        field_name="membershipmodel_set"
+        field_name="membershipmodel_set",
     )
 
 
@@ -64,8 +64,8 @@ def test_query(db):
                 "membership": [
                     {
                         "member": {"name": "my member"},
-                    }
+                    },
                 ],
-            }
+            },
         ],
     }

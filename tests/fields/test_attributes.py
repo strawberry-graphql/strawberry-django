@@ -35,10 +35,10 @@ def test_field_permission_classes():
             return self.field
 
     assert sorted(
-        [(f.name, f.permission_classes) for f in Type._type_definition.fields]
+        [(f.name, f.permission_classes) for f in Type._type_definition.fields],
     ) == sorted(
         [
             ("field", [TestPermission]),
             ("custom_resolved_field", [TestPermission]),
-        ]
+        ],
     )
