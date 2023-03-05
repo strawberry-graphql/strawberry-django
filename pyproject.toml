@@ -29,6 +29,7 @@ classifiers = [
 python = ">=3.7,<4.0"
 Django = ">=3.2"
 strawberry-graphql = ">=0.154.0"
+django-debug-toolbar = { version = ">=3.4", optional = true }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -39,6 +40,7 @@ pytest-django = "^4.1.0"
 pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 pytest-mock = "^3.5.1"
+django-debug-toolbar = "^3.2.4"
 #docs requires
 mkdocs = "^1.4.2"
 mkdocs-markdownextradata-plugin = "^0.2.5"
@@ -47,6 +49,8 @@ mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = "^9.5"
 Markdown = "^3.3.7"
 
+[tool.poetry.extras]
+debug-toolbar = ["django-debug-toolbar"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "setuptools"]
