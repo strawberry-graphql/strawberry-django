@@ -5,7 +5,7 @@ import strawberry
 from strawberry import auto
 
 import strawberry_django
-from strawberry_django.pagination import OffsetPaginationInput  # noqa: TCH001
+from strawberry_django.pagination import OffsetPaginationInput
 from tests import models, utils
 
 

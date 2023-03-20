@@ -148,7 +148,7 @@ class StrawberryDjangoField(
             if not self.is_list:
                 result = result.get()
 
-        return result  # noqa: RET504
+        return result
 
     def get_queryset(self, queryset, info, order=UNSET, **kwargs):
         type_ = self.type or self.child.type

@@ -1,4 +1,4 @@
-import pytest  # noqa: TCH002
+import pytest
 import strawberry
 from django.test import override_settings
 from strawberry import auto

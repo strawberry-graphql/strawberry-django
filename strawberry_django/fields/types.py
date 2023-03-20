@@ -220,7 +220,7 @@ def resolve_model_field_type(
     ):
         field_type = filters.FilterLookup[field_type]
 
-    return field_type  # noqa: RET504
+    return field_type
 
 
 def resolve_model_field_name(
