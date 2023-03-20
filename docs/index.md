@@ -17,6 +17,7 @@ Strawberry integration with Django.
 - [x] Basic Django auth support, current user query, login and logout mutations
 - [x] Django sync and async views
 - [x] Unit test integration
+- [x] [Django Debug Toolbar integration](./guides/debug-toolbar.md) with graphiql to display metrics like SQL queries
 
 ## Installation
 

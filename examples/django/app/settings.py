@@ -4,12 +4,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "very-secret-key"
 DEBUG = True
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
+    "django.contrib.staticfiles",
+    "debug_toolbar",
+    "strawberry_django",
     "app",
 ]
 
@@ -18,6 +26,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "strawberry_django.middlewares.debug_toolbar.DebugToolbarMiddleware",
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -64,5 +73,11 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     },
 }
+
+STATIC_URL = "/static/"
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"

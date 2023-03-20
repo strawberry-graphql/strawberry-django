@@ -29,6 +29,7 @@ classifiers = [
 python = ">=3.7,<4.0"
 Django = ">=3.2"
 strawberry-graphql = ">=0.165.0"
+django-debug-toolbar = { version = ">=3.4", optional = true }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -39,15 +40,19 @@ pytest-django = "^4.1.0"
 pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 pytest-mock = "^3.5.1"
+django-debug-toolbar = "^3.2.4"
 #docs requires
 mkdocs = "^1.4.2"
 mkdocs-markdownextradata-plugin = "^0.2.5"
 mkdocs-material = "^9.0.4"
 mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = "^9.5"
-markdown = "^3.3.7"
 ruff = "^0.0.257"
 django-types = "^0.17.0"
+Markdown = "^3.3.7"
+
+[tool.poetry.extras]
+debug-toolbar = ["django-debug-toolbar"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "setuptools"]
@@ -96,7 +101,7 @@ select = [
   "TRY",
   "SLF",
 ]
-ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003"]
+ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003"]
 target-version = "py38"
 exclude = [
   ".eggs",
