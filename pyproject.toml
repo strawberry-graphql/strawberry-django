@@ -102,6 +102,8 @@ select = [
   "SLF",
 ]
 ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003"]
+# FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
+unfixable = ["UP006"]
 target-version = "py38"
 exclude = [
   ".eggs",

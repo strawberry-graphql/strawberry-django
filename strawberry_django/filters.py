@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 from enum import Enum
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, List, TypeVar
 
 import strawberry
 from django.db.models.sql.query import get_field_names_from_opts
@@ -33,7 +33,7 @@ class FilterLookup(Generic[T]):
     i_exact: T | None = UNSET
     contains: T | None = UNSET
     i_contains: T | None = UNSET
-    in_list: list[T] | None = UNSET
+    in_list: List[T] | None = UNSET  # noqa: UP006
     gt: T | None = UNSET
     gte: T | None = UNSET
     lt: T | None = UNSET
@@ -42,7 +42,7 @@ class FilterLookup(Generic[T]):
     i_starts_with: T | None = UNSET
     ends_with: T | None = UNSET
     i_ends_with: T | None = UNSET
-    range: list[T] | None = UNSET  # noqa: A003
+    range: List[T] | None = UNSET  # noqa: A003,UP006
     is_null: bool | None = UNSET
     regex: str | None = UNSET
     i_regex: str | None = UNSET
