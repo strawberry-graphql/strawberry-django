@@ -33,11 +33,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      # - name: Install OS Dependencies
+      #   if: ${{ matrix.mode == 'geos' }}
+      #   uses: daaku/gh-action-apt-install@v4
+      #   with:
+      #     packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+
       - name: Install OS Dependencies
         if: ${{ matrix.mode == 'geos' }}
-        uses: daaku/gh-action-apt-install@v4
-        with:
-          packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+        run: sudo apt install binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
