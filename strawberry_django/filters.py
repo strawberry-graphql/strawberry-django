@@ -185,10 +185,7 @@ class StrawberryDjangoFieldFilters:
             if (
                 self.django_model
                 and not self.is_list
-                and (
-                    self.origin._type_definition.name
-                    in ["Query", "Mutation", "Subscription"]
-                )
+                and self.origin._type_definition.name == "Query"
             ):
                 arguments.append(argument("pk", strawberry.ID, is_optional=False))
             elif filters and filters is not UNSET:
