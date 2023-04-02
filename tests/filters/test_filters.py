@@ -250,6 +250,7 @@ def test_enum(query, fruits):
     ]
 
 
+@pytest.mark.django_db(transaction=True)
 def test_pk_inserted_for_root_field_only():
     @strawberry_django.type(models.Group)
     class GroupType(models.Group):
@@ -268,7 +269,6 @@ def test_pk_inserted_for_root_field_only():
 
     schema = strawberry.Schema(query=Query)
 
-    __import__("pprint").pprint(str(schema))
     assert (
         textwrap.dedent(str(schema))
         == textwrap.dedent(
@@ -290,3 +290,35 @@ def test_pk_inserted_for_root_field_only():
     """
         ).strip()
     )
+
+    group = models.Group.objects.create(name="Some Group")
+    user = models.User.objects.create(name="Some User", group=group)
+
+    res = schema.execute_sync(
+        """\
+      query GetUser ($pk: ID!) {
+        user(pk: $pk) {
+          name
+          group {
+            name
+          }
+          getGroup {
+            name
+          }
+          groupProp {
+            name
+          }
+        }
+      }
+    """,
+        variable_values={"pk": user.pk},
+    )
+    assert res.errors is None
+    assert res.data == {
+        "user": {
+            "name": "Some User",
+            "group": {"name": "Some Group"},
+            "getGroup": {"name": "Some Group"},
+            "groupProp": {"name": "Some Group"},
+        }
+    }
