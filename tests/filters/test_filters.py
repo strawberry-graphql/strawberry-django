@@ -1,3 +1,4 @@
+import textwrap
 from enum import Enum
 from typing import List
 
@@ -247,3 +248,77 @@ def test_enum(query, fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_pk_inserted_for_root_field_only():
+    @strawberry_django.type(models.Group)
+    class GroupType(models.Group):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.User)
+    class UserType(models.Group):
+        name: strawberry.auto
+        group: GroupType
+        get_group: GroupType
+        group_prop: GroupType
+
+    @strawberry.type
+    class Query:
+        user: UserType = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+
+    assert (
+        textwrap.dedent(str(schema))
+        == textwrap.dedent(
+            """\
+      type GroupType {
+        name: String!
+      }
+
+      type Query {
+        user(pk: ID!): UserType!
+      }
+
+      type UserType {
+        name: String!
+        group: GroupType
+        getGroup: GroupType!
+        groupProp: GroupType!
+      }
+    """
+        ).strip()
+    )
+
+    group = models.Group.objects.create(name="Some Group")
+    user = models.User.objects.create(name="Some User", group=group)
+
+    res = schema.execute_sync(
+        """\
+      query GetUser ($pk: ID!) {
+        user(pk: $pk) {
+          name
+          group {
+            name
+          }
+          getGroup {
+            name
+          }
+          groupProp {
+            name
+          }
+        }
+      }
+    """,
+        variable_values={"pk": user.pk},
+    )
+    assert res.errors is None
+    assert res.data == {
+        "user": {
+            "name": "Some User",
+            "group": {"name": "Some Group"},
+            "getGroup": {"name": "Some Group"},
+            "groupProp": {"name": "Some Group"},
+        }
+    }
