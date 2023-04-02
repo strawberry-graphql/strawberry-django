@@ -1,3 +1,4 @@
+import textwrap
 from enum import Enum
 from typing import List
 
@@ -247,3 +248,45 @@ def test_enum(query, fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+def test_pk_inserted_for_root_field_only():
+    @strawberry_django.type(models.Group)
+    class GroupType(models.Group):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.User)
+    class UserType(models.Group):
+        name: strawberry.auto
+        group: GroupType
+        get_group: GroupType
+        group_prop: GroupType
+
+    @strawberry.type
+    class Query:
+        user: UserType = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+
+    __import__("pprint").pprint(str(schema))
+    assert (
+        textwrap.dedent(str(schema))
+        == textwrap.dedent(
+            """\
+      type GroupType {
+        name: String!
+      }
+
+      type Query {
+        user(pk: ID!): UserType!
+      }
+
+      type UserType {
+        name: String!
+        group: GroupType
+        getGroup: GroupType!
+        groupProp: GroupType!
+      }
+    """
+        ).strip()
+    )
