@@ -38,6 +38,13 @@ class User(models.Model):
     )
     tag = models.OneToOneField("Tag", null=True, on_delete=models.CASCADE)
 
+    @property
+    def group_prop(self) -> "Group":
+        return self.group
+
+    def get_group(self) -> "Group":
+        return self.group
+
 
 class Group(models.Model):
     name = models.CharField(max_length=50)
