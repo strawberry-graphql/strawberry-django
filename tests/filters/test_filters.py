@@ -289,7 +289,7 @@ def test_pk_inserted_for_root_field_only():
         getGroup: GroupType!
         groupProp: GroupType!
       }
-    """
+    """,
         ).strip()
     )
 
@@ -322,5 +322,5 @@ def test_pk_inserted_for_root_field_only():
             "group": {"name": "Some Group"},
             "getGroup": {"name": "Some Group"},
             "groupProp": {"name": "Some Group"},
-        }
+        },
     }
