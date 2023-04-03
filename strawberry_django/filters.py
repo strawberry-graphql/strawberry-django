@@ -188,6 +188,9 @@ class StrawberryDjangoFieldFilters:
                 and self.origin._type_definition.name == "Query"
             ):
                 arguments.append(argument("pk", strawberry.ID, is_optional=False))
+            elif self.django_model and not self.is_list:
+                # Do not add filters to non list fields
+                pass
             elif filters and filters is not UNSET:
                 arguments.append(argument("filters", filters))
         return super().arguments + arguments

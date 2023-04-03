@@ -252,7 +252,11 @@ def test_enum(query, fruits):
 
 @pytest.mark.django_db(transaction=True)
 def test_pk_inserted_for_root_field_only():
-    @strawberry_django.type(models.Group)
+    @strawberry_django.filters.filter(models.Group)
+    class GroupFilter:
+        name: str
+
+    @strawberry_django.type(models.Group, filters=GroupFilter)
     class GroupType(models.Group):
         name: strawberry.auto
 
