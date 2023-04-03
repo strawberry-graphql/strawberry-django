@@ -3,10 +3,10 @@ from typing import Callable, Dict, Hashable, Optional, Tuple
 
 from django.core.cache import caches
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
-from strawberry.extensions.base_extension import Extension
+from strawberry.extensions import SchemaExtension
 
 
-class DjangoCacheBase(Extension):
+class DjangoCacheBase(SchemaExtension):
     """
     Base for a Cache that uses Django built in cache instead of an in memory cache
 
