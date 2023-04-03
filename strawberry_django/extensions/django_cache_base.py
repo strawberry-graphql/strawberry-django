@@ -3,7 +3,7 @@ from typing import Callable, Dict, Hashable, Optional, Tuple
 
 from django.core.cache import caches
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
-from strawberry.extensions.base_extension import SchemaExtension
+from strawberry.extensions import SchemaExtension
 
 
 class DjangoCacheBase(SchemaExtension):
