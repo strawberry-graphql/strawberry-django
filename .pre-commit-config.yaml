@@ -6,7 +6,8 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
-        args: ["--maxkb=1024"]
+        args:
+          - --maxkb=1024
       - id: check-docstring-first
       - id: check-merge-conflict
       - id: check-yaml
@@ -15,26 +16,23 @@ repos:
       - id: check-json
       - id: check-xml
       - id: check-symlinks
-
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.260
+    rev: v0.0.261
     hooks:
       - id: ruff
-        args: ["--fix"]
-
+        args:
+          - --fix
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
       - id: black
-
   - repo: https://github.com/patrick91/pre-commit-alex
     rev: aa5da9e54b92ab7284feddeaf52edf14b1690de3
     hooks:
       - id: alex
         exclude: CHANGELOG.md
-
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.0.0-alpha.4
     hooks:
       - id: prettier
-        files: '^docs/.*\.mdx?$'
+        files: ^docs/.*\.mdx?$

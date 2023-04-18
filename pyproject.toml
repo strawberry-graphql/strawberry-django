@@ -47,7 +47,7 @@ mkdocs-markdownextradata-plugin = "^0.2.5"
 mkdocs-material = "^9.0.4"
 mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = "^9.5"
-ruff = "^0.0.260"
+ruff = "^0.0.261"
 django-types = "^0.17.0"
 Markdown = "^3.3.7"
 
