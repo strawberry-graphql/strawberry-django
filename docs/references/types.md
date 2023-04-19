@@ -98,9 +98,12 @@ limit access to results based on the current user in the request:
 class Berry:
 
     @classmethod
-    def get_queryset(cls, queryset, info):
+    def get_queryset(cls, queryset, info, **kwargs):
         if not info.context.request.user.is_staff:
             # Restrict access to top secret berries if the user is not a staff member
             queryset = queryset.filter(is_top_secret=False)
         return queryset.filter(name__contains="berry")
 ```
+
+The `kwargs` dictionary can include other parameters that were added in a `@strawberry.django.type` definition
+like [filters](filters.md) or [pagination](pagination.md).
