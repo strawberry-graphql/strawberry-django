@@ -27,6 +27,22 @@ class FruitWithOrder:
     name: auto
 
 
+@strawberry_django.ordering.order(models.Group)
+class GroupOrder:
+    name: auto
+
+
+@strawberry_django.type(models.Group, order=GroupOrder)
+class Group:
+    name: auto
+
+
+@strawberry_django.type(models.User)
+class User:
+    name: auto
+    group: Group
+
+
 @strawberry.type
 class Query:
     fruits: List[Fruit] = strawberry_django.field(order=FruitOrder)
@@ -40,7 +56,9 @@ def query():
 def test_field_order_definition():
     from strawberry_django.fields.field import StrawberryDjangoField
 
-    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(FruitWithOrder))
+    field = StrawberryDjangoField(
+        type_annotation=StrawberryAnnotation(List[FruitWithOrder])
+    )
     assert field.get_order() == FruitOrder
     field = StrawberryDjangoField(
         type_annotation=StrawberryAnnotation(FruitWithOrder), filters=None
@@ -85,3 +103,13 @@ def test_relationship(query, fruits):
         {"id": "1", "name": "strawberry", "color": {"name": "red"}},
         {"id": "2", "name": "raspberry", "color": {"name": "dark red"}},
     ]
+
+
+def test_ordering_on_related_fields():
+    from strawberry_django.fields.field import StrawberryDjangoField
+
+    group_field = StrawberryDjangoField(
+        type_annotation=StrawberryAnnotation(List[Group])
+    )
+    assert group_field.get_order() is GroupOrder
+    assert User._type_definition.get_field("group").get_order() is None
