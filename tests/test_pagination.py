@@ -3,6 +3,7 @@ from typing import List
 import pytest
 import strawberry
 from strawberry import auto
+from strawberry.annotation import StrawberryAnnotation
 
 import strawberry_django
 from tests import models, utils
@@ -23,10 +24,23 @@ class BerryFruit:
         return queryset.filter(name__contains="berry")
 
 
+@strawberry_django.type(models.Group, pagination=True)
+class Group:
+    name: auto
+
+
+@strawberry_django.type(models.User)
+class User:
+    name: auto
+    group: Group
+
+
 @strawberry.type
 class Query:
     fruits: List[Fruit] = strawberry_django.field()
     berries: List[BerryFruit] = strawberry_django.field()
+    users: List[User] = strawberry_django.field()
+    groups: List[Group] = strawberry_django.field()
 
 
 @pytest.fixture
@@ -66,3 +80,13 @@ def test_resolver_pagination(fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+def test_pagination_on_related_field_definition():
+    from strawberry_django.fields.field import StrawberryDjangoField
+
+    group_field = StrawberryDjangoField(
+        type_annotation=StrawberryAnnotation(List[Group])
+    )
+    assert group_field.get_pagination() is not None
+    assert User._type_definition.get_field("group").get_pagination() is None

@@ -67,6 +67,22 @@ class Fruit:
     name: auto
 
 
+@strawberry_django.filters.filter(models.Group)
+class GroupFilter:
+    name: auto
+
+
+@strawberry_django.type(models.Group, filters=GroupFilter)
+class Group:
+    name: auto
+
+
+@strawberry_django.type(models.User)
+class User:
+    name: auto
+    group: Group
+
+
 @strawberry.type
 class Query:
     fruits: List[Fruit] = strawberry_django.field()
@@ -326,3 +342,13 @@ def test_pk_inserted_for_root_field_only():
             "groupProp": {"name": "Some Group"},
         }
     }
+
+
+def test_filters_on_related_fields():
+    from strawberry_django.fields.field import StrawberryDjangoField
+
+    group_field = StrawberryDjangoField(
+        type_annotation=StrawberryAnnotation(List[Group])
+    )
+    assert group_field.get_filters() is GroupFilter
+    assert User._type_definition.get_field("group").get_filters() is None

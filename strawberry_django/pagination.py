@@ -40,6 +40,8 @@ class StrawberryDjangoPagination:
         return super().arguments + arguments
 
     def get_pagination(self) -> Optional[Type]:
+        if not self.is_list:
+            return None
         if self.pagination is not UNSET:
             return self.pagination
 
