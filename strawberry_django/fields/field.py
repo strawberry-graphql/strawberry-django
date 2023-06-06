@@ -1,18 +1,21 @@
-from typing import Any, Optional, Type, TypeVar
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from django.db import models
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
 from strawberry.type import StrawberryList, StrawberryOptional
-from strawberry.types import Info
 
-from .. import utils
-from ..filters import StrawberryDjangoFieldFilters
-from ..ordering import StrawberryDjangoFieldOrdering
-from ..pagination import StrawberryDjangoPagination
-from ..resolvers import django_resolver
+from strawberry_django import utils
+from strawberry_django.filters import StrawberryDjangoFieldFilters
+from strawberry_django.ordering import StrawberryDjangoFieldOrdering
+from strawberry_django.pagination import StrawberryDjangoPagination
+from strawberry_django.resolvers import django_resolver
 
+if TYPE_CHECKING:
+    from strawberry.types import Info
 
 T = TypeVar("T", bound="StrawberryDjangoFieldBase")
 
@@ -27,7 +30,7 @@ class StrawberryDjangoFieldBase:
         return utils.get_django_model(type_)
 
     @classmethod
-    def from_field(cls: Type[T], field, django_type) -> T:
+    def from_field(cls: type[T], field, django_type) -> T:
         raise NotImplementedError
 
 
@@ -38,7 +41,7 @@ class StrawberryDjangoField(
     StrawberryDjangoFieldBase,
     StrawberryField,
 ):
-    """Basic field
+    """Basic field.
 
     StrawberryDjangoField inherits all features from StrawberryField and
     implements Django specific functionalities like ordering, filtering and
@@ -62,9 +65,9 @@ class StrawberryDjangoField(
 
     def __init__(
         self,
-        django_name: Optional[str] = None,
-        graphql_name: Optional[str] = None,
-        python_name: Optional[str] = None,
+        django_name: str | None = None,
+        graphql_name: str | None = None,
+        python_name: str | None = None,
         **kwargs,
     ):
         self.django_name = django_name
@@ -85,7 +88,7 @@ class StrawberryDjangoField(
         )
 
     @classmethod
-    def from_field(cls, field: "StrawberryDjangoField", django_type):
+    def from_field(cls, field: StrawberryDjangoField, django_type):
         if utils.is_strawberry_django_field(field) and not field.origin_django_type:
             return field
 
@@ -123,14 +126,13 @@ class StrawberryDjangoField(
         args,
         kwargs,
     ):
-        return self.resolver(info=info, source=source, *args, **kwargs)
+        return self.resolver(info, source, *args, **kwargs)
 
     def resolver(self, info, source, **kwargs):
         if source is None:
             # TODO: would there be better and safer way to detect root?
             # root query object
             result = self.django_model.objects.all()
-
         else:
             # relation model field
             result = getattr(source, self.django_name or self.python_name)
@@ -158,7 +160,8 @@ class StrawberryDjangoField(
 
     @property
     def is_basic_field(self) -> bool:
-        """
+        """Mark this field as not basic.
+
         All StrawberryDjango fields define a custom resolver that needs to be
         run, so always return False here.
         """
@@ -166,7 +169,13 @@ class StrawberryDjangoField(
 
 
 def field(
-    resolver=None, *, name=None, field_name=None, filters=UNSET, default=UNSET, **kwargs
+    resolver=None,
+    *,
+    name=None,
+    field_name=None,
+    filters=UNSET,
+    default=UNSET,
+    **kwargs,
 ) -> Any:
     field_ = StrawberryDjangoField(
         python_name=None,

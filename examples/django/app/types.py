@@ -1,12 +1,11 @@
 from typing import List
 
-from django.contrib.auth import get_user_model
 from strawberry import auto
 
 import strawberry_django
+from django.contrib.auth import get_user_model
 
 from . import models
-
 
 # filters
 
@@ -44,7 +43,10 @@ class ColorOrder:
 
 
 @strawberry_django.type(
-    models.Fruit, filters=FruitFilter, order=FruitOrder, pagination=True
+    models.Fruit,
+    filters=FruitFilter,
+    order=FruitOrder,
+    pagination=True,
 )
 class Fruit:
     id: auto
@@ -53,7 +55,10 @@ class Fruit:
 
 
 @strawberry_django.type(
-    models.Color, filters=ColorFilter, order=ColorOrder, pagination=True
+    models.Color,
+    filters=ColorFilter,
+    order=ColorOrder,
+    pagination=True,
 )
 class Color:
     id: auto

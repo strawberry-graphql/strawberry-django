@@ -7,9 +7,8 @@ from strawberry import auto
 
 import strawberry_django
 from strawberry_django import mutations
-
-from .. import models, utils
-from ..types import (
+from tests import models, utils
+from tests.types import (
     Color,
     ColorInput,
     ColorPartialInput,
@@ -33,7 +32,8 @@ class Mutation:
     create_fruit: Fruit = mutations.create(FruitInput)
     create_fruits: List[Fruit] = mutations.create(FruitInput)
     update_fruits: List[Fruit] = mutations.update(
-        FruitPartialInput, filters=FruitFilter
+        FruitPartialInput,
+        filters=FruitFilter,
     )
     delete_fruits: List[Fruit] = mutations.delete(filters=FruitFilter)
 
@@ -48,10 +48,10 @@ class Mutation:
     delete_fruit_types: List[FruitType] = mutations.delete()
 
 
-@pytest.fixture
+@pytest.fixture()
 def mutation(db):
     if settings.GEOS_IMPORTED:
-        from ..types import GeoField, GeoFieldInput, GeoFieldPartialInput
+        from tests.types import GeoField, GeoFieldInput, GeoFieldPartialInput
 
         @strawberry.type
         class GeoMutation(Mutation):

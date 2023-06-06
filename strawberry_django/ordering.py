@@ -1,17 +1,21 @@
+from __future__ import annotations
+
 import enum
-from typing import List, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 import strawberry
-from django.db.models import QuerySet
 from strawberry import UNSET
-from strawberry.arguments import StrawberryArgument
 from strawberry.auto import StrawberryAuto
-from strawberry.types import Info
 
 from strawberry_django.utils import fields
 
 from . import utils
 from .arguments import argument
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+    from strawberry.arguments import StrawberryArgument
+    from strawberry.types import Info
 
 
 @strawberry.enum
@@ -39,9 +43,9 @@ def generate_order_args(order, prefix=""):
 def order(model):
     def wrapper(cls):
         for name, type_ in cls.__annotations__.items():
-            if isinstance(type_, StrawberryAuto):
-                type_ = Ordering
-            cls.__annotations__[name] = Optional[type_]
+            cls.__annotations__[name] = Optional[
+                Ordering if isinstance(type_, StrawberryAuto) else type_
+            ]
             setattr(cls, name, UNSET)
         return strawberry.input(cls)
 
@@ -63,7 +67,7 @@ class StrawberryDjangoFieldOrdering:
         super().__init__(**kwargs)
 
     @property
-    def arguments(self) -> List[StrawberryArgument]:
+    def arguments(self) -> list[StrawberryArgument]:
         arguments = []
         if not self.base_resolver:
             order = self.get_order()
@@ -71,7 +75,7 @@ class StrawberryDjangoFieldOrdering:
                 arguments.append(argument("order", order))
         return super().arguments + arguments
 
-    def get_order(self) -> Optional[Type]:
+    def get_order(self) -> type | None:
         if self.order is not UNSET:
             return self.order
         type_ = utils.unwrap_type(self.type or self.child.type)
@@ -84,7 +88,11 @@ class StrawberryDjangoFieldOrdering:
         return apply(order, queryset)
 
     def get_queryset(
-        self, queryset: QuerySet, info: Info, order: Type = UNSET, **kwargs
+        self,
+        queryset: QuerySet,
+        info: Info,
+        order: type = UNSET,
+        **kwargs,
     ):
         queryset = super().get_queryset(queryset, info, **kwargs)
         return self.apply_order(queryset, order)

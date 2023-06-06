@@ -32,7 +32,7 @@ class Query:
     fruits: List[Fruit] = strawberry_django.field(order=FruitOrder)
 
 
-@pytest.fixture
+@pytest.fixture()
 def query():
     return utils.generate_query(Query)
 
@@ -43,7 +43,8 @@ def test_field_order_definition():
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(FruitWithOrder))
     assert field.get_order() == FruitOrder
     field = StrawberryDjangoField(
-        type_annotation=StrawberryAnnotation(FruitWithOrder), filters=None
+        type_annotation=StrawberryAnnotation(FruitWithOrder),
+        filters=None,
     )
     assert field.get_filters() is None
 
@@ -77,7 +78,7 @@ def test_relationship(query, fruits):
     for fruit, color_name in zip(fruits, color_names):
         add_color(fruit, color_name)
     result = query(
-        "{ fruits(order: { color: { name: DESC } }) { id name color { name } } }"
+        "{ fruits(order: { color: { name: DESC } }) { id name color { name } } }",
     )
     assert not result.errors
     assert result.data["fruits"] == [

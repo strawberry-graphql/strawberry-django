@@ -3,8 +3,7 @@ from typing import List
 import strawberry
 
 import strawberry_django
-import strawberry_django.auth as auth
-from strawberry_django import mutations
+from strawberry_django import auth, mutations
 
 from .types import (
     Color,
@@ -29,15 +28,15 @@ class Query:
 
 @strawberry.type
 class Mutation:
-    createFruit: Fruit = mutations.create(FruitInput)
-    createFruits: List[Fruit] = mutations.create(FruitInput)
-    updateFruits: List[Fruit] = mutations.update(FruitPartialInput)
-    deleteFruits: List[Fruit] = mutations.delete()
+    create_fruit: Fruit = mutations.create(FruitInput)
+    create_fruits: List[Fruit] = mutations.create(FruitInput)
+    update_fruits: List[Fruit] = mutations.update(FruitPartialInput)
+    delete_fruits: List[Fruit] = mutations.delete()
 
-    createColor: Color = mutations.create(ColorInput)
-    createColors: List[Color] = mutations.create(ColorInput)
-    updateColors: List[Color] = mutations.update(ColorPartialInput)
-    deleteColors: List[Color] = mutations.delete()
+    create_color: Color = mutations.create(ColorInput)
+    create_colors: List[Color] = mutations.create(ColorInput)
+    update_colors: List[Color] = mutations.update(ColorPartialInput)
+    delete_colors: List[Color] = mutations.delete()
 
     register: User = auth.register(UserInput)
 

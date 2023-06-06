@@ -11,8 +11,10 @@ from typing import Optional
 from asgiref.sync import sync_to_async
 from debug_toolbar.middleware import (
     _HTML_TYPES,
-    DebugToolbarMiddleware as _DebugToolbarMiddleware,
     show_toolbar,
+)
+from debug_toolbar.middleware import (
+    DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
 from debug_toolbar.panels.sql.panel import SQLPanel
 from debug_toolbar.panels.templates import TemplatesPanel
@@ -24,7 +26,6 @@ from django.http.response import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.encoding import force_str
 from strawberry.django.views import BaseView
-
 
 _store_cache = weakref.WeakKeyDictionary()
 _debug_toolbar_map: "weakref.WeakKeyDictionary[HttpRequest, DebugToolbar]" = (
@@ -76,7 +77,7 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
     content = force_str(response.content, encoding=response.charset)
     payload = json.loads(content, object_pairs_hook=collections.OrderedDict)
     payload["debugToolbar"] = collections.OrderedDict(
-        [("panels", collections.OrderedDict())]
+        [("panels", collections.OrderedDict())],
     )
     payload["debugToolbar"]["storeId"] = toolbar.store_id
 
@@ -150,7 +151,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
             return await self._original_get_response(request)
 
         return await sync_to_async(self.process_request, thread_sensitive=False)(
-            request
+            request,
         )
 
     def process_request(self, request: HttpRequest):
@@ -163,7 +164,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         is_html = content_type in _HTML_TYPES
         is_graphiql = getattr(request, "_is_graphiql", False)
 
-        if is_html and is_graphiql and response.status_code == 200:
+        if is_html and is_graphiql and response.status_code == 200:  # noqa: PLR2004
             template = render_to_string("strawberry_django/debug_toolbar.html")
             response.write(template)
             if "Content-Length" in response:

@@ -1,6 +1,4 @@
-"""
-Code for interacting with Django settings.
-"""
+"""Code for interacting with Django settings."""
 try:
     from typing import TypedDict
 except ImportError:
@@ -10,8 +8,7 @@ from django.conf import settings
 
 
 class StrawberryDjangoSettings(TypedDict):
-    """
-    Dictionary defining the shape `settings.STRAWBERRY_DJANGO` should have.
+    """Dictionary defining the shape `settings.STRAWBERRY_DJANGO` should have.
 
     All settings are optional and have defaults as described in their docstrings and
     defined in `DEFAULT_DJANGO_SETTINGS`.
@@ -33,12 +30,12 @@ DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
 
 
 def strawberry_django_settings() -> StrawberryDjangoSettings:
-    """
-    Return the dictionary from `settings.STRAWBERRY_DJANGO`, with defaults for missing
-    keys.
+    """Get strawberry django settings.
+
+    Return the dictionary from `settings.STRAWBERRY_DJANGO`, with defaults
+    for missing keys.
 
     Preferred to direct access for the type hints and defaults.
     """
     defaults = DEFAULT_DJANGO_SETTINGS
-    customized = {**defaults, **getattr(settings, "STRAWBERRY_DJANGO", {})}
-    return customized
+    return {**defaults, **getattr(settings, "STRAWBERRY_DJANGO", {})}

@@ -12,8 +12,8 @@ def test_query(query, user, group, tag):
                     {
                         "id": str(tag.id),
                         "name": "tag",
-                    }
+                    },
                 ],
             },
-        }
+        },
     ]

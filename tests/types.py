@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from django.conf import settings
-from strawberry import auto
+from strawberry import auto  # noqa: TCH002
 
 import strawberry_django
 
@@ -14,22 +14,22 @@ from . import models
 class Fruit:
     id: auto
     name: auto
-    color: "Color"
-    types: List["FruitType"]
+    color: Color
+    types: List[FruitType]  # noqa: UP006
 
 
 @strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
-    fruits: List[Fruit]
+    fruits: List[Fruit]  # noqa: UP006
 
 
 @strawberry_django.type(models.FruitType)
 class FruitType:
     id: auto
     name: auto
-    fruits: List[Fruit]
+    fruits: List[Fruit]  # noqa: UP006
 
 
 if settings.GEOS_IMPORTED:
@@ -87,21 +87,21 @@ class FruitTypePartialInput(FruitTypeInput):
 class User:
     id: auto
     name: auto
-    group: "Group"
-    tag: "Tag"
+    group: Group
+    tag: Tag
 
 
 @strawberry_django.type(models.Group)
 class Group:
     id: auto
     name: auto
-    tags: List["Tag"]
-    users: List[User]
+    tags: List[Tag]  # noqa: UP006
+    users: List[User]  # noqa: UP006
 
 
 @strawberry_django.type(models.Tag)
 class Tag:
     id: auto
     name: auto
-    groups: List[Group]
+    groups: List[Group]  # noqa: UP006
     user: User

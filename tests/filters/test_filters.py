@@ -56,9 +56,10 @@ class TypeFilter:
     name: auto
 
     def filter(self, queryset):
-        if self.name:
-            queryset = queryset.filter(name__icontains=self.name)
-        return queryset
+        if not self.name:
+            return queryset
+
+        return queryset.filter(name__icontains=self.name)
 
 
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
@@ -75,7 +76,7 @@ class Query:
     enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
 
 
-@pytest.fixture
+@pytest.fixture()
 def query():
     return utils.generate_query(Query)
 
@@ -86,7 +87,8 @@ def test_field_filter_definition():
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(Fruit))
     assert field.get_filters() == FruitFilter
     field = StrawberryDjangoField(
-        type_annotation=StrawberryAnnotation(Fruit), filters=None
+        type_annotation=StrawberryAnnotation(Fruit),
+        filters=None,
     )
     assert field.get_filters() is None
 
@@ -131,7 +133,7 @@ def test_relationship(query, fruits):
     color.fruits.set([fruits[0], fruits[1]])
 
     result = query(
-        '{ fruits(filters: { color: { name: { iExact: "RED" } } }) { id name } }'
+        '{ fruits(filters: { color: { name: { iExact: "RED" } } }) { id name } }',
     )
     assert not result.errors
     assert result.data["fruits"] == [
@@ -161,7 +163,7 @@ def test_resolver_filter(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(filters: FruitFilter) -> List[Fruit]:
+        def fruits(self, filters: FruitFilter) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
             return strawberry_django.filters.apply(filters, queryset)
 
@@ -190,7 +192,7 @@ def test_resolver_filter_with_info(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
+        def fruits(self, filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
             return strawberry_django.filters.apply(filters, queryset, info=info)
 
@@ -217,7 +219,7 @@ def test_resolver_filter_override_with_info(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
+        def fruits(self, filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
             return strawberry_django.filters.apply(filters, queryset, info=info)
 
@@ -233,7 +235,7 @@ def test_resolver_nonfilter(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(filters: NonFilter) -> List[Fruit]:
+        def fruits(self, filters: NonFilter) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
             return strawberry_django.filters.apply(filters, queryset)
 
@@ -291,7 +293,7 @@ def test_pk_inserted_for_root_field_only():
         getGroup: GroupType!
         groupProp: GroupType!
       }
-    """
+    """,
         ).strip()
     )
 
@@ -324,5 +326,5 @@ def test_pk_inserted_for_root_field_only():
             "group": {"name": "Some Group"},
             "getGroup": {"name": "Some Group"},
             "groupProp": {"name": "Some Group"},
-        }
+        },
     }

@@ -55,7 +55,8 @@ class FieldTypesModel(models.Model):
         on_delete=models.CASCADE,
     )
     many_to_many = models.ManyToManyField(
-        "FieldTypesModel", related_name="related_many_to_many"
+        "FieldTypesModel",
+        related_name="related_many_to_many",
     )
 
 
@@ -377,8 +378,8 @@ def test_type_from_type():
         one_to_one: "Type"
         many_to_many: List["Type"]
 
-    FruitInput = strawberry_django.types.from_type(Type, is_input=True)
-    assert [(f.name, f.type) for f in fields(FruitInput)] == [
+    fruit_input = strawberry_django.types.from_type(Type, is_input=True)
+    assert [(f.name, f.type) for f in fields(fruit_input)] == [
         ("char", str),
         ("one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
         (

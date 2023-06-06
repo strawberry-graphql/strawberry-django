@@ -21,7 +21,9 @@ def generate_query(query=None, mutation=None):
 
     async def query_async(query, variable_values, context_value):
         result = await schema.execute(
-            query, variable_values=variable_values, context_value=context_value
+            query,
+            variable_values=variable_values,
+            context_value=context_value,
         )
         return process_result(result)
 
@@ -35,7 +37,9 @@ def generate_query(query=None, mutation=None):
                 context_value=context_value,
             )
         result = schema.execute_sync(
-            query, variable_values=variable_values, context_value=context_value
+            query,
+            variable_values=variable_values,
+            context_value=context_value,
         )
         return process_result(result)
 

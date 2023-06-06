@@ -7,11 +7,10 @@ from strawberry.extensions import SchemaExtension
 
 
 class DjangoCacheBase(SchemaExtension):
-    """
-    Base for a Cache that uses Django built in cache instead of an in memory cache
+    """Base for a Cache that uses Django built in cache instead of an in memory cache.
 
     Arguments:
-
+    ---------
     `cache_name: str`
         Name of the Django Cache to use, defaults to 'default'
 

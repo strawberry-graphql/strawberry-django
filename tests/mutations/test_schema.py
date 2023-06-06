@@ -2,14 +2,13 @@ import pytest
 import strawberry
 
 from strawberry_django import mutations
-
-from .. import types, utils
+from tests import types, utils
 
 
 def test_type_mismatch():
     @strawberry.type
     class Mutation:
-        createFruit: types.Fruit = mutations.create(types.ColorInput)
+        create_fruit: types.Fruit = mutations.create(types.ColorInput)
 
     with pytest.raises(
         TypeError,

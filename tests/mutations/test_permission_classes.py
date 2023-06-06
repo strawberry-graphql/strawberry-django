@@ -18,16 +18,18 @@ class PermissionClass(BasePermission):
 
 @strawberry.type
 class Mutation:
-    createFruits: List[Fruit] = mutations.create(
-        FruitInput, permission_classes=[PermissionClass]
+    create_fruits: List[Fruit] = mutations.create(
+        FruitInput,
+        permission_classes=[PermissionClass],
     )
-    updateFruits: List[Fruit] = mutations.update(
-        FruitPartialInput, permission_classes=[PermissionClass]
+    update_fruits: List[Fruit] = mutations.update(
+        FruitPartialInput,
+        permission_classes=[PermissionClass],
     )
-    deleteFruits: List[Fruit] = mutations.delete(permission_classes=[PermissionClass])
+    delete_fruits: List[Fruit] = mutations.delete(permission_classes=[PermissionClass])
 
 
-@pytest.fixture
+@pytest.fixture()
 def mutation(db):
     return utils.generate_query(mutation=Mutation)
 

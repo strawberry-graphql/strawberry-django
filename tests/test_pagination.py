@@ -5,6 +5,7 @@ import strawberry
 from strawberry import auto
 
 import strawberry_django
+from strawberry_django.pagination import OffsetPaginationInput
 from tests import models, utils
 
 
@@ -29,7 +30,7 @@ class Query:
     berries: List[BerryFruit] = strawberry_django.field()
 
 
-@pytest.fixture
+@pytest.fixture()
 def query():
     return utils.generate_query(Query)
 
@@ -51,12 +52,10 @@ def test_pagination_of_filtered_query(query, fruits):
 
 
 def test_resolver_pagination(fruits):
-    from strawberry_django.pagination import OffsetPaginationInput
-
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(pagination: OffsetPaginationInput) -> List[Fruit]:
+        def fruits(self, pagination: OffsetPaginationInput) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
             return strawberry_django.pagination.apply(pagination, queryset)
 

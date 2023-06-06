@@ -5,7 +5,10 @@ from django.db import models
 class Fruit(models.Model):
     name = models.CharField(max_length=20)
     color = models.ForeignKey(
-        "Color", null=True, related_name="fruits", on_delete=models.CASCADE
+        "Color",
+        null=True,
+        related_name="fruits",
+        on_delete=models.CASCADE,
     )
     types = models.ManyToManyField("FruitType", related_name="fruits")
 
@@ -28,7 +31,10 @@ class FruitType(models.Model):
 class User(models.Model):
     name = models.CharField(max_length=50)
     group = models.ForeignKey(
-        "Group", null=True, related_name="users", on_delete=models.CASCADE
+        "Group",
+        null=True,
+        related_name="users",
+        on_delete=models.CASCADE,
     )
     tag = models.OneToOneField("Tag", null=True, on_delete=models.CASCADE)
 

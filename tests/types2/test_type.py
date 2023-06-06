@@ -23,7 +23,8 @@ class TypeModel(models.Model):
         on_delete=models.CASCADE,
     )
     many_to_many = models.ManyToManyField(
-        "TypeModel", related_name="related_many_to_many"
+        "TypeModel",
+        related_name="related_many_to_many",
     )
 
 

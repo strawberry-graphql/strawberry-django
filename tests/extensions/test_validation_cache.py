@@ -47,4 +47,4 @@ def test_validation_cache_extension(mock_validate):
     assert not result.errors
     assert result.data == {"ping": "pong"}
 
-    assert mock_validate.call_count == 2
+    assert mock_validate.call_count == 2  # noqa: PLR2004

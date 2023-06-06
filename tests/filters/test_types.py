@@ -5,8 +5,7 @@ from strawberry.type import StrawberryOptional
 import strawberry_django
 from strawberry_django import fields
 from strawberry_django.filters import DjangoModelFilterInput
-
-from .. import models
+from tests import models
 
 
 def test_filter():

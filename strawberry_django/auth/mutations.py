@@ -9,8 +9,7 @@ from strawberry_django.mutations.fields import (
     get_input_data,
     update_m2m,
 )
-
-from ..resolvers import django_resolver
+from strawberry_django.resolvers import django_resolver
 
 
 @django_resolver

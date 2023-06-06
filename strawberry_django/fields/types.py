@@ -11,8 +11,7 @@ from strawberry import UNSET
 from strawberry.auto import StrawberryAuto
 from strawberry.scalars import JSON
 
-from .. import filters
-
+from strawberry_django import filters
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoType
@@ -39,26 +38,26 @@ class DjangoModelType:
 
 @strawberry.input
 class OneToOneInput:
-    set: Optional[strawberry.ID]
+    set: Optional[strawberry.ID]  # noqa: A003
 
 
 @strawberry.input
 class OneToManyInput:
-    set: Optional[strawberry.ID]
+    set: Optional[strawberry.ID]  # noqa: A003
 
 
 @strawberry.input
 class ManyToOneInput:
     add: Optional[List[strawberry.ID]] = UNSET
     remove: Optional[List[strawberry.ID]] = UNSET
-    set: Optional[List[strawberry.ID]] = UNSET
+    set: Optional[List[strawberry.ID]] = UNSET  # noqa: A003
 
 
 @strawberry.input
 class ManyToManyInput:
     add: Optional[List[strawberry.ID]] = UNSET
     remove: Optional[List[strawberry.ID]] = UNSET
-    set: Optional[List[strawberry.ID]] = UNSET
+    set: Optional[List[strawberry.ID]] = UNSET  # noqa: A003
 
 
 field_type_map = {
@@ -100,7 +99,7 @@ if django.VERSION >= (3, 1):
         {
             fields.json.JSONField: JSON,
             fields.PositiveBigIntegerField: int,
-        }
+        },
     )
 
 try:
@@ -168,7 +167,7 @@ else:
         NewType("MultiPolygon", Tuple[Polygon]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
         parse_value=lambda v: geos.MultiPolygon(
-            *[geos.Polygon(*[y for y in x]) for x in v]
+            *[geos.Polygon(*list(x)) for x in v],
         ),
         description="A geographical object that contains multiple polygons.",
     )
@@ -181,7 +180,7 @@ else:
             geos_fields.MultiPointField: MultiPoint,
             geos_fields.MultiLineStringField: MultiLineString,
             geos_fields.MultiPolygonField: MultiPolygon,
-        }
+        },
     )
 
 
@@ -198,7 +197,8 @@ input_field_type_map = {
 
 
 def resolve_model_field_type(
-    model_field: Union[Field, ForeignObjectRel], django_type: "StrawberryDjangoType"
+    model_field: Union[Field, ForeignObjectRel],
+    django_type: "StrawberryDjangoType",
 ):
     model_field_type = type(model_field)
     field_type: Any = None
@@ -210,24 +210,31 @@ def resolve_model_field_type(
         field_type = field_type_map.get(model_field_type, NotImplemented)
     if field_type is NotImplemented:
         raise NotImplementedError(
-            f"GraphQL type for model field '{model_field}' has not been implemented"
+            f"GraphQL type for model field '{model_field}' has not been implemented",
         )
-    if django_type.is_filter == "lookups":
-        # TODO: could this be moved into filters.py
-        if not model_field.is_relation and field_type is not bool:
-            field_type = filters.FilterLookup[field_type]
+    # TODO: could this be moved into filters.py
+    if (
+        django_type.is_filter == "lookups"
+        and not model_field.is_relation
+        and field_type is not bool
+    ):
+        field_type = filters.FilterLookup[field_type]
+
     return field_type
 
 
 def resolve_model_field_name(
-    model_field: Union[Field, ForeignObjectRel], is_input=False, is_filter=False
+    model_field: Union[Field, ForeignObjectRel],
+    is_input=False,
+    is_filter=False,
 ):
     if isinstance(model_field, ForeignObjectRel):
         return model_field.get_accessor_name()
+
     if is_input and not is_filter:
         return model_field.attname
-    else:
-        return model_field.name
+
+    return model_field.name
 
 
 def get_model_field(model: Type[Model], field_name: str):
@@ -246,10 +253,11 @@ def get_model_field(model: Type[Model], field_name: str):
 
         e.args = (
             "{}, did you mean {}?".format(
-                e.args[0], ", ".join([f"'{n}'" for n in model_field_names])
+                e.args[0],
+                ", ".join([f"'{n}'" for n in model_field_names]),
             ),
         )
-        raise e
+        raise
 
 
 def is_auto(type_):

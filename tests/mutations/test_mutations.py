@@ -7,7 +7,7 @@ from tests.utils import deep_tuple_to_list
 
 def test_create(mutation):
     result = mutation(
-        '{ fruit: createFruit(data: { name: "strawberry" }) { id name } }'
+        '{ fruit: createFruit(data: { name: "strawberry" }) { id name } }',
     )
     assert not result.errors
     assert result.data["fruit"] == {"id": "1", "name": "strawberry"}
@@ -16,11 +16,11 @@ def test_create(mutation):
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @pytest.mark.django_db(transaction=True)
 async def test_create_async(mutation):
     result = await mutation(
-        '{ fruit: createFruit(data: { name: "strawberry" }) { name } }'
+        '{ fruit: createFruit(data: { name: "strawberry" }) { name } }',
     )
     assert not result.errors
     assert result.data["fruit"] == {"name": "strawberry"}
@@ -28,8 +28,10 @@ async def test_create_async(mutation):
 
 def test_create_many(mutation):
     result = mutation(
-        '{ fruits: createFruits(data: [{ name: "strawberry" },'
-        ' { name: "raspberry" }]) { id name } }'
+        (
+            '{ fruits: createFruits(data: [{ name: "strawberry" },'
+            ' { name: "raspberry" }]) { id name } }'
+        ),
     )
     assert not result.errors
     assert result.data["fruits"] == [
@@ -59,8 +61,10 @@ def test_update(mutation, fruits):
 
 def test_update_with_filters(mutation, fruits):
     result = mutation(
-        '{ fruits: updateFruits(data: { name: "orange" },'
-        " filters: { id: { inList: [1, 2] } } ) { id name } }"
+        (
+            '{ fruits: updateFruits(data: { name: "orange" },'
+            " filters: { id: { inList: [1, 2] } } ) { id name } }"
+        ),
     )
     assert not result.errors
     assert result.data["fruits"] == [
@@ -87,7 +91,10 @@ def test_delete(mutation, fruits):
 
 def test_delete_with_filters(mutation, fruits):
     result = mutation(
-        '{ fruits: deleteFruits(filters: { name: { contains: "berry" } }) { id name } }'
+        (
+            '{ fruits: deleteFruits(filters: { name: { contains: "berry" } }) { id'
+            " name } }"
+        ),
     )
     assert not result.errors
     assert result.data["fruits"] == [
@@ -110,7 +117,7 @@ def test_create_geo(mutation):
     # Test for point
     point = (0.0, 1.0)
     result = mutation(
-        f"{{ geofield: createGeoField(data: {{ point: {list(point)} }} ) {{ id }} }}"
+        f"{{ geofield: createGeoField(data: {{ point: {list(point)} }} ) {{ id }} }}",
     )
     assert not result.errors
     assert (
@@ -125,7 +132,7 @@ def test_create_geo(mutation):
         {{ geofield: createGeoField(data: {{ lineString:
             {deep_tuple_to_list(line_string)}
          }}) {{ id }} }}
-        """
+        """,
     )
     assert not result.errors
     assert (
@@ -143,7 +150,7 @@ def test_create_geo(mutation):
         {{ geofield: createGeoField(data: {{
             polygon: {deep_tuple_to_list(polygon)}
         }}) {{ id }} }}
-        """
+        """,
     )
     assert not result.errors
     assert (
@@ -158,7 +165,7 @@ def test_create_geo(mutation):
         {{ geofield: createGeoField(data: {{ multiPoint:
             {deep_tuple_to_list(multi_point)}
         }}) {{ id }} }}
-        """
+        """,
     )
     assert not result.errors
     assert (
@@ -177,12 +184,12 @@ def test_create_geo(mutation):
         {{ geofield: createGeoField(data: {{ multiLineString:
             {deep_tuple_to_list(multi_line_string)}
         }}) {{ id }} }}
-        """
+        """,
     )
     assert not result.errors
     assert (
         GeosFieldsModel.objects.get(
-            id=result.data["geofield"]["id"]
+            id=result.data["geofield"]["id"],
         ).multi_line_string.tuple
         == multi_line_string
     )
@@ -203,12 +210,12 @@ def test_create_geo(mutation):
         {{ geofield: createGeoField(data: {{ multiPolygon:
             {deep_tuple_to_list(multi_polygon)}
         }}) {{ id }} }}
-        """
+        """,
     )
     assert not result.errors
     assert (
         GeosFieldsModel.objects.get(
-            id=result.data["geofield"]["id"]
+            id=result.data["geofield"]["id"],
         ).multi_polygon.tuple
         == multi_polygon
     )
@@ -231,19 +238,19 @@ def test_update_geo(mutation):
     assert geofield_obj.multi_line_string is None
     assert geofield_obj.multi_polygon is None
 
-    id = str(geofield_obj.id)
+    obj_id = str(geofield_obj.id)
 
     # Test for point
     point = [0.0, 1.0]
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {id} ,
+            id: {obj_id} ,
             point: {point}
             }}) {{
                 id
             }} }}
-        """
+        """,
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -254,12 +261,12 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {id} ,
+            id: {obj_id} ,
             lineString: {line_string}
             }}) {{
                 id
             }} }}
-        """
+        """,
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -273,12 +280,12 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {id} ,
+            id: {obj_id} ,
             polygon: {polygon}
             }}) {{
                 id
         }} }}
-        """
+        """,
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -289,12 +296,12 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {id} ,
+            id: {obj_id} ,
             multiPoint: {multi_point}
             }}) {{
                 id
             }} }}
-        """
+        """,
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -309,12 +316,12 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {id} ,
+            id: {obj_id} ,
             multiLineString: {multi_line_string}
             }}) {{
                 id
             }} }}
-        """
+        """,
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
@@ -334,12 +341,12 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {id} ,
+            id: {obj_id} ,
             multiPolygon: {multi_polygon}
             }}) {{
                 id
             }} }}
-        """
+        """,
     )
     assert not result.errors
     geofield_obj.refresh_from_db()

@@ -5,14 +5,13 @@ import strawberry
 from django.conf import settings
 
 import strawberry_django
+from tests import models, types, utils
 
-from .. import models, types, utils
 
-
-def generate_query(UserType):
+def generate_query(user_type):
     @strawberry.type
     class Query:
-        users: List[UserType] = strawberry_django.field()
+        users: List[user_type] = strawberry_django.field()
 
     return utils.generate_query(Query)
 
@@ -41,7 +40,7 @@ def test_relational_field_name(user, group):
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @pytest.mark.django_db(transaction=True)
 async def test_sync_resolver(user, group):
     @strawberry_django.type(models.User)
@@ -57,7 +56,7 @@ async def test_sync_resolver(user, group):
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @pytest.mark.django_db(transaction=True)
 async def test_async_resolver(user, group):
     @strawberry_django.type(models.User)
@@ -109,13 +108,13 @@ def test_geo_data(query, geofields):
         {
             "polygon": (
                 ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
-            )
+            ),
         },
         {
             "polygon": (
                 ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
                 ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
-            )
+            ),
         },
         {"polygon": None},
     ]
@@ -141,7 +140,7 @@ def test_geo_data(query, geofields):
                 ((0.0, 0.0), (1.0, 1.0)),
                 ((1.0, 1.0), (-1.0, -1.0)),
                 ((2.0, 2.0), (-2.0, -2.0)),
-            )
+            ),
         },
         {"multiLineString": None},
     ]
@@ -155,7 +154,7 @@ def test_geo_data(query, geofields):
             "multiPolygon": (
                 ((((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0))),),
                 ((((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0))),),
-            )
+            ),
         },
         {
             "multiPolygon": (
@@ -167,7 +166,7 @@ def test_geo_data(query, geofields):
                     ((-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)),
                     ((-2.0, -2.0), (-2.0, 2.0), (2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)),
                 ),
-            )
+            ),
         },
         {"multiPolygon": None},
     ]
