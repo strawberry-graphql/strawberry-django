@@ -1,6 +1,6 @@
 import dataclasses
 from contextlib import suppress
-from inspect import cleandoc
+from inspect import cleandoc, ismethod
 from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
 import django
@@ -27,8 +27,8 @@ _type = type
 
 def get_type_attr(type_, field_name: str):
     attr = getattr(type_, field_name, UNSET)
-    if attr is UNSET:
-        return getattr(type_, "__dataclass_fields__", {}).get(field_name, UNSET)
+    if attr is UNSET or ismethod(attr):
+        return getattr(type_, "__dataclass_fields__", {}).get(field_name, attr)
     return attr
 
 
@@ -113,7 +113,6 @@ def get_field(
         # TODO: could strawberry support UNSET default value?
         field.default_value = UNSET
         field.default = UNSET
-
     return field
 
 

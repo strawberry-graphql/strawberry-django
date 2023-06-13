@@ -107,7 +107,7 @@ class StrawberryDjangoField(
             default_factory=field.default_factory,
             deprecation_reason=getattr(field, "deprecation_reason", None),
             directives=getattr(field, "directives", []),
-            django_name=getattr(field, "django_name", field.name),
+            django_name=getattr(field, "django_name", None),
         )
         new_field.is_auto = getattr(field, "is_auto", False)
         new_field.origin_django_type = getattr(field, "origin_django_type", None)
