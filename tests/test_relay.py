@@ -1,6 +1,6 @@
+import pytest
 import strawberry
 from strawberry import auto, relay
-from strawberry.schema.config import StrawberryConfig
 
 import strawberry_django
 
@@ -17,11 +17,14 @@ def test_relay_with_nodeid():
     class Query:
         user: UserType
 
-    schema = strawberry.Schema(query=Query, config=StrawberryConfig(False))
+    schema = strawberry.Schema(query=Query)
+    # test print_schema
     str(schema)
-    assert UserType._id_attr == "id"
+    # check that resolve_id_attr resolves correctly
+    assert UserType.resolve_id_attr() == "id"
 
 
+@pytest.mark.xfail(reason="See strawberry PR: #2844")
 def test_relay_with_resolve_id():
     @strawberry_django.type(User)
     class UserType(relay.Node):
@@ -35,7 +38,10 @@ def test_relay_with_resolve_id():
     class Query:
         user: UserType
 
-    assert UserType._id_attr is None
+    # Crash because of early check
+    schema = strawberry.Schema(query=Query)
+    # test print_schema
+    str(schema)
 
 
 def test_relay_with_resolve_id_and_node_id():
@@ -52,6 +58,8 @@ def test_relay_with_resolve_id_and_node_id():
     class Query:
         user: UserType
 
-    schema = strawberry.Schema(query=Query, config=StrawberryConfig(False))
+    schema = strawberry.Schema(query=Query)
+    # test print_schema
     str(schema)
-    assert UserType._id_attr == "id"
+    # check that resolve_id_attr resolves correctly
+    assert UserType.resolve_id_attr() == "id"

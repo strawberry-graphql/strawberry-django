@@ -87,13 +87,13 @@ def is_similar_django_type(a, b):
 
 # dirty workaround, but similar to the one of dataclasses
 # it would be better to use dataclasses.fields
-def _is_not_classvar(annotation, namespace):
+def _is_classvar(annotation, namespace):
     if isinstance(annotation, str):
         if annotation.startswith("ClassVar["):
             annotation = namespace["ClassVar"]
         elif annotation.startswith("typing.ClassVar["):
             annotation = namespace["typing"].ClassVar
-    return annotation is not ClassVar
+    return annotation is ClassVar
 
 
 def get_annotations(cls):
@@ -105,7 +105,7 @@ def get_annotations(cls):
                 {
                     k: StrawberryAnnotation(v, namespace=namespace)
                     for k, v in filter(
-                        lambda item: _is_not_classvar(item[1], namespace),
+                        lambda item: not _is_classvar(item[1], namespace),
                         c.__annotations__.items(),
                     )
                 },
