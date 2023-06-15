@@ -1091,13 +1091,13 @@ files = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.165.0"
+version = "0.186.0"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "strawberry_graphql-0.165.0-py3-none-any.whl", hash = "sha256:186f859a237b77af8b22607cf5cb456a8cd5d7d09eb6038a2b4ffa62b4be0ee3"},
-    {file = "strawberry_graphql-0.165.0.tar.gz", hash = "sha256:bffd3c28f764355d1a3b1bef0c8709639fbde3beba2491b0da912a59a27a243f"},
+    {file = "strawberry_graphql-0.186.0-py3-none-any.whl", hash = "sha256:6a788de7f6168cff0577d380070ddc0e79515505c112cf9e9c3396df7374c6c3"},
+    {file = "strawberry_graphql-0.186.0.tar.gz", hash = "sha256:5dddc9deba323a4fe54ecad85e0a6c8cc249cbca3b5d17c34b9c8a55534f9f05"},
 ]
 
 [package.dependencies]
@@ -1105,22 +1105,24 @@ astunparse = {version = ">=1.6.3,<2.0.0", markers = "python_version < \"3.9\""}
 "backports.cached-property" = {version = ">=1.0.2,<2.0.0", markers = "python_version < \"3.8\""}
 graphql-core = ">=3.2.0,<3.3.0"
 python-dateutil = ">=2.7.0,<3.0.0"
-typing_extensions = ">=3.7.4,<5.0.0"
+typing_extensions = ">=4.1.0"
 
 [package.extras]
 aiohttp = ["aiohttp (>=3.7.4.post0,<4.0.0)"]
-asgi = ["python-multipart (>=0.0.5,<0.0.6)", "starlette (>=0.18.0)"]
+asgi = ["python-multipart (>=0.0.5,<0.0.7)", "starlette (>=0.18.0)"]
 chalice = ["chalice (>=1.22,<2.0)"]
 channels = ["asgiref (>=3.2,<4.0)", "channels (>=3.0.5)"]
-cli = ["click (>=7.0,<9.0)", "libcst (>=0.4.7)", "pygments (>=2.3,<3.0)", "rich (>=12.0.0)"]
+cli = ["libcst (>=0.4.7)", "pygments (>=2.3,<3.0)", "rich (>=12.0.0)", "typer (>=0.7.0)"]
 debug = ["libcst (>=0.4.7)", "rich (>=12.0.0)"]
-debug-server = ["click (>=7.0,<9.0)", "libcst (>=0.4.7)", "pygments (>=2.3,<3.0)", "python-multipart (>=0.0.5,<0.0.6)", "rich (>=12.0.0)", "starlette (>=0.18.0)", "uvicorn (>=0.11.6,<0.22.0)"]
+debug-server = ["libcst (>=0.4.7)", "pygments (>=2.3,<3.0)", "python-multipart (>=0.0.5,<0.0.7)", "rich (>=12.0.0)", "starlette (>=0.18.0)", "typer (>=0.7.0)", "uvicorn (>=0.11.6,<0.22.0)"]
 django = ["Django (>=3.2)", "asgiref (>=3.2,<4.0)"]
-fastapi = ["fastapi (>=0.65.2)", "python-multipart (>=0.0.5,<0.0.6)"]
+fastapi = ["fastapi (>=0.65.2)", "python-multipart (>=0.0.5,<0.0.7)"]
 flask = ["flask (>=1.1)"]
 opentelemetry = ["opentelemetry-api (<2)", "opentelemetry-sdk (<2)"]
 pydantic = ["pydantic (<2)"]
+pyinstrument = ["pyinstrument (>=4.0.0)"]
 sanic = ["sanic (>=20.12.2)"]
+starlite = ["starlite (>=1.48.0)"]
 
 [[package]]
 name = "tomli"
@@ -1255,4 +1257,4 @@ debug-toolbar = ["django-debug-toolbar"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.7,<4.0"
-content-hash = "1e896a91d8beb8338944c70ffca86612b98dcb29167e8bbadbcb5fb28eec5110"
+content-hash = "f98dca0d3f35a240828ec079101e14cc5a37190c4a8febdf6af91dba3b5ef7e8"
