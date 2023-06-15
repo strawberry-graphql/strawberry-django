@@ -104,10 +104,8 @@ def get_annotations(cls):
             annotations.update(
                 {
                     k: StrawberryAnnotation(v, namespace=namespace)
-                    for k, v in filter(
-                        lambda item: not _is_classvar(item[1], namespace),
-                        c.__annotations__.items(),
-                    )
+                    for k, v in c.__annotations__.items()
+                    if not _is_classvar(v, namespace)
                 },
             )
     return annotations
