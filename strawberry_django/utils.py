@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import sys
 import warnings
-from typing import Dict
+from typing import ClassVar, Dict
 
 from django.db import models
 from strawberry.annotation import StrawberryAnnotation
@@ -85,15 +85,27 @@ def is_similar_django_type(a, b):
     return True
 
 
+# dirty workaround, but similar to the one of dataclasses
+# it would be better to use dataclasses.fields
+def _is_classvar(annotation, namespace):
+    if isinstance(annotation, str):
+        if annotation.startswith("ClassVar["):
+            annotation = namespace["ClassVar"]
+        elif annotation.startswith("typing.ClassVar["):
+            annotation = namespace["typing"].ClassVar
+    return annotation is ClassVar
+
+
 def get_annotations(cls):
     annotations: Dict[str, StrawberryAnnotation] = {}
-    namespace = sys.modules[cls.__module__].__dict__
     for c in reversed(cls.__mro__):
+        namespace = sys.modules[c.__module__].__dict__
         if "__annotations__" in c.__dict__:
             annotations.update(
                 {
                     k: StrawberryAnnotation(v, namespace=namespace)
                     for k, v in c.__annotations__.items()
+                    if not _is_classvar(v, namespace)
                 },
             )
     return annotations
