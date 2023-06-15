@@ -6,6 +6,30 @@ import strawberry_django
 
 from .models import User
 
+# textdedent not possible because of comments
+expected_schema = '''
+"""
+The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+"""
+scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
+
+"""An object with a Globally Unique ID"""
+interface Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+}
+
+type Query {
+  user: UserType!
+}
+
+type UserType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+}
+'''  # noqa: E501
+
 
 def test_relay_with_nodeid():
     @strawberry_django.type(User)
@@ -19,7 +43,8 @@ def test_relay_with_nodeid():
 
     schema = strawberry.Schema(query=Query)
     # test print_schema
-    str(schema)
+
+    assert str(schema) == expected_schema.strip()
     # check that resolve_id_attr resolves correctly
     assert UserType.resolve_id_attr() == "id"
 
@@ -41,7 +66,7 @@ def test_relay_with_resolve_id():
     # Crash because of early check
     schema = strawberry.Schema(query=Query)
     # test print_schema
-    str(schema)
+    assert str(schema) == expected_schema.strip()
 
 
 def test_relay_with_resolve_id_and_node_id():
@@ -60,6 +85,6 @@ def test_relay_with_resolve_id_and_node_id():
 
     schema = strawberry.Schema(query=Query)
     # test print_schema
-    str(schema)
+    assert str(schema) == expected_schema.strip()
     # check that resolve_id_attr resolves correctly
     assert UserType.resolve_id_attr() == "id"
