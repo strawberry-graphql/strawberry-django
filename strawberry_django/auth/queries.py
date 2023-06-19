@@ -2,9 +2,9 @@ import strawberry_django
 
 
 def resolve_current_user(info):
-    if not info.context.request.user.is_authenticated:
+    if not info.context["request"].user.is_authenticated:
         return None
-    return info.context.request.user
+    return info.context["request"].user
 
 
 def current_user():
