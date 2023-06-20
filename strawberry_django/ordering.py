@@ -1,11 +1,23 @@
-from __future__ import annotations
-
 import enum
-from typing import TYPE_CHECKING, Callable, Mapping, Optional, Sequence, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import strawberry
+from django.db import models
 from strawberry import UNSET
+from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
+from strawberry.type import StrawberryType
+from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
 
@@ -21,11 +33,7 @@ from . import utils
 from .arguments import argument
 
 if TYPE_CHECKING:
-    from django.db import models
     from django.db.models import QuerySet
-    from strawberry.arguments import StrawberryArgument
-    from strawberry.type import StrawberryType
-    from strawberry.types import Info
 
 
 _T = TypeVar("_T")
@@ -56,7 +64,7 @@ def generate_order_args(order: WithStrawberryObjectDefinition, prefix: str = "")
     return args
 
 
-def apply(order: WithStrawberryObjectDefinition | None, queryset: _QS) -> _QS:
+def apply(order: Optional[WithStrawberryObjectDefinition], queryset: _QS) -> _QS:
     if order in (None, strawberry.UNSET):
         return queryset
 
@@ -67,7 +75,7 @@ def apply(order: WithStrawberryObjectDefinition | None, queryset: _QS) -> _QS:
 
 
 class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
-    def __init__(self, order: type | UnsetType | None = UNSET, **kwargs):
+    def __init__(self, order: Union[type, UnsetType, None] = UNSET, **kwargs):
         if order and not is_strawberry_type(order):
             raise TypeError("order needs to be a strawberry type")
 
@@ -75,7 +83,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         super().__init__(**kwargs)
 
     @property
-    def arguments(self) -> list[StrawberryArgument]:
+    def arguments(self) -> List[StrawberryArgument]:
         arguments = []
         if self.base_resolver is None and self.is_list:
             order = self.get_order()
@@ -84,19 +92,19 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         return super().arguments + arguments
 
     @arguments.setter
-    def arguments(self, value: list[StrawberryArgument]):
+    def arguments(self, value: List[StrawberryArgument]):
         args_prop = super(StrawberryDjangoFieldOrdering, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
 
     def copy_with(
         self,
-        type_var_map: Mapping[TypeVar, StrawberryType | type],
+        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
     ) -> Self:
         new_field = super().copy_with(type_var_map)
         new_field.order = self.order
         return new_field
 
-    def get_order(self) -> type[WithStrawberryObjectDefinition] | None:
+    def get_order(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
         order = self.order
         if order is None:
             return None
@@ -110,7 +118,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
     def apply_order(
         self,
         queryset: _QS,
-        order: WithStrawberryObjectDefinition | None = None,
+        order: Optional[WithStrawberryObjectDefinition] = None,
     ) -> _QS:
         return apply(order, queryset)
 
@@ -118,7 +126,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         self,
         queryset: _QS,
         info: Info,
-        order: WithStrawberryObjectDefinition | None = None,
+        order: Optional[WithStrawberryObjectDefinition] = None,
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
@@ -133,11 +141,11 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
     ),
 )
 def order(
-    model: type[models.Model],
+    model: Type[models.Model],
     *,
-    name: str | None = None,
-    description: str | None = None,
-    directives: Sequence[object] | None = (),
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    directives: Optional[Sequence[object]] = (),
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
         for fname, type_ in cls.__annotations__.items():

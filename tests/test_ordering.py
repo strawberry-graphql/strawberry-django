@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import pytest
 import strawberry
@@ -18,7 +18,7 @@ class ColorOrder:
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
     name: auto
-    color: ColorOrder | None
+    color: Optional[ColorOrder]
 
 
 @strawberry_django.type(models.Fruit, order=FruitOrder)

@@ -265,7 +265,7 @@ def test_pk_inserted_for_root_field_only():
     @strawberry_django.type(models.User)
     class UserType(models.Group):
         name: strawberry.auto
-        group: GroupType | None
+        group: Optional[GroupType]
         get_group: GroupType
         group_prop: GroupType
 

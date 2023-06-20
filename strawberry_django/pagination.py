@@ -1,9 +1,11 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Mapping, TypeVar
+from typing import TYPE_CHECKING, List, Mapping, Optional, TypeVar, Union
 
 import strawberry
+from strawberry.arguments import StrawberryArgument
+from strawberry.type import StrawberryType
+from strawberry.types import Info
 from strawberry.unset import UNSET, UnsetType
+from typing_extensions import Self
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 
@@ -12,10 +14,6 @@ from .arguments import argument
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
-    from strawberry.arguments import StrawberryArgument
-    from strawberry.type import StrawberryType
-    from strawberry.types import Info
-    from typing_extensions import Self
 
 _QS = TypeVar("_QS", bound="QuerySet")
 
@@ -26,7 +24,7 @@ class OffsetPaginationInput:
     limit: int = -1
 
 
-def apply(pagination: type | None, queryset: _QS) -> _QS:
+def apply(pagination: Optional[type], queryset: _QS) -> _QS:
     if pagination in (None, strawberry.UNSET):
         return queryset
 
@@ -40,12 +38,12 @@ def apply(pagination: type | None, queryset: _QS) -> _QS:
 
 
 class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
-    def __init__(self, pagination: bool | UnsetType = UNSET, **kwargs):
+    def __init__(self, pagination: Union[bool, UnsetType] = UNSET, **kwargs):
         self.pagination = pagination
         super().__init__(**kwargs)
 
     @property
-    def arguments(self) -> list[StrawberryArgument]:
+    def arguments(self) -> List[StrawberryArgument]:
         arguments = []
         if self.base_resolver is None and self.is_list:
             pagination = self.get_pagination()
@@ -56,19 +54,19 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         return super().arguments + arguments
 
     @arguments.setter
-    def arguments(self, value: list[StrawberryArgument]):
+    def arguments(self, value: List[StrawberryArgument]):
         args_prop = super(StrawberryDjangoPagination, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
 
     def copy_with(
         self,
-        type_var_map: Mapping[TypeVar, StrawberryType | type],
+        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
     ) -> Self:
         new_field = super().copy_with(type_var_map)
         new_field.pagination = self.pagination
         return new_field
 
-    def get_pagination(self) -> type | None:
+    def get_pagination(self) -> Optional[type]:
         has_pagination = self.pagination
 
         if isinstance(has_pagination, UnsetType):
@@ -79,14 +77,14 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
 
         return OffsetPaginationInput if has_pagination else None
 
-    def apply_pagination(self, queryset: _QS, pagination: type | None = None) -> _QS:
+    def apply_pagination(self, queryset: _QS, pagination: Optional[type] = None) -> _QS:
         return apply(pagination, queryset)
 
     def get_queryset(
         self,
         queryset: _QS,
         info: Info,
-        pagination: type | None = None,
+        pagination: Optional[type] = None,
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
