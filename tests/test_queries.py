@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import pytest
 import strawberry
@@ -20,7 +20,7 @@ def user_group(users, groups):  # noqa: PT004
 class User:
     id: auto
     name: auto
-    group: "Group"
+    group: Optional["Group"]
 
 
 @strawberry_django.type(models.Group)

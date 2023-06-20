@@ -32,10 +32,7 @@ class Child:
 
 
 def test_relation():
-    assert [
-        (f.name, f.type or f.child.type, f.is_list)
-        for f in Parent._type_definition.fields
-    ] == [
+    assert [(f.name, f.type, f.is_list) for f in Parent._type_definition.fields] == [
         ("id", strawberry.ID, False),
         ("name", str, False),
         ("children", StrawberryList(Child), True),
@@ -43,10 +40,7 @@ def test_relation():
 
 
 def test_reversed_relation():
-    assert [
-        (f.name, f.type or f.child.type, f.is_list)
-        for f in Child._type_definition.fields
-    ] == [
+    assert [(f.name, f.type, f.is_list) for f in Child._type_definition.fields] == [
         ("id", strawberry.ID, False),
         ("name", str, False),
         ("parents", StrawberryList(Parent), True),

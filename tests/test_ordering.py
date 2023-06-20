@@ -18,7 +18,7 @@ class ColorOrder:
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
     name: auto
-    color: ColorOrder
+    color: ColorOrder | None
 
 
 @strawberry_django.type(models.Fruit, order=FruitOrder)

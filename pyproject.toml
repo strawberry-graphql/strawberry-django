@@ -29,9 +29,8 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.2"
-strawberry-graphql = ">=0.184.0"
+strawberry-graphql = ">=0.186.3"
 django-debug-toolbar = { version = ">=3.4", optional = true }
-
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.21.0"
@@ -42,7 +41,6 @@ pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 pytest-mock = "^3.5.1"
 django-debug-toolbar = "^3.2.4"
-#docs requires
 mkdocs = "^1.4.2"
 mkdocs-markdownextradata-plugin = "^0.2.5"
 mkdocs-material = "^9.0.4"
@@ -105,7 +103,7 @@ select = [
 ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003"]
 # FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
 unfixable = ["UP006"]
-target-version = "py38"
+target-version = "py37"
 exclude = [
   ".eggs",
   ".git",
@@ -145,6 +143,27 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pyright]
+pythonVersion = "3.7"
+useLibraryCodeForTypes = true
+venvPath = "."
+venv = ".venv"
+exclude = [".venv", "**/migrations", "dist", "docs"]
+reportCallInDefaultInitializer = "warning"
+reportMatchNotExhaustive = "warning"
+reportMissingSuperCall = "warning"
+reportOverlappingOverload = "warning"
+reportUninitializedInstanceVariable = "none"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUntypedNamedTuple = "error"
+reportUnusedExpression = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+strictDictionaryInference = true
+strictListInference = true
+strictSetInference = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.django_settings"

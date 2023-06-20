@@ -1,14 +1,14 @@
 import datetime
 import decimal
 import uuid
-from typing import TYPE_CHECKING, Any, List, NewType, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
 
 import django
 import strawberry
+from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
-from django.db.models.fields.reverse_related import ForeignObjectRel
+from django.db.models.fields import files, json, related, reverse_related
 from strawberry import UNSET
-from strawberry.auto import StrawberryAuto
 from strawberry.scalars import JSON
 
 from strawberry_django import filters
@@ -60,7 +60,14 @@ class ManyToManyInput:
     set: Optional[List[strawberry.ID]] = UNSET  # noqa: A003
 
 
-field_type_map = {
+field_type_map: Dict[
+    Union[
+        Type[fields.Field],
+        Type[related.RelatedField],
+        Type[reverse_related.ForeignObjectRel],
+    ],
+    type,
+] = {
     fields.AutoField: strawberry.ID,
     fields.BigAutoField: strawberry.ID,
     fields.BigIntegerField: int,
@@ -70,13 +77,10 @@ field_type_map = {
     fields.DateTimeField: datetime.datetime,
     fields.DecimalField: decimal.Decimal,
     fields.EmailField: str,
-    fields.files.FileField: DjangoFileType,
     fields.FilePathField: str,
     fields.FloatField: float,
-    fields.files.ImageField: DjangoImageType,
     fields.GenericIPAddressField: str,
     fields.IntegerField: int,
-    fields.NullBooleanField: Optional[bool],
     fields.PositiveIntegerField: int,
     fields.PositiveSmallIntegerField: int,
     fields.SlugField: str,
@@ -86,18 +90,24 @@ field_type_map = {
     fields.TimeField: datetime.time,
     fields.URLField: str,
     fields.UUIDField: uuid.UUID,
-    fields.related.ForeignKey: DjangoModelType,
-    fields.reverse_related.ManyToOneRel: List[DjangoModelType],
-    fields.related.OneToOneField: DjangoModelType,
-    fields.reverse_related.OneToOneRel: DjangoModelType,
-    fields.related.ManyToManyField: List[DjangoModelType],
-    fields.reverse_related.ManyToManyRel: List[DjangoModelType],
+    files.FileField: DjangoFileType,
+    files.ImageField: DjangoImageType,
+    related.ForeignKey: DjangoModelType,
+    related.ManyToManyField: List[DjangoModelType],
+    related.OneToOneField: DjangoModelType,
+    reverse_related.ManyToManyRel: List[DjangoModelType],
+    reverse_related.ManyToOneRel: List[DjangoModelType],
+    reverse_related.OneToOneRel: DjangoModelType,
 }
+
+if hasattr(fields, "NullBooleanField"):
+    # NullBooleanField was deprecated and will soon be removed
+    field_type_map[fields.NullBooleanField] = Optional[bool]  # type: ignore
 
 if django.VERSION >= (3, 1):
     field_type_map.update(
         {
-            fields.json.JSONField: JSON,
+            json.JSONField: JSON,
             fields.PositiveBigIntegerField: int,
         },
     )
@@ -106,10 +116,15 @@ try:
     from django.contrib.gis import geos
     from django.contrib.gis.db import models as geos_fields
 
-except django.core.exceptions.ImproperlyConfigured:
+except ImproperlyConfigured:
     # If gdal is not available, skip.
-    pass
-
+    Point = None
+    LineString = None
+    LinearRing = None
+    Polygon = None
+    MultiPoint = None
+    MultilineString = None
+    MultiPolygon = None
 else:
     Point = strawberry.scalar(
         NewType("Point", Tuple[float, float, Optional[float]]),
@@ -184,34 +199,44 @@ else:
     )
 
 
-input_field_type_map = {
-    fields.files.FileField: NotImplemented,
-    fields.files.ImageField: NotImplemented,
-    fields.related.ForeignKey: OneToManyInput,
-    fields.reverse_related.ManyToOneRel: ManyToOneInput,
-    fields.related.OneToOneField: OneToOneInput,
-    fields.reverse_related.OneToOneRel: OneToOneInput,
-    fields.related.ManyToManyField: ManyToManyInput,
-    fields.reverse_related.ManyToManyRel: ManyToManyInput,
+input_field_type_map: Dict[
+    Union[
+        Type[fields.Field],
+        Type[related.RelatedField],
+        Type[reverse_related.ForeignObjectRel],
+    ],
+    type,
+] = {
+    files.FileField: NotImplemented,
+    files.ImageField: NotImplemented,
+    related.ForeignKey: OneToManyInput,
+    related.ManyToManyField: ManyToManyInput,
+    related.OneToOneField: OneToOneInput,
+    reverse_related.ManyToManyRel: ManyToManyInput,
+    reverse_related.ManyToOneRel: ManyToOneInput,
+    reverse_related.OneToOneRel: OneToOneInput,
 }
 
 
 def resolve_model_field_type(
-    model_field: Union[Field, ForeignObjectRel],
+    model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoType",
 ):
     model_field_type = type(model_field)
     field_type: Any = None
+
     if django_type.is_filter and model_field.is_relation:
         field_type = filters.DjangoModelFilterInput
     elif django_type.is_input:
         field_type = input_field_type_map.get(model_field_type, None)
+
     if field_type is None:
         field_type = field_type_map.get(model_field_type, NotImplemented)
     if field_type is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",
         )
+
     # TODO: could this be moved into filters.py
     if (
         django_type.is_filter == "lookups"
@@ -224,11 +249,11 @@ def resolve_model_field_type(
 
 
 def resolve_model_field_name(
-    model_field: Union[Field, ForeignObjectRel],
+    model_field: Union[Field, reverse_related.ForeignObjectRel],
     is_input=False,
     is_filter=False,
 ):
-    if isinstance(model_field, ForeignObjectRel):
+    if isinstance(model_field, reverse_related.ForeignObjectRel):
         return model_field.get_accessor_name()
 
     if is_input and not is_filter:
@@ -240,7 +265,7 @@ def resolve_model_field_name(
 def get_model_field(model: Type[Model], field_name: str):
     try:
         return model._meta.get_field(field_name)
-    except django.core.exceptions.FieldDoesNotExist as e:
+    except FieldDoesNotExist as e:
         model_field_names = []
 
         # we need to iterate through all the fields because reverse relation
@@ -260,29 +285,38 @@ def get_model_field(model: Type[Model], field_name: str):
         raise
 
 
-def is_auto(type_):
-    return isinstance(type_, StrawberryAuto)
-
-
-def is_optional(model_field, is_input, partial):
+def is_optional(
+    model_field: Union[Field, reverse_related.ForeignObjectRel],
+    is_input: bool,
+    partial: bool,
+):
     if partial:
         return True
+
     if not model_field:
         return False
+
     if is_input:
         if isinstance(model_field, fields.AutoField):
             return True
-        if isinstance(model_field, fields.reverse_related.OneToOneRel):
+
+        if isinstance(model_field, reverse_related.OneToOneRel):
             return model_field.null
+
         if model_field.many_to_many or model_field.one_to_many:
             return True
-        has_default = model_field.default is not fields.NOT_PROVIDED
-        if model_field.blank or has_default:
+
+        if (
+            getattr(model_field, "blank", None)
+            or getattr(model_field, "default", None) is not fields.NOT_PROVIDED
+        ):
             return True
+
     if not isinstance(
         model_field,
-        (fields.reverse_related.ManyToManyRel, fields.reverse_related.ManyToOneRel),
-    ) or isinstance(model_field, fields.reverse_related.OneToOneRel):
+        (reverse_related.ManyToManyRel, reverse_related.ManyToOneRel),
+    ) or isinstance(model_field, reverse_related.OneToOneRel):
         # OneToOneRel is the subclass of ManyToOneRel, so additional check is needed
         return model_field.null
+
     return False

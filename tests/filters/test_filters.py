@@ -1,6 +1,6 @@
 import textwrap
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import pytest
 import strawberry
@@ -21,7 +21,7 @@ class ColorFilter:
 class FruitFilter:
     id: auto
     name: auto
-    color: ColorFilter
+    color: Optional[ColorFilter]
 
 
 @strawberry.enum
@@ -265,7 +265,7 @@ def test_pk_inserted_for_root_field_only():
     @strawberry_django.type(models.User)
     class UserType(models.Group):
         name: strawberry.auto
-        group: GroupType
+        group: GroupType | None
         get_group: GroupType
         group_prop: GroupType
 

@@ -1,4 +1,3 @@
-import pytest
 import strawberry
 from strawberry import auto, relay
 
@@ -49,15 +48,14 @@ def test_relay_with_nodeid():
     assert UserType.resolve_id_attr() == "id"
 
 
-@pytest.mark.xfail(reason="See strawberry PR: #2844")
-def test_relay_with_resolve_id():
+def test_relay_with_resolve_id_attr():
     @strawberry_django.type(User)
     class UserType(relay.Node):
         name: auto
 
         @classmethod
-        def resolve_id(cls, root):
-            return root.id
+        def resolve_id_attr(cls):
+            return id
 
     @strawberry.type
     class Query:

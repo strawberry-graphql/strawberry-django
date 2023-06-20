@@ -3,23 +3,47 @@ from __future__ import annotations
 import functools
 import inspect
 from enum import Enum
-from typing import TYPE_CHECKING, Generic, List, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    List,
+    Mapping,
+    Sequence,
+    TypeVar,
+    cast,
+)
 
 import strawberry
-from django.db.models.sql.query import get_field_names_from_opts
+from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
 from strawberry import UNSET
+from strawberry.field import StrawberryField, field
+from strawberry.unset import UnsetType
+from typing_extensions import Self, dataclass_transform
 
-from . import utils
 from .arguments import argument
+from .fields.base import StrawberryDjangoFieldBase
+from .utils import (
+    WithStrawberryDjangoObjectDefinition,
+    WithStrawberryObjectDefinition,
+    fields,
+    is_django_type,
+    is_strawberry_type,
+    unwrap_type,
+)
 
 if TYPE_CHECKING:
     from types import FunctionType
 
+    from django.db import models
     from django.db.models import QuerySet
     from strawberry.arguments import StrawberryArgument
+    from strawberry.type import StrawberryType
     from strawberry.types import Info
 
 T = TypeVar("T")
+_QS = TypeVar("_QS", bound="QuerySet")
 
 
 @strawberry.input
@@ -61,47 +85,25 @@ lookup_name_conversion_map = {
 }
 
 
-def filter(model, *, name=None, lookups=False):  # noqa: A001
-    def wrapper(cls):
-        from .type import process_type
-
-        is_filter = "lookups" if lookups else True
-        return process_type(
-            cls,
-            model,
-            is_input=True,
-            partial=True,
-            is_filter=is_filter,
-        )
-
-    return wrapper
-
-
-def filter_deprecated(model, *, name=None, lookups=False):
-    utils.deprecated(
-        (
-            "'strawberry_django.filter' is deprecated,"
-            " use 'strawberry_django.filters.filter' instead"
-        ),
-        stacklevel=2,
-    )
-    return filter(model, name=name, lookups=lookups)
-
-
-def build_filter_kwargs(filters):
+def build_filter_kwargs(
+    filters: WithStrawberryObjectDefinition,
+) -> tuple[dict[str, Any], list[Callable]]:
     filter_kwargs = {}
     filter_methods = []
-    django_model = utils.get_django_model(filters)
-    for field in utils.fields(filters):
-        field_name = field.name
+    django_model = filters._django_type.model if is_django_type(filters) else None
+
+    for f in fields(filters):
+        field_name = f.name
         field_value = getattr(filters, field_name)
 
+        # Unset means we are not filtering this. None is still acceptable
         if field_value is UNSET:
             continue
 
         if isinstance(field_value, Enum):
             field_value = field_value.value
 
+        field_name = lookup_name_conversion_map.get(field_name, field_name)
         filter_method = getattr(filters, f"filter_{field_name}", None)
         if filter_method:
             filter_methods.append(filter_method)
@@ -112,22 +114,15 @@ def build_filter_kwargs(filters):
         ):
             continue
 
-        if field_name in lookup_name_conversion_map:
-            field_name = lookup_name_conversion_map[field_name]
-        if utils.is_strawberry_type(field_value):
-            (
-                subfield_filter_kwargs,
-                subfield_filter_methods,
-            ) = build_filter_kwargs(field_value)
-            for (
-                subfield_name,
-                subfield_value,
-            ) in subfield_filter_kwargs.items():
-                filter_kwargs[f"{field_name}__{subfield_name}"] = (
-                    subfield_value.value
-                    if isinstance(subfield_value, Enum)
-                    else subfield_value
-                )
+        if is_strawberry_type(field_value):
+            subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
+                field_value,
+            )
+            for subfield_name, subfield_value in subfield_filter_kwargs.items():
+                if isinstance(subfield_value, Enum):
+                    subfield_value = subfield_value.value  # noqa: PLW2901
+                filter_kwargs[f"{field_name}__{subfield_name}"] = subfield_value
+
             filter_methods.extend(subfield_filter_methods)
         else:
             filter_kwargs[field_name] = field_value
@@ -146,90 +141,137 @@ def function_allow_passing_info(filter_method: FunctionType) -> bool:
     )
 
 
-def apply(filters, queryset: QuerySet, info=UNSET, pk=UNSET) -> QuerySet:
-    if pk is not UNSET:
+def apply(
+    filters: object | None,
+    queryset: _QS,
+    info: Info | None = None,
+    pk: Any | None = None,
+) -> _QS:
+    if pk not in (None, strawberry.UNSET):
         queryset = queryset.filter(pk=pk)
 
-    if (
-        filters is UNSET
-        or filters is None
-        or not hasattr(filters, "_django_type")
-        or not filters._django_type.is_filter
-    ):
+    if filters in (None, strawberry.UNSET) or not is_django_type(filters):
         return queryset
 
+    # Custom filter function in the filters object
     filter_method = getattr(filters, "filter", None)
     if filter_method:
+        kwargs = {}
         if function_allow_passing_info(
             # Pass the original __func__ which is always the same
             getattr(filter_method, "__func__", filter_method),
         ):
-            return filter_method(queryset=queryset, info=info)
+            kwargs["info"] = info
 
-        return filter_method(queryset=queryset)
+        return filter_method(queryset=queryset, **kwargs)
 
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
     queryset = queryset.filter(**filter_kwargs)
     for filter_method in filter_methods:
+        kwargs = {}
         if function_allow_passing_info(
             # Pass the original __func__ which is always the same
             getattr(filter_method, "__func__", filter_method),
         ):
-            queryset = filter_method(queryset=queryset, info=info)
-        else:
-            queryset = filter_method(queryset=queryset)
+            kwargs["info"] = info
+
+        queryset = filter_method(queryset=queryset, **kwargs)
 
     return queryset
 
 
-class StrawberryDjangoFieldFilters:
-    def __init__(self, filters=UNSET, **kwargs):
+class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
+    def __init__(self, filters: type | UnsetType | None = UNSET, **kwargs):
+        if filters and not is_strawberry_type(filters):
+            raise TypeError("filters needs to be a strawberry type")
+
         self.filters = filters
         super().__init__(**kwargs)
 
     @property
     def arguments(self) -> list[StrawberryArgument]:
         arguments = []
-        if not self.base_resolver:
+        if self.base_resolver is None:
             filters = self.get_filters()
+            origin = cast(WithStrawberryObjectDefinition, self.origin)
             if (
                 self.django_model
                 and not self.is_list
-                and self.origin._type_definition.name == "Query"
+                and origin._type_definition.name == "Query"
             ):
-                arguments.append(argument("pk", strawberry.ID, is_optional=False))
-            elif self.django_model and not self.is_list:
-                # Do not add filters to non list fields
-                pass
-            elif filters and filters is not UNSET:
-                arguments.append(argument("filters", filters))
+                arguments.append(argument("pk", strawberry.ID))
+            elif filters is not None and self.is_list:
+                arguments.append(argument("filters", filters, is_optional=True))
+
         return super().arguments + arguments
 
-    def get_filters(self) -> type | None:
-        if self.filters is not UNSET:
-            return self.filters
-        type_ = utils.unwrap_type(self.type or self.child.type)
+    @arguments.setter
+    def arguments(self, value: list[StrawberryArgument]):
+        args_prop = super(StrawberryDjangoFieldFilters, self.__class__).arguments
+        return args_prop.fset(self, value)  # type: ignore
 
-        if utils.is_django_type(type_):
-            return type_._django_type.filters
-        return None
+    def copy_with(
+        self,
+        type_var_map: Mapping[TypeVar, StrawberryType | type],
+    ) -> Self:
+        new_field = super().copy_with(type_var_map)
+        new_field.filters = self.filters
+        return new_field
+
+    def get_filters(self) -> type[WithStrawberryObjectDefinition] | None:
+        filters = self.filters
+        if filters is None:
+            return None
+
+        if isinstance(filters, UnsetType):
+            type_ = unwrap_type(self.type)
+            filters = type_._django_type.filters if is_django_type(type_) else None
+
+        return filters
 
     def apply_filters(
         self,
-        queryset: QuerySet,
-        filters: type = UNSET,
-        pk=UNSET,
-        info: Info = UNSET,
-    ) -> QuerySet:
+        queryset: _QS,
+        filters: WithStrawberryDjangoObjectDefinition | None,
+        pk: Any | None,
+        info: Info,
+    ) -> _QS:
         return apply(filters, queryset, info, pk)
 
     def get_queryset(
         self,
-        queryset: QuerySet,
+        queryset: _QS,
         info: Info,
-        pk=UNSET,
-        filters: type = UNSET,
+        filters: WithStrawberryDjangoObjectDefinition | None = None,
+        pk: Any | None = None,
         **kwargs,
-    ):
+    ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
         return self.apply_filters(queryset, filters, pk, info)
+
+
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        field,
+    ),
+)
+def filter(  # noqa: A001
+    model: type[models.Model],
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    directives: Sequence[object] | None = (),
+    lookups: bool = False,
+) -> Callable[[T], T]:
+    from .type import input
+
+    return input(
+        model,
+        name=name,
+        description=description,
+        directives=directives,
+        is_filter="lookups" if lookups else True,
+        partial=True,
+    )

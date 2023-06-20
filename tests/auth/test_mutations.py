@@ -6,7 +6,7 @@ import strawberry
 from django.core.exceptions import ObjectDoesNotExist
 
 import strawberry_django
-from strawberry_django import auth, auto
+from strawberry_django import auth
 from tests import utils
 
 UserModel = django_auth.get_user_model()
@@ -14,15 +14,15 @@ UserModel = django_auth.get_user_model()
 
 @strawberry_django.type(UserModel)
 class User:
-    username: auto
-    email: auto
+    username: strawberry.auto
+    email: strawberry.auto
 
 
 @strawberry_django.input(UserModel)
 class UserInput:
-    username: auto
-    password: auto
-    email: auto
+    username: strawberry.auto
+    password: strawberry.auto
+    email: strawberry.auto
 
 
 @strawberry.type

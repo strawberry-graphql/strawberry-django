@@ -1,63 +1,98 @@
 ---
 name: Run Tests
 
+# yamllint disable-line rule:truthy
 on:
   push:
-    branches: [main, "v*"]
+    branches:
+      - main
+      - v*
   pull_request:
-    branches: [main, "v*"]
+    branches:
+      - main
+      - v*
   release:
-    types: [released]
+    types:
+      - released
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: -a
-
+  typing:
+    name: Typing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: poetry
+      - name: Install dependencies
+        run: |
+          poetry install -E debug-toolbar
+      - name: Check for pyright errors
+        uses: jakebailey/pyright-action@v1
+        with:
+          # FIXME: Enable this for the whole project once we fix
+          # all pyright issues on tests directory
+          extra-args: strawberry_django
   tests:
     runs-on: ubuntu-latest
     needs: lint
     strategy:
       fail-fast: false
       matrix:
-        django-version: ["3.2.*", "4.0.*", "4.1.*", "4.2.*"]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-        mode: ["std", "geos"]
-
+        django-version:
+          - 3.2.*
+          - 4.0.*
+          - 4.1.*
+          - 4.2.*
+        python-version:
+          - '3.8'
+          - '3.9'
+          - '3.10'
+          - '3.11'
+        mode:
+          - std
+          - geos
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Install OS Dependencies
         if: ${{ matrix.mode == 'geos' }}
         uses: daaku/gh-action-apt-install@v4
         with:
           packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
-
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Install Poetry
         uses: abatilo/actions-poetry@v2
-
       - name: Install & Cache Dependencies
         id: cache-deps
         uses: allanchain/poetry-cache-action@release
         with:
-          upload-strategy: "on-success"
+          upload-strategy: on-success
           cache-key-prefix: python${{ matrix.python-version }}-django${{ matrix.django-version }}
-
       - name: Install Django ${{ matrix.django-version }}
         if: ${{ !steps.cache-deps.outputs.cache-hit }}
         run: poetry run pip install  "django==${{ matrix.django-version }}"
-
       - name: Test with pytest
         run: poetry run pytest --showlocals -vvv

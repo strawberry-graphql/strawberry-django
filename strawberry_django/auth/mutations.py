@@ -1,9 +1,12 @@
-from typing import Any
+import functools
+from typing import TYPE_CHECKING
 
 import strawberry
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
+from strawberry.types import Info
 
+from strawberry_django.mutations import mutations
 from strawberry_django.mutations.fields import (
     DjangoCreateMutation,
     get_input_data,
@@ -13,7 +16,7 @@ from strawberry_django.resolvers import django_resolver
 
 
 @django_resolver
-def resolve_login(info, username: str, password: str):
+def resolve_login(info: Info, username: str, password: str):
     request = info.context.request
     user = auth.authenticate(request, username=username, password=password)
     if user is not None:
@@ -24,31 +27,26 @@ def resolve_login(info, username: str, password: str):
 
 
 @django_resolver
-def resolve_logout(info) -> bool:
+def resolve_logout(info: Info) -> bool:
     request = info.context.request
     ret = request.user.is_authenticated
     auth.logout(request)
     return ret
 
 
-def login() -> Any:
-    mutation = strawberry.mutation(resolver=resolve_login)
-    mutation.is_optional = True
-    return mutation
-
-
-def logout() -> bool:
-    return strawberry.mutation(resolver=resolve_logout)
-
-
-def register(user_type) -> Any:
-    return DjangoRegisterMutation(user_type)
-
-
 class DjangoRegisterMutation(DjangoCreateMutation):
-    def create(self, data):
+    def create(self, data: type):
+        assert self.input_type is not None
         input_data = get_input_data(self.input_type, data)
         validate_password(input_data["password"])
-        instance = self.django_model.objects.create_user(**input_data)
+        assert self.django_model
+        instance = self.django_model._default_manager.create_user(  # type: ignore
+            **input_data,
+        )
         update_m2m([instance], data)
         return instance
+
+
+login = functools.partial(strawberry.mutation, resolver=resolve_login)
+logout = functools.partial(strawberry.mutation, resolver=resolve_logout)
+register = mutations.create if TYPE_CHECKING else DjangoRegisterMutation

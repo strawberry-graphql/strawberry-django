@@ -1,10 +1,18 @@
+from typing import Dict, Tuple, Union, cast
+
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryList,
+    StrawberryOptional,
+)
 
 import strawberry_django
 from strawberry_django import fields
+from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.utils import WithStrawberryDjangoObjectDefinition
 
 
 class TypeModel(models.Model):
@@ -91,28 +99,33 @@ def test_relationship_inherit(testtype):
     class Type(Base):
         pass
 
-    assert [(f.name, f.type or f.child.type, f.is_list) for f in fields(Type)] == [
-        ("foreign_key", strawberry_django.DjangoModelType, False),
-        (
-            "related_foreign_key",
+    expected_fields: Dict[str, Tuple[Union[type, StrawberryContainer], bool]] = {
+        "foreign_key": (strawberry_django.DjangoModelType, False),
+        "related_foreign_key": (
             StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
-        ("one_to_one", strawberry_django.DjangoModelType, False),
-        (
-            "related_one_to_one",
+        "one_to_one": (strawberry_django.DjangoModelType, False),
+        "related_one_to_one": (
             StrawberryOptional(strawberry_django.DjangoModelType),
             False,
         ),
-        (
-            "many_to_many",
+        "many_to_many": (
             StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
-        (
-            "related_many_to_many",
+        "related_many_to_many": (
             StrawberryList(strawberry_django.DjangoModelType),
             True,
         ),
-        ("another_name", strawberry_django.DjangoModelType, False),
-    ]
+        "another_name": (strawberry_django.DjangoModelType, False),
+    }
+
+    all_fields = fields(cast(WithStrawberryDjangoObjectDefinition, Type))
+    assert len(all_fields) == len(expected_fields)
+
+    for f in all_fields:
+        expected_type, expected_is_list = expected_fields[f.name]
+        assert isinstance(f, StrawberryDjangoField)
+        assert f.is_list == expected_is_list
+        assert f.type == expected_type

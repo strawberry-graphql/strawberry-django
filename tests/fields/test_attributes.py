@@ -13,8 +13,7 @@ def test_default_django_name():
     @strawberry_django.type(FieldAttributeModel)
     class Type:
         field: auto
-        # TODO: should this fail?
-        field2 = strawberry_django.field(field_name="field")
+        field2: auto = strawberry_django.field(field_name="field")
 
     assert [(f.name, f.django_name) for f in Type._type_definition.fields] == [
         ("field", "field"),
