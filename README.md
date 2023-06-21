@@ -15,12 +15,12 @@ pip install strawberry-graphql-django
 
 Full documentation is available under [docs](https://strawberry-graphql.github.io/strawberry-graphql-django/) github folder.
 
-* [x] GraphQL type generation from models
-* [x] Filtering, pagination and ordering
-* [x] Basic create, retrieve, update and delete (CRUD) types and mutations
-* [x] Basic Django auth support, current user query, login and logout mutations
-* [x] Django sync and async views
-* [x] Unit test integration
+- [x] GraphQL type generation from models
+- [x] Filtering, pagination and ordering
+- [x] Basic create, retrieve, update and delete (CRUD) types and mutations
+- [x] Basic Django auth support, current user query, login and logout mutations
+- [x] Django sync and async views
+- [x] Unit test integration
 
 ## Basic Usage
 
@@ -31,8 +31,13 @@ from django.db import models
 class Fruit(models.Model):
     """A tasty treat"""
     name = models.CharField(max_length=20)
-    color = models.ForeignKey('Color', blank=True, null=True,
-            related_name='fruits', on_delete=models.CASCADE)
+    color = models.ForeignKey(
+        'Color',
+        on_delete=models.CASCADE,
+        related_name='fruits',
+        blank=True,
+        null=True,
+    )
 
 class Color(models.Model):
     name = models.CharField(
@@ -44,6 +49,7 @@ class Color(models.Model):
 ```python
 # types.py
 import strawberry
+import strawberry.django
 from strawberry import auto
 from typing import List
 from . import models
@@ -64,6 +70,7 @@ class Color:
 ```python
 # schema.py
 import strawberry
+import strawberry.django
 from typing import List
 from .types import Fruit
 
