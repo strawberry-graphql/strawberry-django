@@ -36,7 +36,12 @@ class FieldTypesModel(models.Model):
     generic_ip_address = models.GenericIPAddressField()
     integer = models.IntegerField()
     image = models.ImageField()
-    null_boolean = models.NullBooleanField()
+    # NullBooleanField was deprecated and will soon be removed
+    null_boolean = (
+        models.NullBooleanField()  # type: ignore
+        if hasattr(models, "NullBooleanField")
+        else models.BooleanField(null=True)
+    )
     positive_big_integer = models.PositiveBigIntegerField()
     positive_integer = models.PositiveIntegerField()
     positive_small_integer = models.PositiveSmallIntegerField()

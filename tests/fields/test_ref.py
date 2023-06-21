@@ -1,6 +1,6 @@
 from django.db import models
 from strawberry import auto
-from strawberry.type import get_object_definition_strict
+from strawberry.type import get_object_definition
 
 import strawberry_django
 
@@ -19,7 +19,9 @@ def test_forward_reference():
     class MyBytes(bytes):
         pass
 
-    assert [(f.name, f.type) for f in get_object_definition_strict(Type).fields] == [
+    assert [
+        (f.name, f.type) for f in get_object_definition(Type, strict=True).fields
+    ] == [
         ("bytes0", MyBytes),
         ("string", str),
     ]

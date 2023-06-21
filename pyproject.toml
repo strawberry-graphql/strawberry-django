@@ -29,7 +29,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.2"
-strawberry-graphql = ">=0.187.1"
+strawberry-graphql = ">=0.187.3"
 django-debug-toolbar = { version = ">=3.4", optional = true }
 
 [tool.poetry.group.dev.dependencies]

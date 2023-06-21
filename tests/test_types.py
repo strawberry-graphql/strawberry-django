@@ -3,7 +3,7 @@ import strawberry
 from django.test import override_settings
 from strawberry import auto
 from strawberry.object_type import StrawberryObjectDefinition
-from strawberry.type import get_object_definition_strict
+from strawberry.type import get_object_definition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
@@ -59,7 +59,7 @@ def test_custom_field_cls():
 
     assert all(
         isinstance(field, CustomStrawberryDjangoField)
-        for field in get_object_definition_strict(UserType).fields
+        for field in get_object_definition(UserType, strict=True).fields
     )
 
 
@@ -75,15 +75,15 @@ def test_custom_field_cls__explicit_field_type():
         name: auto = strawberry_django.field()
 
     assert isinstance(
-        get_object_definition_strict(UserType).get_field("id"),
+        get_object_definition(UserType, strict=True).get_field("id"),
         CustomStrawberryDjangoField,
     )
     assert isinstance(
-        get_object_definition_strict(UserType).get_field("name"),
+        get_object_definition(UserType, strict=True).get_field("name"),
         StrawberryDjangoField,
     )
     assert not isinstance(
-        get_object_definition_strict(UserType).get_field("name"),
+        get_object_definition(UserType, strict=True).get_field("name"),
         CustomStrawberryDjangoField,
     )
 
@@ -99,7 +99,7 @@ def test_field_metadata_default():
     class Book:
         title: auto
 
-    type_def = get_object_definition_strict(Book)
+    type_def = get_object_definition(Book, strict=True)
     assert type_def.description is None
     title_field = type_def.get_field("title")
     assert title_field is not None
@@ -123,12 +123,12 @@ def test_field_metadata_preserved():
     class Book:
         title: auto
 
-    type_def = get_object_definition_strict(Book)
+    type_def = get_object_definition(Book, strict=True)
     assert type_def.description == BookModel.__doc__
     title_field = type_def.get_field("title")
     assert title_field is not None
     assert title_field.description == BookModel._meta.get_field("title").help_text
-    assert get_object_definition_strict(Book).description == BookModel.__doc__
+    assert get_object_definition(Book, strict=True).description == BookModel.__doc__
 
 
 @override_settings(
@@ -148,7 +148,7 @@ def test_field_metadata_overridden():
     class Book:
         title: auto = strawberry_django.field(description="The name of the story")
 
-    type_def = get_object_definition_strict(Book)
+    type_def = get_object_definition(Book, strict=True)
     assert type_def.description == "A story with pages"
     title_field = type_def.get_field("title")
     assert title_field is not None
@@ -172,7 +172,7 @@ def test_field_no_empty_strings(monkeypatch: pytest.MonkeyPatch):
     class Book:
         title: auto
 
-    assert get_object_definition_strict(Book).description is None
+    assert get_object_definition(Book, strict=True).description is None
 
 
 @strawberry_django.type(Color)

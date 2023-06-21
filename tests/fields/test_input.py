@@ -1,7 +1,7 @@
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.type import StrawberryOptional, get_object_definition_strict
+from strawberry.type import StrawberryOptional, get_object_definition
 
 import strawberry_django
 
@@ -30,14 +30,14 @@ def test_input_type():
         null_boolean: auto
 
     assert [
-        (f.name, f.type) for f in get_object_definition_strict(InputType).fields
+        (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
     ] == [
-        ("id", StrawberryOptional(strawberry.ID)),  # type: ignore
+        ("id", StrawberryOptional(strawberry.ID)),
         ("mandatory", int),
-        ("default", StrawberryOptional(int)),  # type: ignore
-        ("blank", StrawberryOptional(int)),  # type: ignore
-        ("null", StrawberryOptional(int)),  # type: ignore
-        ("null_boolean", StrawberryOptional(bool)),  # type: ignore
+        ("default", StrawberryOptional(int)),
+        ("blank", StrawberryOptional(int)),
+        ("null", StrawberryOptional(int)),
+        ("null_boolean", StrawberryOptional(bool)),
     ]
 
 
@@ -52,14 +52,14 @@ def test_input_type_for_partial_update():
         null_boolean: auto
 
     assert [
-        (f.name, f.type) for f in get_object_definition_strict(InputType).fields
+        (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
     ] == [
-        ("id", StrawberryOptional(strawberry.ID)),  # type: ignore
-        ("mandatory", StrawberryOptional(int)),  # type: ignore
-        ("default", StrawberryOptional(int)),  # type: ignore
-        ("blank", StrawberryOptional(int)),  # type: ignore
-        ("null", StrawberryOptional(int)),  # type: ignore
-        ("null_boolean", StrawberryOptional(bool)),  # type: ignore
+        ("id", StrawberryOptional(strawberry.ID)),
+        ("mandatory", StrawberryOptional(int)),
+        ("default", StrawberryOptional(int)),
+        ("blank", StrawberryOptional(int)),
+        ("null", StrawberryOptional(int)),
+        ("null_boolean", StrawberryOptional(bool)),
     ]
 
 
@@ -71,7 +71,7 @@ def test_input_type_basic():
         name: auto
 
     assert [
-        (f.name, f.type) for f in get_object_definition_strict(UserInput).fields
+        (f.name, f.type) for f in get_object_definition(UserInput, strict=True).fields
     ] == [
         ("name", str),
     ]
@@ -85,9 +85,10 @@ def test_partial_input_type():
         name: auto
 
     assert [
-        (f.name, f.type) for f in get_object_definition_strict(UserPartialInput).fields
+        (f.name, f.type)
+        for f in get_object_definition(UserPartialInput, strict=True).fields
     ] == [
-        ("name", StrawberryOptional(str)),  # type: ignore
+        ("name", StrawberryOptional(str)),
     ]
 
 
@@ -103,9 +104,10 @@ def test_partial_input_type_inheritance():
         pass
 
     assert [
-        (f.name, f.type) for f in get_object_definition_strict(UserPartialInput).fields
+        (f.name, f.type)
+        for f in get_object_definition(UserPartialInput, strict=True).fields
     ] == [
-        ("name", StrawberryOptional(str)),  # type: ignore
+        ("name", StrawberryOptional(str)),
     ]
 
 
@@ -122,8 +124,8 @@ def test_input_type_inheritance_from_type():
         pass
 
     assert [
-        (f.name, f.type) for f in get_object_definition_strict(UserInput).fields
+        (f.name, f.type) for f in get_object_definition(UserInput, strict=True).fields
     ] == [
-        ("id", StrawberryOptional(strawberry.ID)),  # type: ignore
+        ("id", StrawberryOptional(strawberry.ID)),
         ("name", str),
     ]

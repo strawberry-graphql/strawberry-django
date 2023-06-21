@@ -11,6 +11,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import strawberry
@@ -24,16 +25,17 @@ from strawberry.exceptions import (
 )
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
-from strawberry.type import get_object_definition_strict
+from strawberry.type import get_object_definition
 from strawberry.unset import UNSET
 from strawberry.utils.cached_property import cached_property
+from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Literal, dataclass_transform
 
 from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
 from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
-from .utils import get_annotations, is_auto
+from .utils import WithStrawberryDjangoObjectDefinition, get_annotations, is_auto
 
 __all = [
     "StrawberryDjangoType",
@@ -137,7 +139,7 @@ def _process_type(
     strawberry.type(cls, **kwargs)
 
     # update annotations and fields
-    type_def = get_object_definition_strict(cls)
+    type_def = get_object_definition(cls, strict=True)
     description_from_doc = settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]
     new_fields: List[StrawberryField] = []
     for f in type_def._fields:
@@ -267,6 +269,15 @@ def _process_type(
 
     type_def._fields = new_fields
     cls.__strawberry_django_definition__ = django_type  # type: ignore
+    # TODO: remove when deprecating _type_definition
+    DeprecatedDescriptor(
+        "_django_type is deprecated, use __strawberry_django_definition__ instead",
+        cast(
+            WithStrawberryDjangoObjectDefinition,
+            cls,
+        ).__strawberry_django_definition__,
+        "_django_type",
+    ).inject(cls)
 
     return cls
 
