@@ -118,7 +118,7 @@ def django_getattr(
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
 ):
     args = (default,) if default is not _SENTINEL else ()
-    return django_resolver(getattr, qs_hook=qs_hook)(  # type: ignore
+    return django_resolver(getattr, qs_hook=qs_hook)(
         obj,
         name,
         *args,
