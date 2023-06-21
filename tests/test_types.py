@@ -2,7 +2,8 @@ import pytest
 import strawberry
 from django.test import override_settings
 from strawberry import auto
-from strawberry.object_type import TypeDefinition
+from strawberry.object_type import StrawberryObjectDefinition
+from strawberry.type import get_object_definition_strict
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
@@ -58,7 +59,7 @@ def test_custom_field_cls():
 
     assert all(
         isinstance(field, CustomStrawberryDjangoField)
-        for field in UserType._type_definition.fields
+        for field in get_object_definition_strict(UserType).fields
     )
 
 
@@ -74,15 +75,15 @@ def test_custom_field_cls__explicit_field_type():
         name: auto = strawberry_django.field()
 
     assert isinstance(
-        UserType._type_definition.get_field("id"),
+        get_object_definition_strict(UserType).get_field("id"),
         CustomStrawberryDjangoField,
     )
     assert isinstance(
-        UserType._type_definition.get_field("name"),
+        get_object_definition_strict(UserType).get_field("name"),
         StrawberryDjangoField,
     )
     assert not isinstance(
-        UserType._type_definition.get_field("name"),
+        get_object_definition_strict(UserType).get_field("name"),
         CustomStrawberryDjangoField,
     )
 
@@ -98,8 +99,11 @@ def test_field_metadata_default():
     class Book:
         title: auto
 
-    assert Book._type_definition.description is None
-    assert Book._type_definition.get_field("title").description is None
+    type_def = get_object_definition_strict(Book)
+    assert type_def.description is None
+    title_field = type_def.get_field("title")
+    assert title_field is not None
+    assert title_field.description is None
 
 
 @override_settings(
@@ -119,11 +123,12 @@ def test_field_metadata_preserved():
     class Book:
         title: auto
 
-    assert Book._type_definition.description == BookModel.__doc__
-    assert (
-        Book._type_definition.get_field("title").description
-        == BookModel._meta.get_field("title").help_text
-    )
+    type_def = get_object_definition_strict(Book)
+    assert type_def.description == BookModel.__doc__
+    title_field = type_def.get_field("title")
+    assert title_field is not None
+    assert title_field.description == BookModel._meta.get_field("title").help_text
+    assert get_object_definition_strict(Book).description == BookModel.__doc__
 
 
 @override_settings(
@@ -143,10 +148,11 @@ def test_field_metadata_overridden():
     class Book:
         title: auto = strawberry_django.field(description="The name of the story")
 
-    assert Book._type_definition.description == "A story with pages"
-    assert (
-        Book._type_definition.get_field("title").description == "The name of the story"
-    )
+    type_def = get_object_definition_strict(Book)
+    assert type_def.description == "A story with pages"
+    title_field = type_def.get_field("title")
+    assert title_field is not None
+    assert title_field.description == "The name of the story"
 
 
 @override_settings(
@@ -166,7 +172,7 @@ def test_field_no_empty_strings(monkeypatch: pytest.MonkeyPatch):
     class Book:
         title: auto
 
-    assert Book._type_definition.description is None
+    assert get_object_definition_strict(Book).description is None
 
 
 @strawberry_django.type(Color)
@@ -192,7 +198,7 @@ def test_type_resolution_with_resolvers():
 
     schema = strawberry.Schema(query=Query)
     type_def = schema.get_type_by_name("FruitType")
-    assert isinstance(type_def, TypeDefinition)
+    assert isinstance(type_def, StrawberryObjectDefinition)
     field = type_def.get_field("color")
     assert field
     assert field.type is ColorType

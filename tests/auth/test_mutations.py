@@ -88,7 +88,7 @@ def test_register_new_user(mutation, user, context):
     assert result.data["register"] == {"username": "new_user"}
 
     user = UserModel.objects.get(username="new_user")
-    assert user.id
+    assert user.pk
     assert user.check_password("test_password")
 
 

@@ -25,7 +25,7 @@ from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import StrawberryType
+from strawberry.type import StrawberryType, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
@@ -36,8 +36,7 @@ from .utils import (
     WithStrawberryDjangoObjectDefinition,
     WithStrawberryObjectDefinition,
     fields,
-    is_django_type,
-    is_strawberry_type,
+    has_django_definition,
     unwrap_type,
 )
 
@@ -92,7 +91,11 @@ def build_filter_kwargs(
 ) -> Tuple[Dict[str, Any], List[Callable]]:
     filter_kwargs = {}
     filter_methods = []
-    django_model = filters._django_type.model if is_django_type(filters) else None
+    django_model = (
+        filters.__strawberry_django_definition__.model
+        if has_django_definition(filters)
+        else None
+    )
 
     for f in fields(filters):
         field_name = f.name
@@ -116,7 +119,7 @@ def build_filter_kwargs(
         ):
             continue
 
-        if is_strawberry_type(field_value):
+        if has_object_definition(field_value):
             subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
                 field_value,
             )
@@ -152,7 +155,7 @@ def apply(
     if pk not in (None, strawberry.UNSET):
         queryset = queryset.filter(pk=pk)
 
-    if filters in (None, strawberry.UNSET) or not is_django_type(filters):
+    if filters in (None, strawberry.UNSET) or not has_django_definition(filters):
         return queryset
 
     # Custom filter function in the filters object
@@ -184,7 +187,7 @@ def apply(
 
 class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
     def __init__(self, filters: Union[type, UnsetType, None] = UNSET, **kwargs):
-        if filters and not is_strawberry_type(filters):
+        if filters and not has_object_definition(filters):
             raise TypeError("filters needs to be a strawberry type")
 
         self.filters = filters
@@ -199,7 +202,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
             if (
                 self.django_model
                 and not self.is_list
-                and origin._type_definition.name == "Query"
+                and origin.__strawberry_definition__.name == "Query"
             ):
                 arguments.append(argument("pk", strawberry.ID))
             elif filters is not None and self.is_list:
@@ -227,7 +230,11 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
 
         if isinstance(filters, UnsetType):
             type_ = unwrap_type(self.type)
-            filters = type_._django_type.filters if is_django_type(type_) else None
+            filters = (
+                type_.__strawberry_django_definition__.filters
+                if has_django_definition(type_)
+                else None
+            )
 
         return filters
 

@@ -1,8 +1,12 @@
+from typing import cast
+
 import strawberry
 from django.db import models
 from strawberry import BasePermission, auto
+from strawberry.type import get_object_definition_strict
 
 import strawberry_django
+from strawberry_django.fields.field import StrawberryDjangoField
 
 
 class FieldAttributeModel(models.Model):
@@ -15,7 +19,10 @@ def test_default_django_name():
         field: auto
         field2: auto = strawberry_django.field(field_name="field")
 
-    assert [(f.name, f.django_name) for f in Type._type_definition.fields] == [
+    assert [
+        (f.name, cast(StrawberryDjangoField, f).django_name)
+        for f in get_object_definition_strict(Type).fields
+    ] == [
         ("field", "field"),
         ("field2", "field"),
     ]
@@ -34,7 +41,10 @@ def test_field_permission_classes():
             return self.field
 
     assert sorted(
-        [(f.name, f.permission_classes) for f in Type._type_definition.fields],
+        [
+            (f.name, f.permission_classes)
+            for f in get_object_definition_strict(Type).fields
+        ],
     ) == sorted(
         [
             ("field", [TestPermission]),

@@ -5,7 +5,7 @@ import strawberry
 from strawberry import auto
 
 import strawberry_django
-from strawberry_django.pagination import OffsetPaginationInput
+from strawberry_django.pagination import OffsetPaginationInput, apply
 from tests import models, utils
 
 
@@ -57,7 +57,7 @@ def test_resolver_pagination(fruits):
         @strawberry.field
         def fruits(self, pagination: OffsetPaginationInput) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return strawberry_django.pagination.apply(pagination, queryset)
+            return apply(pagination, queryset)
 
     query = utils.generate_query(Query)
     result = query("{ fruits(pagination: { limit: 1 }) { id name } }")

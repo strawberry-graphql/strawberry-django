@@ -72,7 +72,9 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         if isinstance(has_pagination, UnsetType):
             type_ = utils.unwrap_type(self.type)
             has_pagination = (
-                type_._django_type.pagination if utils.is_django_type(type_) else False
+                type_.__strawberry_django_definition__.pagination
+                if utils.has_django_definition(type_)
+                else False
             )
 
         return OffsetPaginationInput if has_pagination else None

@@ -612,13 +612,13 @@ files = [
 
 [[package]]
 name = "platformdirs"
-version = "3.6.0"
+version = "3.7.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.6.0-py3-none-any.whl", hash = "sha256:ffa199e3fbab8365778c4a10e1fbf1b9cd50707de826eb304b50e57ec0cc8d38"},
-    {file = "platformdirs-3.6.0.tar.gz", hash = "sha256:57e28820ca8094678b807ff529196506d7a21e17156cb1cddb3e74cebce54640"},
+    {file = "platformdirs-3.7.0-py3-none-any.whl", hash = "sha256:cfd065ba43133ff103ab3bd10aecb095c2a0035fcd1f07217c9376900d94ba07"},
+    {file = "platformdirs-3.7.0.tar.gz", hash = "sha256:87fbf6473e87c078d536980ba970a472422e94f17b752cfad17024c18876d481"},
 ]
 
 [package.dependencies]
@@ -630,13 +630,13 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.3.1)", "pytest-
 
 [[package]]
 name = "pluggy"
-version = "1.0.0"
+version = "1.2.0"
 description = "plugin and hook calling mechanisms for python"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
-    {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
+    {file = "pluggy-1.2.0-py3-none-any.whl", hash = "sha256:c2fd55a7d7a3863cba1a013e4e2414658b1d07b6bc57b3919e0c63c9abb99849"},
+    {file = "pluggy-1.2.0.tar.gz", hash = "sha256:d12f0c4b579b15f5e054301bb226ee85eeeba08ffec228092f8defbaa3a4c4b3"},
 ]
 
 [package.dependencies]
@@ -1077,13 +1077,13 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.186.3"
+version = "0.187.1"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "strawberry_graphql-0.186.3-py3-none-any.whl", hash = "sha256:6780525793216c404564d20644d79e06575b51fa0a3e180c5c0e2a98b111fa2b"},
-    {file = "strawberry_graphql-0.186.3.tar.gz", hash = "sha256:8bab925d2dd5a0505f20bf0981f20f3ce7c8b8f7cb48dea0a60b10d3af33e0b8"},
+    {file = "strawberry_graphql-0.187.1-py3-none-any.whl", hash = "sha256:bb757b441949c9b0373d570a4a17a8e417804ee762c2bbf4db416c1346111554"},
+    {file = "strawberry_graphql-0.187.1.tar.gz", hash = "sha256:53abe173e77a46a42413ca3d753e1e67c0ea7c0bb9a2e0767991a1959f36b7c6"},
 ]
 
 [package.dependencies]
@@ -1091,7 +1091,7 @@ astunparse = {version = ">=1.6.3,<2.0.0", markers = "python_version < \"3.9\""}
 "backports.cached-property" = {version = ">=1.0.2,<2.0.0", markers = "python_version < \"3.8\""}
 graphql-core = ">=3.2.0,<3.3.0"
 python-dateutil = ">=2.7.0,<3.0.0"
-typing_extensions = ">=4.1.0"
+typing-extensions = ">=4.5.0"
 
 [package.extras]
 aiohttp = ["aiohttp (>=3.7.4.post0,<4.0.0)"]
@@ -1244,4 +1244,4 @@ debug-toolbar = ["django-debug-toolbar"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.7,<4.0"
-content-hash = "bc8937a81243ba2a7257743948a09c0d7be14bcf7edda0b86704ef847d07604c"
+content-hash = "4b0606a3c9b32a812256f7f1f5a1666691c80167b8d84ade22a17157314de065"

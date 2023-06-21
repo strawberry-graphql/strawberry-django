@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 class DjangoMutationBase(StrawberryDjangoFieldBase):
     def __init__(self, input_type: type | None = None, **kwargs):
-        if input_type is not None and not utils.is_django_type(input_type):
+        if input_type is not None and not utils.has_django_definition(input_type):
             raise TypeError("input_type needs to be a strawberry django input")
 
         self.input_type = input_type
@@ -39,7 +39,11 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
 
     @property
     def arguments(self):
-        if self.input_type and self.django_model != self.input_type._django_type.model:
+        if (
+            self.input_type
+            and self.django_model
+            != self.input_type.__strawberry_django_definition__.model
+        ):
             raise TypeError(
                 "Input and output types should be from the same Django model",
             )
@@ -139,7 +143,7 @@ class DjangoDeleteMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
 
 def get_input_data(input_type: type[WithStrawberryDjangoObjectDefinition], data: Any):
     input_data = {}
-    for field in input_type._type_definition.fields:
+    for field in input_type.__strawberry_definition__.fields:
         value = getattr(data, field.name)
         if value is UNSET or isinstance(value, (ManyToOneInput, ManyToManyInput)):
             continue

@@ -16,7 +16,7 @@ from django.db import models
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import StrawberryType
+from strawberry.type import StrawberryType, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
@@ -26,7 +26,6 @@ from strawberry_django.utils import (
     WithStrawberryObjectDefinition,
     fields,
     is_auto,
-    is_strawberry_type,
 )
 
 from . import utils
@@ -76,7 +75,7 @@ def apply(order: Optional[WithStrawberryObjectDefinition], queryset: _QS) -> _QS
 
 class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
     def __init__(self, order: Union[type, UnsetType, None] = UNSET, **kwargs):
-        if order and not is_strawberry_type(order):
+        if order and not has_object_definition(order):
             raise TypeError("order needs to be a strawberry type")
 
         self.order = order
@@ -111,7 +110,11 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
 
         if isinstance(order, UnsetType):
             type_ = utils.unwrap_type(self.type)
-            order = type_._django_type.order if utils.is_django_type(type_) else None
+            order = (
+                type_.__strawberry_django_definition__.order
+                if utils.has_django_definition(type_)
+                else None
+            )
 
         return order
 

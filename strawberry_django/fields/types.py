@@ -14,7 +14,7 @@ from strawberry.scalars import JSON
 from strawberry_django import filters
 
 if TYPE_CHECKING:
-    from strawberry_django.type import StrawberryDjangoType
+    from strawberry_django.type import StrawberryDjangoDefinition
 
 
 @strawberry.type
@@ -220,7 +220,7 @@ input_field_type_map: Dict[
 
 def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
-    django_type: "StrawberryDjangoType",
+    django_type: "StrawberryDjangoDefinition",
 ):
     model_field_type = type(model_field)
     field_type: Any = None

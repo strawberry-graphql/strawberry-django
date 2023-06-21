@@ -3,38 +3,64 @@ from __future__ import annotations
 import dataclasses
 import sys
 import typing
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, overload
 
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
-from strawberry.type import StrawberryContainer, StrawberryType
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryType,
+    WithStrawberryObjectDefinition,
+)
+from typing_extensions import Protocol
 
 if TYPE_CHECKING:
     from strawberry.field import StrawberryField
-    from strawberry.object_type import TypeDefinition
-    from typing_extensions import TypeGuard
+    from typing_extensions import Literal, TypeGuard
 
-    from strawberry_django.type import StrawberryDjangoType
+    from strawberry_django.type import StrawberryDjangoDefinition
 
 _Type = TypeVar("_Type", bound="StrawberryType | type")
 
 
-# FIXME: Replace this with strawberry's one once this PR gets merged:
-# https://github.com/strawberry-graphql/strawberry/pull/2836
-class WithStrawberryObjectDefinition(Protocol):
-    _type_definition: ClassVar[TypeDefinition]
-
-
 class WithStrawberryDjangoObjectDefinition(WithStrawberryObjectDefinition, Protocol):
-    _django_type: ClassVar[StrawberryDjangoType]
+    __strawberry_django_definition__: ClassVar[StrawberryDjangoDefinition]
 
 
-def is_strawberry_type(obj: Any) -> TypeGuard[type[WithStrawberryObjectDefinition]]:
-    return hasattr(obj, "_type_definition")
+def has_django_definition(
+    obj: Any,
+) -> TypeGuard[type[WithStrawberryDjangoObjectDefinition]]:
+    return hasattr(obj, "__strawberry_django_definition__")
 
 
-def is_django_type(obj: Any) -> TypeGuard[type[WithStrawberryDjangoObjectDefinition]]:
-    return hasattr(obj, "_django_type")
+@overload
+def get_django_definition(
+    obj: Any,
+    *,
+    strict: Literal[True],
+) -> StrawberryDjangoDefinition:
+    ...
+
+
+@overload
+def get_django_definition(
+    obj: Any,
+    *,
+    strict: bool = False,
+) -> StrawberryDjangoDefinition | None:
+    ...
+
+
+def get_django_definition(
+    obj: Any,
+    *,
+    strict: bool = False,
+) -> StrawberryDjangoDefinition | None:
+    return (
+        obj.__strawberry_django_definition__
+        if strict
+        else getattr(obj, "__strawberry_django_definition__", None)
+    )
 
 
 def is_auto(obj: Any) -> TypeGuard[StrawberryAuto]:
@@ -46,7 +72,7 @@ def is_auto(obj: Any) -> TypeGuard[StrawberryAuto]:
 
 
 def fields(obj: WithStrawberryObjectDefinition) -> list[StrawberryField]:
-    return obj._type_definition.fields
+    return obj.__strawberry_definition__.fields
 
 
 def get_annotations(cls):

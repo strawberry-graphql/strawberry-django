@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from strawberry.types import Info
     from typing_extensions import Literal, Self
 
-    from strawberry_django.type import StrawberryDjangoType
+    from strawberry_django.type import StrawberryDjangoDefinition
 
 _QS = TypeVar("_QS", bound="models.QuerySet")
 
@@ -31,7 +31,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
     ):
         self.is_relation = False
         self.django_name = django_name
-        self.origin_django_type: StrawberryDjangoType[Any, Any] | None = None
+        self.origin_django_type: StrawberryDjangoDefinition[Any, Any] | None = None
         super().__init__(graphql_name=graphql_name, python_name=python_name, **kwargs)
 
     @property
@@ -88,8 +88,8 @@ class StrawberryDjangoFieldBase(StrawberryField):
     @cached_property
     def django_model(self) -> type[models.Model] | None:
         type_ = utils.unwrap_type(self.type)
-        if utils.is_django_type(type_):
-            return type_._django_type.model
+        if utils.has_django_definition(type_):
+            return type_.__strawberry_django_definition__.model
         return None
 
     @cached_property
@@ -119,10 +119,6 @@ class StrawberryDjangoFieldBase(StrawberryField):
         type_var_map: Mapping[TypeVar, StrawberryType | type],
     ) -> Self:
         new_field = super().copy_with(type_var_map)
-        # FIXME: We can remove extensions and arguments from here once
-        # this PR is merged: https://github.com/strawberry-graphql/strawberry/pull/2865
-        new_field.extensions = self.extensions and self.extensions[:]
-        new_field._arguments = self._arguments and self._arguments[:]
         new_field.django_name = self.django_name
         new_field.is_relation = self.is_relation
         new_field.origin_django_type = self.origin_django_type

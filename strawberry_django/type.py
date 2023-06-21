@@ -11,7 +11,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
 )
 
 import strawberry
@@ -25,7 +24,7 @@ from strawberry.exceptions import (
 )
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
-from strawberry.types.types import TypeDefinition
+from strawberry.type import get_object_definition_strict
 from strawberry.unset import UNSET
 from strawberry.utils.cached_property import cached_property
 from typing_extensions import Literal, dataclass_transform
@@ -62,7 +61,7 @@ def _process_type(
     **kwargs,
 ) -> _O:
     is_input = kwargs.get("is_input", False)
-    django_type = StrawberryDjangoType(
+    django_type = StrawberryDjangoDefinition(
         origin=cls,
         model=model,
         field_cls=field_cls,
@@ -138,7 +137,7 @@ def _process_type(
     strawberry.type(cls, **kwargs)
 
     # update annotations and fields
-    type_def = cast(TypeDefinition, cls._type_definition)  # type: ignore
+    type_def = get_object_definition_strict(cls)
     description_from_doc = settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]
     new_fields: List[StrawberryField] = []
     for f in type_def._fields:
@@ -266,14 +265,14 @@ def _process_type(
         if f.base_resolver and f.python_name:
             setattr(cls, f.python_name, f)
 
-    cls._type_definition._fields = new_fields  # type: ignore
-    cls._django_type = django_type  # type: ignore
+    type_def._fields = new_fields
+    cls.__strawberry_django_definition__ = django_type  # type: ignore
 
     return cls
 
 
 @dataclasses.dataclass
-class StrawberryDjangoType(Generic[_O, _M]):
+class StrawberryDjangoDefinition(Generic[_O, _M]):
     origin: _O
     model: Type[_M]
     is_input: bool = False
