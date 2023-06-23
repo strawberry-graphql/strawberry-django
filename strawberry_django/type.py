@@ -251,14 +251,6 @@ def _process_type(
                 extensions=getattr(f, "extensions", ()),
             )
 
-        # Force type to auto if it is a relation in case an input is
-        # inheriting from a type
-        if is_relation and is_input and not is_filter and f.origin_django_type is None:
-            f.type_annotation = StrawberryAnnotation(
-                strawberry.auto,
-                namespace=getattr(f.type_annotation, "namespace", None),
-            )
-
         f.django_name = django_name
         f.is_relation = is_relation
         f.origin_django_type = django_type

@@ -51,11 +51,19 @@ class StrawberryDjangoFieldBase(StrawberryField):
         if resolved is UNRESOLVED:
             return resolved
 
-        if (
+        resolved_django_type = utils.get_django_definition(utils.unwrap_type(resolved))
+
+        if self.origin_django_type and (
             # FIXME: Why does this come as Any sometimes when using future annotations?
             resolved is Any
             or isinstance(resolved, StrawberryAuto)
-        ) and self.origin_django_type:
+            # If the resolved type is an input but the origin is not, or vice versa,
+            # resolve this again
+            or (
+                resolved_django_type
+                and resolved_django_type.is_input != self.origin_django_type.is_input
+            )
+        ):
             from .types import get_model_field, is_optional, resolve_model_field_type
 
             model_field = get_model_field(
