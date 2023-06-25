@@ -9,7 +9,6 @@ from typing_extensions import Self
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 
-from . import utils
 from .arguments import argument
 
 if TYPE_CHECKING:
@@ -70,10 +69,13 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         has_pagination = self.pagination
 
         if isinstance(has_pagination, UnsetType):
-            type_ = utils.unwrap_type(self.type)
+            django_type = self.django_type
             has_pagination = (
-                type_.__strawberry_django_definition__.pagination
-                if utils.has_django_definition(type_)
+                django_type.__strawberry_django_definition__.pagination
+                if (
+                    django_type is not None
+                    and not issubclass(django_type, strawberry.relay.Node)
+                )
                 else False
             )
 

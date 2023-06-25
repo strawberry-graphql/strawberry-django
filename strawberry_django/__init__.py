@@ -1,11 +1,14 @@
-from . import auth, filters, mutations, ordering
-from .fields.field import field
+from . import auth, filters, mutations, ordering, relay
+from .fields.field import connection, field, node
 from .fields.types import (
     DjangoFileType,
     DjangoImageType,
     DjangoModelType,
+    ListInput,
     ManyToManyInput,
     ManyToOneInput,
+    NodeInput,
+    NodeInputPartial,
     OneToManyInput,
     OneToOneInput,
 )
@@ -20,11 +23,15 @@ __all__ = [
     "DjangoFileType",
     "DjangoImageType",
     "DjangoModelType",
+    "ListInput",
     "ManyToManyInput",
     "ManyToOneInput",
+    "NodeInput",
+    "NodeInputPartial",
     "OneToManyInput",
     "OneToOneInput",
     "auth",
+    "connection",
     "django_resolver",
     "field",
     "fields",
@@ -33,8 +40,10 @@ __all__ = [
     "input",
     "mutation",
     "mutations",
+    "node",
     "order",
     "ordering",
     "partial",
+    "relay",
     "type",
 ]

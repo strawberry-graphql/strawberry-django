@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Mapping, Optional, TypeVar, cast
 
+from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
 from strawberry.field import UNRESOLVED, StrawberryField
-from strawberry.type import StrawberryList, StrawberryOptional, StrawberryType
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryList,
+    StrawberryOptional,
+    StrawberryType,
+    get_object_definition,
+)
+from strawberry.union import StrawberryUnion
 from strawberry.utils.cached_property import cached_property
 
 from strawberry_django import utils
@@ -94,11 +102,44 @@ class StrawberryDjangoFieldBase(StrawberryField):
         )
 
     @cached_property
+    def django_type(self) -> type[utils.WithStrawberryDjangoObjectDefinition] | None:
+        origin = self.type
+
+        tdef = get_object_definition(origin)
+        if (
+            tdef
+            and tdef.concrete_of
+            and issubclass(tdef.concrete_of.origin, relay.Connection)
+        ):
+            origin = tdef.type_var_map[cast(TypeVar, relay.NodeType)]
+            if isinstance(origin, LazyType):
+                origin = origin.resolve_type()
+
+        origin = utils.unwrap_type(origin)
+        if isinstance(origin, LazyType):
+            origin = origin.resolve_type()
+
+        if isinstance(origin, StrawberryUnion):
+            origin_list: list[type[utils.WithStrawberryDjangoObjectDefinition]] = []
+            for t in origin.types:
+                while isinstance(t, StrawberryContainer):
+                    t = t.of_type  # noqa: PLW2901
+
+                if utils.has_django_definition(t):
+                    origin_list.append(t)
+
+            origin = origin_list[0] if len(origin_list) == 1 else None
+
+        return origin if utils.has_django_definition(origin) else None
+
+    @cached_property
     def django_model(self) -> type[models.Model] | None:
-        type_ = utils.unwrap_type(self.type)
-        if utils.has_django_definition(type_):
-            return type_.__strawberry_django_definition__.model
-        return None
+        django_type = self.django_type
+        return (
+            django_type.__strawberry_django_definition__.model
+            if django_type is not None
+            else None
+        )
 
     @cached_property
     def is_optional(self) -> bool:
@@ -111,6 +152,14 @@ class StrawberryDjangoFieldBase(StrawberryField):
             type_ = type_.of_type
 
         return isinstance(type_, StrawberryList)
+
+    @cached_property
+    def is_connection(self) -> bool:
+        type_ = self.type
+        if isinstance(type_, StrawberryOptional):
+            type_ = type_.of_type
+
+        return isinstance(type_, type) and issubclass(type_, relay.Connection)
 
     @cached_property
     def safe_resolver(self):

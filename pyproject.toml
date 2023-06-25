@@ -104,7 +104,7 @@ select = [
   "TRY",
   "SLF",
 ]
-ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003"]
+ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003", "D417"]
 # FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
 unfixable = ["UP006"]
 target-version = "py37"
@@ -174,4 +174,4 @@ strictSetInference = true
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
 testpaths = ["tests"]
 filterwarnings = "ignore:.*is deprecated.*:DeprecationWarning"
-asyncio_mode = "strict"
+asyncio_mode = "auto"

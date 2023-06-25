@@ -28,7 +28,6 @@ from strawberry_django.utils import (
     is_auto,
 )
 
-from . import utils
 from .arguments import argument
 
 if TYPE_CHECKING:
@@ -86,7 +85,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         arguments = []
         if self.base_resolver is None and self.is_list:
             order = self.get_order()
-            if order and order is not UNSET and self.is_list:
+            if order and order is not UNSET:
                 arguments.append(argument("order", order, is_optional=True))
         return super().arguments + arguments
 
@@ -109,10 +108,10 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
             return None
 
         if isinstance(order, UnsetType):
-            type_ = utils.unwrap_type(self.type)
+            django_type = self.django_type
             order = (
-                type_.__strawberry_django_definition__.order
-                if utils.has_django_definition(type_)
+                django_type.__strawberry_django_definition__.order
+                if django_type is not None
                 else None
             )
 
