@@ -28,6 +28,7 @@ from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.utils.cached_property import cached_property
 
 from strawberry_django.arguments import argument
+from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import StrawberryDjangoFieldFilters
 from strawberry_django.ordering import StrawberryDjangoFieldOrdering
@@ -132,7 +133,9 @@ class StrawberryDjangoField(
             attname = self.django_name or self.python_name
             attr = getattr(source.__class__, attname, None)
             try:
-                if isinstance(attr, DeferredAttribute):
+                if isinstance(attr, ModelProperty):
+                    result = source.__dict__[attr.name]
+                elif isinstance(attr, DeferredAttribute):
                     # If the value is cached, retrieve it with getattr because
                     # some fields wrap values at that time (e.g. FileField).
                     # If this next like fails, it will raise KeyError and get
