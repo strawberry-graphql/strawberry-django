@@ -14,7 +14,7 @@ from . import models
 class Fruit:
     id: auto
     name: auto
-    color: Color
+    color: Color | None
     types: List[FruitType]  # noqa: UP006
 
 

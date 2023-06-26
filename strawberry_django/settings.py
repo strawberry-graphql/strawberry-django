@@ -1,10 +1,9 @@
 """Code for interacting with Django settings."""
-try:
-    from typing import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict
+
+from typing import cast
 
 from django.conf import settings
+from typing_extensions import TypedDict
 
 
 class StrawberryDjangoSettings(TypedDict):
@@ -38,4 +37,7 @@ def strawberry_django_settings() -> StrawberryDjangoSettings:
     Preferred to direct access for the type hints and defaults.
     """
     defaults = DEFAULT_DJANGO_SETTINGS
-    return {**defaults, **getattr(settings, "STRAWBERRY_DJANGO", {})}
+    return cast(
+        StrawberryDjangoSettings,
+        {**defaults, **getattr(settings, "STRAWBERRY_DJANGO", {})},
+    )

@@ -1,13 +1,23 @@
-from typing import Optional
+from typing import List, Optional
 
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 
 
-def argument(name, type_, is_optional=True, default=UNSET):
+def argument(
+    name: str,
+    type_: type,
+    *,
+    is_list: bool = False,
+    is_optional: bool = False,
+    default: object = UNSET,
+):
+    if is_list:
+        type_ = List[type_]
     if is_optional:
         type_ = Optional[type_]
+
     return StrawberryArgument(
         default=default,
         description=None,

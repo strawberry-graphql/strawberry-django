@@ -1,114 +1,115 @@
-import asyncio
+from __future__ import annotations
+
 import dataclasses
 import sys
-import warnings
-from typing import ClassVar, Dict
+import typing
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, overload
 
-from django.db import models
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.field import StrawberryField
-from strawberry.type import StrawberryContainer
+from strawberry.auto import StrawberryAuto
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryType,
+    WithStrawberryObjectDefinition,
+)
+from typing_extensions import Protocol
 
-__all__ = ["deprecated"]
+if TYPE_CHECKING:
+    from strawberry.field import StrawberryField
+    from typing_extensions import Literal, TypeGuard
 
+    from strawberry_django.type import StrawberryDjangoDefinition
 
-def is_async() -> bool:
-    # django uses the same method to detect async operation
-    # https://github.com/django/django/blob/bb076476cf560b988f8d80dbbc4a3c85df54b1b9/django/utils/asyncio.py
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return False
-    else:
-        return True
-
-
-def deprecated(msg, stacklevel=1):
-    warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel + 1)
+_Type = TypeVar("_Type", bound="StrawberryType | type")
 
 
-def is_strawberry_type(obj):
-    return hasattr(obj, "_type_definition")
+class WithStrawberryDjangoObjectDefinition(WithStrawberryObjectDefinition, Protocol):
+    __strawberry_django_definition__: ClassVar[StrawberryDjangoDefinition]
 
 
-def is_strawberry_field(obj):
-    return isinstance(obj, StrawberryField)
+def has_django_definition(
+    obj: Any,
+) -> TypeGuard[type[WithStrawberryDjangoObjectDefinition]]:
+    return hasattr(obj, "__strawberry_django_definition__")
 
 
-def is_strawberry_django_field(obj):
-    from strawberry_django.fields.field import StrawberryDjangoFieldBase
-
-    return isinstance(obj, StrawberryDjangoFieldBase)
-
-
-def is_django_type(obj):
-    return hasattr(obj, "_django_type")
-
-
-def is_django_model(obj):
-    return isinstance(obj, models.base.ModelBase)
+@overload
+def get_django_definition(
+    obj: Any,
+    *,
+    strict: Literal[True],
+) -> StrawberryDjangoDefinition:
+    ...
 
 
-def is_field(obj):
-    return isinstance(obj, dataclasses.Field)
+@overload
+def get_django_definition(
+    obj: Any,
+    *,
+    strict: bool = False,
+) -> StrawberryDjangoDefinition | None:
+    ...
 
 
-def is_django_field(obj):
-    from .fields.field import DjangoField
-
-    return isinstance(obj, DjangoField)
-
-
-def fields(obj):
-    return obj._type_definition.fields
-
-
-def is_auto(obj):
-    from .fields.types import is_auto
-
-    return is_auto(obj)
+def get_django_definition(
+    obj: Any,
+    *,
+    strict: bool = False,
+) -> StrawberryDjangoDefinition | None:
+    return (
+        obj.__strawberry_django_definition__
+        if strict
+        else getattr(obj, "__strawberry_django_definition__", None)
+    )
 
 
-def get_django_model(type_):
-    if not is_django_type(type_):
-        return None
-    return type_._django_type.model
+def is_auto(obj: Any) -> TypeGuard[StrawberryAuto]:
+    if isinstance(obj, str):
+        # Support future references
+        return obj in ["auto", "strawberry.auto"]
+
+    return isinstance(obj, StrawberryAuto)
 
 
-def is_similar_django_type(a, b):
-    if not a or not b:
-        return False
-    if a.is_input != b.is_input:
-        return False
-    if a.is_filter != b.is_filter:
-        return False
-    return True
-
-
-# dirty workaround, but similar to the one of dataclasses
-# it would be better to use dataclasses.fields
-def _is_classvar(annotation, namespace):
-    if isinstance(annotation, str):
-        if annotation.startswith("ClassVar["):
-            annotation = namespace["ClassVar"]
-        elif annotation.startswith("typing.ClassVar["):
-            annotation = namespace["typing"].ClassVar
-    return annotation is ClassVar
+def fields(obj: WithStrawberryObjectDefinition) -> list[StrawberryField]:
+    return obj.__strawberry_definition__.fields
 
 
 def get_annotations(cls):
-    annotations: Dict[str, StrawberryAnnotation] = {}
+    annotations: dict[str, StrawberryAnnotation] = {}
+
     for c in reversed(cls.__mro__):
         namespace = sys.modules[c.__module__].__dict__
-        if "__annotations__" in c.__dict__:
-            annotations.update(
-                {
-                    k: StrawberryAnnotation(v, namespace=namespace)
-                    for k, v in c.__annotations__.items()
-                    if not _is_classvar(v, namespace)
-                },
+        if "__annotations__" not in c.__dict__:
+            continue
+
+        for k, v in c.__annotations__.items():
+            # This is the same check that dataclasses does to
+            # exclude classvars from annotations
+            is_classvar = dataclasses._is_classvar(v, typing) or (  # type: ignore
+                isinstance(v, str)
+                and dataclasses._is_type(  # type: ignore
+                    v,
+                    cls,
+                    typing,
+                    typing.ClassVar,
+                    dataclasses._is_classvar,  # type: ignore
+                )
             )
+            if not is_classvar:
+                annotations[k] = StrawberryAnnotation(v, namespace=namespace)
+
     return annotations
+
+
+@overload
+def unwrap_type(type_: StrawberryContainer) -> StrawberryType | type:
+    ...
+
+
+@overload
+def unwrap_type(type_: _Type) -> _Type:
+    ...
 
 
 def unwrap_type(type_):

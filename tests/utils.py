@@ -1,8 +1,7 @@
 import dataclasses
 
 import strawberry
-
-import strawberry_django
+from strawberry.utils.inspect import in_async_context
 
 
 def generate_query(query=None, mutation=None):
@@ -30,7 +29,7 @@ def generate_query(query=None, mutation=None):
     def query_sync(query, variable_values=None, context_value=None):
         if append_mutation and not query.startswith("mutation"):
             query = f"mutation {query}"
-        if strawberry_django.utils.is_async():
+        if in_async_context():
             return query_async(
                 query,
                 variable_values=variable_values,

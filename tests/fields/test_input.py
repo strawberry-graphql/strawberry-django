@@ -1,7 +1,7 @@
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.type import StrawberryOptional
+from strawberry.type import StrawberryOptional, get_object_definition
 
 import strawberry_django
 
@@ -11,7 +11,12 @@ class InputFieldsModel(models.Model):
     default = models.IntegerField(default=1)
     blank = models.IntegerField(blank=True)
     null = models.IntegerField(null=True)
-    null_boolean = models.NullBooleanField()
+    # NullBoleanField is deprecated and will be removed in Django 5.0
+    null_boolean = (
+        models.NullBooleanField()  # type: ignore
+        if hasattr(models, "NullBooleanField")
+        else models.BooleanField(null=True)
+    )
 
 
 def test_input_type():
@@ -24,7 +29,9 @@ def test_input_type():
         null: auto
         null_boolean: auto
 
-    assert [(f.name, f.type) for f in InputType._type_definition.fields] == [
+    assert [
+        (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
+    ] == [
         ("id", StrawberryOptional(strawberry.ID)),
         ("mandatory", int),
         ("default", StrawberryOptional(int)),
@@ -44,7 +51,9 @@ def test_input_type_for_partial_update():
         null: auto
         null_boolean: auto
 
-    assert [(f.name, f.type) for f in InputType._type_definition.fields] == [
+    assert [
+        (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
+    ] == [
         ("id", StrawberryOptional(strawberry.ID)),
         ("mandatory", StrawberryOptional(int)),
         ("default", StrawberryOptional(int)),
@@ -61,7 +70,9 @@ def test_input_type_basic():
     class UserInput:
         name: auto
 
-    assert [(f.name, f.type) for f in UserInput._type_definition.fields] == [
+    assert [
+        (f.name, f.type) for f in get_object_definition(UserInput, strict=True).fields
+    ] == [
         ("name", str),
     ]
 
@@ -73,7 +84,10 @@ def test_partial_input_type():
     class UserPartialInput:
         name: auto
 
-    assert [(f.name, f.type) for f in UserPartialInput._type_definition.fields] == [
+    assert [
+        (f.name, f.type)
+        for f in get_object_definition(UserPartialInput, strict=True).fields
+    ] == [
         ("name", StrawberryOptional(str)),
     ]
 
@@ -89,7 +103,10 @@ def test_partial_input_type_inheritance():
     class UserPartialInput(UserInput):
         pass
 
-    assert [(f.name, f.type) for f in UserPartialInput._type_definition.fields] == [
+    assert [
+        (f.name, f.type)
+        for f in get_object_definition(UserPartialInput, strict=True).fields
+    ] == [
         ("name", StrawberryOptional(str)),
     ]
 
@@ -106,7 +123,9 @@ def test_input_type_inheritance_from_type():
     class UserInput(User):
         pass
 
-    assert [(f.name, f.type) for f in UserInput._type_definition.fields] == [
+    assert [
+        (f.name, f.type) for f in get_object_definition(UserInput, strict=True).fields
+    ] == [
         ("id", StrawberryOptional(strawberry.ID)),
         ("name", str),
     ]

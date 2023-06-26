@@ -1,246 +1,473 @@
+import copy
 import dataclasses
-from contextlib import suppress
-from inspect import cleandoc, ismethod
-from typing import Any, Dict, Generic, Optional, Type, TypeVar
-
-import django
-import django.db.models
-import strawberry
-from strawberry import UNSET
-from strawberry.annotation import StrawberryAnnotation
-from strawberry.exceptions import PrivateStrawberryFieldError
-from strawberry.field import UNRESOLVED
-from strawberry.private import is_private
-
-from . import utils
-from .fields.field import StrawberryDjangoField
-from .fields.types import (
-    get_model_field,
-    is_optional,
-    resolve_model_field_name,
-    resolve_model_field_type,
+import inspect
+import sys
+from typing import (
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+    cast,
 )
+
+import strawberry
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.base import Model
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.exceptions import (
+    MissingFieldAnnotationError,
+)
+from strawberry.field import StrawberryField
+from strawberry.private import is_private
+from strawberry.type import get_object_definition
+from strawberry.unset import UNSET
+from strawberry.utils.cached_property import cached_property
+from strawberry.utils.deprecations import DeprecatedDescriptor
+from typing_extensions import Literal, dataclass_transform
+
+from .fields.field import StrawberryDjangoField
+from .fields.field import field as _field
+from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
+from .utils import WithStrawberryDjangoObjectDefinition, get_annotations, is_auto
 
-_type = type
+__all = [
+    "StrawberryDjangoType",
+    "type",
+    "interface",
+    "input",
+    "partial",
+]
 
-
-def get_type_attr(type_, field_name: str):
-    attr = getattr(type_, field_name, UNSET)
-    if attr is UNSET or ismethod(attr):
-        return getattr(type_, "__dataclass_fields__", {}).get(field_name, attr)
-    return attr
-
-
-def get_field(
-    django_type: "StrawberryDjangoType",
-    field_name: str,
-    field_annotation: Optional[StrawberryAnnotation] = None,
-):
-    if field_annotation and is_private(field_annotation.annotation):
-        raise PrivateStrawberryFieldError(field_name, django_type.origin)
-    attr = get_type_attr(django_type.origin, field_name)
-
-    if utils.is_field(attr):
-        field = django_type.field_cls.from_field(attr, django_type)
-    else:
-        field = django_type.field_cls(
-            default=attr,
-            type_annotation=field_annotation,
-        )
-
-    field.python_name = field_name
-    if field_name in django_type.origin.__dict__.get("__annotations__", {}):
-        # store origin django type for further usage
-        field.origin_django_type = django_type
-
-    if field_annotation:
-        # annotation of field is used as a class type
-        field.type_annotation = field_annotation
-        field.is_auto = utils.is_auto(field_annotation)
-
-    try:
-        # resolve the django_name and check if it is relation field. django_name
-        # is used to access the field data in resolvers
-        django_name = field.django_name or field_name
-        model_field = get_model_field(django_type.model, django_name)
-        field.django_name = resolve_model_field_name(
-            model_field,
-            django_type.is_input,
-            django_type.is_filter,
-        )
-        field.is_relation = model_field.is_relation
-
-        # Use the Django field help_text if no other description is available.
-        settings = django_settings()
-        if not field.description and settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]:
-            model_field_help_text = getattr(model_field, "help_text", "")
-            field.description = str(model_field_help_text) or None
-    except django.core.exceptions.FieldDoesNotExist:
-        if field.django_name or field.is_auto:
-            raise  # field should exist, reraise caught exception
-        model_field = None
-
-    # change relation field type to auto if field is inherited from another
-    # type. for example if field is inherited from output type but we are
-    # configuring field for input type
-    if field.is_relation and not utils.is_similar_django_type(
-        django_type,
-        field.origin_django_type,
-    ):
-        field.is_auto = True
-
-    # Only set the type_annotation for auto fields if they don't have a base_resolver.
-    # Since strawberry 0.139 the type_annotation has a higher priority than the
-    # resolver's annotation, and that would force our automatic model resolution to be
-    # used instead of the resolver's type annotation.
-    if field.is_auto and not field.base_resolver:
-        # resolve type of auto field
-        field_type = resolve_model_field_type(model_field, django_type)
-        field.type_annotation = StrawberryAnnotation(field_type)
-
-    if field.type_annotation and is_optional(
-        model_field,
-        django_type.is_input,
-        django_type.is_partial,
-    ):
-        field.type_annotation.annotation = Optional[field.type_annotation.annotation]
-
-    if django_type.is_input and field.default is dataclasses.MISSING:
-        # strawberry converts UNSET value to MISSING, let's set
-        # it back to UNSET. this is important especially for partial
-        # input types
-        # TODO: could strawberry support UNSET default value?
-        field.default_value = UNSET
-        field.default = UNSET
-    return field
-
-
-def get_fields(django_type: "StrawberryDjangoType"):
-    annotations = utils.get_annotations(django_type.origin)
-    fields: Dict[str, StrawberryDjangoField] = {}
-    seen_fields = set()
-
-    # collect all annotated fields
-    for field_name, field_annotation in annotations.items():
-        with suppress(PrivateStrawberryFieldError):
-            fields[field_name] = get_field(django_type, field_name, field_annotation)
-        seen_fields.add(field_name)
-
-    # collect non-annotated strawberry fields
-    for field_name in dir(django_type.origin):
-        if field_name in seen_fields:
-            continue
-        attr = getattr(django_type.origin, field_name)
-        if not utils.is_strawberry_field(attr):
-            continue
-        field = get_field(django_type, field_name)
-        fields[field_name] = field
-
-    return list(fields.values())
-
-
+_T = TypeVar("_T")
 _O = TypeVar("_O", bound=type)
-_M = TypeVar("_M", bound=django.db.models.Model)
+_M = TypeVar("_M", bound=Model)
 
 
-@dataclasses.dataclass
-class StrawberryDjangoType(Generic[_O, _M]):
-    origin: _O
-    model: Type[_M]
-    is_input: bool
-    is_partial: bool
-    is_filter: bool
-    filters: Any
-    order: Any
-    pagination: Any
-    field_cls: Type[StrawberryDjangoField]
-
-
-def process_type(
-    cls,
-    model: Type[django.db.models.Model],
+def _process_type(
+    cls: _O,
+    model: Type[Model],
     *,
-    filters=UNSET,
-    pagination=UNSET,
-    order=UNSET,
-    field_cls=UNSET,
+    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    filters: Optional[type] = None,
+    order: Optional[type] = None,
+    pagination: bool = False,
+    partial: bool = False,
+    is_filter: Union[Literal["lookups"], bool] = False,
     **kwargs,
-):
-    original_annotations = cls.__dict__.get("__annotations__", {})
-
-    if not field_cls or field_cls is UNSET:
-        field_cls = StrawberryDjangoField
-
-    django_type = StrawberryDjangoType(
+) -> _O:
+    is_input = kwargs.get("is_input", False)
+    django_type = StrawberryDjangoDefinition(
         origin=cls,
         model=model,
-        is_input=kwargs.get("is_input", False),
-        is_partial=kwargs.pop("partial", False),
-        is_filter=kwargs.pop("is_filter", False),
+        field_cls=field_cls,
+        is_partial=partial,
+        is_input=is_input,
+        is_filter=is_filter,
         filters=filters,
         order=order,
         pagination=pagination,
-        field_cls=field_cls,
     )
 
-    fields = get_fields(django_type)
+    auto_fields: set[str] = set()
+    for field_name, field_annotation in get_annotations(cls).items():
+        annotation = field_annotation.annotation
+        if is_private(annotation):
+            continue
+
+        if is_auto(annotation):
+            auto_fields.add(field_name)
+
+        # FIXME: For input types it is imported to set the default value to UNSET
+        # Is there a better way of doing this?
+        if is_input:
+            # First check if the field is defined in the class. If it is,
+            # then we just need to set its default value to UNSET in case
+            # it is MISSING
+            if field_name in cls.__dict__:
+                field = cls.__dict__[field_name]
+                if (
+                    isinstance(field, dataclasses.Field)
+                    and field.default is dataclasses.MISSING
+                ):
+                    field.default = UNSET
+                    if isinstance(field, StrawberryField):
+                        field.default_value = UNSET
+
+                continue
+
+            if not hasattr(cls, field_name):
+                base_field = getattr(cls, "__dataclass_fields__", {}).get(field_name)
+                if base_field is not None and isinstance(base_field, StrawberryField):
+                    new_field = copy.copy(base_field)
+                    for attr in [
+                        "_arguments",
+                        "permission_classes",
+                        "directives",
+                        "extensions",
+                    ]:
+                        old_attr = getattr(base_field, attr)
+                        if old_attr is not None:
+                            setattr(new_field, attr, old_attr[:])
+                else:
+                    new_field = _field(default=UNSET)
+
+                new_field.type_annotation = field_annotation
+                new_field.default = UNSET
+                if isinstance(base_field, StrawberryField):
+                    new_field.default_value = UNSET
+                setattr(cls, field_name, new_field)
+
+    # Make sure model is also considered a "virtual subclass" of cls
+    if "is_type_of" not in cls.__dict__:
+        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type: ignore
+
+    settings = django_settings()
+    if (
+        kwargs.get("description", None) is None
+        and model.__doc__
+        and settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]
+    ):
+        kwargs["description"] = inspect.cleandoc(model.__doc__)
+
+    strawberry.type(cls, **kwargs)
 
     # update annotations and fields
-    cls.__annotations__ = cls_annotations = {}
-    for field in fields:
-        annotation = None
+    type_def = get_object_definition(cls, strict=True)
+    description_from_doc = settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]
+    new_fields: List[StrawberryField] = []
+    for f in type_def._fields:
+        django_name: Optional[str] = (
+            getattr(f, "django_name", None) or f.python_name or f.name
+        )
+        description: Optional[str] = getattr(f, "description", None)
+        type_annotation: Optional[StrawberryAnnotation] = getattr(
+            f,
+            "type_annotation",
+            None,
+        )
 
-        if field.type_annotation and field.type_annotation.annotation:
-            annotation = field.type_annotation.annotation
-        elif field.base_resolver and field.base_resolver.type_annotation:
-            annotation = field.base_resolver.type_annotation.annotation
+        if f.name in auto_fields:
+            f_is_auto = True
+            # Force the field to be auto again for it to be re-evaluated
+            if type_annotation:
+                type_annotation.annotation = strawberry.auto
+        else:
+            f_is_auto = type_annotation is not None and is_auto(
+                type_annotation.annotation,
+            )
 
-        # UNRESOLVED is not a valid annotation, it is just an indication that the type
-        # could not be resolved. In this case just fallback to None
-        if annotation is UNRESOLVED:
-            annotation = None
+        try:
+            if django_name is None:
+                raise FieldDoesNotExist  # noqa: TRY301
+            model_attr = get_model_field(django_type.model, django_name)
+        except FieldDoesNotExist as e:
+            model_attr = getattr(django_type.model, django_name, None)
+            is_relation = False
 
-        # TODO: should we raise an error if annotation is None here?
+            if model_attr is not None and isinstance(
+                model_attr,
+                (property, cached_property),
+            ):
+                func = (
+                    model_attr.fget
+                    if isinstance(model_attr, property)
+                    else model_attr.func
+                )
 
-        cls_annotations[field.name] = annotation
-        setattr(cls, field.name, field)
+                if type_annotation is None or f_is_auto:
+                    return_type = func.__annotations__.get("return")
+                    if return_type is None:
+                        raise MissingFieldAnnotationError(
+                            django_name,
+                            type_def.origin,
+                        ) from e
 
-    # Strawberry >= 0.92.0 defines `is_type_of` for types implementing
-    # interfaces if the attribute has not been set yet. It allows only
-    # instances of `cls` to be returned, we should allow model instances
-    # too.
-    if not hasattr(cls, "is_type_of"):
-        cls.is_type_of = lambda obj, _info: isinstance(obj, (cls, model))
+                    type_annotation = StrawberryAnnotation(
+                        return_type,
+                        namespace=sys.modules[func.__module__].__dict__,
+                    )
 
-    # Get type description from either kwargs, or the model's docstring
-    settings = django_settings()
-    description = kwargs.pop("description", None)
-    if not description and settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]:
-        description = cleandoc(model.__doc__) or None
+                if description is None and func.__doc__ and description_from_doc:
+                    description = inspect.cleandoc(func.__doc__)
 
-    strawberry.type(cls, description=description, **kwargs)
+            if type_annotation is None or f_is_auto:
+                raise
+        else:
+            is_relation = model_attr.is_relation
+            django_name = resolve_model_field_name(
+                model_attr,
+                is_input=django_type.is_input,
+                is_filter=bool(django_type.is_filter),
+            )
 
-    # restore original annotations for further use
-    cls.__annotations__ = original_annotations
-    cls._django_type = django_type
+            if description is None and description_from_doc:
+                if isinstance(model_attr, (GenericRel, GenericForeignKey)):
+                    f_description = None
+                elif isinstance(model_attr, (ManyToOneRel, ManyToManyRel)):
+                    f_description = model_attr.field.help_text
+                else:
+                    f_description = getattr(model_attr, "help_text", None)
+
+                if f_description:
+                    description = str(f_description)
+
+        if isinstance(f, StrawberryDjangoField) and not f.origin_django_type:
+            # If the field is a StrawberryDjangoField and it is the first time
+            # seeing it, just update its annotations/description/etc
+            f.type_annotation = type_annotation
+            f.description = description
+        elif (
+            not isinstance(f, StrawberryDjangoField)
+            and getattr(f, "base_resolver", None) is not None
+        ):
+            # If this is not a StrawberryDjangoField, but has a base_resolver, no need
+            # avoid forcing it to be a StrawberryDjangoField
+            new_fields.append(f)
+            continue
+        else:
+            f = field_cls(  # noqa: PLW2901
+                django_name=django_name,
+                description=description,
+                type_annotation=type_annotation,
+                python_name=f.python_name,
+                graphql_name=getattr(f, "graphql_name", None),
+                origin=getattr(f, "origin", None),
+                is_subscription=getattr(f, "is_subscription", False),
+                base_resolver=getattr(f, "base_resolver", None),
+                permission_classes=getattr(f, "permission_classes", ()),
+                default=getattr(f, "default", dataclasses.MISSING),
+                default_factory=getattr(f, "default_factory", dataclasses.MISSING),
+                deprecation_reason=getattr(f, "deprecation_reason", None),
+                directives=getattr(f, "directives", ()),
+                filters=getattr(f, "filters", None),
+                order=getattr(f, "order", None),
+                extensions=getattr(f, "extensions", ()),
+            )
+
+        f.django_name = django_name
+        f.is_relation = is_relation
+        f.origin_django_type = django_type
+
+        new_fields.append(f)
+        if f.base_resolver and f.python_name:
+            setattr(cls, f.python_name, f)
+
+    type_def._fields = new_fields
+    cls.__strawberry_django_definition__ = django_type  # type: ignore
+    # TODO: remove when deprecating _type_definition
+    DeprecatedDescriptor(
+        "_django_type is deprecated, use __strawberry_django_definition__ instead",
+        cast(
+            WithStrawberryDjangoObjectDefinition,
+            cls,
+        ).__strawberry_django_definition__,
+        "_django_type",
+    ).inject(cls)
 
     return cls
 
 
-# FIXME: This needs proper typing
-def type(model, *, filters=UNSET, **kwargs):  # noqa: A001
+@dataclasses.dataclass
+class StrawberryDjangoDefinition(Generic[_O, _M]):
+    origin: _O
+    model: Type[_M]
+    is_input: bool = False
+    is_partial: bool = False
+    is_filter: Union[Literal["lookups"], bool] = False
+    filters: Optional[type] = None
+    order: Optional[type] = None
+    pagination: bool = False
+    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField
+
+
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        _field,
+    ),
+)
+def type(  # noqa: A001
+    model: Type[Model],
+    *,
+    name: Optional[str] = None,
+    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    is_input: bool = False,
+    is_interface: bool = False,
+    is_filter: Union[Literal["lookups"], bool] = False,
+    description: Optional[str] = None,
+    directives: Optional[Sequence[object]] = (),
+    extend: bool = False,
+    filters: Optional[type] = None,
+    order: Optional[type] = None,
+    pagination: bool = False,
+) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL type.
+
+    Examples
+    --------
+        It can be used like this:
+
+        >>> @strawberry_django.type(SomeModel)
+        ... class X:
+        ...     some_field: strawberry.auto
+        ...     otherfield: str = strawberry_django.field()
+
+    """
+
     def wrapper(cls):
-        return process_type(cls, model, filters=filters, **kwargs)
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            field_cls=field_cls,
+            is_input=is_input,
+            is_filter=is_filter,
+            is_interface=is_interface,
+            description=description,
+            directives=directives,
+            extend=extend,
+            filters=filters,
+            pagination=pagination,
+            order=order,
+        )
 
     return wrapper
 
 
-# FIXME: This needs proper typing
-def input(model, *, partial=False, **kwargs):  # noqa: A001
-    return type(model, partial=partial, is_input=True, **kwargs)
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        _field,
+    ),
+)
+def interface(
+    model: Type[Model],
+    *,
+    name: Optional[str] = None,
+    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    description: Optional[str] = None,
+    directives: Optional[Sequence[object]] = (),
+) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL interface.
+
+    Examples
+    --------
+        It can be used like this:
+
+        >>> @strawberry_django.interface(SomeModel)
+        ... class X:
+        ...     some_field: strawberry.auto
+        ...     otherfield: str = strawberry_django.field()
+
+    """
+
+    def wrapper(cls):
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            field_cls=field_cls,
+            is_interface=True,
+            description=description,
+            directives=directives,
+        )
+
+    return wrapper
 
 
-# FIXME: This needs proper typing
-def mutation(model, **kwargs):
-    return type(model, **kwargs)
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        _field,
+    ),
+)
+def input(  # noqa: A001
+    model: Type[Model],
+    *,
+    name: Optional[str] = None,
+    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    description: Optional[str] = None,
+    directives: Optional[Sequence[object]] = (),
+    is_filter: Union[Literal["lookups"], bool] = False,
+    partial: bool = False,
+) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL input.
+
+    Examples
+    --------
+        It can be used like this:
+
+        >>> @strawberry_django.input(SomeModel)
+        ... class X:
+        ...     some_field: strawberry.auto
+        ...     otherfield: str = strawberry_django.field()
+
+    """
+
+    def wrapper(cls):
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            field_cls=field_cls,
+            is_input=True,
+            is_filter=is_filter,
+            description=description,
+            directives=directives,
+            partial=partial,
+        )
+
+    return wrapper
+
+
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        _field,
+    ),
+)
+def partial(
+    model: Type[Model],
+    *,
+    name: Optional[str] = None,
+    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    description: Optional[str] = None,
+    directives: Optional[Sequence[object]] = (),
+) -> Callable[[_T], _T]:
+    """Annotates a class as a Django GraphQL partial.
+
+    Examples
+    --------
+        It can be used like this:
+
+        >>> @strawberry_django.partial(SomeModel)
+        ... class X:
+        ...     some_field: strawberry.auto
+        ...     otherfield: str = strawberry_django.field()
+
+    """
+
+    def wrapper(cls):
+        return _process_type(
+            cls,
+            model,
+            name=name,
+            field_cls=field_cls,
+            is_input=True,
+            description=description,
+            directives=directives,
+            partial=True,
+        )
+
+    return wrapper

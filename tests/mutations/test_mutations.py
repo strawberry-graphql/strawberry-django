@@ -238,7 +238,7 @@ def test_update_geo(mutation):
     assert geofield_obj.multi_line_string is None
     assert geofield_obj.multi_polygon is None
 
-    obj_id = str(geofield_obj.id)
+    obj_id = str(geofield_obj.pk)
 
     # Test for point
     point = [0.0, 1.0]

@@ -1,13 +1,51 @@
 import functools
 import inspect
+from typing import Any, Callable, TypeVar, overload
 
 from asgiref.sync import sync_to_async
 from django.db import models
+from django.db.models.manager import BaseManager
+from graphql.pyutils import AwaitableOrValue
+from strawberry.utils.inspect import in_async_context
+from typing_extensions import ParamSpec
 
-from . import utils
+_SENTINEL = object()
+_T = TypeVar("_T")
+_R = TypeVar("_R")
+_P = ParamSpec("_P")
+_M = TypeVar("_M", bound=models.Model)
 
 
-def django_resolver(resolver):
+def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
+    # This is what QuerySet does internally to fetch results.
+    # After this, iterating over the queryset should be async safe
+    qs._fetch_all()  # type: ignore
+    return qs
+
+
+@overload
+def django_resolver(
+    f: Callable[_P, _R],
+    *,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+) -> Callable[_P, AwaitableOrValue[_R]]:
+    ...
+
+
+@overload
+def django_resolver(
+    f: None,
+    *,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
+    ...
+
+
+def django_resolver(
+    f=None,
+    *,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+):
     """Django resolver for handling both sync and async.
 
     This decorator is used to make sure that resolver is always called from
@@ -15,30 +53,73 @@ def django_resolver(resolver):
     async context. This is useful especially with Django ORM, which does not
     support async. Coroutines are not wrapped.
     """
-    if inspect.iscoroutinefunction(resolver) or inspect.isasyncgenfunction(resolver):
-        return resolver
 
-    @functools.wraps(resolver)
-    def wrapper(*args, **kwargs):
-        if utils.is_async():
-            return call_sync_resolver(resolver, *args, **kwargs)
+    def wrapper(resolver):
+        if inspect.iscoroutinefunction(resolver) or inspect.isasyncgenfunction(
+            resolver,
+        ):
+            return resolver
 
-        return resolver(*args, **kwargs)
+        def sync_resolver(*args, **kwargs):
+            retval = resolver(*args, **kwargs)
+
+            if callable(retval):
+                retval = retval()
+
+            if isinstance(retval, BaseManager):
+                retval = retval.all()
+
+            if isinstance(retval, models.QuerySet):
+                retval = qs_hook(retval)
+
+            return retval
+
+        async_resolver = sync_to_async(sync_resolver)
+
+        @functools.wraps(resolver)
+        def inner_wrapper(*args, **kwargs):
+            f = async_resolver if in_async_context() else sync_resolver
+            return f(*args, **kwargs)
+
+        return inner_wrapper
+
+    if f is not None:
+        return wrapper(f)
 
     return wrapper
 
 
-def sync_to_async_thread_sensitive(func):
-    # django 3.0 defaults to thread_sensitive=False
-    return sync_to_async(func, thread_sensitive=True)
+@overload
+def django_getattr(
+    obj: Any,
+    name: str,
+    *,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+) -> AwaitableOrValue[Any]:
+    ...
 
 
-@sync_to_async_thread_sensitive
-def call_sync_resolver(resolver, *args, **kwargs):
-    """Safe resolve a sync resolver.
+@overload
+def django_getattr(
+    obj: Any,
+    name: str,
+    default: Any,
+    *,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+) -> AwaitableOrValue[Any]:
+    ...
 
-    This function executes resolver function in sync context and ensures
-    that querysets are executed.
-    """
-    result = resolver(*args, **kwargs)
-    return list(result) if isinstance(result, models.QuerySet) else result
+
+def django_getattr(
+    obj: Any,
+    name: str,
+    default: Any = _SENTINEL,
+    *,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+):
+    args = (default,) if default is not _SENTINEL else ()
+    return django_resolver(getattr, qs_hook=qs_hook)(
+        obj,
+        name,
+        *args,
+    )

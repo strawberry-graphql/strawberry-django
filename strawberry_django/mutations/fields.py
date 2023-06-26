@@ -1,16 +1,15 @@
-from typing import List
+from __future__ import annotations
 
-from django.db import transaction
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, TypeVar
+
+from django.db import models, transaction
 from strawberry import UNSET
-from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument
-from strawberry.type import StrawberryList, StrawberryOptional
 
 from strawberry_django import utils
+from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoFieldBase,
     StrawberryDjangoFieldFilters,
-    StrawberryField,
 )
 from strawberry_django.fields.types import (
     ManyToManyInput,
@@ -19,128 +18,146 @@ from strawberry_django.fields.types import (
 )
 from strawberry_django.resolvers import django_resolver
 
+if TYPE_CHECKING:
+    from strawberry.arguments import StrawberryArgument
+    from strawberry.type import StrawberryType
+    from strawberry.types import Info
+    from typing_extensions import Self
 
-class DjangoMutationBase:
-    def __init__(self, input_type, **kwargs):
+    from strawberry_django.utils import (
+        WithStrawberryDjangoObjectDefinition,
+    )
+
+
+class DjangoMutationBase(StrawberryDjangoFieldBase):
+    def __init__(self, input_type: type | None = None, **kwargs):
+        if input_type is not None and not utils.has_django_definition(input_type):
+            raise TypeError("input_type needs to be a strawberry django input")
+
         self.input_type = input_type
-        super().__init__(
-            graphql_name=None,
-            python_name=None,
-            type_annotation=None,
-            **kwargs,
-        )
-
-    @property
-    def is_optional(self):
-        return isinstance(self.type, StrawberryOptional)
-
-    @property
-    def is_list(self):
-        return isinstance(self.type, StrawberryList) or (
-            self.is_optional and isinstance(self.type.of_type, StrawberryList)
-        )
+        super().__init__(**kwargs)
 
     @property
     def arguments(self):
-        if self.input_type:
-            assert self.django_model == utils.get_django_model(
-                self.input_type,
-            ), "Input and output types should be from the same Django model"
+        if (
+            self.input_type
+            and self.django_model
+            != self.input_type.__strawberry_django_definition__.model
+        ):
+            raise TypeError(
+                "Input and output types should be from the same Django model",
+            )
 
         arguments = []
         if self.input_type:
-            is_list = self.is_list and isinstance(self, DjangoCreateMutation)
-            arguments.append(get_argument("data", self.input_type, is_list))
+            arguments.append(
+                argument(
+                    "data",
+                    self.input_type,
+                    is_list=self.is_list and isinstance(self, DjangoCreateMutation),
+                ),
+            )
+
         return arguments + super().arguments
 
-    @django_resolver
-    def get_result(self, source, info, args, kwargs):
-        return self.resolver(info, source, *args, **kwargs)
+    @arguments.setter
+    def arguments(self, value: list[StrawberryArgument]):
+        args_prop = super(DjangoMutationBase, self.__class__).arguments
+        return args_prop.fset(self, value)  # type: ignore
 
-    @property
-    def is_basic_field(self) -> bool:
-        """Mark this field as not basic.
+    def copy_with(
+        self,
+        type_var_map: Mapping[TypeVar, StrawberryType | type],
+    ) -> Self:
+        new_field = super().copy_with(type_var_map)
+        new_field.input_type = self.input_type
+        return new_field
 
-        All StrawberryDjango fields define a custom resolver that needs to be
-        run, so always return False here.
-        """
-        return False
 
-
-class DjangoCreateMutation(
-    DjangoMutationBase,
-    StrawberryDjangoFieldBase,
-    StrawberryField,
-):
-    def create(self, data):
+class DjangoCreateMutation(DjangoMutationBase):
+    def create(self, data: type):
+        assert self.input_type is not None
         input_data = get_input_data(self.input_type, data)
-        instance = self.django_model.objects.create(**input_data)
+        assert self.django_model
+        instance = self.django_model._default_manager.create(**input_data)
         update_m2m([instance], data)
         return instance
 
+    @django_resolver
     @transaction.atomic
-    def resolver(self, info, source, data):
+    def resolver(
+        self,
+        source: Any,
+        info: Info,
+        args: list[Any],
+        kwargs: dict[str, Any],
+    ) -> Any:
+        data: list[Any] | Any = kwargs["data"]
+
         if self.is_list:
+            assert isinstance(data, list)
             return [self.create(d) for d in data]
 
+        assert not isinstance(data, list)
         return self.create(data)
 
 
-class DjangoUpdateMutation(
-    DjangoMutationBase,
-    StrawberryDjangoFieldFilters,
-    StrawberryDjangoFieldBase,
-    StrawberryField,
-):
+class DjangoUpdateMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
+    @django_resolver
     @transaction.atomic
-    def resolver(self, info, source, data, **kwargs):
-        queryset = self.django_model.objects.all()
-        queryset = self.get_queryset(queryset=queryset, info=info, data=data, **kwargs)
+    def resolver(
+        self,
+        source: Any,
+        info: Info,
+        args: list[Any],
+        kwargs: dict[str, Any],
+    ) -> Any:
+        assert self.input_type is not None
+        data: Any = kwargs["data"]
+        assert self.django_model
+        queryset = self.django_model._default_manager.all()
+        queryset = self.get_queryset(queryset=queryset, info=info, **kwargs)
         input_data = get_input_data(self.input_type, data)
         queryset.update(**input_data)
         update_m2m(queryset, data)
         return queryset
 
 
-class DjangoDeleteMutation(
-    DjangoMutationBase,
-    StrawberryDjangoFieldFilters,
-    StrawberryDjangoFieldBase,
-    StrawberryField,
-):
+class DjangoDeleteMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
+    @django_resolver
     @transaction.atomic
-    def resolver(self, info, source, **kwargs):
-        queryset = self.django_model.objects.all()
+    def resolver(
+        self,
+        source: Any,
+        info: Info,
+        args: list[Any],
+        kwargs: dict[str, Any],
+    ) -> Any:
+        assert self.django_model
+        queryset = self.django_model._default_manager.all()
         queryset = self.get_queryset(queryset=queryset, info=info, **kwargs)
         instances = list(queryset)
         queryset.delete()
         return instances
 
 
-def get_argument(name, type_, is_list=False):
-    annotation = StrawberryAnnotation(List[type_] if is_list else type_)
-    return StrawberryArgument(
-        python_name=name,
-        graphql_name=name,
-        type_annotation=annotation,
-    )
-
-
-def get_input_data(input_type, data):
+def get_input_data(input_type: type[WithStrawberryDjangoObjectDefinition], data: Any):
     input_data = {}
-    for field in input_type._type_definition.fields:
+    for field in input_type.__strawberry_definition__.fields:
         value = getattr(data, field.name)
-        if isinstance(value, (ManyToOneInput, ManyToManyInput)):
+        if value is UNSET or isinstance(value, (ManyToOneInput, ManyToManyInput)):
             continue
-        if value is UNSET:
-            continue
+
         if isinstance(value, OneToManyInput):
             value = value.set
-        input_data[field.django_name] = value
+
+        fname = getattr(field, "django_name", None) or field.python_name or field.name
+        input_data[fname] = value
+
     return input_data
 
 
-def update_m2m(queryset, data):
+def update_m2m(queryset: Iterable[models.Model], data: Any):
     for field_name, field_value in vars(data).items():
         if not isinstance(field_value, (ManyToOneInput, ManyToManyInput)):
             continue
@@ -154,8 +171,8 @@ def update_m2m(queryset, data):
                     raise ValueError("'remove' cannot be used together with 'set'")
 
                 values = field_value.set
-                if isinstance(field_value, ManyToOneInput):
-                    values = [f.model.objects.get(pk=pk) for pk in values]
+                if values and isinstance(field_value, ManyToOneInput):
+                    values = [f.model._default_manager.get(pk=pk) for pk in values]
                 if values:
                     f.set(values)
                 else:

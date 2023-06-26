@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import List
+from typing import Dict, List, Tuple, Union, cast
 
 import django
 import pytest
@@ -12,10 +12,15 @@ from django.db import models
 from strawberry import auto
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.scalars import JSON
-from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.type import StrawberryContainer, StrawberryList, StrawberryOptional
 
 import strawberry_django
 from strawberry_django import fields
+from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.utils import (
+    WithStrawberryDjangoObjectDefinition,
+    WithStrawberryObjectDefinition,
+)
 
 
 class FieldTypesModel(models.Model):
@@ -31,7 +36,12 @@ class FieldTypesModel(models.Model):
     generic_ip_address = models.GenericIPAddressField()
     integer = models.IntegerField()
     image = models.ImageField()
-    null_boolean = models.NullBooleanField()
+    # NullBooleanField was deprecated and will soon be removed
+    null_boolean = (
+        models.NullBooleanField()  # type: ignore
+        if hasattr(models, "NullBooleanField")
+        else models.BooleanField(null=True)
+    )
     positive_big_integer = models.PositiveBigIntegerField()
     positive_integer = models.PositiveIntegerField()
     positive_small_integer = models.PositiveSmallIntegerField()
@@ -136,8 +146,8 @@ def test_type_extension():
         char: auto
         text: bytes  # override type
 
-        @staticmethod
         @strawberry.field
+        @staticmethod
         def my_field() -> int:
             return 0
 
@@ -200,7 +210,7 @@ def test_related_fields():
         related_one_to_one: auto
         related_many_to_many: auto
 
-    assert [(f.name, f.type or f.child.type, f.is_list) for f in fields(Type)] == [
+    assert [(f.name, f.type, f.is_list) for f in fields(Type)] == [
         ("foreign_key", strawberry_django.DjangoModelType, False),
         ("one_to_one", strawberry_django.DjangoModelType, False),
         (
@@ -236,38 +246,42 @@ def test_related_input_fields():
         related_one_to_one: auto
         related_many_to_many: auto
 
-    assert [(f.name, f.type_annotation, f.is_optional) for f in fields(Input)] == [
-        (
-            "foreign_key",
-            StrawberryOptional(strawberry_django.OneToManyInput),
+    expected_fields: Dict[str, Tuple[Union[type, StrawberryContainer], bool]] = {
+        "foreign_key": (
+            strawberry_django.OneToManyInput,
             True,
         ),
-        (
-            "one_to_one",
-            StrawberryOptional(strawberry_django.OneToOneInput),
+        "one_to_one": (
+            strawberry_django.OneToOneInput,
             True,
         ),
-        (
-            "many_to_many",
-            StrawberryOptional(strawberry_django.ManyToManyInput),
+        "many_to_many": (
+            strawberry_django.ManyToManyInput,
             True,
         ),
-        (
-            "related_foreign_key",
-            StrawberryOptional(strawberry_django.ManyToOneInput),
+        "related_foreign_key": (
+            strawberry_django.ManyToOneInput,
             True,
         ),
-        (
-            "related_one_to_one",
-            StrawberryOptional(strawberry_django.OneToOneInput),
+        "related_one_to_one": (
+            strawberry_django.OneToOneInput,
             True,
         ),
-        (
-            "related_many_to_many",
-            StrawberryOptional(strawberry_django.ManyToManyInput),
+        "related_many_to_many": (
+            strawberry_django.ManyToManyInput,
             True,
         ),
-    ]
+    }
+
+    all_fields = fields(cast(WithStrawberryDjangoObjectDefinition, Input))
+    assert len(all_fields) == len(expected_fields)
+
+    for f in all_fields:
+        expected_type, expected_is_optional = expected_fields[f.name]
+        assert isinstance(f, StrawberryDjangoField)
+        assert f.is_optional == expected_is_optional
+        assert isinstance(f.type, StrawberryOptional)
+        assert f.type.of_type == expected_type
 
 
 @pytest.mark.skipif(
@@ -275,6 +289,7 @@ def test_related_input_fields():
     reason="Test requires GEOS to be imported and properly configured",
 )
 def test_geos_fields():
+    from strawberry_django.fields import types
     from tests.models import GeosFieldsModel
 
     @strawberry_django.type(GeosFieldsModel)
@@ -286,13 +301,16 @@ def test_geos_fields():
         multi_line_string: auto
         multi_polygon: auto
 
-    assert [(f.name, f.type or f.child.type) for f in fields(GeoFieldType)] == [
-        ("point", StrawberryOptional(strawberry_django.Point)),
-        ("line_string", StrawberryOptional(strawberry_django.LineString)),
-        ("polygon", StrawberryOptional(strawberry_django.Polygon)),
-        ("multi_point", StrawberryOptional(strawberry_django.MultiPoint)),
-        ("multi_line_string", StrawberryOptional(strawberry_django.MultiLineString)),
-        ("multi_polygon", StrawberryOptional(strawberry_django.MultiPolygon)),
+    assert [
+        (f.name, cast(StrawberryOptional, f.type).of_type)
+        for f in fields(cast(WithStrawberryObjectDefinition, GeoFieldType))
+    ] == [
+        ("point", types.Point),
+        ("line_string", types.LineString),
+        ("polygon", types.Polygon),
+        ("multi_point", types.MultiPoint),
+        ("multi_line_string", types.MultiLineString),
+        ("multi_polygon", types.MultiPolygon),
     ]
 
 
@@ -308,7 +326,7 @@ def test_inherit_type():
     class Type(Base):
         many_to_many: List["Type"]
 
-    assert [(f.name, f.type or f.child.type) for f in fields(Type)] == [
+    assert [(f.name, f.type) for f in fields(Type)] == [
         ("char", str),
         ("one_to_one", Type),
         ("many_to_many", StrawberryList(Type)),
@@ -357,34 +375,12 @@ def test_inherit_partial_input():
     class PartialInput(Input):
         pass
 
-    assert [
-        (f.name, f.type or f.child.type, f.is_optional) for f in fields(PartialInput)
-    ] == [
+    assert [(f.name, f.type, f.is_optional) for f in fields(PartialInput)] == [
         ("char", StrawberryOptional(str), True),
         (
             "one_to_one",
             StrawberryOptional(strawberry_django.OneToOneInput),
             True,
-        ),
-    ]
-
-
-def test_type_from_type():
-    global Type
-
-    @strawberry_django.type(FieldTypesModel)
-    class Type:
-        char: auto
-        one_to_one: "Type"
-        many_to_many: List["Type"]
-
-    fruit_input = strawberry_django.types.from_type(Type, is_input=True)
-    assert [(f.name, f.type) for f in fields(fruit_input)] == [
-        ("char", str),
-        ("one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
-        (
-            "many_to_many",
-            StrawberryOptional(strawberry_django.ManyToManyInput),
         ),
     ]
 
@@ -400,8 +396,13 @@ def test_notimplemented():
 
         field = UnknownField()
 
-    with pytest.raises(NotImplementedError, match=r"UnknownModel\.field"):
+    @strawberry_django.type(UnknownModel)
+    class UnknownType:
+        field: auto
 
-        @strawberry_django.type(UnknownModel)
-        class UnknownType:
-            field: auto
+    @strawberry.type
+    class Query:
+        unknown_type: UnknownType
+
+    with pytest.raises(TypeError, match=r"UnknownModel\.field"):
+        strawberry.Schema(query=Query)

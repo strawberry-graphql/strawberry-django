@@ -1,3 +1,5 @@
+from typing import Optional
+
 import strawberry
 from strawberry import auto
 from strawberry.type import StrawberryOptional
@@ -67,7 +69,7 @@ def test_relationship():
 
     @strawberry_django.filters.filter(models.Fruit)
     class Filter:
-        color: ColorFilter
+        color: Optional[ColorFilter]
 
     assert [(f.name, f.type) for f in fields(Filter)] == [
         ("color", StrawberryOptional(ColorFilter)),
@@ -85,7 +87,7 @@ def test_relationship_with_inheritance():
 
     @strawberry_django.filters.filter(models.Fruit)
     class Filter(Base):
-        color: ColorFilter
+        color: Optional[ColorFilter]
 
     assert [(f.name, f.type) for f in fields(Filter)] == [
         ("color", StrawberryOptional(ColorFilter)),

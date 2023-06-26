@@ -29,9 +29,8 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.2"
-strawberry-graphql = ">=0.184.0"
+strawberry-graphql = ">=0.187.3"
 django-debug-toolbar = { version = ">=3.4", optional = true }
-
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.21.0"
@@ -42,13 +41,12 @@ pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 pytest-mock = "^3.5.1"
 django-debug-toolbar = "^3.2.4"
-#docs requires
 mkdocs = "^1.4.2"
 mkdocs-markdownextradata-plugin = "^0.2.5"
 mkdocs-material = "^9.0.4"
 mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = "^9.5"
-ruff = "^0.0.272"
+ruff = "^0.0.274"
 django-types = "^0.17.0"
 Markdown = "^3.3.7"
 
@@ -61,6 +59,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 select = [
+  "A",
+  "ASYNC100",
+  "ASYNC101",
+  "ASYNC102",
   "E",
   "F",
   "W",
@@ -105,7 +107,7 @@ select = [
 ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003"]
 # FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
 unfixable = ["UP006"]
-target-version = "py38"
+target-version = "py37"
 exclude = [
   ".eggs",
   ".git",
@@ -123,6 +125,7 @@ exclude = [
 [tool.ruff.per-file-ignores]
 "tests/*" = ["A003", "PLW0603"]
 "examples/*" = ["A003"]
+"**/migrations/*" = ["RUF012"]
 
 [tool.ruff.isort]
 known-first-party = ["strawberry-django-plus"]
@@ -145,6 +148,27 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pyright]
+pythonVersion = "3.7"
+useLibraryCodeForTypes = true
+venvPath = "."
+venv = ".venv"
+exclude = [".venv", "**/migrations", "dist", "docs"]
+reportCallInDefaultInitializer = "warning"
+reportMatchNotExhaustive = "warning"
+reportMissingSuperCall = "warning"
+reportOverlappingOverload = "warning"
+reportUninitializedInstanceVariable = "none"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUntypedNamedTuple = "error"
+reportUnusedExpression = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+strictDictionaryInference = true
+strictListInference = true
+strictSetInference = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.django_settings"

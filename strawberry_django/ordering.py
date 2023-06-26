@@ -1,21 +1,42 @@
-from __future__ import annotations
-
 import enum
-from typing import TYPE_CHECKING, Optional
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import strawberry
+from django.db import models
 from strawberry import UNSET
-from strawberry.auto import StrawberryAuto
+from strawberry.arguments import StrawberryArgument
+from strawberry.field import StrawberryField, field
+from strawberry.type import StrawberryType, has_object_definition
+from strawberry.types import Info
+from strawberry.unset import UnsetType
+from typing_extensions import Self, dataclass_transform
 
-from strawberry_django.utils import fields
+from strawberry_django.fields.base import StrawberryDjangoFieldBase
+from strawberry_django.utils import (
+    WithStrawberryObjectDefinition,
+    fields,
+    is_auto,
+)
 
 from . import utils
 from .arguments import argument
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
-    from strawberry.arguments import StrawberryArgument
-    from strawberry.types import Info
+
+
+_T = TypeVar("_T")
+_QS = TypeVar("_QS", bound="QuerySet")
 
 
 @strawberry.enum
@@ -24,75 +45,124 @@ class Ordering(enum.Enum):
     DESC = "DESC"
 
 
-def generate_order_args(order, prefix=""):
+def generate_order_args(order: WithStrawberryObjectDefinition, prefix: str = ""):
     args = []
-    for field in fields(order):
-        ordering = getattr(order, field.name, UNSET)
+    for f in fields(order):
+        ordering = getattr(order, f.name, UNSET)
         if ordering is UNSET:
             continue
+
         if ordering == Ordering.ASC:
-            args.append(f"{prefix}{field.name}")
+            args.append(f"{prefix}{f.name}")
         elif ordering == Ordering.DESC:
-            args.append(f"-{prefix}{field.name}")
+            args.append(f"-{prefix}{f.name}")
         else:
-            subargs = generate_order_args(ordering, prefix=f"{prefix}{field.name}__")
+            subargs = generate_order_args(ordering, prefix=f"{prefix}{f.name}__")
             args.extend(subargs)
+
     return args
 
 
-def order(model):
-    def wrapper(cls):
-        for name, type_ in cls.__annotations__.items():
-            cls.__annotations__[name] = Optional[
-                Ordering if isinstance(type_, StrawberryAuto) else type_
-            ]
-            setattr(cls, name, UNSET)
-        return strawberry.input(cls)
-
-    return wrapper
-
-
-def apply(order, queryset: QuerySet) -> QuerySet:
-    if order is UNSET or order is None:
+def apply(order: Optional[WithStrawberryObjectDefinition], queryset: _QS) -> _QS:
+    if order in (None, strawberry.UNSET):
         return queryset
+
     args = generate_order_args(order)
     if not args:
         return queryset
     return queryset.order_by(*args)
 
 
-class StrawberryDjangoFieldOrdering:
-    def __init__(self, order=UNSET, **kwargs):
+class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
+    def __init__(self, order: Union[type, UnsetType, None] = UNSET, **kwargs):
+        if order and not has_object_definition(order):
+            raise TypeError("order needs to be a strawberry type")
+
         self.order = order
         super().__init__(**kwargs)
 
     @property
-    def arguments(self) -> list[StrawberryArgument]:
+    def arguments(self) -> List[StrawberryArgument]:
         arguments = []
-        if not self.base_resolver:
+        if self.base_resolver is None and self.is_list:
             order = self.get_order()
             if order and order is not UNSET and self.is_list:
-                arguments.append(argument("order", order))
+                arguments.append(argument("order", order, is_optional=True))
         return super().arguments + arguments
 
-    def get_order(self) -> type | None:
-        if self.order is not UNSET:
-            return self.order
-        type_ = utils.unwrap_type(self.type or self.child.type)
+    @arguments.setter
+    def arguments(self, value: List[StrawberryArgument]):
+        args_prop = super(StrawberryDjangoFieldOrdering, self.__class__).arguments
+        return args_prop.fset(self, value)  # type: ignore
 
-        if utils.is_django_type(type_):
-            return type_._django_type.order
-        return None
+    def copy_with(
+        self,
+        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
+    ) -> Self:
+        new_field = super().copy_with(type_var_map)
+        new_field.order = self.order
+        return new_field
 
-    def apply_order(self, queryset: QuerySet, order) -> QuerySet:
+    def get_order(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
+        order = self.order
+        if order is None:
+            return None
+
+        if isinstance(order, UnsetType):
+            type_ = utils.unwrap_type(self.type)
+            order = (
+                type_.__strawberry_django_definition__.order
+                if utils.has_django_definition(type_)
+                else None
+            )
+
+        return order
+
+    def apply_order(
+        self,
+        queryset: _QS,
+        order: Optional[WithStrawberryObjectDefinition] = None,
+    ) -> _QS:
         return apply(order, queryset)
 
     def get_queryset(
         self,
-        queryset: QuerySet,
+        queryset: _QS,
         info: Info,
-        order: type = UNSET,
+        order: Optional[WithStrawberryObjectDefinition] = None,
         **kwargs,
-    ):
+    ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
         return self.apply_order(queryset, order)
+
+
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        field,
+    ),
+)
+def order(
+    model: Type[models.Model],
+    *,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    directives: Optional[Sequence[object]] = (),
+) -> Callable[[_T], _T]:
+    def wrapper(cls):
+        for fname, type_ in cls.__annotations__.items():
+            if is_auto(type_):
+                type_ = Ordering  # noqa: PLW2901
+
+            cls.__annotations__[fname] = Optional[type_]
+            setattr(cls, fname, UNSET)
+
+        return strawberry.input(
+            cls,
+            name=name,
+            description=description,
+            directives=directives,
+        )
+
+    return wrapper
