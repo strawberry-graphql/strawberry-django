@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import dataclasses
 import sys
-import typing
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, overload
 
 from strawberry.annotation import StrawberryAnnotation
@@ -12,6 +10,7 @@ from strawberry.type import (
     StrawberryType,
     WithStrawberryObjectDefinition,
 )
+from strawberry.utils.typing import is_classvar
 from typing_extensions import Protocol
 
 if TYPE_CHECKING:
@@ -84,19 +83,7 @@ def get_annotations(cls):
             continue
 
         for k, v in c.__annotations__.items():
-            # This is the same check that dataclasses does to
-            # exclude classvars from annotations
-            is_classvar = dataclasses._is_classvar(v, typing) or (  # type: ignore
-                isinstance(v, str)
-                and dataclasses._is_type(  # type: ignore
-                    v,
-                    cls,
-                    typing,
-                    typing.ClassVar,
-                    dataclasses._is_classvar,  # type: ignore
-                )
-            )
-            if not is_classvar:
+            if not is_classvar(c, v):
                 annotations[k] = StrawberryAnnotation(v, namespace=namespace)
 
     return annotations

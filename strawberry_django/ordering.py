@@ -3,7 +3,6 @@ from typing import (
     TYPE_CHECKING,
     Callable,
     List,
-    Mapping,
     Optional,
     Sequence,
     Type,
@@ -16,7 +15,7 @@ from django.db import models
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import StrawberryType, has_object_definition
+from strawberry.type import has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
@@ -28,7 +27,6 @@ from strawberry_django.utils import (
     is_auto,
 )
 
-from . import utils
 from .arguments import argument
 
 if TYPE_CHECKING:
@@ -81,12 +79,17 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         self.order = order
         super().__init__(**kwargs)
 
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.order = self.order
+        return new_field
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         arguments = []
         if self.base_resolver is None and self.is_list:
             order = self.get_order()
-            if order and order is not UNSET and self.is_list:
+            if order and order is not UNSET:
                 arguments.append(argument("order", order, is_optional=True))
         return super().arguments + arguments
 
@@ -95,24 +98,16 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         args_prop = super(StrawberryDjangoFieldOrdering, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
 
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.order = self.order
-        return new_field
-
     def get_order(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
         order = self.order
         if order is None:
             return None
 
         if isinstance(order, UnsetType):
-            type_ = utils.unwrap_type(self.type)
+            django_type = self.django_type
             order = (
-                type_.__strawberry_django_definition__.order
-                if utils.has_django_definition(type_)
+                django_type.__strawberry_django_definition__.order
+                if django_type is not None
                 else None
             )
 

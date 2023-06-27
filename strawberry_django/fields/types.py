@@ -1,20 +1,35 @@
 import datetime
 import decimal
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    NewType,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
 from django.db.models.fields import files, json, related, reverse_related
-from strawberry import UNSET
+from strawberry import UNSET, relay
 from strawberry.scalars import JSON
+from typing_extensions import Self
 
 from strawberry_django import filters
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
+
+K = TypeVar("K")
 
 
 @strawberry.type
@@ -58,6 +73,73 @@ class ManyToManyInput:
     add: Optional[List[strawberry.ID]] = UNSET
     remove: Optional[List[strawberry.ID]] = UNSET
     set: Optional[List[strawberry.ID]] = UNSET  # noqa: A003
+
+
+@strawberry.input(
+    description="Input of an object that implements the `Node` interface.",
+)
+class NodeInput:
+    id: relay.GlobalID  # noqa: A003
+
+    def __eq__(self, other: Self):
+        if not isinstance(other, NodeInput):
+            return NotImplemented
+
+        return self.id == other.id
+
+    def __hash__(self):
+        return hash((self.__class__, self.id))
+
+
+@strawberry.input(
+    description="Input of an object that implements the `Node` interface.",
+)
+class NodeInputPartial(NodeInput):
+    # FIXME: Without this pyright will not let any class inheric from this and define
+    # a field that doesn't contain a default value...
+    if TYPE_CHECKING:
+        id: Optional[relay.GlobalID]  # noqa: A003
+    else:
+        id: Optional[relay.GlobalID] = UNSET  # noqa: A003
+
+
+@strawberry.input(description="Add/remove/set the selected nodes.")
+class ListInput(Generic[K]):
+    """Add/remove/set the selected nodes.
+
+    Notes
+    -----
+        To pass data to an intermediate model, type the input in a
+        `throught_defaults` key inside the input object.
+
+    """
+
+    # FIXME: Without this pyright will not let any class inheric from this and define
+    # a field that doesn't contain a default value...
+    if TYPE_CHECKING:
+        set: Optional[List[K]]  # noqa: A003
+        add: Optional[List[K]]
+        remove: Optional[List[K]]
+    else:
+        set: Optional[List[K]] = UNSET  # noqa: A003
+        add: Optional[List[K]] = UNSET
+        remove: Optional[List[K]] = UNSET
+
+    def __eq__(self, other: Self):
+        if not isinstance(other, ListInput):
+            return NotImplemented
+
+        return self._hash_fields() == other._hash_fields()
+
+    def __hash__(self):
+        return hash((self.__class__, *self._hash_fields()))
+
+    def _hash_fields(self):
+        return (
+            tuple(self.set) if isinstance(self.set, list) else self.set,
+            tuple(self.add) if isinstance(self.add, list) else self.add,
+            tuple(self.remove) if isinstance(self.remove, list) else self.remove,
+        )
 
 
 field_type_map: Dict[
@@ -218,20 +300,66 @@ input_field_type_map: Dict[
 }
 
 
+relay_field_type_map: Dict[
+    Union[
+        Type[fields.Field],
+        Type[related.RelatedField],
+        Type[reverse_related.ForeignObjectRel],
+    ],
+    type,
+] = {
+    fields.AutoField: relay.GlobalID,
+    fields.BigAutoField: relay.GlobalID,
+    related.ForeignKey: relay.Node,
+    related.ManyToManyField: List[relay.Node],
+    related.OneToOneField: relay.Node,
+    reverse_related.ManyToManyRel: List[relay.Node],
+    reverse_related.ManyToOneRel: List[relay.Node],
+    reverse_related.OneToOneRel: relay.Node,
+}
+
+
+relay_input_field_type_map: Dict[
+    Union[
+        Type[fields.Field],
+        Type[related.RelatedField],
+        Type[reverse_related.ForeignObjectRel],
+    ],
+    type,
+] = {
+    related.ForeignKey: NodeInput,
+    related.ManyToManyField: ListInput[NodeInputPartial],
+    related.OneToOneField: NodeInput,
+    reverse_related.ManyToManyRel: ListInput[NodeInputPartial],
+    reverse_related.ManyToOneRel: ListInput[NodeInput],
+    reverse_related.OneToOneRel: NodeInput,
+}
+
+
 def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoDefinition",
 ):
+    is_relay = issubclass(django_type.origin, relay.Node)
     model_field_type = type(model_field)
     field_type: Any = None
 
     if django_type.is_filter and model_field.is_relation:
-        field_type = filters.DjangoModelFilterInput
+        field_type = NodeInput if is_relay else filters.DjangoModelFilterInput
     elif django_type.is_input:
-        field_type = input_field_type_map.get(model_field_type, None)
+        input_type_map = input_field_type_map
+        if is_relay:
+            input_type_map = {**input_type_map, **relay_input_field_type_map}
+
+        field_type = input_type_map.get(model_field_type, None)
 
     if field_type is None:
-        field_type = field_type_map.get(model_field_type, NotImplemented)
+        type_map = field_type_map
+        if is_relay:
+            type_map = {**type_map, **relay_field_type_map}
+
+        field_type = type_map.get(model_field_type, NotImplemented)
+
     if field_type is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",

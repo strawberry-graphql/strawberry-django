@@ -9,7 +9,6 @@ from typing import (
     Dict,
     Generic,
     List,
-    Mapping,
     Optional,
     Sequence,
     Tuple,
@@ -22,10 +21,10 @@ from typing import (
 import strawberry
 from django.db import models
 from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
-from strawberry import UNSET
+from strawberry import UNSET, relay
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import StrawberryType, has_object_definition
+from strawberry.type import has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
@@ -37,7 +36,6 @@ from .utils import (
     WithStrawberryObjectDefinition,
     fields,
     has_django_definition,
-    unwrap_type,
 )
 
 if TYPE_CHECKING:
@@ -86,6 +84,15 @@ lookup_name_conversion_map = {
 }
 
 
+def _resolve_global_id(value: Any):
+    if isinstance(value, list):
+        return [_resolve_global_id(v) for v in value]
+    if isinstance(value, relay.GlobalID):
+        return value.node_id
+
+    return value
+
+
 def build_filter_kwargs(
     filters: WithStrawberryObjectDefinition,
 ) -> Tuple[Dict[str, Any], List[Callable]]:
@@ -99,7 +106,7 @@ def build_filter_kwargs(
 
     for f in fields(filters):
         field_name = f.name
-        field_value = getattr(filters, field_name)
+        field_value = _resolve_global_id(getattr(filters, field_name))
 
         # Unset means we are not filtering this. None is still acceptable
         if field_value is UNSET:
@@ -193,16 +200,36 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         self.filters = filters
         super().__init__(**kwargs)
 
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.filters = self.filters
+        return new_field
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         arguments = []
         if self.base_resolver is None:
             filters = self.get_filters()
             origin = cast(WithStrawberryObjectDefinition, self.origin)
+            is_root_query = origin.__strawberry_definition__.name == "Query"
+
             if (
                 self.django_model
+                and is_root_query
+                and isinstance(self.django_type, relay.Node)
+            ):
+                arguments.append(
+                    (
+                        argument("ids", List[relay.GlobalID])
+                        if self.is_list
+                        else argument("id", relay.GlobalID)
+                    ),
+                )
+            if (
+                self.django_model
+                and is_root_query
                 and not self.is_list
-                and origin.__strawberry_definition__.name == "Query"
+                and not self.is_connection
             ):
                 arguments.append(argument("pk", strawberry.ID))
             elif filters is not None and self.is_list:
@@ -215,24 +242,16 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         args_prop = super(StrawberryDjangoFieldFilters, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
 
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.filters = self.filters
-        return new_field
-
     def get_filters(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
         filters = self.filters
         if filters is None:
             return None
 
         if isinstance(filters, UnsetType):
-            type_ = unwrap_type(self.type)
+            django_type = self.django_type
             filters = (
-                type_.__strawberry_django_definition__.filters
-                if has_django_definition(type_)
+                django_type.__strawberry_django_definition__.filters
+                if django_type is not None
                 else None
             )
 

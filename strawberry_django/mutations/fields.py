@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable
 
 from django.db import models, transaction
 from strawberry import UNSET
@@ -20,7 +20,6 @@ from strawberry_django.resolvers import django_resolver
 
 if TYPE_CHECKING:
     from strawberry.arguments import StrawberryArgument
-    from strawberry.type import StrawberryType
     from strawberry.types import Info
     from typing_extensions import Self
 
@@ -36,6 +35,11 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
 
         self.input_type = input_type
         super().__init__(**kwargs)
+
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.input_type = self.input_type
+        return new_field
 
     @property
     def arguments(self):
@@ -64,14 +68,6 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
     def arguments(self, value: list[StrawberryArgument]):
         args_prop = super(DjangoMutationBase, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
-
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, StrawberryType | type],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.input_type = self.input_type
-        return new_field
 
 
 class DjangoCreateMutation(DjangoMutationBase):

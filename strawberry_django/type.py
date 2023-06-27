@@ -2,6 +2,7 @@ import copy
 import dataclasses
 import inspect
 import sys
+import types
 from typing import (
     Callable,
     Generic,
@@ -19,17 +20,24 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
+from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import (
     MissingFieldAnnotationError,
 )
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
-from strawberry.type import get_object_definition
-from strawberry.unset import UNSET
+from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
 from strawberry.utils.cached_property import cached_property
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Literal, dataclass_transform
+
+from strawberry_django.relay import (
+    resolve_model_id,
+    resolve_model_id_attr,
+    resolve_model_node,
+    resolve_model_nodes,
+)
 
 from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
@@ -46,7 +54,7 @@ __all = [
 ]
 
 _T = TypeVar("_T")
-_O = TypeVar("_O", bound=type)
+_O = TypeVar("_O", bound=Type[WithStrawberryObjectDefinition])
 _M = TypeVar("_M", bound=Model)
 
 
@@ -127,6 +135,31 @@ def _process_type(
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
         cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type: ignore
+
+    # Default querying methods for relay
+    if issubclass(cls, relay.Node):
+        for attr, func in [
+            ("resolve_id", resolve_model_id),
+            ("resolve_id_attr", resolve_model_id_attr),
+            ("resolve_node", resolve_model_node),
+            ("resolve_nodes", resolve_model_nodes),
+        ]:
+            existing_resolver = getattr(cls, attr, None)
+            if (
+                existing_resolver is None
+                or existing_resolver.__func__ is getattr(relay.Node, attr).__func__
+            ):
+                setattr(cls, attr, types.MethodType(func, cls))
+
+            # Adjust types that inherit from other types/interfaces that implement Node
+            # to make sure they pass themselves as the node type
+            meth = getattr(cls, attr)
+            if isinstance(meth, types.MethodType) and meth.__self__ is not cls:
+                setattr(
+                    cls,
+                    attr,
+                    types.MethodType(cast(classmethod, meth).__func__, cls),
+                )
 
     settings = django_settings()
     if (

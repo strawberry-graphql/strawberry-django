@@ -1,18 +1,33 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
+from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
 from strawberry.field import UNRESOLVED, StrawberryField
-from strawberry.type import StrawberryList, StrawberryOptional, StrawberryType
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryList,
+    StrawberryOptional,
+    StrawberryType,
+    WithStrawberryObjectDefinition,
+    get_object_definition,
+)
+from strawberry.union import StrawberryUnion
 from strawberry.utils.cached_property import cached_property
 
-from strawberry_django import utils
 from strawberry_django.resolvers import django_resolver
+from strawberry_django.utils import (
+    WithStrawberryDjangoObjectDefinition,
+    get_django_definition,
+    has_django_definition,
+    unwrap_type,
+)
 
 if TYPE_CHECKING:
     from django.db import models
+    from strawberry.object_type import StrawberryObjectDefinition
     from strawberry.types import Info
     from typing_extensions import Literal, Self
 
@@ -34,6 +49,13 @@ class StrawberryDjangoFieldBase(StrawberryField):
         self.origin_django_type: StrawberryDjangoDefinition[Any, Any] | None = None
         super().__init__(graphql_name=graphql_name, python_name=python_name, **kwargs)
 
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.django_name = self.django_name
+        new_field.is_relation = self.is_relation
+        new_field.origin_django_type = self.origin_django_type
+        return new_field
+
     @property
     def is_basic_field(self) -> bool:
         """Mark this field as not basic.
@@ -43,15 +65,90 @@ class StrawberryDjangoFieldBase(StrawberryField):
         """
         return False
 
-    @property
-    def type(  # noqa: A003
+    @cached_property
+    def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
+        origin = self.type
+
+        object_definition = get_object_definition(origin)
+        if (
+            object_definition
+            and object_definition.concrete_of
+            and issubclass(object_definition.concrete_of.origin, relay.Connection)
+        ):
+            origin = object_definition.type_var_map[cast(TypeVar, relay.NodeType)]
+            if isinstance(origin, LazyType):
+                origin = origin.resolve_type()
+
+        origin = unwrap_type(origin)
+        if isinstance(origin, LazyType):
+            origin = origin.resolve_type()
+
+        if isinstance(origin, StrawberryUnion):
+            origin_list: list[type[WithStrawberryDjangoObjectDefinition]] = []
+            for t in origin.types:
+                while isinstance(t, StrawberryContainer):
+                    t = t.of_type  # noqa: PLW2901
+
+                if has_django_definition(t):
+                    origin_list.append(t)
+
+            origin = origin_list[0] if len(origin_list) == 1 else None
+
+        return origin if has_django_definition(origin) else None
+
+    @cached_property
+    def django_model(self) -> type[models.Model] | None:
+        django_type = self.django_type
+        return (
+            django_type.__strawberry_django_definition__.model
+            if django_type is not None
+            else None
+        )
+
+    @cached_property
+    def is_optional(self) -> bool:
+        return isinstance(self.type, StrawberryOptional)
+
+    @cached_property
+    def is_list(self) -> bool:
+        type_ = self.type
+        if isinstance(type_, StrawberryOptional):
+            type_ = type_.of_type
+
+        return isinstance(type_, StrawberryList)
+
+    @cached_property
+    def is_connection(self) -> bool:
+        type_ = self.type
+        if isinstance(type_, StrawberryOptional):
+            type_ = type_.of_type
+
+        return isinstance(type_, type) and issubclass(type_, relay.Connection)
+
+    @cached_property
+    def safe_resolver(self):
+        resolver = self.base_resolver
+        assert resolver
+
+        if not resolver.is_async:
+            resolver = django_resolver(resolver)
+
+        return resolver
+
+    def resolve_type(
         self,
-    ) -> StrawberryType | type | Literal[UNRESOLVED]:  # type: ignore
-        resolved = super().type
+        *,
+        type_definition: StrawberryObjectDefinition | None = None,
+    ) -> (
+        StrawberryType
+        | type[WithStrawberryObjectDefinition]
+        | Literal[UNRESOLVED]  # type: ignore
+    ):
+        resolved = super().resolve_type(type_definition=type_definition)
         if resolved is UNRESOLVED:
             return resolved
 
-        resolved_django_type = utils.get_django_definition(utils.unwrap_type(resolved))
+        resolved_django_type = get_django_definition(unwrap_type(resolved))
 
         if self.origin_django_type and (
             # FIXME: Why does this come as Any sometimes when using future annotations?
@@ -84,53 +181,10 @@ class StrawberryDjangoFieldBase(StrawberryField):
             self.type_annotation = StrawberryAnnotation(resolved_type)
             resolved = super().type
 
+        if isinstance(resolved, StrawberryAuto):
+            resolved = UNRESOLVED
+
         return resolved
-
-    @type.setter
-    def type(self, type_: Any) -> None:  # noqa: A003
-        super(StrawberryDjangoFieldBase, self.__class__).type.fset(  # type: ignore
-            self,
-            type_,
-        )
-
-    @cached_property
-    def django_model(self) -> type[models.Model] | None:
-        type_ = utils.unwrap_type(self.type)
-        if utils.has_django_definition(type_):
-            return type_.__strawberry_django_definition__.model
-        return None
-
-    @cached_property
-    def is_optional(self) -> bool:
-        return isinstance(self.type, StrawberryOptional)
-
-    @cached_property
-    def is_list(self) -> bool:
-        type_ = self.type
-        if isinstance(type_, StrawberryOptional):
-            type_ = type_.of_type
-
-        return isinstance(type_, StrawberryList)
-
-    @cached_property
-    def safe_resolver(self):
-        resolver = self.base_resolver
-        assert resolver
-
-        if not resolver.is_async:
-            resolver = django_resolver(resolver)
-
-        return resolver
-
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, StrawberryType | type],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.django_name = self.django_name
-        new_field.is_relation = self.is_relation
-        new_field.origin_django_type = self.origin_django_type
-        return new_field
 
     def resolver(
         self,
