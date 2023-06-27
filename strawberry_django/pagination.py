@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, List, Mapping, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, List, Optional, TypeVar, Union
 
 import strawberry
 from strawberry.arguments import StrawberryArgument
-from strawberry.type import StrawberryType
 from strawberry.types import Info
 from strawberry.unset import UNSET, UnsetType
 from typing_extensions import Self
@@ -41,6 +40,11 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         self.pagination = pagination
         super().__init__(**kwargs)
 
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.pagination = self.pagination
+        return new_field
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         arguments = []
@@ -56,14 +60,6 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
     def arguments(self, value: List[StrawberryArgument]):
         args_prop = super(StrawberryDjangoPagination, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
-
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.pagination = self.pagination
-        return new_field
 
     def get_pagination(self) -> Optional[type]:
         has_pagination = self.pagination

@@ -9,7 +9,6 @@ from typing import (
     Dict,
     Generic,
     List,
-    Mapping,
     Optional,
     Sequence,
     Tuple,
@@ -25,7 +24,7 @@ from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
 from strawberry import UNSET, relay
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import StrawberryType, has_object_definition
+from strawberry.type import has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
@@ -201,6 +200,11 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         self.filters = filters
         super().__init__(**kwargs)
 
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.filters = self.filters
+        return new_field
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         arguments = []
@@ -237,14 +241,6 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
     def arguments(self, value: List[StrawberryArgument]):
         args_prop = super(StrawberryDjangoFieldFilters, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
-
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.filters = self.filters
-        return new_field
 
     def get_filters(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
         filters = self.filters

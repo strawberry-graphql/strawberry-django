@@ -3,7 +3,6 @@ from typing import (
     TYPE_CHECKING,
     Callable,
     List,
-    Mapping,
     Optional,
     Sequence,
     Type,
@@ -16,7 +15,7 @@ from django.db import models
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import StrawberryType, has_object_definition
+from strawberry.type import has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
@@ -80,6 +79,11 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         self.order = order
         super().__init__(**kwargs)
 
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.order = self.order
+        return new_field
+
     @property
     def arguments(self) -> List[StrawberryArgument]:
         arguments = []
@@ -93,14 +97,6 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
     def arguments(self, value: List[StrawberryArgument]):
         args_prop = super(StrawberryDjangoFieldOrdering, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
-
-    def copy_with(
-        self,
-        type_var_map: Mapping[TypeVar, Union[StrawberryType, type]],
-    ) -> Self:
-        new_field = super().copy_with(type_var_map)
-        new_field.order = self.order
-        return new_field
 
     def get_order(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
         order = self.order
