@@ -217,6 +217,21 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-choices-field"
+version = "2.2.2"
+description = "Django field that set/get django's new TextChoices/IntegerChoices enum."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "django_choices_field-2.2.2-py3-none-any.whl", hash = "sha256:bfdf5a8e098ead77eb1d5e32a85352af4a37a7b3f28fb5e74b8a17c1270a30bc"},
+    {file = "django_choices_field-2.2.2.tar.gz", hash = "sha256:1147a47d3972a49479be002c5c8ad0118863a8b936933597cfb3d8fcf257a578"},
+]
+
+[package.dependencies]
+django = ">=3.2"
+typing_extensions = ">=4.0.0"
+
+[[package]]
 name = "django-debug-toolbar"
 version = "3.8.1"
 description = "A configurable set of panels that display various debug information about the current request/response."
@@ -1156,13 +1171,13 @@ files = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.6.3"
+version = "4.7.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typing_extensions-4.6.3-py3-none-any.whl", hash = "sha256:88a4153d8505aabbb4e13aacb7c486c2b4a33ca3b3f807914a9b4c844c471c26"},
-    {file = "typing_extensions-4.6.3.tar.gz", hash = "sha256:d91d5919357fe7f681a9f2b5b4cb2a5f1ef0a1e9f59c4d8ff0d3491e05c0ffd5"},
+    {file = "typing_extensions-4.7.0-py3-none-any.whl", hash = "sha256:5d8c9dac95c27d20df12fb1d97b9793ab8b2af8a3a525e68c80e21060c161771"},
+    {file = "typing_extensions-4.7.0.tar.gz", hash = "sha256:935ccf31549830cda708b42289d44b6f74084d616a00be651601a4f968e77c82"},
 ]
 
 [[package]]
@@ -1273,8 +1288,9 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 
 [extras]
 debug-toolbar = ["django-debug-toolbar"]
+enum = ["django-choices-field"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.7,<4.0"
-content-hash = "ebc1cf469c2634b2fa4702036dd9a73d7258f2fcf21f062227503ba32a599b8e"
+content-hash = "1dbafab68956539efb7fa7f604c5d5a1c58338091b660d0b428b881a5c4b634c"
