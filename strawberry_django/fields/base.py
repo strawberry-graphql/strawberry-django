@@ -17,8 +17,13 @@ from strawberry.type import (
 from strawberry.union import StrawberryUnion
 from strawberry.utils.cached_property import cached_property
 
-from strawberry_django import utils
 from strawberry_django.resolvers import django_resolver
+from strawberry_django.utils import (
+    WithStrawberryDjangoObjectDefinition,
+    get_django_definition,
+    has_django_definition,
+    unwrap_type,
+)
 
 if TYPE_CHECKING:
     from django.db import models
@@ -61,35 +66,35 @@ class StrawberryDjangoFieldBase(StrawberryField):
         return False
 
     @cached_property
-    def django_type(self) -> type[utils.WithStrawberryDjangoObjectDefinition] | None:
+    def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
         origin = self.type
 
-        tdef = get_object_definition(origin)
+        object_definition = get_object_definition(origin)
         if (
-            tdef
-            and tdef.concrete_of
-            and issubclass(tdef.concrete_of.origin, relay.Connection)
+            object_definition
+            and object_definition.concrete_of
+            and issubclass(object_definition.concrete_of.origin, relay.Connection)
         ):
-            origin = tdef.type_var_map[cast(TypeVar, relay.NodeType)]
+            origin = object_definition.type_var_map[cast(TypeVar, relay.NodeType)]
             if isinstance(origin, LazyType):
                 origin = origin.resolve_type()
 
-        origin = utils.unwrap_type(origin)
+        origin = unwrap_type(origin)
         if isinstance(origin, LazyType):
             origin = origin.resolve_type()
 
         if isinstance(origin, StrawberryUnion):
-            origin_list: list[type[utils.WithStrawberryDjangoObjectDefinition]] = []
+            origin_list: list[type[WithStrawberryDjangoObjectDefinition]] = []
             for t in origin.types:
                 while isinstance(t, StrawberryContainer):
                     t = t.of_type  # noqa: PLW2901
 
-                if utils.has_django_definition(t):
+                if has_django_definition(t):
                     origin_list.append(t)
 
             origin = origin_list[0] if len(origin_list) == 1 else None
 
-        return origin if utils.has_django_definition(origin) else None
+        return origin if has_django_definition(origin) else None
 
     @cached_property
     def django_model(self) -> type[models.Model] | None:
@@ -143,7 +148,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
         if resolved is UNRESOLVED:
             return resolved
 
-        resolved_django_type = utils.get_django_definition(utils.unwrap_type(resolved))
+        resolved_django_type = get_django_definition(unwrap_type(resolved))
 
         if self.origin_django_type and (
             # FIXME: Why does this come as Any sometimes when using future annotations?
