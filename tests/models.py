@@ -15,6 +15,7 @@ class Fruit(models.Model):
     color = models.ForeignKey(
         "Color",
         null=True,
+        blank=True,
         related_name="fruits",
         on_delete=models.CASCADE,
     )
@@ -47,6 +48,7 @@ class User(models.Model):
     group = models.ForeignKey(
         "Group",
         null=True,
+        blank=True,
         related_name="users",
         on_delete=models.CASCADE,
     )
@@ -87,12 +89,12 @@ try:
     GEOS_IMPORTED = True
 
     class GeosFieldsModel(models.Model):
-        point = geos_fields.PointField(null=True)
-        line_string = geos_fields.LineStringField(null=True)
-        polygon = geos_fields.PolygonField(null=True)
-        multi_point = geos_fields.MultiPointField(null=True)
-        multi_line_string = geos_fields.MultiLineStringField(null=True)
-        multi_polygon = geos_fields.MultiPolygonField(null=True)
+        point = geos_fields.PointField(null=True, blank=True)
+        line_string = geos_fields.LineStringField(null=True, blank=True)
+        polygon = geos_fields.PolygonField(null=True, blank=True)
+        multi_point = geos_fields.MultiPointField(null=True, blank=True)
+        multi_line_string = geos_fields.MultiLineStringField(null=True, blank=True)
+        multi_polygon = geos_fields.MultiPolygonField(null=True, blank=True)
 
 except ImproperlyConfigured:
     GEOS_IMPORTED = False

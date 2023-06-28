@@ -1,3 +1,9 @@
-from .mutations import create, delete, update
+from .mutations import create, delete, input_mutation, mutation, update
 
-__all__ = ["create", "update", "delete"]
+__all__ = [
+    "create",
+    "delete",
+    "input_mutation",
+    "mutation",
+    "update",
+]

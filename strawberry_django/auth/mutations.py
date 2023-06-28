@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 import functools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Type, cast
 
 import strawberry
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
-from strawberry.types import Info
 
-from strawberry_django.mutations import mutations
-from strawberry_django.mutations.fields import (
-    DjangoCreateMutation,
-    get_input_data,
-    update_m2m,
-)
+from strawberry_django.mutations import mutations, resolvers
+from strawberry_django.mutations.fields import DjangoCreateMutation
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.resolvers import django_resolver
+
+if TYPE_CHECKING:
+    from django.contrib.auth.base_user import AbstractBaseUser
+    from strawberry.types import Info
 
 
 @django_resolver
@@ -35,16 +37,25 @@ def resolve_logout(info: Info) -> bool:
 
 
 class DjangoRegisterMutation(DjangoCreateMutation):
-    def create(self, data: type):
-        assert self.input_type is not None
-        input_data = get_input_data(self.input_type, data)
-        validate_password(input_data["password"])
-        assert self.django_model
-        instance = self.django_model._default_manager.create_user(  # type: ignore
-            **input_data,
-        )
-        update_m2m([instance], data)
-        return instance
+    def create(self, data: dict[str, Any], *, info: Info):
+        model = cast(Type["AbstractBaseUser"], self.django_model)
+        assert model is not None
+
+        password = data.pop("password")
+        validate_password(password)
+
+        # Do not optimize anything while retrieving the object to update
+        token = DjangoOptimizerExtension.enabled.set(False)
+        try:
+            return resolvers.create(
+                info,
+                model,
+                data,
+                full_clean=self.full_clean,
+                pre_save_hook=lambda obj: obj.set_password(password),
+            )
+        finally:
+            DjangoOptimizerExtension.enabled.reset(token)
 
 
 login = functools.partial(strawberry.mutation, resolver=resolve_login)
