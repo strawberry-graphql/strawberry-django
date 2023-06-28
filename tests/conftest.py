@@ -1,12 +1,36 @@
-from typing import List
+from typing import Dict, List, Tuple, Type, Union, cast
 
 import pytest
 import strawberry
 from django.conf import settings
+from django.test.client import (
+    AsyncClient,  # type: ignore
+    Client,
+)
 
 import strawberry_django
+from strawberry_django.optimizer import DjangoOptimizerExtension
+from tests.utils import GraphQLTestClient
 
 from . import models, types, utils
+
+
+@pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])
+def gql_client(request):
+    client, path, with_optimizer = cast(
+        Dict[str, Tuple[Union[Type[Client], Type[AsyncClient]], str, bool]],
+        {
+            "sync": (Client, "/graphql/", True),
+            "async": (AsyncClient, "/graphql_async/", True),
+            "sync_no_optimizer": (Client, "/graphql/", False),
+            "async_no_optimizer": (AsyncClient, "/graphql_async/", False),
+        },
+    )[request.param]
+
+    token = DjangoOptimizerExtension.enabled.set(with_optimizer)
+    with GraphQLTestClient(path, client()) as c:
+        yield c
+    DjangoOptimizerExtension.enabled.reset(token)
 
 
 @pytest.fixture()
@@ -110,8 +134,8 @@ if settings.GEOS_IMPORTED:
         ]
 
 
-@pytest.fixture()
-def schema():
+@pytest.fixture(params=["optimizer_enabled", "optimizer_disabled"])
+def schema(request):
     @strawberry.type
     class Query:
         user: types.User = strawberry_django.field()
@@ -121,15 +145,22 @@ def schema():
         tag: types.Tag = strawberry_django.field()
         tags: List[types.Tag] = strawberry_django.field()
 
+    if request.param == "optimizer_enabled":
+        extensions = [DjangoOptimizerExtension()]
+    elif request.param == "optimizer_disabled":
+        extensions = []
+    else:
+        raise AssertionError(f"Not able to handle param '{request.param}'")
+
     if settings.GEOS_IMPORTED:
 
         @strawberry.type
         class GeoQuery(Query):
             geofields: List[types.GeoField] = strawberry_django.field()
 
-        return strawberry.Schema(query=GeoQuery)
+        return strawberry.Schema(query=GeoQuery, extensions=extensions)
 
-    return strawberry.Schema(query=Query)
+    return strawberry.Schema(query=Query, extensions=extensions)
 
 
 @pytest.fixture(

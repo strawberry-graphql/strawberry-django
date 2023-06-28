@@ -25,7 +25,7 @@ from strawberry.utils.inspect import in_async_context
 from typing_extensions import Literal, Self
 
 from strawberry_django.resolvers import django_getattr, django_resolver
-from strawberry_django.utils import (
+from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
     get_django_definition,
 )
@@ -230,6 +230,8 @@ def resolve_model_nodes(
         The resolved queryset, already prefetched from the database
 
     """
+    from strawberry_django import optimizer  # avoid circular import
+
     if issubclass(source, models.Model):
         origin = None
     else:
@@ -259,6 +261,11 @@ def resolve_model_nodes(
         return_type = info.return_type
         if isinstance(return_type, type) and issubclass(return_type, relay.Connection):
             extra_args["qs_hook"] = lambda qs: qs
+
+        ext = optimizer.optimizer.get()
+        if ext is not None:
+            # If optimizer extension is enabled, optimize this queryset
+            qs = ext.optimize(qs, info=info)
 
     retval = cast(
         AwaitableOrValue[models.QuerySet[_M]],
@@ -341,6 +348,8 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
         The resolved node, already prefetched from the database
 
     """
+    from strawberry_django import optimizer  # avoid circular import
+
     if issubclass(source, models.Model):
         origin = None
     else:
@@ -356,6 +365,12 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
 
     if origin and hasattr(origin, "get_queryset"):
         qs = origin.get_queryset(qs, info)
+
+    if info is not None:
+        ext = optimizer.optimizer.get()
+        if ext is not None:
+            # If optimizer extension is enabled, optimize this queryset
+            qs = ext.optimize(qs, info=info)
 
     return django_resolver(lambda: qs.get() if required else qs.first())()
 

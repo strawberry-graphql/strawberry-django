@@ -1,5 +1,6 @@
 import inspect
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -14,6 +15,11 @@ from typing import (
 from django.db.models.base import Model
 from strawberry.exceptions import MissingFieldAnnotationError
 from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from strawberry_django.optimizer import OptimizerStore
+
+    from .utils.typing import PrefetchType, TypeOrSequence
 
 __all__ = [
     "ModelProperty",
@@ -30,6 +36,7 @@ class ModelProperty(Generic[_M, _R]):
     """Model property with optimization hinting functionality."""
 
     name: str
+    store: "OptimizerStore"
 
     def __init__(
         self,
@@ -37,12 +44,22 @@ class ModelProperty(Generic[_M, _R]):
         *,
         cached: bool = False,
         meta: Optional[Dict[Any, Any]] = None,
+        only: Optional["TypeOrSequence[str]"] = None,
+        select_related: Optional["TypeOrSequence[str]"] = None,
+        prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
     ):
+        from .optimizer import OptimizerStore
+
         super().__init__()
 
         self.func = func
         self.cached = cached
         self.meta = meta
+        self.store = OptimizerStore.with_hints(
+            only=only,
+            select_related=select_related,
+            prefetch_related=prefetch_related,
+        )
 
     def __set_name__(self, owner: Type[_M], name: str):
         self.origin = owner
@@ -91,6 +108,9 @@ def model_property(
     *,
     cached: bool = False,
     meta: Optional[Dict[Any, Any]] = None,
+    only: Optional["TypeOrSequence[str]"] = None,
+    select_related: Optional["TypeOrSequence[str]"] = None,
+    prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
 ) -> ModelProperty[_M, _R]:
     ...
 
@@ -101,6 +121,9 @@ def model_property(
     *,
     cached: bool = False,
     meta: Optional[Dict[Any, Any]] = None,
+    only: Optional["TypeOrSequence[str]"] = None,
+    select_related: Optional["TypeOrSequence[str]"] = None,
+    prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
 ) -> Callable[[Callable[[_M], _R]], ModelProperty[_M, _R]]:
     ...
 
@@ -110,12 +133,18 @@ def model_property(
     *,
     cached: bool = False,
     meta: Optional[Dict[Any, Any]] = None,
+    only: Optional["TypeOrSequence[str]"] = None,
+    select_related: Optional["TypeOrSequence[str]"] = None,
+    prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
 ) -> Any:
     def wrapper(f):
         return ModelProperty(
             f,
             cached=cached,
             meta=meta,
+            only=only,
+            select_related=select_related,
+            prefetch_related=prefetch_related,
         )
 
     if func is not None:
@@ -128,6 +157,9 @@ def model_cached_property(
     func=None,
     *,
     meta: Optional[Dict[Any, Any]] = None,
+    only: Optional["TypeOrSequence[str]"] = None,
+    select_related: Optional["TypeOrSequence[str]"] = None,
+    prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
 ):
     """Property with gql optimization hinting.
 
@@ -171,4 +203,11 @@ def model_cached_property(
         ...     col_b_formatted: gql.auto
 
     """
-    return model_property(func, cached=True, meta=meta)
+    return model_property(
+        func,
+        cached=True,
+        meta=meta,
+        only=only,
+        select_related=select_related,
+        prefetch_related=prefetch_related,
+    )

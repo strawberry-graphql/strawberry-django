@@ -15,17 +15,13 @@ from django.db import models
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import has_object_definition
+from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
-from strawberry_django.utils import (
-    WithStrawberryObjectDefinition,
-    fields,
-    is_auto,
-)
+from strawberry_django.utils.typing import is_auto
 
 from .arguments import argument
 
@@ -45,7 +41,7 @@ class Ordering(enum.Enum):
 
 def generate_order_args(order: WithStrawberryObjectDefinition, prefix: str = ""):
     args = []
-    for f in fields(order):
+    for f in order.__strawberry_definition__.fields:
         ordering = getattr(order, f.name, UNSET)
         if ordering is UNSET:
             continue

@@ -18,7 +18,7 @@ from strawberry.union import StrawberryUnion
 from strawberry.utils.cached_property import cached_property
 
 from strawberry_django.resolvers import django_resolver
-from strawberry_django.utils import (
+from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
     get_django_definition,
     has_django_definition,
@@ -131,7 +131,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
         assert resolver
 
         if not resolver.is_async:
-            resolver = django_resolver(resolver)
+            resolver = django_resolver(resolver, qs_hook=None)
 
         return resolver
 

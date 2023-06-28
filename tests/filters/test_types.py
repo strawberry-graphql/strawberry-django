@@ -2,10 +2,9 @@ from typing import Optional
 
 import strawberry
 from strawberry import auto
-from strawberry.type import StrawberryOptional
+from strawberry.type import StrawberryOptional, get_object_definition
 
 import strawberry_django
-from strawberry_django import fields
 from strawberry_django.filters import DjangoModelFilterInput
 from tests import models
 
@@ -18,7 +17,8 @@ def test_filter():
         color: auto
         types: auto
 
-    assert [(f.name, f.type) for f in fields(Filter)] == [
+    object_definition = get_object_definition(Filter, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("id", StrawberryOptional(strawberry.ID)),
         ("name", StrawberryOptional(str)),
         ("color", StrawberryOptional(DjangoModelFilterInput)),
@@ -34,7 +34,11 @@ def test_lookups():
         color: auto
         types: auto
 
-    assert [(f.name, f.type.of_type.__name__) for f in fields(Filter)] == [
+    object_definition = get_object_definition(Filter, strict=True)
+    assert [
+        (f.name, f.type.of_type.__name__)  # type: ignore
+        for f in object_definition.fields
+    ] == [
         ("id", "FilterLookup"),
         ("name", "FilterLookup"),
         ("color", "DjangoModelFilterInput"),
@@ -54,7 +58,8 @@ def test_inherit(testtype):
     class Filter(Base):
         pass
 
-    assert [(f.name, f.type) for f in fields(Filter)] == [
+    object_definition = get_object_definition(Filter, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("id", StrawberryOptional(strawberry.ID)),
         ("name", StrawberryOptional(str)),
         ("color", StrawberryOptional(DjangoModelFilterInput)),
@@ -71,7 +76,8 @@ def test_relationship():
     class Filter:
         color: Optional[ColorFilter]
 
-    assert [(f.name, f.type) for f in fields(Filter)] == [
+    object_definition = get_object_definition(Filter, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("color", StrawberryOptional(ColorFilter)),
     ]
 
@@ -89,6 +95,7 @@ def test_relationship_with_inheritance():
     class Filter(Base):
         color: Optional[ColorFilter]
 
-    assert [(f.name, f.type) for f in fields(Filter)] == [
+    object_definition = get_object_definition(Filter, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("color", StrawberryOptional(ColorFilter)),
     ]

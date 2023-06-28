@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import functools
 import inspect
-from typing import Any, Callable, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from asgiref.sync import sync_to_async
 from django.db import models
 from django.db.models.manager import BaseManager
-from graphql.pyutils import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import ParamSpec
+
+if TYPE_CHECKING:
+    from graphql.pyutils import AwaitableOrValue
 
 _SENTINEL = object()
 _T = TypeVar("_T")
@@ -19,7 +23,8 @@ _M = TypeVar("_M", bound=models.Model)
 def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
     # This is what QuerySet does internally to fetch results.
     # After this, iterating over the queryset should be async safe
-    qs._fetch_all()  # type: ignore
+    if qs._result_cache is None:  # type: ignore
+        qs._fetch_all()  # type: ignore
     return qs
 
 
@@ -27,16 +32,15 @@ def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
 def django_resolver(
     f: Callable[_P, _R],
     *,
-    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
 ) -> Callable[_P, AwaitableOrValue[_R]]:
     ...
 
 
 @overload
 def django_resolver(
-    f: None,
     *,
-    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
 ) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
     ...
 
@@ -44,7 +48,7 @@ def django_resolver(
 def django_resolver(
     f=None,
     *,
-    qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+    qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
 ):
     """Django resolver for handling both sync and async.
 
@@ -69,7 +73,7 @@ def django_resolver(
             if isinstance(retval, BaseManager):
                 retval = retval.all()
 
-            if isinstance(retval, models.QuerySet):
+            if qs_hook is not None and isinstance(retval, models.QuerySet):
                 retval = qs_hook(retval)
 
             return retval
@@ -87,6 +91,11 @@ def django_resolver(
         return wrapper(f)
 
     return wrapper
+
+
+@django_resolver(qs_hook=None)
+def django_fetch(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
+    return default_qs_hook(qs)
 
 
 @overload

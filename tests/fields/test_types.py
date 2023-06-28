@@ -4,23 +4,23 @@ import enum
 import uuid
 from typing import Dict, List, Tuple, Union, cast
 
-import django
 import pytest
 import strawberry
 from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from strawberry import auto
 from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.scalars import JSON
-from strawberry.type import StrawberryContainer, StrawberryList, StrawberryOptional
+from strawberry.type import (
+    StrawberryContainer,
+    StrawberryList,
+    StrawberryOptional,
+    get_object_definition,
+)
 
 import strawberry_django
-from strawberry_django import fields
 from strawberry_django.fields.field import StrawberryDjangoField
-from strawberry_django.utils import (
-    WithStrawberryDjangoObjectDefinition,
-    WithStrawberryObjectDefinition,
-)
 
 
 class FieldTypesModel(models.Model):
@@ -98,7 +98,8 @@ def test_field_types():
         uuid: auto
         json: auto
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("char", str),
@@ -133,7 +134,8 @@ def test_subset_of_fields():
         integer: auto
         text: auto
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("id", strawberry.ID),
         ("integer", int),
         ("text", str),
@@ -151,7 +153,8 @@ def test_type_extension():
         def my_field() -> int:
             return 0
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("char", str),
         ("text", bytes),
         ("my_field", int),
@@ -159,7 +162,7 @@ def test_type_extension():
 
 
 def test_field_does_not_exist():
-    with pytest.raises(django.core.exceptions.FieldDoesNotExist):
+    with pytest.raises(FieldDoesNotExist):
 
         @strawberry_django.type(FieldTypesModel)
         class Type:
@@ -175,7 +178,8 @@ def test_override_field_type():
     class Type:
         char: EnumType
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         (
             "char",
             EnumDefinition(
@@ -193,7 +197,8 @@ def test_override_field_default_value():
     class Type:
         char: str = "my value"
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("char", str),
     ]
 
@@ -210,7 +215,11 @@ def test_related_fields():
         related_one_to_one: auto
         related_many_to_many: auto
 
-    assert [(f.name, f.type, f.is_list) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [
+        (f.name, f.type, cast(StrawberryDjangoField, f).is_list)
+        for f in object_definition.fields
+    ] == [
         ("foreign_key", strawberry_django.DjangoModelType, False),
         ("one_to_one", strawberry_django.DjangoModelType, False),
         (
@@ -273,10 +282,10 @@ def test_related_input_fields():
         ),
     }
 
-    all_fields = fields(cast(WithStrawberryDjangoObjectDefinition, Input))
-    assert len(all_fields) == len(expected_fields)
+    object_definition = get_object_definition(Input, strict=True)
+    assert len(object_definition.fields) == len(expected_fields)
 
-    for f in all_fields:
+    for f in object_definition.fields:
         expected_type, expected_is_optional = expected_fields[f.name]
         assert isinstance(f, StrawberryDjangoField)
         assert f.is_optional == expected_is_optional
@@ -301,9 +310,10 @@ def test_geos_fields():
         multi_line_string: auto
         multi_polygon: auto
 
+    object_definition = get_object_definition(GeoFieldType, strict=True)
     assert [
         (f.name, cast(StrawberryOptional, f.type).of_type)
-        for f in fields(cast(WithStrawberryObjectDefinition, GeoFieldType))
+        for f in object_definition.fields
     ] == [
         ("point", types.Point),
         ("line_string", types.LineString),
@@ -320,13 +330,14 @@ def test_inherit_type():
     @strawberry_django.type(FieldTypesModel)
     class Base:
         char: auto
-        one_to_one: "Type"
+        one_to_one: "Type"  # type: ignore
 
     @strawberry_django.type(FieldTypesModel)
-    class Type(Base):
-        many_to_many: List["Type"]
+    class Type(Base):  # type: ignore
+        many_to_many: List["Type"]  # type: ignore
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("char", str),
         ("one_to_one", Type),
         ("many_to_many", StrawberryList(Type)),
@@ -337,7 +348,7 @@ def test_inherit_input():
     global Type
 
     @strawberry_django.type(FieldTypesModel)
-    class Type:
+    class Type:  # type: ignore
         char: auto
         one_to_one: "Type"
         many_to_many: List["Type"]
@@ -347,7 +358,8 @@ def test_inherit_input():
         id: auto
         my_data: str
 
-    assert [(f.name, f.type) for f in fields(Input)] == [
+    object_definition = get_object_definition(Input, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("char", str),
         ("one_to_one", StrawberryOptional(strawberry_django.OneToOneInput)),
         (
@@ -375,7 +387,11 @@ def test_inherit_partial_input():
     class PartialInput(Input):
         pass
 
-    assert [(f.name, f.type, f.is_optional) for f in fields(PartialInput)] == [
+    object_definition = get_object_definition(PartialInput, strict=True)
+    assert [
+        (f.name, f.type, cast(StrawberryDjangoField, f).is_optional)
+        for f in object_definition.fields
+    ] == [
         ("char", StrawberryOptional(str), True),
         (
             "one_to_one",
