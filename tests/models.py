@@ -1,11 +1,17 @@
+from typing import TYPE_CHECKING, Optional
+
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 
 from strawberry_django.descriptors import model_property
 
+if TYPE_CHECKING:
+    from django.db.models.manager import RelatedManager
+
 
 class Fruit(models.Model):
     name = models.CharField(max_length=20)
+    color_id: Optional[int]
     color = models.ForeignKey(
         "Color",
         null=True,
@@ -27,6 +33,7 @@ class Fruit(models.Model):
 
 
 class Color(models.Model):
+    fruits: "RelatedManager[Fruit]"
     name = models.CharField(max_length=20)
 
 
@@ -36,6 +43,7 @@ class FruitType(models.Model):
 
 class User(models.Model):
     name = models.CharField(max_length=50)
+    group_id: Optional[int]
     group = models.ForeignKey(
         "Group",
         null=True,
@@ -45,14 +53,15 @@ class User(models.Model):
     tag = models.OneToOneField("Tag", null=True, on_delete=models.CASCADE)
 
     @property
-    def group_prop(self) -> "Group":
+    def group_prop(self) -> Optional["Group"]:
         return self.group
 
-    def get_group(self) -> "Group":
+    def get_group(self) -> Optional["Group"]:
         return self.group
 
 
 class Group(models.Model):
+    users: "RelatedManager[User]"
     name = models.CharField(max_length=50)
     tags = models.ManyToManyField("Tag", null=True, related_name="groups")
 

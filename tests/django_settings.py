@@ -1,5 +1,15 @@
 from django.core.exceptions import ImproperlyConfigured
+from django.db import models
+from django.db.models.manager import BaseManager
+from django.db.models.query import QuerySet
 
+for cls in [QuerySet, BaseManager, models.ForeignKey, models.ManyToManyField]:
+    if not hasattr(cls, "__class_getitem__"):
+        cls.__class_getitem__ = classmethod(  # type: ignore
+            lambda cls, *args, **kwargs: cls,
+        )
+
+DEBUG = True
 SECRET_KEY = 1
 
 DATABASES = {
@@ -12,6 +22,20 @@ DATABASES = {
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.staticfiles",
+    "debug_toolbar",
+    "strawberry_django",
+]
+
+
+ROOT_URLCONF = "tests.urls"
+
+
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "strawberry_django.middlewares.debug_toolbar.DebugToolbarMiddleware",
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -30,6 +54,36 @@ CACHES = {
     },
 }
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "%(levelname)s %(message)s"},
+    },
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "loggers": {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+        },
+        "strawberry.execution": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
+
 try:
     from django.contrib.gis.db import models
 
@@ -44,4 +98,9 @@ except ImproperlyConfigured:
     GEOS_IMPORTED = False
 
 
-INSTALLED_APPS.append("tests")
+INSTALLED_APPS.extend(
+    [
+        "tests",
+        "tests.projects",
+    ],
+)

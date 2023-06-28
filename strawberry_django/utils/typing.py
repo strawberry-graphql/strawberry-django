@@ -1,8 +1,20 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
+from django.db.models import Prefetch
+from graphql.type.definition import GraphQLResolveInfo
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
 from strawberry.type import (
@@ -14,12 +26,20 @@ from strawberry.utils.typing import is_classvar
 from typing_extensions import Protocol
 
 if TYPE_CHECKING:
-    from strawberry.field import StrawberryField
-    from typing_extensions import Literal, TypeGuard
+    from django.contrib.auth.base_user import AbstractBaseUser
+    from django.contrib.auth.models import AnonymousUser
+    from typing_extensions import Literal, TypeAlias, TypeGuard
 
     from strawberry_django.type import StrawberryDjangoDefinition
 
+_T = TypeVar("_T")
 _Type = TypeVar("_Type", bound="StrawberryType | type")
+
+TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
+TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
+UserType: TypeAlias = Union["AbstractBaseUser", "AnonymousUser"]
+PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
+PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
 
 
 class WithStrawberryDjangoObjectDefinition(WithStrawberryObjectDefinition, Protocol):
@@ -62,27 +82,19 @@ def get_django_definition(
     )
 
 
-def is_auto(obj: Any) -> TypeGuard[StrawberryAuto]:
+def is_auto(obj: Any) -> bool:
     if isinstance(obj, str):
-        # Support future references
         return obj in ["auto", "strawberry.auto"]
 
     return isinstance(obj, StrawberryAuto)
 
 
-def fields(obj: WithStrawberryObjectDefinition) -> list[StrawberryField]:
-    return obj.__strawberry_definition__.fields
-
-
-def get_annotations(cls):
+def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
     annotations: dict[str, StrawberryAnnotation] = {}
 
     for c in reversed(cls.__mro__):
         namespace = sys.modules[c.__module__].__dict__
-        if "__annotations__" not in c.__dict__:
-            continue
-
-        for k, v in c.__annotations__.items():
+        for k, v in getattr(c, "__annotations__", {}).items():
             if not is_classvar(c, v):
                 annotations[k] = StrawberryAnnotation(v, namespace=namespace)
 

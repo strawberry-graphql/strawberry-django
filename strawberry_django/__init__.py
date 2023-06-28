@@ -17,7 +17,6 @@ from .mutations.mutations import mutation
 from .ordering import order
 from .resolvers import django_resolver
 from .type import input, partial, type
-from .utils import fields
 
 __all__ = [
     "DjangoFileType",
@@ -34,7 +33,6 @@ __all__ = [
     "connection",
     "django_resolver",
     "field",
-    "fields",
     "filter",
     "filters",
     "input",

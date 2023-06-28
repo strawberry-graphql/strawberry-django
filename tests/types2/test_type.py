@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union, cast
+from typing import Dict, Tuple, Union
 
 import strawberry
 from django.db import models
@@ -7,12 +7,11 @@ from strawberry.type import (
     StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
+    get_object_definition,
 )
 
 import strawberry_django
-from strawberry_django import fields
 from strawberry_django.fields.field import StrawberryDjangoField
-from strawberry_django.utils import WithStrawberryDjangoObjectDefinition
 
 
 class TypeModel(models.Model):
@@ -43,7 +42,8 @@ def test_type():
         boolean: auto
         string: auto
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("string", str),
@@ -60,7 +60,8 @@ def test_inherit(testtype):
     class Type(Base):
         string: auto
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("string", str),
@@ -74,7 +75,8 @@ def test_default_value():
         string2: str = strawberry.field(default="data2")
         string3: str = strawberry_django.field(default="data3")
 
-    assert [(f.name, f.type) for f in fields(Type)] == [
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
         ("string", str),
         ("string2", str),
         ("string3", str),
@@ -121,10 +123,10 @@ def test_relationship_inherit(testtype):
         "another_name": (strawberry_django.DjangoModelType, False),
     }
 
-    all_fields = fields(cast(WithStrawberryDjangoObjectDefinition, Type))
-    assert len(all_fields) == len(expected_fields)
+    object_definition = get_object_definition(Type, strict=True)
+    assert len(object_definition.fields) == len(expected_fields)
 
-    for f in all_fields:
+    for f in object_definition.fields:
         expected_type, expected_is_list = expected_fields[f.name]
         assert isinstance(f, StrawberryDjangoField)
         assert f.is_list == expected_is_list

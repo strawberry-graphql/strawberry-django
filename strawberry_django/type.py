@@ -16,7 +16,6 @@ from typing import (
 )
 
 import strawberry
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
@@ -32,11 +31,19 @@ from strawberry.utils.cached_property import cached_property
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Literal, dataclass_transform
 
+from strawberry_django.optimizer import OptimizerStore
 from strawberry_django.relay import (
     resolve_model_id,
     resolve_model_id_attr,
     resolve_model_node,
     resolve_model_nodes,
+)
+from strawberry_django.utils.typing import (
+    PrefetchType,
+    TypeOrSequence,
+    WithStrawberryDjangoObjectDefinition,
+    get_annotations,
+    is_auto,
 )
 
 from .descriptors import ModelProperty
@@ -44,7 +51,6 @@ from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
 from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
-from .utils import WithStrawberryDjangoObjectDefinition, get_annotations, is_auto
 
 __all = [
     "StrawberryDjangoType",
@@ -69,6 +75,10 @@ def _process_type(
     pagination: bool = False,
     partial: bool = False,
     is_filter: Union[Literal["lookups"], bool] = False,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
     **kwargs,
 ) -> _O:
     is_input = kwargs.get("is_input", False)
@@ -82,6 +92,12 @@ def _process_type(
         filters=filters,
         order=order,
         pagination=pagination,
+        disable_optimization=disable_optimization,
+        store=OptimizerStore.with_hints(
+            only=only,
+            select_related=select_related,
+            prefetch_related=prefetch_related,
+        ),
     )
 
     auto_fields: set[str] = set()
@@ -255,7 +271,20 @@ def _process_type(
             )
 
             if description is None and description_from_doc:
-                if isinstance(model_attr, (GenericRel, GenericForeignKey)):
+                try:
+                    from django.contrib.contenttypes.fields import (
+                        GenericForeignKey,
+                        GenericRel,
+                    )
+                except (ImportError, RuntimeError):
+                    GenericForeignKey = None  # noqa: N806
+                    GenericRel = None  # noqa: N806
+
+                if (
+                    GenericForeignKey is not None
+                    and GenericRel is not None
+                    and isinstance(model_attr, (GenericRel, GenericForeignKey))
+                ):
                     f_description = None
                 elif isinstance(model_attr, (ManyToOneRel, ManyToManyRel)):
                     f_description = model_attr.field.help_text
@@ -325,6 +354,7 @@ def _process_type(
 class StrawberryDjangoDefinition(Generic[_O, _M]):
     origin: _O
     model: Type[_M]
+    store: OptimizerStore
     is_input: bool = False
     is_partial: bool = False
     is_filter: Union[Literal["lookups"], bool] = False
@@ -332,6 +362,7 @@ class StrawberryDjangoDefinition(Generic[_O, _M]):
     order: Optional[type] = None
     pagination: bool = False
     field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField
+    disable_optimization: bool = False
 
 
 @dataclass_transform(
@@ -355,6 +386,10 @@ def type(  # noqa: A001
     filters: Optional[type] = None,
     order: Optional[type] = None,
     pagination: bool = False,
+    only: Optional[TypeOrSequence[str]] = None,
+    select_related: Optional[TypeOrSequence[str]] = None,
+    prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    disable_optimization: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
@@ -384,6 +419,10 @@ def type(  # noqa: A001
             filters=filters,
             pagination=pagination,
             order=order,
+            only=only,
+            select_related=select_related,
+            prefetch_related=prefetch_related,
+            disable_optimization=disable_optimization,
         )
 
     return wrapper

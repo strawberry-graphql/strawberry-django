@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, Iterable
 from django.db import models, transaction
 from strawberry import UNSET
 
-from strawberry_django import utils
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoFieldBase,
@@ -17,20 +16,19 @@ from strawberry_django.fields.types import (
     OneToManyInput,
 )
 from strawberry_django.resolvers import django_resolver
+from strawberry_django.utils.typing import has_django_definition
 
 if TYPE_CHECKING:
     from strawberry.arguments import StrawberryArgument
     from strawberry.types import Info
     from typing_extensions import Self
 
-    from strawberry_django.utils import (
-        WithStrawberryDjangoObjectDefinition,
-    )
+    from strawberry_django.utils.typing import WithStrawberryDjangoObjectDefinition
 
 
 class DjangoMutationBase(StrawberryDjangoFieldBase):
     def __init__(self, input_type: type | None = None, **kwargs):
-        if input_type is not None and not utils.has_django_definition(input_type):
+        if input_type is not None and not has_django_definition(input_type):
             raise TypeError("input_type needs to be a strawberry django input")
 
         self.input_type = input_type

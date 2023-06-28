@@ -24,19 +24,18 @@ from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
 from strawberry import UNSET, relay
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
-from strawberry.type import has_object_definition
+from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
 
-from .arguments import argument
-from .fields.base import StrawberryDjangoFieldBase
-from .utils import (
+from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
-    WithStrawberryObjectDefinition,
-    fields,
     has_django_definition,
 )
+
+from .arguments import argument
+from .fields.base import StrawberryDjangoFieldBase
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -104,7 +103,7 @@ def build_filter_kwargs(
         else None
     )
 
-    for f in fields(filters):
+    for f in filters.__strawberry_definition__.fields:
         field_name = f.name
         field_value = _resolve_global_id(getattr(filters, field_name))
 
