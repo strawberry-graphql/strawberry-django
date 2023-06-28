@@ -39,6 +39,7 @@ from strawberry_django.relay import (
     resolve_model_nodes,
 )
 
+from .descriptors import ModelProperty
 from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
 from .fields.types import get_model_field, resolve_model_field_name
@@ -204,7 +205,18 @@ def _process_type(
             model_attr = getattr(django_type.model, django_name, None)
             is_relation = False
 
-            if model_attr is not None and isinstance(
+            if model_attr is not None and isinstance(model_attr, ModelProperty):
+                if type_annotation is None or f_is_auto:
+                    type_annotation = StrawberryAnnotation(
+                        model_attr.type_annotation,
+                        namespace=sys.modules[model_attr.func.__module__].__dict__,
+                    )
+
+                if description is None and description_from_doc:
+                    description = model_attr.description
+
+                f_is_auto = False
+            elif model_attr is not None and isinstance(
                 model_attr,
                 (property, cached_property),
             ):
@@ -229,6 +241,8 @@ def _process_type(
 
                 if description is None and func.__doc__ and description_from_doc:
                     description = inspect.cleandoc(func.__doc__)
+
+                f_is_auto = False
 
             if type_annotation is None or f_is_auto:
                 raise

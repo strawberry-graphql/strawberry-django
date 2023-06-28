@@ -1,6 +1,8 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 
+from strawberry_django.descriptors import model_property
+
 
 class Fruit(models.Model):
     name = models.CharField(max_length=20)
@@ -18,6 +20,10 @@ class Fruit(models.Model):
     @property
     def name_lower(self):
         return self.name.lower()
+
+    @model_property
+    def name_length(self) -> int:
+        return len(self.name)
 
 
 class Color(models.Model):
