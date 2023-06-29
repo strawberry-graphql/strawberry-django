@@ -276,7 +276,7 @@ def _process_type(
                         GenericForeignKey,
                         GenericRel,
                     )
-                except (ImportError, RuntimeError):
+                except (ImportError, RuntimeError):  # pragma: no cover
                     GenericForeignKey = None  # noqa: N806
                     GenericRel = None  # noqa: N806
 

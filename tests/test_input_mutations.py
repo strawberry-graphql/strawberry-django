@@ -40,7 +40,9 @@ def test_input_mutation(db, gql_client: GraphQLTestClient):
         assert res.data == {
             "createProject": {
                 "name": "Some Project",
-                "cost": "12.50",
+                # The cost is properly set, but this user doesn't have
+                # permission to see it
+                "cost": None,
                 "dueDate": "2030-01-01T00:00:00",
             },
         }

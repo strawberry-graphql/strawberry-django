@@ -2,12 +2,12 @@ import textwrap
 from typing import cast
 
 import strawberry
-import strawberry.django
 from django.db import models
 from django.test import override_settings
 from django_choices_field import TextChoicesField
 from pytest_mock import MockerFixture
 
+import strawberry_django
 from strawberry_django.fields import types
 from strawberry_django.fields.types import field_type_map
 from strawberry_django.settings import (
@@ -35,14 +35,14 @@ class ChoicesModel(models.Model):
 
 
 def test_choices_field():
-    @strawberry.django.type(ChoicesModel)
+    @strawberry_django.type(ChoicesModel)
     class ChoicesType:
         attr1: strawberry.auto
         attr2: strawberry.auto
 
     @strawberry.type
     class Query:
-        @strawberry.django.field
+        @strawberry_django.field
         def obj(self) -> ChoicesType:
             return cast(ChoicesType, ChoicesModel(attr1=Choice.A, attr2="c"))
 
@@ -78,14 +78,14 @@ def test_no_choices_enum(mocker: MockerFixture):
     mocker.patch.object(types, "TextChoicesField", None)
     mocker.patch.dict(field_type_map, {TextChoicesField: str})
 
-    @strawberry.django.type(ChoicesModel)
+    @strawberry_django.type(ChoicesModel)
     class ChoicesType:
         attr1: strawberry.auto
         attr2: strawberry.auto
 
     @strawberry.type
     class Query:
-        @strawberry.django.field
+        @strawberry_django.field
         def obj(self) -> ChoicesType:
             return cast(ChoicesType, ChoicesModel(attr1=Choice.A, attr2="c"))
 
@@ -115,14 +115,14 @@ def test_no_choices_enum(mocker: MockerFixture):
     },
 )
 def test_generate_choices_from_enum():
-    @strawberry.django.type(ChoicesModel)
+    @strawberry_django.type(ChoicesModel)
     class ChoicesType:
         attr1: strawberry.auto
         attr2: strawberry.auto
 
     @strawberry.type
     class Query:
-        @strawberry.django.field
+        @strawberry_django.field
         def obj(self) -> ChoicesType:
             return cast(ChoicesType, ChoicesModel(attr1=Choice.A, attr2="c"))
 

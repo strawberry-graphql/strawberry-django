@@ -247,6 +247,20 @@ django = ">=3.2.4"
 sqlparse = ">=0.2"
 
 [[package]]
+name = "django-guardian"
+version = "2.4.0"
+description = "Implementation of per object permissions for Django."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "django-guardian-2.4.0.tar.gz", hash = "sha256:c58a68ae76922d33e6bdc0e69af1892097838de56e93e78a8361090bcd9f89a0"},
+    {file = "django_guardian-2.4.0-py3-none-any.whl", hash = "sha256:440ca61358427e575323648b25f8384739e54c38b3d655c81d75e0cd0d61b697"},
+]
+
+[package.dependencies]
+Django = ">=2.2"
+
+[[package]]
 name = "django-types"
 version = "0.17.0"
 description = "Type stubs for Django"
@@ -833,6 +847,20 @@ files = [
 pytest = ">=2.5.2"
 
 [[package]]
+name = "pytest-snapshot"
+version = "0.9.0"
+description = "A plugin for snapshot testing with pytest."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "pytest-snapshot-0.9.0.tar.gz", hash = "sha256:c7013c3abc3e860f9feff899f8b4debe3708650d8d8242a61bf2625ff64db7f3"},
+    {file = "pytest_snapshot-0.9.0-py3-none-any.whl", hash = "sha256:4b9fe1c21c868fe53a545e4e3184d36bc1c88946e3f5c1d9dd676962a9b3d4ab"},
+]
+
+[package.dependencies]
+pytest = ">=3.0.0"
+
+[[package]]
 name = "pytest-watch"
 version = "4.2.0"
 description = "Local continuous test runner with pytest and watchdog."
@@ -1125,13 +1153,13 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.190.0"
+version = "0.192.0"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "strawberry_graphql-0.190.0-py3-none-any.whl", hash = "sha256:8e9bdb5080a97bc4e0dd67cbb0ce77261d4e624be57d4cf45581c75d4a5605e0"},
-    {file = "strawberry_graphql-0.190.0.tar.gz", hash = "sha256:179fe9aa57f478b1d27aa249b3fb682c6fcab99809671597e18c4a73b8a66123"},
+    {file = "strawberry_graphql-0.192.0-py3-none-any.whl", hash = "sha256:1eb84b96e75fccabbfc4b908da4bfc6e9177ab1632d246323ef99b7482da079a"},
+    {file = "strawberry_graphql-0.192.0.tar.gz", hash = "sha256:1662a99fd6d7df8f4def7b6e11f19c42c12d459f5f9a3ccc3d3812fa6d5d5083"},
 ]
 
 [package.dependencies]
@@ -1293,4 +1321,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.7,<4.0"
-content-hash = "1dbafab68956539efb7fa7f604c5d5a1c58338091b660d0b428b881a5c4b634c"
+content-hash = "d39f77f498849860908156cc85fc0a3332da88ae6b8223bd395f52e1c32882d5"

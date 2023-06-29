@@ -3,6 +3,7 @@ from typing import Optional
 import django.contrib.auth as django_auth
 import pytest
 import strawberry
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 import strawberry_django
@@ -60,7 +61,11 @@ def test_login_with_wrong_password(mutation, user, context):
 
 
 def test_logout(mutation, user, context):
-    django_auth.login(context.request, user)
+    django_auth.login(
+        context.request,
+        user,
+        backend=settings.AUTHENTICATION_BACKENDS[0],
+    )
 
     result = mutation("{ logout }", context_value=context)
     assert not result.errors

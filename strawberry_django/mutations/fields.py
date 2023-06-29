@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar
 
 import strawberry
 from django.core.exceptions import (
@@ -23,6 +23,7 @@ from strawberry_django.fields.field import (
 )
 from strawberry_django.fields.types import OperationInfo, OperationMessage
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.permissions import filter_with_perms, get_with_perms
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.settings import strawberry_django_settings
 from strawberry_django.utils.inspect import get_possible_types
@@ -126,12 +127,14 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
             if OperationInfo not in types_:
                 types_ = (*types_, OperationInfo)
 
-            name = capitalize_first(to_camel_case(self.python_name))
-            resolved = strawberry.union(f"{name}Payload", types_)
-            self.type_annotation = StrawberryAnnotation(
-                resolved,
-                namespace=getattr(self.type_annotation, "namespace", None),
-            )
+                name = capitalize_first(to_camel_case(self.python_name))
+                resolved = strawberry.union(f"{name}Payload", types_)
+                self.type_annotation = StrawberryAnnotation(
+                    resolved,
+                    namespace=getattr(self.type_annotation, "namespace", None),
+                )
+
+            self._resolved_return_type = True
 
         return resolved
 
@@ -248,20 +251,6 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
             )
 
 
-def resolve_model(
-    model: type[_M],
-    pk: strawberry.ID | relay.GlobalID,
-    *,
-    info: Info,
-) -> _M:
-    if isinstance(pk, relay.GlobalID):
-        instance = pk.resolve_node_sync(info, required=True, ensure_type=model)
-    else:
-        instance = cast(_M, model._default_manager.get(pk=pk))
-
-    return instance
-
-
 def get_pk(
     data: dict[str, Any],
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
@@ -289,12 +278,15 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 
         pk = get_pk(vdata)
         if pk not in (None, UNSET):
-            instance = resolve_model(model, pk, info=info)
+            instance = get_with_perms(pk, info, required=True, model=model)
         else:
-            instance = self.get_queryset(
-                queryset=model._default_manager.all(),
-                info=info,
-                **kwargs,
+            instance = filter_with_perms(
+                self.get_queryset(
+                    queryset=model._default_manager.all(),
+                    info=info,
+                    **kwargs,
+                ),
+                info,
             )
 
         return self.update(info, instance, resolvers.parse_input(info, vdata))
@@ -337,12 +329,15 @@ class DjangoDeleteMutation(
 
         pk = get_pk(vdata)
         if pk not in (None, UNSET):
-            instance = resolve_model(model, pk, info=info)
+            instance = get_with_perms(pk, info, required=True, model=model)
         else:
-            instance = self.get_queryset(
-                queryset=model._default_manager.all(),
-                info=info,
-                **kwargs,
+            instance = filter_with_perms(
+                self.get_queryset(
+                    queryset=model._default_manager.all(),
+                    info=info,
+                    **kwargs,
+                ),
+                info,
             )
 
         return self.delete(info, instance, resolvers.parse_input(info, vdata))

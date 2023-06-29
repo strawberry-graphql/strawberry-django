@@ -1,21 +1,21 @@
 import textwrap
 
 import strawberry
-import strawberry.django
 from asgiref.sync import sync_to_async
 
+import strawberry_django
 from tests import models
 
 
 def test_model_property(transactional_db):
-    @strawberry.django.type(models.Fruit)
+    @strawberry_django.type(models.Fruit)
     class Fruit:
         name: strawberry.auto
         name_length: strawberry.auto
 
     @strawberry.type
     class Query:
-        fruit: Fruit = strawberry.django.field()
+        fruit: Fruit = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
 
@@ -54,14 +54,14 @@ def test_model_property(transactional_db):
 
 
 async def test_model_property_async(transactional_db):
-    @strawberry.django.type(models.Fruit)
+    @strawberry_django.type(models.Fruit)
     class Fruit:
         name: strawberry.auto
         name_length: strawberry.auto
 
     @strawberry.type
     class Query:
-        fruit: Fruit = strawberry.django.field()
+        fruit: Fruit = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
 

@@ -296,7 +296,7 @@ def _get_model_hints(
             GenericForeignKey,
             GenericRelation,
         )
-    except (ImportError, RuntimeError):  # pragma:nocover
+    except (ImportError, RuntimeError):  # pragma: no cover
         GenericForeignKey = None  # noqa: N806
         GenericRelation = None  # noqa: N806
         _relation_fields = (models.ManyToManyField, ManyToManyRel, ManyToOneRel)
