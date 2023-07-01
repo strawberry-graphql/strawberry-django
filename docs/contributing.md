@@ -22,7 +22,7 @@ following command:
 pre-commit install
 ```
 
-### Docs setup and local server:
+### Docs setup and local server
 
 We use Material for MkDocs, you can read the documentation [here](https://squidfunk.github.io/mkdocs-material/)
 

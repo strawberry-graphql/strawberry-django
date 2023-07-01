@@ -1,10 +1,17 @@
 # Authentication
 
+!!! warning
+
+    This solution is enough for web browsers, but will not work for clients that
+    doesn't have a way to store cookies in it (e.g. mobile apps). For those it is
+    recommended to use token authentication methods. JWT can be used with
+    [strawberry-django-jwt](https://github.com/KundaPanda/strawberry-django-jwt)
+    lib.
+
 `strawberry_django` provides mutations to get authentication going right away.
 The `auth.register` mutation performs password validation using Django's `validate_password` method.
 
-```python
-# types.py
+```{.python title=types.py}
 import strawberry
 from strawberry import auto
 from django.contrib.auth import get_user_model
@@ -18,8 +25,9 @@ class User:
 class UserInput:
     username: auto
     password: auto
+```
 
-# schema.py
+```{.python title=schema.py}
 from strawberry.django import auth
 from .types import User, UserInput
 
