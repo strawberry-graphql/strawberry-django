@@ -689,9 +689,9 @@ class DjangoOptimizerExtension(SchemaExtension):
 
     """
 
-    enabled: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    disabled: contextvars.ContextVar[bool] = contextvars.ContextVar(
         "optimizer_enabled_ctx",
-        default=True,
+        default=False,
     )
 
     def __init__(
@@ -710,14 +710,14 @@ class DjangoOptimizerExtension(SchemaExtension):
         self.prefetch_custom_queryset = prefetch_custom_queryset
 
     def on_execute(self) -> Generator[None, None, None]:
-        enabled = self.enabled.get()
-        if enabled:
+        disabled = self.disabled.get()
+        if not disabled:
             optimizer.set(self)
 
         try:
             yield
         finally:
-            if enabled:
+            if not disabled:
                 optimizer.set(None)
 
     def resolve(
@@ -755,7 +755,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         *,
         store: OptimizerStore | None = None,
     ) -> QuerySet[_M]:
-        if not self.enabled.get():
+        if self.disabled.get():
             return qs
 
         config = OptimizerConfig(

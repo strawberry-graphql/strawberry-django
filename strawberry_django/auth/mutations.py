@@ -45,7 +45,7 @@ class DjangoRegisterMutation(DjangoCreateMutation):
         validate_password(password)
 
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.enabled.set(False)
+        token = DjangoOptimizerExtension.disabled.set(True)
         try:
             return resolvers.create(
                 info,
@@ -55,7 +55,7 @@ class DjangoRegisterMutation(DjangoCreateMutation):
                 pre_save_hook=lambda obj: obj.set_password(password),
             )
         finally:
-            DjangoOptimizerExtension.enabled.reset(token)
+            DjangoOptimizerExtension.disabled.reset(token)
 
 
 login = functools.partial(strawberry.mutation, resolver=resolve_login)

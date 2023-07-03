@@ -239,7 +239,7 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         assert model is not None
 
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.enabled.set(False)
+        token = DjangoOptimizerExtension.disabled.set(True)
         try:
             return resolvers.create(
                 info,
@@ -248,7 +248,7 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
                 full_clean=self.full_clean,
             )
         finally:
-            DjangoOptimizerExtension.enabled.reset(token)
+            DjangoOptimizerExtension.disabled.reset(token)
 
 
 def resolve_model(
@@ -302,7 +302,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         data: dict[str, Any],
     ):
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.enabled.set(False)
+        token = DjangoOptimizerExtension.disabled.set(True)
         try:
             return resolvers.update(
                 info,
@@ -311,7 +311,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
                 full_clean=self.full_clean,
             )
         finally:
-            DjangoOptimizerExtension.enabled.reset(token)
+            DjangoOptimizerExtension.disabled.reset(token)
 
 
 class DjangoDeleteMutation(
@@ -355,7 +355,7 @@ class DjangoDeleteMutation(
         data: dict[str, Any] | None = None,
     ):
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.enabled.set(False)
+        token = DjangoOptimizerExtension.disabled.set(True)
         try:
             return resolvers.delete(
                 info,
@@ -363,4 +363,4 @@ class DjangoDeleteMutation(
                 data=data,
             )
         finally:
-            DjangoOptimizerExtension.enabled.reset(token)
+            DjangoOptimizerExtension.disabled.reset(token)
