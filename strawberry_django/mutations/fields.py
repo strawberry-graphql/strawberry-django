@@ -239,16 +239,13 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         assert model is not None
 
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.disabled.set(True)
-        try:
+        with DjangoOptimizerExtension.disabled():
             return resolvers.create(
                 info,
                 model,
                 data,
                 full_clean=self.full_clean,
             )
-        finally:
-            DjangoOptimizerExtension.disabled.reset(token)
 
 
 def resolve_model(
@@ -309,16 +306,13 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         data: dict[str, Any],
     ):
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.disabled.set(True)
-        try:
+        with DjangoOptimizerExtension.disabled():
             return resolvers.update(
                 info,
                 instance,
                 data,
                 full_clean=self.full_clean,
             )
-        finally:
-            DjangoOptimizerExtension.disabled.reset(token)
 
 
 class DjangoDeleteMutation(
@@ -360,12 +354,9 @@ class DjangoDeleteMutation(
         data: dict[str, Any] | None = None,
     ):
         # Do not optimize anything while retrieving the object to update
-        token = DjangoOptimizerExtension.disabled.set(True)
-        try:
+        with DjangoOptimizerExtension.disabled():
             return resolvers.delete(
                 info,
                 instance,
                 data=data,
             )
-        finally:
-            DjangoOptimizerExtension.disabled.reset(token)

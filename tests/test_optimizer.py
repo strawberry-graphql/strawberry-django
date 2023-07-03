@@ -78,7 +78,7 @@ def test_interface_query(db, gql_client: GraphQLTestClient):
     tags = TagFactory.create_batch(4)
     issue.tags.set(tags)
 
-    with assert_num_queries(4 if DjangoOptimizerExtension.disabled.get() else 2):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 4):
         res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
 
     assert isinstance(res.data, dict)
@@ -158,7 +158,7 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
                     r["milestone"]["asyncField"] = "value: foo"
                 expected.append(r)
 
-    with assert_num_queries(18 if DjangoOptimizerExtension.disabled.get() else 2):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 18):
         res = gql_client.query(query, {"isAsync": gql_client.is_async})
 
     assert res.data == {
@@ -237,7 +237,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                     },
                 )
 
-    with assert_num_queries(56 if DjangoOptimizerExtension.disabled.get() else 2):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 56):
         res = gql_client.query(query)
 
     assert res.data == {
@@ -308,7 +308,7 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
 
     assert len(expected) == 2
     for e in expected:
-        with assert_num_queries(4 if DjangoOptimizerExtension.disabled.get() else 3):
+        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 4):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
@@ -381,7 +381,7 @@ def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
     assert len(expected) == 2
     for e in expected:
         with gql_client.login(user):
-            if not DjangoOptimizerExtension.disabled.get():
+            if DjangoOptimizerExtension.enabled.get():
                 with assert_num_queries(5):
                     res = gql_client.query(query, {"node_id": e["id"]})
                     assert res.data == {"project": e}
@@ -492,7 +492,7 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
 
     assert len(expected) == 3
     for e in expected:
-        with assert_num_queries(8 if DjangoOptimizerExtension.disabled.get() else 3):
+        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 8):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
@@ -652,7 +652,7 @@ def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
             },
         )
 
-    with assert_num_queries(7 if DjangoOptimizerExtension.disabled.get() else 2):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 7):
         res = gql_client.query(query)
 
     assert res.data == expected
