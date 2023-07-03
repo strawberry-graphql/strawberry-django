@@ -265,6 +265,15 @@ def resolve_model(
     return instance
 
 
+def get_pk(
+    data: dict[str, Any],
+) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
+    pk = data.pop("id", UNSET)
+    if pk is UNSET:
+        pk = data.pop("pk", UNSET)
+    return pk
+
+
 class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
     @django_resolver
     @transaction.atomic
@@ -280,11 +289,9 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 
         data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
-        pk = vdata.pop("id", UNSET)
-        if pk is UNSET:
-            pk = vdata.pop("pk", UNSET)
 
-        if pk:
+        pk = get_pk(vdata)
+        if pk not in (None, UNSET):
             instance = resolve_model(model, pk, info=info)
         else:
             instance = self.get_queryset(
@@ -333,11 +340,9 @@ class DjangoDeleteMutation(
 
         data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
-        pk = vdata.pop("id", UNSET)
-        if pk is UNSET:
-            pk = vdata.pop("pk", UNSET)
 
-        if pk:
+        pk = get_pk(vdata)
+        if pk not in (None, UNSET):
             instance = resolve_model(model, pk, info=info)
         else:
             instance = self.get_queryset(
