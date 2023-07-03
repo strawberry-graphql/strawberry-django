@@ -1,6 +1,7 @@
 # Strawberry GraphQL Django integration
 
 [![CI](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml/badge.svg)](https://github.com/la4de/strawberry-graphql-django/actions/workflows/main.yml)
+[![Coverage](https://codecov.io/gh/strawberry-graphql/strawberry-graphql-django/branch/main/graph/badge.svg?token=JNH6PUYh3e)](https://codecov.io/gh/strawberry-graphql/strawberry-graphql-django)
 [![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
 [![Downloads](https://pepy.tech/badge/strawberry-graphql-django)](https://pepy.tech/project/strawberry-graphql-django)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/strawberry-graphql-django)
