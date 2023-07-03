@@ -238,14 +238,11 @@ def test_update_geo(mutation):
     assert geofield_obj.multi_line_string is None
     assert geofield_obj.multi_polygon is None
 
-    obj_id = str(geofield_obj.pk)
-
     # Test for point
     point = [0.0, 1.0]
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {obj_id} ,
             point: {point}
             }}) {{
                 id
@@ -261,7 +258,6 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {obj_id} ,
             lineString: {line_string}
             }}) {{
                 id
@@ -280,7 +276,6 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {obj_id} ,
             polygon: {polygon}
             }}) {{
                 id
@@ -296,7 +291,6 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {obj_id} ,
             multiPoint: {multi_point}
             }}) {{
                 id
@@ -316,7 +310,6 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {obj_id} ,
             multiLineString: {multi_line_string}
             }}) {{
                 id
@@ -341,7 +334,6 @@ def test_update_geo(mutation):
     result = mutation(
         f"""
         {{ geofield: updateGeoFields(data: {{
-            id: {obj_id} ,
             multiPolygon: {multi_polygon}
             }}) {{
                 id

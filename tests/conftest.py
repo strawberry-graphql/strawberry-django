@@ -1,3 +1,4 @@
+import contextlib
 from typing import Dict, List, Tuple, Type, Union, cast
 
 import pytest
@@ -27,10 +28,13 @@ def gql_client(request):
         },
     )[request.param]
 
-    token = DjangoOptimizerExtension.enabled.set(with_optimizer)
-    with GraphQLTestClient(path, client()) as c:
+    if with_optimizer:
+        optimizer_ctx = contextlib.nullcontext
+    else:
+        optimizer_ctx = DjangoOptimizerExtension.disabled
+
+    with optimizer_ctx(), GraphQLTestClient(path, client()) as c:
         yield c
-    DjangoOptimizerExtension.enabled.reset(token)
 
 
 @pytest.fixture()

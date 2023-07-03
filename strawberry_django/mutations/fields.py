@@ -1,66 +1,207 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable
+import inspect
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, cast
 
+import strawberry
+from django.core.exceptions import (
+    NON_FIELD_ERRORS,
+    ObjectDoesNotExist,
+    PermissionDenied,
+    ValidationError,
+)
 from django.db import models, transaction
-from strawberry import UNSET
+from strawberry import UNSET, relay
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.field import UNRESOLVED
+from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
     StrawberryDjangoFieldBase,
     StrawberryDjangoFieldFilters,
 )
-from strawberry_django.fields.types import (
-    ManyToManyInput,
-    ManyToOneInput,
-    OneToManyInput,
-)
+from strawberry_django.fields.types import OperationInfo, OperationMessage
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.resolvers import django_resolver
-from strawberry_django.utils.typing import has_django_definition
+from strawberry_django.settings import strawberry_django_settings
+from strawberry_django.utils.inspect import get_possible_types
+
+from . import resolvers
 
 if TYPE_CHECKING:
+    from graphql.pyutils import AwaitableOrValue
     from strawberry.arguments import StrawberryArgument
+    from strawberry.type import StrawberryType, WithStrawberryObjectDefinition
     from strawberry.types import Info
-    from typing_extensions import Self
+    from strawberry.types.types import StrawberryObjectDefinition
+    from typing_extensions import Literal, Self
 
-    from strawberry_django.utils.typing import WithStrawberryDjangoObjectDefinition
+
+_M = TypeVar("_M", bound=models.Model)
+
+
+def _get_validation_errors(error: Exception):
+    if isinstance(error, PermissionDenied):
+        kind = OperationMessage.Kind.PERMISSION
+    elif isinstance(error, ValidationError):
+        kind = OperationMessage.Kind.VALIDATION
+    elif isinstance(error, ObjectDoesNotExist):
+        kind = OperationMessage.Kind.ERROR
+    else:
+        kind = OperationMessage.Kind.ERROR
+
+    if isinstance(error, ValidationError) and hasattr(error, "error_dict"):
+        # convert field errors
+        for field, field_errors in error.message_dict.items():
+            for e in field_errors:
+                yield OperationMessage(
+                    kind=kind,
+                    field=to_camel_case(field) if field != NON_FIELD_ERRORS else None,
+                    message=e,
+                )
+    elif isinstance(error, ValidationError) and hasattr(error, "error_list"):
+        # convert non-field errors
+        for e in error.error_list:
+            yield OperationMessage(
+                kind=kind,
+                message=e.message % e.params if e.params else e.message,
+            )
+    else:
+        msg = getattr(error, "msg", None)
+        if msg is None:
+            msg = str(error)
+
+        yield OperationMessage(
+            kind=kind,
+            message=msg,
+        )
+
+
+def _handle_exception(error: Exception):
+    if isinstance(error, (ValidationError, PermissionDenied, ObjectDoesNotExist)):
+        return OperationInfo(
+            messages=list(_get_validation_errors(error)),
+        )
+
+    raise error
 
 
 class DjangoMutationBase(StrawberryDjangoFieldBase):
-    def __init__(self, input_type: type | None = None, **kwargs):
-        if input_type is not None and not has_django_definition(input_type):
-            raise TypeError("input_type needs to be a strawberry django input")
+    def __init__(
+        self,
+        *args,
+        handle_django_errors: bool | None = None,
+        **kwargs,
+    ):
+        self._resolved_return_type: bool = False
 
+        if handle_django_errors is None:
+            settings = strawberry_django_settings()
+            handle_django_errors = settings["MUTATIONS_DEFAULT_HANDLE_ERRORS"]
+        self.handle_errors = handle_django_errors
+
+        super().__init__(*args, **kwargs)
+
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.handle_errors = self.handle_errors
+        return new_field
+
+    def resolve_type(
+        self,
+        *,
+        type_definition: StrawberryObjectDefinition | None = None,
+    ) -> (
+        StrawberryType
+        | type[WithStrawberryObjectDefinition]
+        | Literal[UNRESOLVED]  # type: ignore
+    ):
+        resolved = super().resolve_type(type_definition=type_definition)
+        if resolved is UNRESOLVED:
+            return resolved
+
+        if self.handle_errors and not self._resolved_return_type:
+            types_ = tuple(get_possible_types(resolved))
+            if OperationInfo not in types_:
+                types_ = (*types_, OperationInfo)
+
+            name = capitalize_first(to_camel_case(self.python_name))
+            resolved = strawberry.union(f"{name}Payload", types_)
+            self.type_annotation = StrawberryAnnotation(
+                resolved,
+                namespace=getattr(self.type_annotation, "namespace", None),
+            )
+
+        return resolved
+
+    def get_result(
+        self,
+        source: Any,
+        info: Info,
+        args: list[Any],
+        kwargs: dict[str, Any],
+    ) -> AwaitableOrValue[Any]:
+        if not self.handle_errors:
+            return self.resolver(source, info, args, kwargs)
+
+        # TODO: Any other exception types that we should capture here?
+        try:
+            resolved = self.resolver(source, info, args, kwargs)
+        except Exception as e:  # noqa: BLE001
+            return _handle_exception(e)
+
+        if inspect.isawaitable(resolved):
+
+            async def async_resolver():
+                try:
+                    return await resolved
+                except Exception as e:  # noqa: BLE001
+                    return _handle_exception(e)
+
+            return async_resolver()
+
+        return resolved
+
+
+class DjangoMutationCUD(DjangoMutationBase):
+    def __init__(
+        self,
+        input_type: type | None = None,
+        full_clean: bool = True,
+        argument_name: str | None = None,
+        **kwargs,
+    ):
+        self.full_clean = full_clean
         self.input_type = input_type
+
+        if argument_name is None:
+            settings = strawberry_django_settings()
+            argument_name = settings["MUTATIONS_DEFAULT_ARGUMENT_NAME"]
+        self.argument_name = argument_name
+
         super().__init__(**kwargs)
 
     def __copy__(self) -> Self:
         new_field = super().__copy__()
         new_field.input_type = self.input_type
+        new_field.full_clean = self.full_clean
         return new_field
 
     @property
     def arguments(self):
-        if (
-            self.input_type
-            and self.django_model
-            != self.input_type.__strawberry_django_definition__.model
-        ):
-            raise TypeError(
-                "Input and output types should be from the same Django model",
-            )
+        arguments = super().arguments
+        if not self.input_type:
+            return arguments
 
-        arguments = []
-        if self.input_type:
-            arguments.append(
-                argument(
-                    "data",
-                    self.input_type,
-                    is_list=self.is_list and isinstance(self, DjangoCreateMutation),
-                ),
-            )
-
-        return arguments + super().arguments
+        return [
+            *arguments,
+            argument(
+                self.argument_name,
+                self.input_type,
+                is_list=self.is_list and isinstance(self, DjangoCreateMutation),
+            ),
+        ]
 
     @arguments.setter
     def arguments(self, value: list[StrawberryArgument]):
@@ -68,15 +209,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
         return args_prop.fset(self, value)  # type: ignore
 
 
-class DjangoCreateMutation(DjangoMutationBase):
-    def create(self, data: type):
-        assert self.input_type is not None
-        input_data = get_input_data(self.input_type, data)
-        assert self.django_model
-        instance = self.django_model._default_manager.create(**input_data)
-        update_m2m([instance], data)
-        return instance
-
+class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
     @django_resolver
     @transaction.atomic
     def resolver(
@@ -86,17 +219,59 @@ class DjangoCreateMutation(DjangoMutationBase):
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:
-        data: list[Any] | Any = kwargs["data"]
+        data: list[Any] | Any = kwargs.get(self.argument_name)
 
         if self.is_list:
             assert isinstance(data, list)
-            return [self.create(d) for d in data]
+            return [
+                self.create(resolvers.parse_input(info, vars(d)), info=info)
+                for d in data
+            ]
 
         assert not isinstance(data, list)
-        return self.create(data)
+        return self.create(
+            resolvers.parse_input(info, vars(data)) if data is not None else {},
+            info=info,
+        )
+
+    def create(self, data: dict[str, Any], *, info: Info):
+        model = self.django_model
+        assert model is not None
+
+        # Do not optimize anything while retrieving the object to update
+        with DjangoOptimizerExtension.disabled():
+            return resolvers.create(
+                info,
+                model,
+                data,
+                full_clean=self.full_clean,
+            )
 
 
-class DjangoUpdateMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
+def resolve_model(
+    model: type[_M],
+    pk: strawberry.ID | relay.GlobalID,
+    *,
+    info: Info,
+) -> _M:
+    if isinstance(pk, relay.GlobalID):
+        instance = pk.resolve_node_sync(info, required=True, ensure_type=model)
+    else:
+        instance = cast(_M, model._default_manager.get(pk=pk))
+
+    return instance
+
+
+def get_pk(
+    data: dict[str, Any],
+) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
+    pk = data.pop("id", UNSET)
+    if pk is UNSET:
+        pk = data.pop("pk", UNSET)
+    return pk
+
+
+class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
     @django_resolver
     @transaction.atomic
     def resolver(
@@ -106,18 +281,45 @@ class DjangoUpdateMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:
-        assert self.input_type is not None
-        data: Any = kwargs["data"]
-        assert self.django_model
-        queryset = self.django_model._default_manager.all()
-        queryset = self.get_queryset(queryset=queryset, info=info, **kwargs)
-        input_data = get_input_data(self.input_type, data)
-        queryset.update(**input_data)
-        update_m2m(queryset, data)
-        return queryset
+        model = self.django_model
+        assert model is not None
+
+        data: Any = kwargs.get(self.argument_name)
+        vdata = vars(data).copy() if data is not None else {}
+
+        pk = get_pk(vdata)
+        if pk not in (None, UNSET):
+            instance = resolve_model(model, pk, info=info)
+        else:
+            instance = self.get_queryset(
+                queryset=model._default_manager.all(),
+                info=info,
+                **kwargs,
+            )
+
+        return self.update(info, instance, resolvers.parse_input(info, vdata))
+
+    def update(
+        self,
+        info: Info,
+        instance: models.Model | Iterable[models.Model],
+        data: dict[str, Any],
+    ):
+        # Do not optimize anything while retrieving the object to update
+        with DjangoOptimizerExtension.disabled():
+            return resolvers.update(
+                info,
+                instance,
+                data,
+                full_clean=self.full_clean,
+            )
 
 
-class DjangoDeleteMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
+class DjangoDeleteMutation(
+    DjangoMutationCUD,
+    DjangoMutationBase,
+    StrawberryDjangoFieldFilters,
+):
     @django_resolver
     @transaction.atomic
     def resolver(
@@ -127,58 +329,34 @@ class DjangoDeleteMutation(DjangoMutationBase, StrawberryDjangoFieldFilters):
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:
-        assert self.django_model
-        queryset = self.django_model._default_manager.all()
-        queryset = self.get_queryset(queryset=queryset, info=info, **kwargs)
-        instances = list(queryset)
-        queryset.delete()
-        return instances
+        model = self.django_model
+        assert model is not None
 
+        data: Any = kwargs.get(self.argument_name)
+        vdata = vars(data).copy() if data is not None else {}
 
-def get_input_data(input_type: type[WithStrawberryDjangoObjectDefinition], data: Any):
-    input_data = {}
-    for field in input_type.__strawberry_definition__.fields:
-        value = getattr(data, field.name)
-        if value is UNSET or isinstance(value, (ManyToOneInput, ManyToManyInput)):
-            continue
+        pk = get_pk(vdata)
+        if pk not in (None, UNSET):
+            instance = resolve_model(model, pk, info=info)
+        else:
+            instance = self.get_queryset(
+                queryset=model._default_manager.all(),
+                info=info,
+                **kwargs,
+            )
 
-        if isinstance(value, OneToManyInput):
-            value = value.set
+        return self.delete(info, instance, resolvers.parse_input(info, vdata))
 
-        fname = getattr(field, "django_name", None) or field.python_name or field.name
-        input_data[fname] = value
-
-    return input_data
-
-
-def update_m2m(queryset: Iterable[models.Model], data: Any):
-    for field_name, field_value in vars(data).items():
-        if not isinstance(field_value, (ManyToOneInput, ManyToManyInput)):
-            continue
-
-        for instance in queryset:
-            f = getattr(instance, field_name)
-            if field_value.set is not UNSET:
-                if field_value.add:
-                    raise ValueError("'add' cannot be used together with 'set'")
-                if field_value.remove:
-                    raise ValueError("'remove' cannot be used together with 'set'")
-
-                values = field_value.set
-                if values and isinstance(field_value, ManyToOneInput):
-                    values = [f.model._default_manager.get(pk=pk) for pk in values]
-                if values:
-                    f.set(values)
-                else:
-                    f.clear()
-            else:
-                if field_value.add:
-                    values = field_value.add
-                    if isinstance(field_value, ManyToOneInput):
-                        values = [f.model.objects.get(pk=pk) for pk in values]
-                    f.add(*values)
-                if field_value.remove:
-                    values = field_value.remove
-                    if isinstance(field_value, ManyToOneInput):
-                        values = [f.model.objects.get(pk=pk) for pk in values]
-                    f.remove(*values)
+    def delete(
+        self,
+        info: Info,
+        instance: models.Model | Iterable[models.Model],
+        data: dict[str, Any] | None = None,
+    ):
+        # Do not optimize anything while retrieving the object to update
+        with DjangoOptimizerExtension.disabled():
+            return resolvers.delete(
+                info,
+                instance,
+                data=data,
+            )

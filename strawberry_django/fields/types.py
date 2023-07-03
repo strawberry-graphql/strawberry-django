@@ -25,6 +25,7 @@ from django.db.models import Field, Model, fields
 from django.db.models.fields import files, json, related, reverse_related
 from strawberry import UNSET, relay
 from strawberry.enum import EnumValueDefinition
+from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 from typing_extensions import Self
@@ -152,6 +153,62 @@ class ListInput(Generic[K]):
             tuple(self.add) if isinstance(self.add, list) else self.add,
             tuple(self.remove) if isinstance(self.remove, list) else self.remove,
         )
+
+
+@strawberry.type
+class OperationMessage:
+    """An error that happened while executing an operation."""
+
+    @strawberry.enum(name="OperationMessageKind")
+    class Kind(enum.Enum):
+        """The kind of the returned message."""
+
+        INFO = "info"
+        WARNING = "warning"
+        ERROR = "error"
+        PERMISSION = "permission"
+        VALIDATION = "validation"
+
+    kind: Kind = strawberry.field(description="The kind of this message.")
+    message: str = strawberry.field(description="The error message.")
+    field: Optional[str] = strawberry.field(
+        description=(
+            "The field that caused the error, or `null` if it "
+            "isn't associated with any particular field."
+        ),
+        default=None,
+    )
+
+    def __eq__(self, other: Self):
+        if not isinstance(other, OperationMessage):
+            return NotImplemented
+
+        return (
+            self.kind == other.kind
+            and self.message == other.message
+            and self.field == other.field
+        )
+
+    def __hash__(self):
+        return hash((self.__class__, self.kind, self.message, self.field))
+
+
+@strawberry.type
+class OperationInfo:
+    """Multiple messages returned by an operation."""
+
+    messages: List[OperationMessage] = strawberry.field(
+        description="List of messages returned by the operation.",
+    )
+
+    def __eq__(self, other: Self):
+        if not isinstance(other, OperationInfo):
+            return NotImplemented
+
+        return self.messages == other.messages
+
+    def __hash__(self):
+        return hash((self.__class__, *tuple(self.messages)))
 
 
 field_type_map: Dict[
@@ -301,8 +358,8 @@ input_field_type_map: Dict[
     ],
     type,
 ] = {
-    files.FileField: NotImplemented,
-    files.ImageField: NotImplemented,
+    files.FileField: Upload,
+    files.ImageField: Upload,
     related.ForeignKey: OneToManyInput,
     related.ManyToManyField: ManyToManyInput,
     related.OneToOneField: OneToOneInput,

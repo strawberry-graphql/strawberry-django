@@ -23,7 +23,9 @@ def test_non_defaults():
         STRAWBERRY_DJANGO=settings.StrawberryDjangoSettings(
             FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
             TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
-            GENERATE_ENUMS_FROM_CHOICES=False,
+            GENERATE_ENUMS_FROM_CHOICES=True,
+            MUTATIONS_DEFAULT_ARGUMENT_NAME="id",
+            MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
         ),
     ):
         assert (
@@ -31,6 +33,8 @@ def test_non_defaults():
             == settings.StrawberryDjangoSettings(
                 FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
                 TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
-                GENERATE_ENUMS_FROM_CHOICES=False,
+                GENERATE_ENUMS_FROM_CHOICES=True,
+                MUTATIONS_DEFAULT_ARGUMENT_NAME="id",
+                MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
             )
         )

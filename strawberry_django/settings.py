@@ -25,11 +25,21 @@ class StrawberryDjangoSettings(TypedDict):
     #: an enum of possibilities instead of being exposed as `String`
     GENERATE_ENUMS_FROM_CHOICES: bool
 
+    #: If True, fields with `choices` will have automatically generate
+    #: an enum of possibilities instead of being exposed as `String`
+    MUTATIONS_DEFAULT_ARGUMENT_NAME: str
+
+    #: If True, fields with `choices` will have automatically generate
+    #: an enum of possibilities instead of being exposed as `String`
+    MUTATIONS_DEFAULT_HANDLE_ERRORS: bool
+
 
 DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     FIELD_DESCRIPTION_FROM_HELP_TEXT=False,
     TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=False,
     GENERATE_ENUMS_FROM_CHOICES=False,
+    MUTATIONS_DEFAULT_ARGUMENT_NAME="data",
+    MUTATIONS_DEFAULT_HANDLE_ERRORS=False,
 )
 
 

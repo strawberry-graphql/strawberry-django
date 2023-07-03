@@ -156,6 +156,11 @@ class Issue(models.Model):
 
 
 class Assignee(models.Model):
+    class Meta:
+        unique_together = [  # noqa: RUF012
+            ("issue", "user"),
+        ]
+
     issues: "RelatedManager[Issue]"
 
     id = models.BigAutoField(

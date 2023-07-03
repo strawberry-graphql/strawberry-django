@@ -1,17 +1,22 @@
 import asyncio
+import datetime
+import decimal
 from typing import Iterable, List, Optional, Type, cast
 
 import strawberry
 import strawberry.django
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef, Prefetch
 from django.db.models.query import QuerySet
 from strawberry import relay
 from strawberry.types.info import Info
 from typing_extensions import Annotated
 
+from strawberry_django import mutations
 from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartial
+from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.relay import ListConnectionWithTotalCount
 
@@ -181,7 +186,7 @@ class AssigneeType(relay.Node):
 
 @strawberry.django.partial(Assignee)
 class IssueAssigneeInputPartial(NodeInputPartial):
-    user: strawberry.auto
+    user: Optional[NodeInputPartial]
     owner: strawberry.auto
 
 
@@ -284,8 +289,81 @@ class Query:
         return Project.objects.filter(name__contains=name)
 
 
+@strawberry.type
+class Mutation:
+    """All available mutations for this schema."""
+
+    create_issue: IssueType = mutations.create(
+        IssueInput,
+        handle_django_errors=True,
+        argument_name="input",
+    )
+    update_issue: IssueType = mutations.update(
+        IssueInputPartial,
+        handle_django_errors=True,
+        argument_name="input",
+    )
+    delete_issue: IssueType = mutations.delete(
+        NodeInput,
+        handle_django_errors=True,
+        argument_name="input",
+    )
+    update_project: ProjectType = mutations.update(
+        ProjectInputPartial,
+        handle_django_errors=True,
+        argument_name="input",
+    )
+    create_milestone: MilestoneType = mutations.create(
+        MilestoneInput,
+        handle_django_errors=True,
+        argument_name="input",
+    )
+
+    @mutations.input_mutation(handle_django_errors=True)
+    def create_project(
+        self,
+        info: Info,
+        name: str,
+        cost: Annotated[
+            decimal.Decimal,
+            strawberry.argument(description="The project's cost"),
+        ],
+        due_date: Optional[datetime.datetime] = None,
+    ) -> ProjectType:
+        """Create project documentation."""
+        if cost > 500:
+            raise ValidationError({"cost": "Cost cannot be higher than 500"})
+
+        return cast(
+            ProjectType,
+            Project.objects.create(
+                name=name,
+                cost=cost,
+                due_date=due_date,
+            ),
+        )
+
+    @mutations.input_mutation(handle_django_errors=True)
+    def create_quiz(
+        self,
+        info: Info,
+        title: str,
+        full_clean_options: bool = False,
+    ) -> QuizType:
+        return cast(
+            QuizType,
+            resolvers.create(
+                info,
+                Quiz,
+                {"title": title},
+                full_clean={"exclude": ["sequence"]} if full_clean_options else True,
+            ),
+        )
+
+
 schema = strawberry.Schema(
     query=Query,
+    mutation=Mutation,
     extensions=[
         DjangoOptimizerExtension,
     ],

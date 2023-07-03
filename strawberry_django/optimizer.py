@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import contextvars
 import dataclasses
 import itertools
@@ -710,15 +711,11 @@ class DjangoOptimizerExtension(SchemaExtension):
         self.prefetch_custom_queryset = prefetch_custom_queryset
 
     def on_execute(self) -> Generator[None, None, None]:
-        enabled = self.enabled.get()
-        if enabled:
-            optimizer.set(self)
-
+        token = optimizer.set(self)
         try:
             yield
         finally:
-            if enabled:
-                optimizer.set(None)
+            optimizer.reset(token)
 
     def resolve(
         self,
@@ -729,7 +726,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         **kwargs,
     ) -> AwaitableOrValue[Any]:
         ret = _next(root, info, *args, **kwargs)
-        if not optimizer.get():
+        if not self.enabled.get():
             return ret
 
         if isinstance(ret, BaseManager):
@@ -747,6 +744,15 @@ class DjangoOptimizerExtension(SchemaExtension):
             ret = django_fetch(optimize(qs=ret, info=info, config=config))
 
         return ret
+
+    @classmethod
+    @contextlib.contextmanager
+    def disabled(cls):
+        token = cls.enabled.set(False)
+        try:
+            yield
+        finally:
+            cls.enabled.reset(token)
 
     def optimize(
         self,
