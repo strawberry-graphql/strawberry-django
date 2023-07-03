@@ -1,5 +1,7 @@
 import datetime
 import decimal
+import enum
+import inspect
 import uuid
 from typing import (
     TYPE_CHECKING,
@@ -13,6 +15,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import django
@@ -21,10 +24,19 @@ from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
 from django.db.models.fields import files, json, related, reverse_related
 from strawberry import UNSET, relay
+from strawberry.enum import EnumValueDefinition
 from strawberry.scalars import JSON
+from strawberry.utils.str_converters import capitalize_first, to_camel_case
 from typing_extensions import Self
 
 from strawberry_django import filters
+from strawberry_django.settings import strawberry_django_settings as django_settings
+
+try:
+    from django_choices_field import IntegerChoicesField, TextChoicesField
+except ImportError:
+    IntegerChoicesField = None
+    TextChoicesField = None
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
@@ -340,25 +352,81 @@ def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoDefinition",
 ):
-    is_relay = issubclass(django_type.origin, relay.Node)
-    model_field_type = type(model_field)
-    field_type: Any = None
+    settings = django_settings()
 
-    if django_type.is_filter and model_field.is_relation:
-        field_type = NodeInput if is_relay else filters.DjangoModelFilterInput
-    elif django_type.is_input:
-        input_type_map = input_field_type_map
-        if is_relay:
-            input_type_map = {**input_type_map, **relay_input_field_type_map}
+    # Django choices field
+    if (
+        TextChoicesField is not None
+        and IntegerChoicesField is not None
+        and isinstance(
+            model_field,
+            (TextChoicesField, IntegerChoicesField),
+        )
+    ):
+        field_type = model_field.choices_enum
+        enum_def = getattr(field_type, "_enum_definition", None)
+        if enum_def is None:
+            doc = (
+                inspect.cleandoc(field_type.__doc__)
+                if settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]
+                and field_type.__dic__
+                else None
+            )
+            enum_def = strawberry.enum(field_type, description=doc)._enum_definition
+        field_type = enum_def.wrapped_cls
+    # Auto enum
+    elif (
+        settings["GENERATE_ENUMS_FROM_CHOICES"]
+        and isinstance(model_field, Field)
+        and hasattr(model_field, "choices")
+    ):
+        choices = cast(List[Tuple[Any, str]], model_field.choices)
+        field_type = getattr(model_field, "_strawberry_enum", None)
+        if field_type is None:
+            meta = model_field.model._meta
+            field_type = strawberry.enum(
+                enum.Enum(
+                    "".join(
+                        (
+                            capitalize_first(to_camel_case(meta.app_label)),
+                            str(meta.object_name),
+                            capitalize_first(to_camel_case(model_field.name)),
+                            "Enum",
+                        ),
+                    ),
+                    {
+                        c[0]: EnumValueDefinition(value=c[0], description=c[1])
+                        for c in choices
+                    },
+                ),
+                description=(
+                    f"{meta.verbose_name} | {model_field.verbose_name}"
+                    if settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]
+                    else None
+                ),
+            )
+            model_field._strawberry_enum = field_type  # type: ignore
+    # Every other Field possibility
+    else:
+        is_relay = issubclass(django_type.origin, relay.Node)
+        model_field_type = type(model_field)
+        field_type: Any = None
 
-        field_type = input_type_map.get(model_field_type, None)
+        if django_type.is_filter and model_field.is_relation:
+            field_type = NodeInput if is_relay else filters.DjangoModelFilterInput
+        elif django_type.is_input:
+            input_type_map = input_field_type_map
+            if is_relay:
+                input_type_map = {**input_type_map, **relay_input_field_type_map}
 
-    if field_type is None:
-        type_map = field_type_map
-        if is_relay:
-            type_map = {**type_map, **relay_field_type_map}
+            field_type = input_type_map.get(model_field_type, None)
 
-        field_type = type_map.get(model_field_type, NotImplemented)
+        if field_type is None:
+            type_map = field_type_map
+            if is_relay:
+                type_map = {**type_map, **relay_field_type_map}
+
+            field_type = type_map.get(model_field_type, NotImplemented)
 
     if field_type is NotImplemented:
         raise NotImplementedError(

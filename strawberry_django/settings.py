@@ -13,18 +13,23 @@ class StrawberryDjangoSettings(TypedDict):
     defined in `DEFAULT_DJANGO_SETTINGS`.
     """
 
+    #: If True, field descriptions will be fetched from the
+    #: corresponding model field's `help_text` attribute.
     FIELD_DESCRIPTION_FROM_HELP_TEXT: bool
-    """(Default: False) If True, field descriptions will be fetched from the
-    corresponding model field's `help_text` attribute."""
 
+    #: If True, type descriptions will be fetched from the
+    #: corresponding model model's docstring.
     TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING: bool
-    """(Default: False) If True, type descriptions will be fetched from the
-    corresponding model's docstring."""
+
+    #: If True, fields with `choices` will have automatically generate
+    #: an enum of possibilities instead of being exposed as `String`
+    GENERATE_ENUMS_FROM_CHOICES: bool
 
 
 DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     FIELD_DESCRIPTION_FROM_HELP_TEXT=False,
     TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=False,
+    GENERATE_ENUMS_FROM_CHOICES=False,
 )
 
 
