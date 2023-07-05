@@ -6,14 +6,14 @@ Queries can be written using `strawberry.django.field()` to load the fields defi
 #schema.py
 
 import strawberry
-from typing import List
-from .types import *
+
+from .types import Fruit
 
 @strawberry.type
 class Query:
 
     Fruit: Fruit = strawberry.django.field()
-    Fruits: List[Fruit] = strawberry.django.field()
+    Fruits: list[Fruit] = strawberry.django.field()
 
 schema = strawberry.Schema(query=Query)
 ```

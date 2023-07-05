@@ -1,33 +1,33 @@
+---
 site_name: Strawberry Django
 site_description: Strawberry integration with Django.
-#site_url: https://nrbnlulu.github.io/strawberry-django-auth/
 site_author: community
-repo_name: strawberry-django
+repo_name: strawberry-graphql-django
 repo_url: https://github.com/strawberry-graphql/strawberry-graphql-django
 edit_uri: edit/main/docs/
+dev_addr: 127.0.0.1:7000
 
 theme:
   name: material
   language: en
   palette:
-  - scheme: default
-    primary: red
-    accent: green
-    toggle:
+    - scheme: default
+      primary: red
+      accent: green
+      toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to light mode
-
-  - scheme: slate
-    primary: green
-    accent: red
-    toggle:
-      icon: material/toggle-switch
-      name: Switch to dark mode
-
+    - scheme: slate
+      primary: green
+      accent: red
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
   logo: images/logo.png
   favicon: images/logo.png
   features:
     - content.code.annotate
+    - navigation.instant
 
 markdown_extensions:
   - tables
@@ -37,11 +37,14 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      use_pygments: true
+      linenums: true
   - pymdownx.superfences
   - md_in_html
   - pymdownx.tabbed:
       alternate_style: true
-
   - toc:
       permalink: true
   - pymdownx.caret
@@ -52,43 +55,48 @@ markdown_extensions:
   - pymdownx.magiclink
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
 
 plugins:
+  - mkdocstrings:
   - search
   - minify:
       minify_html: true
   - markdownextradata:
-        data: docs/data
-
-dev_addr: 127.0.0.1:7000
+      data: docs/data
 
 nav:
-  - Strawberry GraphQL Django: index.md
+  - index.md
+  - quick-start.md
+  - Guide:
+      - guide/views.md
+      - guide/types.md
+      - guide/fields.md
+      - guide/resolvers.md
+      - guide/filters.md
+      - guide/ordering.md
+      - guide/pagination.md
+      - guide/optimizer.md
+      - guide/queries.md
+      - guide/mutations.md
+      - guide/subscriptions.md
+      - guide/permissions.md
+      - guide/relay.md
+      - guide/authentication.md
+      - guide/settings.md
+      - guide/unit-testing.md
+  - Integrations:
+      - integrations/debug-toolbar.md
+      - integrations/guardian.md
+      - integrations/channels.md
+      - integrations/choices-field.md
+  - community-projects.md
+  - contributing.md
   - FAQ: faq.md
-  - Guides:
-       - Query optimizer: ./guides/quick-start.md
-#      (TBD's)
-       - UnitTesting: ./guides/unit-testing.md
-       - Django Debug Toolbar: ./guides/debug-toolbar.md
-       - Relationships: ./guides/relationships.md
-  - References:
-      - Authentication: ./references/authentication.md
-      - Fields: ./references/fields.md
-      - Filters: ./references/filters.md
-      - Mutations: ./references/mutations.md
-      - Ordering: ./references/ordering.md
-      - Pagination: ./references/pagination.md
-      - Resolvers: ./references/resolvers.md
-      - Types: ./references/types.md
-      - Views: ./references/views.md
-      - Settings: ./references/settings.md
-#      (TBD's)
-      - Permissions: ./references/permissions.md
-      - Subscriptions: ./references/subscriptions.md
-      - Queries: ./references/queries.md
-  - Community projects: ./community-projects.md
-  - Contributing: contributing.md

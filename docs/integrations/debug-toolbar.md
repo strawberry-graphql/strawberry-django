@@ -1,4 +1,4 @@
-# Django Debug Toolbar integration
+# django-debug-toolbar
 
 This integration provides integration between the
 [Django Debug Toolbar](https://github.com/jazzband/django-debug-toolbar) and
@@ -9,7 +9,7 @@ To use it, make sure you have the
 [Django Debug Toolbar](https://github.com/jazzband/django-debug-toolbar) installed
 and configured, then change its middleware settings from:
 
-```python
+```{.python title=settings.py}
 MIDDLEWARE = [
     ...
     "debug_toolbar.middleware.DebugToolbarMiddleware",
@@ -19,7 +19,7 @@ MIDDLEWARE = [
 
 To:
 
-```python
+```{.python title=settings.py}
 MIDDLEWARE = [
     ...
     "strawberry_django.middlewares.debug_toolbar.DebugToolbarMiddleware",

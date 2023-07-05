@@ -44,6 +44,17 @@ files = [
 ]
 
 [[package]]
+name = "cached-property"
+version = "1.5.2"
+description = "A decorator for caching properties in classes."
+optional = false
+python-versions = "*"
+files = [
+    {file = "cached-property-1.5.2.tar.gz", hash = "sha256:9fa5755838eecbb2d234c3aa390bd80fbd3ac6b6869109bfc1b499f7bd89a130"},
+    {file = "cached_property-1.5.2-py2.py3-none-any.whl", hash = "sha256:df4f613cf7ad9a588cc381aaf4a512d26265ecebd5eb9e1ba12f1319eb85a6a0"},
+]
+
+[[package]]
 name = "certifi"
 version = "2023.5.7"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -450,6 +461,21 @@ files = [
 typing-extensions = {version = ">=4.2,<5", markers = "python_version < \"3.8\""}
 
 [[package]]
+name = "griffe"
+version = "0.30.1"
+description = "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "griffe-0.30.1-py3-none-any.whl", hash = "sha256:b2f3df6952995a6bebe19f797189d67aba7c860755d3d21cc80f64d076d0154c"},
+    {file = "griffe-0.30.1.tar.gz", hash = "sha256:007cc11acd20becf1bb8f826419a52b9d403bbad9d8c8535699f5440ddc0a109"},
+]
+
+[package.dependencies]
+cached-property = {version = "*", markers = "python_version < \"3.8\""}
+colorama = ">=0.4"
+
+[[package]]
 name = "htmlmin2"
 version = "0.1.13"
 description = "An HTML Minifier"
@@ -659,6 +685,21 @@ i18n = ["babel (>=2.9.0)"]
 min-versions = ["babel (==2.9.0)", "click (==7.0)", "colorama (==0.4)", "ghp-import (==1.0)", "importlib-metadata (==4.3)", "jinja2 (==2.11.1)", "markdown (==3.2.1)", "markupsafe (==2.0.1)", "mergedeep (==1.3.4)", "packaging (==20.5)", "pyyaml (==5.1)", "pyyaml-env-tag (==0.1)", "typing-extensions (==3.10)", "watchdog (==2.0)"]
 
 [[package]]
+name = "mkdocs-autorefs"
+version = "0.4.1"
+description = "Automatically link across pages in MkDocs."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "mkdocs-autorefs-0.4.1.tar.gz", hash = "sha256:70748a7bd025f9ecd6d6feeba8ba63f8e891a1af55f48e366d6d6e78493aba84"},
+    {file = "mkdocs_autorefs-0.4.1-py3-none-any.whl", hash = "sha256:a2248a9501b29dc0cc8ba4c09f4f47ff121945f6ce33d760f145d6f89d313f5b"},
+]
+
+[package.dependencies]
+Markdown = ">=3.3"
+mkdocs = ">=1.1"
+
+[[package]]
 name = "mkdocs-markdownextradata-plugin"
 version = "0.2.5"
 description = "A MkDocs plugin that injects the mkdocs.yml extra variables into the markdown template"
@@ -721,6 +762,48 @@ csscompressor = ">=0.9.5"
 htmlmin2 = ">=0.1.13"
 jsmin = ">=3.0.1"
 mkdocs = ">=1.4.1"
+
+[[package]]
+name = "mkdocstrings"
+version = "0.22.0"
+description = "Automatic documentation from sources, for MkDocs."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "mkdocstrings-0.22.0-py3-none-any.whl", hash = "sha256:2d4095d461554ff6a778fdabdca3c00c468c2f1459d469f7a7f622a2b23212ba"},
+    {file = "mkdocstrings-0.22.0.tar.gz", hash = "sha256:82a33b94150ebb3d4b5c73bab4598c3e21468c79ec072eff6931c8f3bfc38256"},
+]
+
+[package.dependencies]
+importlib-metadata = {version = ">=4.6", markers = "python_version < \"3.10\""}
+Jinja2 = ">=2.11.1"
+Markdown = ">=3.3"
+MarkupSafe = ">=1.1"
+mkdocs = ">=1.2"
+mkdocs-autorefs = ">=0.3.1"
+mkdocstrings-python = {version = ">=0.5.2", optional = true, markers = "extra == \"python\""}
+pymdown-extensions = ">=6.3"
+typing-extensions = {version = ">=4.1", markers = "python_version < \"3.10\""}
+
+[package.extras]
+crystal = ["mkdocstrings-crystal (>=0.3.4)"]
+python = ["mkdocstrings-python (>=0.5.2)"]
+python-legacy = ["mkdocstrings-python-legacy (>=0.2.1)"]
+
+[[package]]
+name = "mkdocstrings-python"
+version = "1.1.2"
+description = "A Python handler for mkdocstrings."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "mkdocstrings_python-1.1.2-py3-none-any.whl", hash = "sha256:c2b652a850fec8e85034a9cdb3b45f8ad1a558686edc20ed1f40b4e17e62070f"},
+    {file = "mkdocstrings_python-1.1.2.tar.gz", hash = "sha256:f28bdcacb9bcdb44b6942a5642c1ea8b36870614d33e29e3c923e204a8d8ed61"},
+]
+
+[package.dependencies]
+griffe = ">=0.24"
+mkdocstrings = ">=0.20"
 
 [[package]]
 name = "nodeenv"
@@ -818,13 +901,13 @@ plugins = ["importlib-metadata"]
 
 [[package]]
 name = "pymdown-extensions"
-version = "9.11"
+version = "10.0.1"
 description = "Extension pack for Python Markdown."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pymdown_extensions-9.11-py3-none-any.whl", hash = "sha256:a499191d8d869f30339de86fcf072a787e86c42b6f16f280f5c2cf174182b7f3"},
-    {file = "pymdown_extensions-9.11.tar.gz", hash = "sha256:f7e86c1d3981f23d9dc43294488ecb54abadd05b0be4bf8f0e15efc90f7853ff"},
+    {file = "pymdown_extensions-10.0.1-py3-none-any.whl", hash = "sha256:ae66d84013c5d027ce055693e09a4628b67e9dec5bce05727e45b0918e36f274"},
+    {file = "pymdown_extensions-10.0.1.tar.gz", hash = "sha256:b44e1093a43b8a975eae17b03c3a77aad4681b3b56fce60ce746dbef1944c8cb"},
 ]
 
 [package.dependencies]
@@ -1414,4 +1497,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.7,<4.0"
-content-hash = "46756b52b77db3b5fb377a7b0517cfdc9a9ad3400b25e883b3e7c33954a11ce7"
+content-hash = "f3dd6f3b47820d85f4bfae2db7ccef3410e7b3b3b5c48da2054d95331ccc1b7e"
