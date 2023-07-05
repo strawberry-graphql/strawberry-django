@@ -6,6 +6,7 @@ import dataclasses
 import enum
 import functools
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
@@ -27,7 +28,6 @@ from asgiref.sync import sync_to_async
 from django.core.exceptions import PermissionDenied
 from django.db.models import Model, QuerySet
 from strawberry import relay, schema_directive
-from strawberry.django.context import StrawberryDjangoContext
 from strawberry.extensions.field_extension import (
     AsyncExtensionResolver,
     FieldExtension,
@@ -53,6 +53,9 @@ try:
     _cache = functools.cache  # type: ignore
 except AttributeError:
     _cache = functools.lru_cache
+
+if TYPE_CHECKING:
+    from strawberry.django.context import StrawberryDjangoContext
 
 
 _T = TypeVar("_T")
@@ -106,7 +109,7 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
         set_perm_safe(False)
         return qs
 
-    user = cast(StrawberryDjangoContext, info.context).request.user
+    user = cast("StrawberryDjangoContext", info.context).request.user
     # If the user is anonymous, we can't filter object permissions for it
     if user.is_anonymous:
         set_perm_safe(False)
@@ -206,7 +209,7 @@ def get_with_perms(pk, info, *, required=False, model=None):
     if not context.checkers or context.is_safe:
         return instance
 
-    user = cast(StrawberryDjangoContext, info.context).request.user
+    user = cast("StrawberryDjangoContext", info.context).request.user
     try:
         from .integrations.guardian import get_user_or_anonymous
     except (ImportError, RuntimeError):  # pragma: no cover
