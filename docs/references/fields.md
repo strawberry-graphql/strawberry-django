@@ -20,6 +20,33 @@ class Fruit:
     name: str
 ```
 
+# Choice fields
+
+For IntegerChoices Enum can be used to display the value
+
+```python
+# models.py
+class FruitColor(models.IntegerChoices):
+  Red = 1
+  Yellow = 2
+  Green = 3
+
+# types.py
+from enum import Enum
+
+@strawberry.enum
+class FruitColor(Enum):
+  Red = 1
+  Yellow = 2
+  Green = 3
+
+@strawberry.django.type(models.Fruit)
+class Fruit:
+    id: auto
+    name: auto
+    color: FruitColor
+```
+
 ## Relationships
 
 All one-to-one, one-to-many, many-to-one and many-to-many relationship types are supported, and the many-to-many relation is described using the `typing.List` annotation.
