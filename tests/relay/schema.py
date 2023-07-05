@@ -7,13 +7,13 @@ from typing import (
 )
 
 import strawberry
-import strawberry.django
 from django.db import models
 from strawberry import relay
 from strawberry.permission import BasePermission
 from strawberry.types import Info
 from typing_extensions import Annotated
 
+import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount
 
 
@@ -25,19 +25,19 @@ class FruitModel(models.Model):
     color = models.CharField(max_length=255)
 
 
-@strawberry.django.filter(FruitModel, lookups=True)
+@strawberry_django.filter(FruitModel, lookups=True)
 class FruitFilter:
     name: strawberry.auto
     color: strawberry.auto
 
 
-@strawberry.django.order(FruitModel)
+@strawberry_django.order(FruitModel)
 class FruitOrder:
     name: strawberry.auto
     color: strawberry.auto
 
 
-@strawberry.django.type(FruitModel)
+@strawberry_django.type(FruitModel)
 class Fruit(relay.Node):
     name: strawberry.auto
     color: strawberry.auto
@@ -52,29 +52,29 @@ class DummyPermission(BasePermission):
 
 @strawberry.type
 class Query:
-    node: relay.Node = strawberry.django.node()
-    node_with_async_permissions: relay.Node = strawberry.django.node(
+    node: relay.Node = strawberry_django.node()
+    node_with_async_permissions: relay.Node = strawberry_django.node(
         permission_classes=[DummyPermission],
     )
-    nodes: List[relay.Node] = strawberry.django.node()
-    node_optional: Optional[relay.Node] = strawberry.django.node()
-    nodes_optional: List[Optional[relay.Node]] = strawberry.django.node()
-    fruits: ListConnectionWithTotalCount[Fruit] = strawberry.django.connection()
+    nodes: List[relay.Node] = strawberry_django.node()
+    node_optional: Optional[relay.Node] = strawberry_django.node()
+    nodes_optional: List[Optional[relay.Node]] = strawberry_django.node()
+    fruits: ListConnectionWithTotalCount[Fruit] = strawberry_django.connection()
     fruits_lazy: ListConnectionWithTotalCount[
         Annotated["Fruit", strawberry.lazy("tests.relay.schema")]
-    ] = strawberry.django.connection()
+    ] = strawberry_django.connection()
     fruits_with_filters_and_order: ListConnectionWithTotalCount[Fruit] = (
-        strawberry.django.connection(
+        strawberry_django.connection(
             filters=FruitFilter,
             order=FruitOrder,
         )
     )
 
-    @strawberry.django.connection(ListConnectionWithTotalCount[Fruit])
+    @strawberry_django.connection(ListConnectionWithTotalCount[Fruit])
     def fruits_custom_resolver(self, info: Info) -> Iterable[FruitModel]:
         return FruitModel.objects.all()
 
-    @strawberry.django.connection(
+    @strawberry_django.connection(
         ListConnectionWithTotalCount[Fruit],
         filters=FruitFilter,
         order=FruitOrder,

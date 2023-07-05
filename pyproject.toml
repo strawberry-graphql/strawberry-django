@@ -3,11 +3,16 @@ name = "strawberry-graphql-django"
 packages = [{ include = "strawberry_django" }]
 version = "0.9.5"
 description = "Strawberry GraphQL Django extension"
-authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
+authors = [
+  "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
+  "Thiago Bellini Ribeiro <thiago@bellini.dev>",
+]
+maintainers = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
 repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
+documentation = "https://strawberry-graphql.github.io/strawberry-graphql-django"
 license = "MIT"
 readme = "README.md"
-keywords = ["graphql", "api", "django"]
+keywords = ["graphql", "api", "django", "strawberry-graphql"]
 classifiers = [
   "Environment :: Web Environment",
   "Intended Audience :: Developers",
@@ -41,6 +46,8 @@ pytest-django = "^4.1.0"
 pytest-pythonpath = "^0.7.3"
 pytest-watch = "^4.2.0"
 pytest-mock = "^3.5.1"
+pytest-snapshot = "^0.9.0"
+pytest-cov = "^4.0.0"
 django-debug-toolbar = "^3.2.4"
 django-choices-field = "^2.2.2"
 mkdocs = "^1.4.2"
@@ -52,6 +59,7 @@ ruff = "^0.0.274"
 django-types = "^0.17.0"
 Markdown = "^3.3.7"
 factory-boy = "^3.2.1"
+django-guardian = "^2.4.0"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]
@@ -178,4 +186,5 @@ strictSetInference = true
 DJANGO_SETTINGS_MODULE = "tests.django_settings"
 testpaths = ["tests"]
 filterwarnings = "ignore:.*is deprecated.*:DeprecationWarning"
+addopts = "--nomigrations --cov=./ --cov-report term-missing:skip-covered"
 asyncio_mode = "auto"

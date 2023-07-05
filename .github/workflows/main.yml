@@ -95,4 +95,8 @@ jobs:
         if: ${{ !steps.cache-deps.outputs.cache-hit }}
         run: poetry run pip install  "django==${{ matrix.django-version }}"
       - name: Test with pytest
-        run: poetry run pytest --showlocals -vvv
+        run: poetry run pytest --showlocals -vvv --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

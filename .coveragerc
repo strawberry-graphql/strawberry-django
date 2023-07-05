@@ -1,0 +1,19 @@
+[run]
+source = strawberry_django_plus
+omit = .venv/**,examples/**
+
+[report]
+precision = 2
+exclude_lines =
+    pragma: nocover
+    pragma:nocover
+    pragma: no cover
+    pragma:no cover
+    if TYPE_CHECKING:
+    @overload
+    @abstractmethod
+    @abc.abstractmethod
+    assert_never
+omit =
+    */migrations/*
+    */tests/*

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextvars
 import functools
 import inspect
 from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
@@ -18,6 +19,11 @@ _T = TypeVar("_T")
 _R = TypeVar("_R")
 _P = ParamSpec("_P")
 _M = TypeVar("_M", bound=models.Model)
+
+resolving_async: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "resolving-async",
+    default=False,
+)
 
 
 def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
@@ -78,11 +84,21 @@ def django_resolver(
 
             return retval
 
-        async_resolver = sync_to_async(sync_resolver)
+        @sync_to_async
+        def async_resolver(*args, **kwargs):
+            token = resolving_async.set(True)
+            try:
+                return sync_resolver(*args, **kwargs)
+            finally:
+                resolving_async.reset(token)
 
         @functools.wraps(resolver)
         def inner_wrapper(*args, **kwargs):
-            f = async_resolver if in_async_context() else sync_resolver
+            f = (
+                async_resolver
+                if in_async_context() and not resolving_async.get()
+                else sync_resolver
+            )
             return f(*args, **kwargs)
 
         return inner_wrapper

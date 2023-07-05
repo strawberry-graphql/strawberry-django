@@ -24,12 +24,21 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.staticfiles",
+    "guardian",
     "debug_toolbar",
     "strawberry_django",
 ]
 
 
 ROOT_URLCONF = "tests.urls"
+
+
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    "guardian.backends.ObjectPermissionBackend",
+)
+
+ANONYMOUS_USER_NAME = None
 
 
 MIDDLEWARE = [

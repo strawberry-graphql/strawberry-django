@@ -35,7 +35,7 @@ from strawberry_django.settings import strawberry_django_settings as django_sett
 
 try:
     from django_choices_field import IntegerChoicesField, TextChoicesField
-except ImportError:
+except ImportError:  # pragma: no cover
     IntegerChoicesField = None
     TextChoicesField = None
 

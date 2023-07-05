@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Any, Optional
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import QuerySet
+from django.utils.translation import gettext_lazy as _
+from django_choices_field import TextChoicesField
 
 from strawberry_django.descriptors import model_property
 from strawberry_django.utils.typing import UserType
@@ -14,11 +16,22 @@ User = get_user_model()
 
 
 class Project(models.Model):
+    class Status(models.TextChoices):
+        """Project status options."""
+
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+
     milestones: "RelatedManager[Milestone]"
 
     id = models.BigAutoField(
         verbose_name="ID",
         primary_key=True,
+    )
+    status = TextChoicesField(
+        help_text=_("This project's status"),
+        choices_enum=Status,
+        default=Status.ACTIVE,
     )
     name = models.CharField(
         help_text="The name of the project",

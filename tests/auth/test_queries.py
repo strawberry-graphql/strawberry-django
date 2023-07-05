@@ -2,6 +2,7 @@ from typing import Optional
 
 import pytest
 import strawberry
+from django.conf import settings
 from django.contrib import auth as django_auth
 
 from strawberry_django import auth
@@ -21,7 +22,11 @@ def query(db):
 
 
 def test_current_user(query, user, context):
-    django_auth.login(context.request, user)
+    django_auth.login(
+        context.request,
+        user,
+        backend=settings.AUTHENTICATION_BACKENDS[0],
+    )
 
     result = query("{ currentUser { username } }", context_value=context)
     assert not result.errors

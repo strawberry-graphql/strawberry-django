@@ -25,7 +25,6 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.utils import aio
 from strawberry.utils.cached_property import cached_property
 
 from strawberry_django import optimizer
@@ -36,6 +35,7 @@ from strawberry_django.filters import StrawberryDjangoFieldFilters
 from strawberry_django.optimizer import OptimizerStore
 from strawberry_django.ordering import StrawberryDjangoFieldOrdering
 from strawberry_django.pagination import StrawberryDjangoPagination
+from strawberry_django.permissions import filter_with_perms
 from strawberry_django.relay import resolve_model_nodes
 from strawberry_django.resolvers import (
     default_qs_hook,
@@ -230,7 +230,10 @@ class StrawberryDjangoField(
         if get_queryset:
             queryset = get_queryset(queryset, info, **kwargs)
 
-        queryset = super().get_queryset(queryset, info, **kwargs)
+        queryset = filter_with_perms(
+            super().get_queryset(queryset, info, **kwargs),
+            info,
+        )
 
         # If optimizer extension is enabled, optimize this queryset
         ext = optimizer.optimizer.get()
@@ -293,17 +296,6 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                         info=info,
                         required=True,
                     )
-
-                # If the type defines a custom get_queryset, use it on top
-                # of the returned queryset
-                get_queryset = getattr(django_type, "get_queryset", None)
-                if get_queryset is not None and inspect.isawaitable(retval):
-                    retval = aio.resolve_awaitable(
-                        retval,
-                        lambda resolved: get_queryset(resolved, info),
-                    )
-                elif get_queryset is not None:
-                    retval = get_queryset(retval, info)
 
                 return cast(Iterable[Any], retval)
 
@@ -516,6 +508,7 @@ def field(
 def node(
     *,
     name: str | None = None,
+    field_name: str | None = None,
     is_subscription: bool = False,
     description: str | None = None,
     permission_classes: list[type[BasePermission]] | None = None,
@@ -560,6 +553,7 @@ def node(
     extensions = [*extensions, relay.NodeExtension()]
     return StrawberryDjangoField(
         python_name=None,
+        django_name=field_name,
         graphql_name=name,
         type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,
@@ -579,6 +573,7 @@ def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
     name: str | None = None,
+    field_name: str | None = None,
     is_subscription: bool = False,
     description: str | None = None,
     permission_classes: list[type[BasePermission]] | None = None,
@@ -604,6 +599,7 @@ def connection(
     *,
     resolver: _RESOLVER_TYPE[NodeIterableType[Any]] | None = None,
     name: str | None = None,
+    field_name: str | None = None,
     is_subscription: bool = False,
     description: str | None = None,
     init: Literal[True] = True,
@@ -629,6 +625,7 @@ def connection(
     *,
     resolver: _RESOLVER_TYPE[NodeIterableType[Any]] | None = None,
     name: str | None = None,
+    field_name: str | None = None,
     is_subscription: bool = False,
     description: str | None = None,
     permission_classes: list[type[BasePermission]] | None = None,
@@ -711,6 +708,7 @@ def connection(
     extensions = [*extensions, StrawberryDjangoConnectionExtension()]
     f = StrawberryDjangoField(
         python_name=None,
+        django_name=field_name,
         graphql_name=name,
         type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
         description=description,

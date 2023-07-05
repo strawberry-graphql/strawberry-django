@@ -122,6 +122,7 @@ def resolve_model_nodes(
     info: Optional[Info] = None,
     node_ids: Iterable[Union[str, relay.GlobalID]],
     required: Literal[True],
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[Iterable[_M]]:
     ...
 
@@ -137,6 +138,7 @@ def resolve_model_nodes(
     info: Optional[Info] = None,
     node_ids: None = None,
     required: Literal[True],
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[models.QuerySet[_M]]:
     ...
 
@@ -152,6 +154,7 @@ def resolve_model_nodes(
     info: Optional[Info] = None,
     node_ids: Iterable[Union[str, relay.GlobalID]],
     required: Literal[False],
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[Iterable[Optional[_M]]]:
     ...
 
@@ -167,6 +170,7 @@ def resolve_model_nodes(
     info: Optional[Info] = None,
     node_ids: None = None,
     required: Literal[False],
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[Optional[models.QuerySet[_M]]]:
     ...
 
@@ -182,6 +186,7 @@ def resolve_model_nodes(
     info: Optional[Info] = None,
     node_ids: Optional[Iterable[Union[str, relay.GlobalID]]] = None,
     required: bool = False,
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[
     Union[
         Iterable[_M],
@@ -199,6 +204,7 @@ def resolve_model_nodes(
     info=None,
     node_ids=None,
     required=False,
+    filter_perms=False,
 ) -> AwaitableOrValue[
     Union[
         Iterable[_M],
@@ -231,6 +237,7 @@ def resolve_model_nodes(
 
     """
     from strawberry_django import optimizer  # avoid circular import
+    from strawberry_django.permissions import filter_with_perms
 
     if issubclass(source, models.Model):
         origin = None
@@ -240,9 +247,6 @@ def resolve_model_nodes(
         source = cast(Type[_M], django_type.model)
 
     qs = source._default_manager.all()
-
-    if origin and hasattr(origin, "get_queryset"):
-        qs = origin.get_queryset(qs, info)
 
     id_attr = cast(relay.Node, origin).resolve_id_attr()
     if node_ids is not None:
@@ -256,6 +260,9 @@ def resolve_model_nodes(
 
     extra_args = {}
     if info is not None:
+        if filter_perms:
+            qs = filter_with_perms(qs, info)
+
         # Connection will filter the results when its is being resolved.
         # We don't want to fetch everything before it does that
         return_type = info.return_type
@@ -306,6 +313,7 @@ def resolve_model_node(
     *,
     info: Optional[Info] = ...,
     required: Literal[False] = ...,
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[Optional[_M]]:
     ...
 
@@ -321,11 +329,19 @@ def resolve_model_node(
     *,
     info: Optional[Info] = ...,
     required: Literal[True],
+    filter_perms: bool = False,
 ) -> AwaitableOrValue[_M]:
     ...
 
 
-def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required=False):
+def resolve_model_node(
+    source,
+    node_id,
+    *,
+    info: Optional[Info] = None,
+    required=False,
+    filter_perms=False,
+):
     """Resolve model nodes, ensuring it is retrieved in a sync context.
 
     Args:
@@ -349,6 +365,7 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
 
     """
     from strawberry_django import optimizer  # avoid circular import
+    from strawberry_django.permissions import filter_with_perms
 
     if issubclass(source, models.Model):
         origin = None
@@ -363,10 +380,10 @@ def resolve_model_node(source, node_id, *, info: Optional[Info] = None, required
     id_attr = cast(relay.Node, origin).resolve_id_attr()
     qs = source._default_manager.filter(**{id_attr: node_id})
 
-    if origin and hasattr(origin, "get_queryset"):
-        qs = origin.get_queryset(qs, info)
-
     if info is not None:
+        if filter_perms:
+            qs = filter_with_perms(qs, info)
+
         ext = optimizer.optimizer.get()
         if ext is not None:
             # If optimizer extension is enabled, optimize this queryset

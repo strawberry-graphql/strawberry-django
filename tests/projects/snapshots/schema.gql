@@ -1,0 +1,767 @@
+"""
+Can only be resolved by authenticated users.
+
+When the condition fails, the following can be returned (following this priority):
+1) `OperationInfo`/`OperationMessage` if those types are allowed at the return type
+2) `null` in case the field is not mandatory (e.g. `String` or `[String]`)
+3) An empty list in case the field is a list (e.g. `[String]!`)
+4) An empty `Connection` in case the return type is a relay connection
+2) Otherwise, an error will be raised
+"""
+directive @isAuthenticated repeatable on FIELD_DEFINITION
+
+"""
+Can only be resolved by staff users.
+
+When the condition fails, the following can be returned (following this priority):
+1) `OperationInfo`/`OperationMessage` if those types are allowed at the return type
+2) `null` in case the field is not mandatory (e.g. `String` or `[String]`)
+3) An empty list in case the field is a list (e.g. `[String]!`)
+4) An empty `Connection` in case the return type is a relay connection
+2) Otherwise, an error will be raised
+"""
+directive @isStaff repeatable on FIELD_DEFINITION
+
+"""
+Can only be resolved by superuser users.
+
+When the condition fails, the following can be returned (following this priority):
+1) `OperationInfo`/`OperationMessage` if those types are allowed at the return type
+2) `null` in case the field is not mandatory (e.g. `String` or `[String]`)
+3) An empty list in case the field is a list (e.g. `[String]!`)
+4) An empty `Connection` in case the return type is a relay connection
+2) Otherwise, an error will be raised
+"""
+directive @isSuperuser repeatable on FIELD_DEFINITION
+
+"""
+Will check if the user has any/all permissions for the resolved value of this field before returning it.
+
+When the condition fails, the following can be returned (following this priority):
+1) `OperationInfo`/`OperationMessage` if those types are allowed at the return type
+2) `null` in case the field is not mandatory (e.g. `String` or `[String]`)
+3) An empty list in case the field is a list (e.g. `[String]!`)
+4) An empty `Connection` in case the return type is a relay connection
+2) Otherwise, an error will be raised
+"""
+directive @hasRetvalPerm(permissions: [PermDefinition!]!, any: Boolean! = true) repeatable on FIELD_DEFINITION
+
+"""
+Will check if the user has any/all permissions to resolve this.
+
+When the condition fails, the following can be returned (following this priority):
+1) `OperationInfo`/`OperationMessage` if those types are allowed at the return type
+2) `null` in case the field is not mandatory (e.g. `String` or `[String]`)
+3) An empty list in case the field is a list (e.g. `[String]!`)
+4) An empty `Connection` in case the return type is a relay connection
+2) Otherwise, an error will be raised
+"""
+directive @hasPerm(permissions: [PermDefinition!]!, any: Boolean! = true) repeatable on FIELD_DEFINITION
+
+input AssigneeInputPartial {
+  id: GlobalID
+  throughDefaults: AssigneeThroughInputPartial
+}
+
+"""Add/remove/set the selected nodes."""
+input AssigneeInputPartialListInput {
+  set: [AssigneeInputPartial!]
+  add: [AssigneeInputPartial!]
+  remove: [AssigneeInputPartial!]
+}
+
+input AssigneeThroughInputPartial {
+  owner: Boolean
+}
+
+type AssigneeType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  user: UserType!
+  owner: Boolean!
+}
+
+union CreateIssuePayload = IssueType | OperationInfo
+
+union CreateMilestonePayload = MilestoneType | OperationInfo
+
+input CreateProjectInput {
+  name: String!
+
+  """The project's cost"""
+  cost: Decimal!
+  dueDate: DateTime = null
+}
+
+union CreateProjectPayload = ProjectType | OperationInfo
+
+input CreateQuizInput {
+  title: String!
+  fullCleanOptions: Boolean! = false
+}
+
+union CreateQuizPayload = QuizType | OperationInfo
+
+"""Date (isoformat)"""
+scalar Date
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+union DeleteIssuePayload = IssueType | OperationInfo
+
+input DjangoModelFilterInput {
+  pk: ID!
+}
+
+type FavoriteType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  user: UserType!
+  issue: IssueType!
+}
+
+"""A connection to a list of items."""
+type FavoriteTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [FavoriteTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type FavoriteTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: FavoriteType!
+}
+
+"""
+The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+"""
+scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
+
+input IssueAssigneeInputPartial {
+  id: GlobalID
+  user: NodeInputPartial
+  owner: Boolean
+}
+
+"""Add/remove/set the selected nodes."""
+input IssueAssigneeInputPartialListInput {
+  set: [IssueAssigneeInputPartial!]
+  add: [IssueAssigneeInputPartial!]
+  remove: [IssueAssigneeInputPartial!]
+}
+
+input IssueInput {
+  name: String!
+  milestone: MilestoneInputPartial!
+  priority: Int
+  kind: String
+  tags: [NodeInput!]
+}
+
+input IssueInputPartial {
+  id: GlobalID!
+  name: String
+  milestone: MilestoneInputPartial!
+  priority: Int
+  kind: String
+  tags: TagInputPartialListInput
+  assignees: AssigneeInputPartialListInput
+  issueAssignees: IssueAssigneeInputPartialListInput
+}
+
+type IssueType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  milestone: MilestoneType!
+  priority: Int!
+  kind: String
+  nameWithPriority: String!
+  nameWithKind: String!
+  tags: [TagType!]!
+  issueAssignees: [AssigneeType!]!
+  favoriteSet(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): FavoriteTypeConnection!
+}
+
+"""A connection to a list of items."""
+type IssueTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [IssueTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type IssueTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: IssueType!
+}
+
+input MilestoneFilter {
+  name: StrFilterLookup
+  project: DjangoModelFilterInput
+  search: String
+}
+
+input MilestoneInput {
+  name: String!
+  project: ProjectInputPartial!
+  issues: [MilestoneIssueInput!]
+}
+
+input MilestoneInputPartial {
+  id: GlobalID
+  name: String
+}
+
+input MilestoneIssueInput {
+  name: String!
+}
+
+input MilestoneOrder {
+  name: Ordering
+  project: ProjectOrder
+}
+
+type MilestoneType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  project: ProjectType!
+  issues: [IssueType!]!
+  myIssues: [IssueType!]!
+  asyncField(value: String!): String!
+}
+
+"""A connection to a list of items."""
+type MilestoneTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [MilestoneTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type MilestoneTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: MilestoneType!
+}
+
+type Mutation {
+  createIssue(input: IssueInput!): CreateIssuePayload!
+  updateIssue(input: IssueInputPartial!): UpdateIssuePayload!
+  deleteIssue(input: NodeInput!): DeleteIssuePayload!
+  updateProject(input: ProjectInputPartial!): UpdateProjectPayload!
+  createMilestone(input: MilestoneInput!): CreateMilestonePayload!
+  createProject(
+    """Input data for `createProject` mutation"""
+    input: CreateProjectInput!
+  ): CreateProjectPayload!
+  createQuiz(
+    """Input data for `createQuiz` mutation"""
+    input: CreateQuizInput!
+  ): CreateQuizPayload!
+}
+
+"""An object with a Globally Unique ID"""
+interface Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+}
+
+"""Input of an object that implements the `Node` interface."""
+input NodeInput {
+  id: GlobalID!
+}
+
+"""Input of an object that implements the `Node` interface."""
+input NodeInputPartial {
+  id: GlobalID
+}
+
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
+}
+
+type OperationInfo {
+  """List of messages returned by the operation."""
+  messages: [OperationMessage!]!
+}
+
+type OperationMessage {
+  """The kind of this message."""
+  kind: OperationMessageKind!
+
+  """The error message."""
+  message: String!
+
+  """
+  The field that caused the error, or `null` if it isn't associated with any particular field.
+  """
+  field: String
+}
+
+enum OperationMessageKind {
+  INFO
+  WARNING
+  ERROR
+  PERMISSION
+  VALIDATION
+}
+
+enum Ordering {
+  ASC
+  DESC
+}
+
+"""Information to aid in pagination."""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+}
+
+input ProjectInputPartial {
+  id: GlobalID
+  name: String
+  milestones: [MilestoneInputPartial!]
+}
+
+input ProjectOrder {
+  id: Ordering
+  name: Ordering
+}
+
+type ProjectType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  milestones: [MilestoneType!]!
+  cost: Decimal @isAuthenticated
+}
+
+"""A connection to a list of items."""
+type ProjectTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [ProjectTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type ProjectTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: ProjectType!
+}
+
+type Query {
+  node(
+    """The ID of the object."""
+    id: GlobalID!
+  ): Node
+  favorite(
+    """The ID of the object."""
+    id: GlobalID!
+  ): FavoriteType
+
+  """Foobar"""
+  issue(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType
+  milestone(
+    """The ID of the object."""
+    id: GlobalID!
+  ): MilestoneType
+  milestoneMandatory(
+    """The ID of the object."""
+    id: GlobalID!
+  ): MilestoneType!
+  milestones(
+    """The IDs of the objects."""
+    ids: [GlobalID!]!
+  ): [MilestoneType!]!
+  project(
+    """The ID of the object."""
+    id: GlobalID!
+  ): ProjectType
+  projectLoginRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): ProjectType @isAuthenticated
+  tag(
+    """The ID of the object."""
+    id: GlobalID!
+  ): TagType
+  staff(
+    """The ID of the object."""
+    id: GlobalID!
+  ): StaffType
+  staffList(
+    """The IDs of the objects."""
+    ids: [GlobalID!]!
+  ): [StaffType]!
+  issueList: [IssueType!]!
+  milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
+  projectList: [ProjectType!]!
+  tagList: [TagType!]!
+  favoriteConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): FavoriteTypeConnection!
+  issueConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
+  milestoneConn(
+    filters: MilestoneFilter
+    order: MilestoneOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): MilestoneTypeConnection!
+  projectConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): ProjectTypeConnection!
+  tagConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): TagTypeConnection!
+  staffConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): StaffTypeConnection!
+  issueLoginRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @isAuthenticated
+  issueLoginRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @isAuthenticated
+  issueStaffRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @isStaff
+  issueStaffRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @isStaff
+  issueSuperuserRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @isSuperuser
+  issueSuperuserRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @isSuperuser
+  issuePermRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issuePermRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueListPermRequired: [IssueType!]! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueConnPermRequired(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueObjPermRequired(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueObjPermRequiredOptional(
+    """The ID of the object."""
+    id: GlobalID!
+  ): IssueType @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueListObjPermRequired: [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueConnObjPermRequired(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  me: UserType
+  projectConnWithResolver(
+    name: String!
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): ProjectTypeConnection!
+}
+
+type QuizType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  title: String!
+  sequence: Int!
+}
+
+type StaffType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  email: String!
+  isActive: Boolean!
+  isSuperuser: Boolean!
+  isStaff: Boolean!
+}
+
+"""A connection to a list of items."""
+type StaffTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [StaffTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type StaffTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: StaffType!
+}
+
+input StrFilterLookup {
+  exact: String
+  iExact: String
+  contains: String
+  iContains: String
+  inList: [String!]
+  gt: String
+  gte: String
+  lt: String
+  lte: String
+  startsWith: String
+  iStartsWith: String
+  endsWith: String
+  iEndsWith: String
+  range: [String!]
+  isNull: Boolean
+  regex: String
+  iRegex: String
+}
+
+input TagInputPartial {
+  id: GlobalID
+  name: String
+}
+
+"""Add/remove/set the selected nodes."""
+input TagInputPartialListInput {
+  set: [TagInputPartial!]
+  add: [TagInputPartial!]
+  remove: [TagInputPartial!]
+}
+
+type TagType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  issues(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
+}
+
+"""A connection to a list of items."""
+type TagTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [TagTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type TagTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: TagType!
+}
+
+union UpdateIssuePayload = IssueType | OperationInfo
+
+union UpdateProjectPayload = ProjectType | OperationInfo
+
+type UserType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  email: String!
+  isActive: Boolean!
+  isSuperuser: Boolean!
+  isStaff: Boolean!
+  fullName: String!
+}
+
+"""Permission definition for schema directives."""
+input PermDefinition {
+  """
+  The app to which we are requiring permission. If this is empty that means that we are checking the permission directly.
+  """
+  app: String
+
+  """
+  The permission itself. If this is empty that means that we are checking for any permission for the given app.
+  """
+  permission: String
+}
