@@ -34,7 +34,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3.2"
-strawberry-graphql = ">=0.190.0"
+strawberry-graphql = ">=0.192.1"
 django-debug-toolbar = { version = ">=3.4", optional = true }
 django-choices-field = { version = ">=2.2.2", optional = true }
 
