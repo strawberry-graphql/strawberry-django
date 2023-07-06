@@ -268,7 +268,7 @@ def _process_type(
                 raise
         else:
             is_relation = model_attr.is_relation
-            django_name = resolve_model_field_name(
+            django_name = getattr(f, "django_name", None) or resolve_model_field_name(
                 model_attr,
                 is_input=django_type.is_input,
                 is_filter=bool(django_type.is_filter),

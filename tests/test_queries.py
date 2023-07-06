@@ -1,4 +1,5 @@
-from typing import List, Optional
+import textwrap
+from typing import List, Optional, cast
 
 import pytest
 import strawberry
@@ -154,3 +155,48 @@ async def test_model_properties(query, fruits):
         {"nameUpper": "STRAWBERRY", "nameLower": "strawberry"},
         {"nameUpper": "RASPBERRY", "nameLower": "raspberry"},
     ]
+
+
+def test_field_name():
+    """Make sure that field_name overriding is not ignored."""
+
+    @strawberry_django.type(models.Fruit)
+    class Fruit:
+        name: auto
+        color_id: int = strawberry_django.field(field_name="color_id")
+
+    @strawberry.type
+    class Query:
+        @strawberry_django.field
+        def fruit(self) -> Fruit:
+            color = models.Color.objects.create(name="Yellow")
+            return cast(
+                Fruit,
+                models.Fruit.objects.create(
+                    name="Banana",
+                    color=color,
+                ),
+            )
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type Fruit {
+        name: String!
+        colorId: Int!
+      }
+
+      type Query {
+        fruit: Fruit!
+      }
+    """
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync("""\
+      query TestQuery {
+        fruit {
+          name
+          colorId
+        }
+      }
+    """)
+    assert result.data == {"fruit": {"colorId": 1, "name": "Banana"}}
