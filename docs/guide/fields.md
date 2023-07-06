@@ -2,7 +2,7 @@
 
 !!! tip
 
-    It is highly recommended to enable the [Query Optimizer Extension](/guide/optimizer)
+    It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
     for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
 
 Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box. If you use a library that defines a custom field you will need to define an equivalent type such as `str`, `float`, `bool`, `int` or `id`.

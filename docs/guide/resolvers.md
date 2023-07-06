@@ -46,10 +46,10 @@ class Color:
 
 ## Optimizing resolvers
 
-When using custom resolvers together with the [Query Optimizer Extension](/guide/optimizer)
+When using custom resolvers together with the [Query Optimizer Extension](optimizer.md)
 you might need to give it a "hint" on how to optimize that field
 
-Take a look at the [optimization hints](/guide/optimizer#optimization-hints)
+Take a look at the [optimization hints](optimizer.md#optimization-hints)
 docs for more information about this topic.
 
 ## Issues with Resolvers
