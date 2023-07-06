@@ -13,7 +13,7 @@ from .fields.types import (
     OneToOneInput,
 )
 from .filters import filter
-from .mutations.mutations import mutation
+from .mutations.mutations import input_mutation, mutation
 from .ordering import order
 from .resolvers import django_resolver
 from .type import input, partial, type
@@ -36,6 +36,7 @@ __all__ = [
     "filter",
     "filters",
     "input",
+    "input_mutation",
     "mutation",
     "mutations",
     "node",
