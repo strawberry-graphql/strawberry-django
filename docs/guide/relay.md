@@ -38,8 +38,8 @@ Behind the scenes this extension is doing the following for you:
   `some_model_conn` and `some_model_conn_with_total_count` will both define a custom resolver
   that returns `SomeModel.objects.all()`.
 - Integrate connection resolution with all other features available in this lib. For example,
-  [filters](/guide/filters), [ordering](/guide/ordering) and
-  [permissioning](/guide/permissioning) can be used together with connections defined
+  [filters](filters.md), [ordering](ordering.md) and
+  [permissions](permissions.md) can be used together with connections defined
   by strawberry django.
 
 You can also define your own `relay.NodeID` field and your resolve, in the same way as

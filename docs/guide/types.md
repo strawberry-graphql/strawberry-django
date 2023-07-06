@@ -4,7 +4,7 @@
 
 !!! note
 
-    It is highly recommended to enable the [Query Optimizer Extension](/guide/optimizer)
+    It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
     for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
 
 Output types are generated from models. The `auto` type is used for field type auto resolution.

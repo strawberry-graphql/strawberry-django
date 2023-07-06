@@ -26,13 +26,13 @@ A dictionary with the following optional keys:
 
 - **`MUTATIONS_DEFAULT_ARGUMENT_NAME`** (default: `"data"`)
 
-      Change the [CUD mutations'](/guide/mutations#cud-mutations) default
+      Change the [CUD mutations'](mutations.md#cud-mutations) default
       argument name when no option is passed (e.g. to `"input"`)
 
 - **`MUTATIONS_DEFAULT_HANDLE_ERRORS`** (default: `False`)
 
       Set the default behaviour of the
-      [Django Errors Handling](/guide/mutations#django-errors-handling)
+      [Django Errors Handling](mutations.md#django-errors-handling)
       when no option is passed.
 
 - **`GENERATE_ENUMS_FROM_CHOICES`** (default: `False`)
