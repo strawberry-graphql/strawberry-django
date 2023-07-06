@@ -96,13 +96,16 @@ for more information).
 
 The following CUD mutations are provided by this lib:
 
-- `strawberry_djang.create`: Will create the model using the data from the given input
-- `strawberry_djang.update`: Will update the model using the data from the given input
-- `strawberry_djang.delete`: Will delete the model using the id from the given input
+- `strawberry_django.mutations.create`: Will create the model using the data from the given input
+- `strawberry_django.mutations.update`: Will update the model using the data from the given input
+- `strawberry_django.mutations.delete`: Will delete the model using the id from the given input
 
 A basic example would be:
 
 ```{.python title=types.py}
+from strawberry_django import mutations
+
+
 @strawberry_django.type(SomeModel)
 class SomeModelType(relay.Node):
     name: gql.auto
@@ -118,9 +121,9 @@ class SomeModelInputPartial(relay.NodeInput):
 
 @gql.type
 class Mutation:
-    create_model: SomeModelType = strawberry_django.create(SomeModelInput)
-    update_model: SomeModelType = strawberry_django.update(SomeModelInputPartial)
-    delete_model: SomeModelType = strawberry_django.delete(relay.NodeInput)
+    create_model: SomeModelType = mutations.create(SomeModelInput)
+    update_model: SomeModelType = mutations.update(SomeModelInputPartial)
+    delete_model: SomeModelType = mutations.delete(relay.NodeInput)
 ```
 
 Some things to note here:

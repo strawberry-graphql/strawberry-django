@@ -7,7 +7,7 @@ directly with django types like this:
 import strawberry
 import strawberry_django
 from strawberry import relay
-from strawberry_django import ListConnectionWithTotalCount
+from strawberry_django.relay import ListConnectionWithTotalCount
 
 
 class Fruit(models.Model):
@@ -45,7 +45,7 @@ Behind the scenes this extension is doing the following for you:
 You can also define your own `relay.NodeID` field and your resolve, in the same way as
 `some_model_conn_with_resolver` is doing. In those cases, they will not be overridden.
 
-Also, this lib exposes a `strawberry_django.ListConnectionWithTotalCount`, which works
+Also, this lib exposes a `strawberry_django.relay.ListConnectionWithTotalCount`, which works
 the same way as `strawberry.relay.ListConnection` does, but also exposes a
 `totalCount` attribute in the connection.
 
