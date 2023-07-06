@@ -14,6 +14,7 @@ from typing import (
     overload,
 )
 
+from asgiref.sync import sync_to_async
 from django.db import models
 from django.db.models.fields.related import (
     ForwardManyToOneDescriptor,
@@ -134,6 +135,8 @@ class StrawberryDjangoField(
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> AwaitableOrValue[Any]:
+        is_awaitable = False
+
         if self.base_resolver is not None:
             resolver_kwargs = kwargs.copy()
             if self._need_remove_order_argument:
@@ -142,6 +145,7 @@ class StrawberryDjangoField(
                 resolver_kwargs.pop("filters", None)
 
             result = self.resolver(source, info, args, resolver_kwargs)
+            is_awaitable = inspect.isawaitable(result)
         elif source is None:
             model = self.django_model
             assert model is not None
@@ -182,6 +186,26 @@ class StrawberryDjangoField(
                     attname,
                     qs_hook=self.get_queryset_hook(**kwargs),
                 )
+
+        if is_awaitable:
+
+            async def async_resolver():
+                resolved = await result  # type: ignore
+
+                if isinstance(resolved, BaseManager):
+                    resolved = resolved.all()
+
+                if isinstance(resolved, models.QuerySet):
+                    if "info" not in kwargs:
+                        kwargs["info"] = info
+
+                    resolved = await sync_to_async(self.get_queryset_hook(**kwargs))(
+                        resolved,
+                    )
+
+                return resolved
+
+            return async_resolver()
 
         if isinstance(result, BaseManager):
             result = result.all()

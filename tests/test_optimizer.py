@@ -9,6 +9,7 @@ from .projects.faker import (
     IssueFactory,
     MilestoneFactory,
     ProjectFactory,
+    StaffUserFactory,
     TagFactory,
     UserFactory,
 )
@@ -45,6 +46,34 @@ def test_user_query(db, gql_client: GraphQLTestClient):
                 "fullName": "John Snow",
             },
         }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_staff_query(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        staffConn {
+          edges {
+            node {
+              email
+            }
+          }
+        }
+      }
+    """
+
+    UserFactory.create_batch(5)
+    staff1, staff2 = StaffUserFactory.create_batch(2)
+
+    res = gql_client.query(query)
+    assert res.data == {
+        "staffConn": {
+            "edges": [
+                {"node": {"email": staff1.email}},
+                {"node": {"email": staff2.email}},
+            ],
+        },
+    }
 
 
 @pytest.mark.django_db(transaction=True)
