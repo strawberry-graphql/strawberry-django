@@ -139,7 +139,7 @@ Some things to note here:
 
 !!! danger
 
-    This is totally disincoraged since it allows for any issue with the filters
+    This is totally discouraged as it allows for any issue with the filters
     to be able to alter your whole model collection.
 
     **You have been warned!**
