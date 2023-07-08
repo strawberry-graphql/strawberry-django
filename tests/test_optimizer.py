@@ -564,7 +564,7 @@ def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
                         "id": to_base64("ProjectType", p.id),
                         "milestones": [],
                         "name": p.name,
-                    }
+                    },
                 }
                 for p in [p1, p2, p3]
             ],
