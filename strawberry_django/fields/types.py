@@ -27,6 +27,7 @@ from strawberry import UNSET, relay
 from strawberry.enum import EnumValueDefinition
 from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
+from strawberry.type import StrawberryList
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 from typing_extensions import Self
 
@@ -38,6 +39,11 @@ try:
 except ImportError:  # pragma: no cover
     IntegerChoicesField = None
     TextChoicesField = None
+
+try:
+    from django.contrib.postgres.fields import ArrayField
+except ImportError:
+    ArrayField = None
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
@@ -463,6 +469,13 @@ def resolve_model_field_type(
                 ),
             )
             model_field._strawberry_enum = field_type  # type: ignore
+    # Postgres array fields
+    elif (
+        ArrayField is not None
+        and isinstance(model_field, ArrayField)
+    ):
+        base_field_type = resolve_model_field_type(model_field.base_field, django_type)
+        field_type = StrawberryList(base_field_type)
     # Every other Field possibility
     else:
         is_relay = issubclass(django_type.origin, relay.Node)

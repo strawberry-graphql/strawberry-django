@@ -8,6 +8,7 @@ import pytest
 import strawberry
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from strawberry import auto
 from strawberry.enum import EnumDefinition, EnumValue
@@ -52,6 +53,34 @@ class FieldTypesModel(models.Model):
     url = models.URLField()
     uuid = models.UUIDField()
     json = models.JSONField()
+    array_of_boolean = ArrayField(models.BooleanField())
+    array_of_char = ArrayField(models.CharField(max_length=50))
+    array_of_date = ArrayField(models.DateField())
+    array_of_date_time = ArrayField(models.DateTimeField())
+    array_of_decimal = ArrayField(models.DecimalField())
+    array_of_email = ArrayField(models.EmailField())
+    array_of_file = ArrayField(models.FileField())
+    array_of_file_path = ArrayField(models.FilePathField())
+    array_of_float = ArrayField(models.FloatField())
+    array_of_generic_ip_address = ArrayField(models.GenericIPAddressField())
+    array_of_integer = ArrayField(models.IntegerField())
+    array_of_image = ArrayField(models.ImageField())
+    # NullBooleanField was deprecated and will soon be removed
+    array_of_null_boolean = ArrayField(
+        models.NullBooleanField()  # type: ignore
+        if hasattr(models, "NullBooleanField")
+        else models.BooleanField(null=True)
+    )
+    array_of_positive_big_integer = ArrayField(models.PositiveBigIntegerField())
+    array_of_positive_integer = ArrayField(models.PositiveIntegerField())
+    array_of_positive_small_integer = ArrayField(models.PositiveSmallIntegerField())
+    array_of_slug = ArrayField(models.SlugField())
+    array_of_small_integer = ArrayField(models.SmallIntegerField())
+    array_of_text = ArrayField(models.TextField())
+    array_of_time = ArrayField(models.TimeField())
+    array_of_url = ArrayField(models.URLField())
+    array_of_uuid = ArrayField(models.UUIDField())
+    array_of_json = ArrayField(models.JSONField())
     foreign_key = models.ForeignKey(
         "FieldTypesModel",
         blank=True,
@@ -97,6 +126,29 @@ def test_field_types():
         url: auto
         uuid: auto
         json: auto
+        array_of_boolean: auto
+        array_of_char: auto
+        array_of_date: auto
+        array_of_date_time: auto
+        array_of_decimal: auto
+        array_of_email: auto
+        array_of_file: auto
+        array_of_file_path: auto
+        array_of_float: auto
+        array_of_generic_ip_address: auto
+        array_of_integer: auto
+        array_of_image: auto
+        array_of_null_boolean: auto
+        array_of_positive_big_integer: auto
+        array_of_positive_integer: auto
+        array_of_positive_small_integer: auto
+        array_of_slug: auto
+        array_of_small_integer: auto
+        array_of_text: auto
+        array_of_time: auto
+        array_of_url: auto
+        array_of_uuid: auto
+        array_of_json: auto
 
     object_definition = get_object_definition(Type, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
@@ -124,6 +176,29 @@ def test_field_types():
         ("url", str),
         ("uuid", uuid.UUID),
         ("json", JSON),
+        ("array_of_boolean", List[bool]),
+        ("array_of_char", List[str]),
+        ("array_of_date", List[datetime.date]),
+        ("array_of_date_time", List[datetime.datetime]),
+        ("array_of_decimal", List[decimal.Decimal]),
+        ("array_of_email", List[str]),
+        ("array_of_file", List[strawberry_django.DjangoFileType]),
+        ("array_of_file_path", List[str]),
+        ("array_of_float", List[float]),
+        ("array_of_generic_ip_address", List[str]),
+        ("array_of_integer", List[int]),
+        ("array_of_image", List[strawberry_django.DjangoImageType]),
+        ("array_of_null_boolean", List[StrawberryOptional(bool)]),
+        ("array_of_positive_big_integer", List[int]),
+        ("array_of_positive_integer", List[int]),
+        ("array_of_positive_small_integer", List[int]),
+        ("array_of_slug", List[str]),
+        ("array_of_small_integer", List[int]),
+        ("array_of_text", List[str]),
+        ("array_of_time", List[datetime.time]),
+        ("array_of_url", List[str]),
+        ("array_of_uuid", List[uuid.UUID]),
+        ("array_of_json", List[JSON]),
     ]
 
 
