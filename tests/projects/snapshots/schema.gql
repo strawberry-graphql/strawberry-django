@@ -105,6 +105,26 @@ union CreateQuizPayload = QuizType | OperationInfo
 """Date (isoformat)"""
 scalar Date
 
+input DateFilterLookup {
+  exact: Date
+  iExact: Date
+  contains: Date
+  iContains: Date
+  inList: [Date!]
+  gt: Date
+  gte: Date
+  lt: Date
+  lte: Date
+  startsWith: Date
+  iStartsWith: Date
+  endsWith: Date
+  iEndsWith: Date
+  range: [Date!]
+  isNull: Boolean
+  regex: String
+  iRegex: String
+}
+
 """Date with time (isoformat)"""
 scalar DateTime
 
@@ -382,6 +402,11 @@ type ProjectConnection {
   totalCount: Int
 }
 
+input ProjectFilter {
+  name: StrFilterLookup
+  dueDate: DateFilterLookup
+}
+
 input ProjectInputPartial {
   id: GlobalID
   name: String
@@ -460,7 +485,7 @@ type Query {
   ): [StaffType]!
   issueList: [IssueType!]!
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
-  projectList: [ProjectType!]!
+  projectList(filters: ProjectFilter): [ProjectType!]!
   tagList: [TagType!]!
   favoriteConn(
     """Returns the items in the list that come before the specified cursor."""
@@ -505,6 +530,8 @@ type Query {
     last: Int = null
   ): MilestoneTypeConnection!
   projectConn(
+    filters: ProjectFilter
+
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
 
@@ -614,6 +641,7 @@ type Query {
   me: UserType
   projectConnWithResolver(
     name: String!
+    filters: ProjectFilter
 
     """Returns the items in the list that come before the specified cursor."""
     before: String = null

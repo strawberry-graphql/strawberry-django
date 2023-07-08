@@ -73,7 +73,12 @@ class StaffType(relay.Node):
         return queryset.filter(is_staff=True)
 
 
-@strawberry_django.type(Project)
+@strawberry_django.filter(Project, lookups=True)
+class ProjectFilter:
+    name: strawberry.auto
+    due_date: strawberry.auto
+
+@strawberry_django.type(Project, filters=ProjectFilter)
 class ProjectType(relay.Node):
     name: strawberry.auto
     due_date: strawberry.auto
