@@ -559,7 +559,13 @@ def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
         "projectConnWithResolver": {
             "totalCount": 3,
             "edges": [
-                {"node": {"id": to_base64("ProjectType", p.id), 'milestones': [], "name": p.name}}
+                {
+                    "node": {
+                        "id": to_base64("ProjectType", p.id),
+                        "milestones": [],
+                        "name": p.name,
+                    }
+                }
                 for p in [p1, p2, p3]
             ],
         },
