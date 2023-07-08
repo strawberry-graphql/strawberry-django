@@ -71,7 +71,13 @@ class StaffType(relay.Node):
         return queryset.filter(is_staff=True)
 
 
-@strawberry_django.type(Project)
+@strawberry_django.filter(Project, lookups=True)
+class ProjectFilter:
+    name: strawberry.auto
+    due_date: strawberry.auto
+
+
+@strawberry_django.type(Project, filters=ProjectFilter)
 class ProjectType(relay.Node):
     name: strawberry.auto
     due_date: strawberry.auto
@@ -238,6 +244,11 @@ class MilestoneInputPartial(NodeInputPartial):
 
 
 @strawberry.type
+class ProjectConnection(ListConnectionWithTotalCount[ProjectType]):
+    """Project connection documentation."""
+
+
+@strawberry.type
 class Query:
     """All available queries for this schema."""
 
@@ -280,9 +291,7 @@ class Query:
         strawberry_django.connection()
     )
 
-    project_conn: ListConnectionWithTotalCount[ProjectType] = (
-        strawberry_django.connection()
-    )
+    project_conn: ProjectConnection = strawberry_django.connection()
     tag_conn: ListConnectionWithTotalCount[TagType] = strawberry_django.connection()
     staff_conn: ListConnectionWithTotalCount[StaffType] = strawberry_django.connection()
 
@@ -344,7 +353,7 @@ class Query:
 
         return cast(UserType, user)
 
-    @strawberry_django.connection(ListConnectionWithTotalCount[ProjectType])
+    @strawberry_django.connection(ProjectConnection)
     def project_conn_with_resolver(self, root: str, name: str) -> Iterable[Project]:
         return Project.objects.filter(name__contains=name)
 

@@ -537,6 +537,9 @@ def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
             node {
               id
               name
+              milestones {
+                id
+              }
             }
           }
         }
@@ -549,14 +552,20 @@ def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
     for i in range(10):
         ProjectFactory.create(name=f"Project {i}")
 
-    with assert_num_queries(2):
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
         res = gql_client.query(query)
 
     assert res.data == {
         "projectConnWithResolver": {
             "totalCount": 3,
             "edges": [
-                {"node": {"id": to_base64("ProjectType", p.id), "name": p.name}}
+                {
+                    "node": {
+                        "id": to_base64("ProjectType", p.id),
+                        "milestones": [],
+                        "name": p.name,
+                    },
+                }
                 for p in [p1, p2, p3]
             ],
         },

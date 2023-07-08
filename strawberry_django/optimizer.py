@@ -314,8 +314,8 @@ def _get_model_hints(
 
     # In case this is a relay field, find the selected edges/nodes, the selected fields
     # are actually inside edges -> node selection...
-    if object_definition.concrete_of and issubclass(
-        object_definition.concrete_of.origin,
+    if issubclass(
+        object_definition.origin,
         relay.Connection,
     ):
         # TODO: Connections are mostly used for pagination so it doesn't make sense for
@@ -324,7 +324,11 @@ def _get_model_hints(
         if level > 0:
             return None
 
-        n_type = object_definition.type_var_map[cast(TypeVar, relay.NodeType)]
+        n_type = object_definition.type_var_map.get(cast(TypeVar, relay.NodeType))
+        if n_type is None:
+            specialized_type_var_map = object_definition.specialized_type_var_map or {}
+
+            n_type = specialized_type_var_map[cast(TypeVar, relay.NodeType)]
         if isinstance(n_type, LazyType):
             n_type = n_type.resolve_type()
 

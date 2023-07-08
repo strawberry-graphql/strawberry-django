@@ -105,6 +105,26 @@ union CreateQuizPayload = QuizType | OperationInfo
 """Date (isoformat)"""
 scalar Date
 
+input DateFilterLookup {
+  exact: Date
+  iExact: Date
+  contains: Date
+  iContains: Date
+  inList: [Date!]
+  gt: Date
+  gte: Date
+  lt: Date
+  lte: Date
+  startsWith: Date
+  iStartsWith: Date
+  endsWith: Date
+  iEndsWith: Date
+  range: [Date!]
+  isNull: Boolean
+  regex: String
+  iRegex: String
+}
+
 """Date with time (isoformat)"""
 scalar DateTime
 
@@ -371,6 +391,22 @@ type PageInfo {
   endCursor: String
 }
 
+type ProjectConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [ProjectTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+input ProjectFilter {
+  name: StrFilterLookup
+  dueDate: DateFilterLookup
+}
+
 input ProjectInputPartial {
   id: GlobalID
   name: String
@@ -389,18 +425,6 @@ type ProjectType implements Node {
   dueDate: Date
   milestones: [MilestoneType!]!
   cost: Decimal @isAuthenticated
-}
-
-"""A connection to a list of items."""
-type ProjectTypeConnection {
-  """Pagination data for this connection"""
-  pageInfo: PageInfo!
-
-  """Contains the nodes in this connection"""
-  edges: [ProjectTypeEdge!]!
-
-  """Total quantity of existing nodes."""
-  totalCount: Int
 }
 
 """An edge in a connection."""
@@ -461,7 +485,7 @@ type Query {
   ): [StaffType]!
   issueList: [IssueType!]!
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
-  projectList: [ProjectType!]!
+  projectList(filters: ProjectFilter): [ProjectType!]!
   tagList: [TagType!]!
   favoriteConn(
     """Returns the items in the list that come before the specified cursor."""
@@ -506,6 +530,8 @@ type Query {
     last: Int = null
   ): MilestoneTypeConnection!
   projectConn(
+    filters: ProjectFilter
+
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
 
@@ -517,7 +543,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): ProjectTypeConnection!
+  ): ProjectConnection!
   tagConn(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -615,6 +641,7 @@ type Query {
   me: UserType
   projectConnWithResolver(
     name: String!
+    filters: ProjectFilter
 
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -627,7 +654,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): ProjectTypeConnection!
+  ): ProjectConnection!
 }
 
 type QuizType implements Node {
