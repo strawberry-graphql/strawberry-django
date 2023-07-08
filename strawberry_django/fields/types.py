@@ -470,10 +470,7 @@ def resolve_model_field_type(
             )
             model_field._strawberry_enum = field_type  # type: ignore
     # Postgres array fields
-    elif (
-        ArrayField is not None
-        and isinstance(model_field, ArrayField)
-    ):
+    elif ArrayField is not None and isinstance(model_field, ArrayField):
         base_field_type = resolve_model_field_type(model_field.base_field, django_type)
         field_type = StrawberryList(base_field_type)
     # Every other Field possibility

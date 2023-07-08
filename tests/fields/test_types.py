@@ -7,8 +7,8 @@ from typing import Dict, List, Tuple, Union, cast
 import pytest
 import strawberry
 from django.conf import settings
-from django.core.exceptions import FieldDoesNotExist
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from strawberry import auto
 from strawberry.enum import EnumDefinition, EnumValue
@@ -67,9 +67,11 @@ class FieldTypesModel(models.Model):
     array_of_image = ArrayField(models.ImageField())
     # NullBooleanField was deprecated and will soon be removed
     array_of_null_boolean = ArrayField(
-        models.NullBooleanField()  # type: ignore
-        if hasattr(models, "NullBooleanField")
-        else models.BooleanField(null=True)
+        (
+            models.NullBooleanField()  # type: ignore
+            if hasattr(models, "NullBooleanField")
+            else models.BooleanField(null=True)
+        ),
     )
     array_of_positive_big_integer = ArrayField(models.PositiveBigIntegerField())
     array_of_positive_integer = ArrayField(models.PositiveIntegerField())
