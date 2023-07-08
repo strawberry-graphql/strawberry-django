@@ -435,7 +435,7 @@ def resolve_model_field_type(
     elif (
         settings["GENERATE_ENUMS_FROM_CHOICES"]
         and isinstance(model_field, Field)
-        and hasattr(model_field, "choices")
+        and getattr(model_field, "choices", None)
     ):
         choices = cast(List[Tuple[Any, str]], model_field.choices)
         field_type = getattr(model_field, "_strawberry_enum", None)

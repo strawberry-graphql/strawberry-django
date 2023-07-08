@@ -10,9 +10,7 @@ from pytest_mock import MockerFixture
 import strawberry_django
 from strawberry_django.fields import types
 from strawberry_django.fields.types import field_type_map
-from strawberry_django.settings import (
-    strawberry_django_settings,
-)
+from strawberry_django.settings import strawberry_django_settings
 
 
 class Choice(models.TextChoices):
@@ -32,6 +30,19 @@ class ChoicesModel(models.Model):
             ("d", "D description"),
         ],
     )
+
+
+class ChoicesWithExtraFieldsModel(models.Model):
+    attr1 = TextChoicesField(choices_enum=Choice)
+    attr2 = models.CharField(
+        max_length=255,
+        choices=[
+            ("c", "C description"),
+            ("d", "D description"),
+        ],
+    )
+    extra1 = models.CharField(max_length=255)
+    extra2 = models.PositiveIntegerField()
 
 
 def test_choices_field():
@@ -157,3 +168,68 @@ def test_generate_choices_from_enum():
     result = schema.execute_sync("query { obj { attr1, attr2 }}")
     assert result.errors is None
     assert result.data == {"obj": {"attr1": "A", "attr2": "c"}}
+
+
+@override_settings(
+    STRAWBERRY_DJANGO={
+        **strawberry_django_settings(),
+        "GENERATE_ENUMS_FROM_CHOICES": True,
+    },
+)
+def test_generate_choices_from_enum_with_extra_fields():
+    @strawberry_django.type(ChoicesWithExtraFieldsModel)
+    class ChoicesWithExtraFieldsType:
+        attr1: strawberry.auto
+        attr2: strawberry.auto
+        extra1: strawberry.auto
+        extra2: strawberry.auto
+
+    @strawberry.type
+    class Query:
+        @strawberry_django.field
+        def obj(self) -> ChoicesWithExtraFieldsType:
+            return cast(
+                ChoicesWithExtraFieldsType,
+                ChoicesWithExtraFieldsModel(
+                    attr1=Choice.A,
+                    attr2="c",
+                    extra1="str1",
+                    extra2=99,
+                ),
+            )
+
+    expected = '''\
+    enum Choice {
+      A
+      B
+      C
+    }
+
+    type ChoicesWithExtraFieldsType {
+      attr1: Choice!
+      attr2: TestsChoicesWithExtraFieldsModelAttr2Enum!
+      extra1: String!
+      extra2: Int!
+    }
+
+    type Query {
+      obj: ChoicesWithExtraFieldsType!
+    }
+
+    enum TestsChoicesWithExtraFieldsModelAttr2Enum {
+      """C description"""
+      c
+
+      """D description"""
+      d
+    }
+    '''
+
+    schema = strawberry.Schema(query=Query)
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync("query { obj { attr1, attr2, extra1, extra2 }}")
+    assert result.errors is None
+    assert result.data == {
+        "obj": {"attr1": "A", "attr2": "c", "extra1": "str1", "extra2": 99},
+    }
