@@ -75,9 +75,11 @@ class StrawberryDjangoFieldBase(StrawberryField):
             origin = object_definition.type_var_map.get(cast(TypeVar, relay.NodeType))
 
             if origin is None:
-                origin = object_definition.specialized_type_var_map[
-                    cast(TypeVar, relay.NodeType)
-                ]
+                specialized_type_var_map = (
+                    object_definition.specialized_type_var_map or {}
+                )
+
+                origin = specialized_type_var_map[cast(TypeVar, relay.NodeType)]
 
             if isinstance(origin, LazyType):
                 origin = origin.resolve_type()

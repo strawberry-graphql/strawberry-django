@@ -326,9 +326,9 @@ def _get_model_hints(
 
         n_type = object_definition.type_var_map.get(cast(TypeVar, relay.NodeType))
         if n_type is None:
-            n_type = object_definition.specialized_type_var_map[
-                cast(TypeVar, relay.NodeType)
-            ]
+            specialized_type_var_map = object_definition.specialized_type_var_map or {}
+
+            n_type = specialized_type_var_map[cast(TypeVar, relay.NodeType)]
         if isinstance(n_type, LazyType):
             n_type = n_type.resolve_type()
 

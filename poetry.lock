@@ -1329,13 +1329,13 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.193.0"
+version = "0.194.0"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "strawberry_graphql-0.193.0-py3-none-any.whl", hash = "sha256:072997e654dde90356607dc49be35a310d1c134b95ef9e7a657277f2336a47b5"},
-    {file = "strawberry_graphql-0.193.0.tar.gz", hash = "sha256:4171ccac21fade71106d70c539d0f92a1303b34e9aa57d0cf47bb323ef45c7be"},
+    {file = "strawberry_graphql-0.194.0-py3-none-any.whl", hash = "sha256:f9993f1afacec0f32188acc65410ed9d3bac7832c49905f73430f53697274f68"},
+    {file = "strawberry_graphql-0.194.0.tar.gz", hash = "sha256:a92ffad08afec722a5dd43565e5402de58588df6b59bd486e615e264fbff8dc4"},
 ]
 
 [package.dependencies]
