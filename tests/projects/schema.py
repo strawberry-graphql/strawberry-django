@@ -350,7 +350,7 @@ class Query:
 
         return cast(UserType, user)
 
-    @strawberry_django.connection(ListConnectionWithTotalCount[ProjectType])
+    @strawberry_django.connection(ProjectConnection)
     def project_conn_with_resolver(self, root: str, name: str) -> Iterable[Project]:
         return Project.objects.filter(name__contains=name)
 

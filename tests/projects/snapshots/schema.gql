@@ -402,18 +402,6 @@ type ProjectType implements Node {
   cost: Decimal @isAuthenticated
 }
 
-"""A connection to a list of items."""
-type ProjectTypeConnection {
-  """Pagination data for this connection"""
-  pageInfo: PageInfo!
-
-  """Contains the nodes in this connection"""
-  edges: [ProjectTypeEdge!]!
-
-  """Total quantity of existing nodes."""
-  totalCount: Int
-}
-
 """An edge in a connection."""
 type ProjectTypeEdge {
   """A cursor for use in pagination"""
@@ -638,7 +626,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): ProjectTypeConnection!
+  ): ProjectConnection!
 }
 
 type QuizType implements Node {
