@@ -41,6 +41,8 @@ from .models import (
 UserModel = cast(Type[AbstractUser], get_user_model())
 
 
+
+
 @strawberry_django.type(UserModel)
 class UserType(relay.Node):
     username: relay.NodeID[str]
@@ -236,6 +238,10 @@ class MilestoneInput:
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
 
+@strawberry.type
+class ProjectConnection(ListConnectionWithTotalCount[ProjectType]):
+    """Project connection documentation."""
+
 
 @strawberry.type
 class Query:
@@ -280,7 +286,7 @@ class Query:
         strawberry_django.connection()
     )
 
-    project_conn: ListConnectionWithTotalCount[ProjectType] = (
+    project_conn: ProjectConnection = (
         strawberry_django.connection()
     )
     tag_conn: ListConnectionWithTotalCount[TagType] = strawberry_django.connection()

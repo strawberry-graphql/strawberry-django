@@ -371,6 +371,17 @@ type PageInfo {
   endCursor: String
 }
 
+type ProjectConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [ProjectTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
 input ProjectInputPartial {
   id: GlobalID
   name: String
@@ -517,7 +528,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): ProjectTypeConnection!
+  ): ProjectConnection!
   tagConn(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
