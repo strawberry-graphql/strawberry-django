@@ -426,7 +426,7 @@ def resolve_model_field_type(
             doc = (
                 inspect.cleandoc(field_type.__doc__)
                 if settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]
-                and field_type.__dic__
+                and field_type.__dict__
                 else None
             )
             enum_def = strawberry.enum(field_type, description=doc)._enum_definition
