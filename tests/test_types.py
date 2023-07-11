@@ -229,7 +229,7 @@ def test_all_fields_works():
     assert sweetness_field is not None
     assert sweetness_field.type == int
     assert sweetness_field.description == Fruit._meta.get_field("sweetness").help_text
-    
+
 
 def test_can_override_type_when_fields_all():
     @strawberry_django.type(Fruit, fields="__all__")
@@ -252,7 +252,7 @@ def test_fields_can_be_enumerated():
 
     name_field = type_def.get_field("name")
     assert name_field is not None
-    
+
     sweetness_field = type_def.get_field("sweetness")
     assert sweetness_field is not None
 
@@ -269,7 +269,7 @@ def test_non_existent_fields_ignored():
 
     name_field = type_def.get_field("name")
     assert name_field is not None
-    
+
     sourness_field = type_def.get_field("sourness")
     assert sourness_field is None
 
@@ -280,7 +280,7 @@ def test_resolvers_with_fields():
         @strawberry.field
         def color(self, info, root) -> "ColorType":
             return root.color
-        
+
     @strawberry.type
     class Query:
         fruit: FruitType = strawberry_django.field()
@@ -305,7 +305,7 @@ def test_exclude_with_fields_is_ignored():
 
     name_field = type_def.get_field("name")
     assert name_field is not None
-    
+
     sweetness_field = type_def.get_field("sweetness")
     assert sweetness_field is not None
 
@@ -322,7 +322,7 @@ def test_exclude_includes_non_enumerated_fields():
 
     name_field = type_def.get_field("name")
     assert name_field is None
-    
+
     sweetness_field = type_def.get_field("sweetness")
     assert sweetness_field is not None
 
@@ -339,7 +339,7 @@ def test_non_existent_fields_exclude_ignored():
 
     name_field = type_def.get_field("name")
     assert name_field is not None
-    
+
     sweetness_field = type_def.get_field("sweetness")
     assert sweetness_field is not None
 

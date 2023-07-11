@@ -122,8 +122,8 @@ strawberry_django.field_type_map.update({
 
 Valid values for `fields` are:
 
-  * `__all__` to assign `strawberry.auto` as the field type for all model fields.
-  * `[<List of field names>]` to assign `strawberry.auto` as the field type for the enumerated fields. These can be combined with manual type annotations if needed.
+- `__all__` to assign `strawberry.auto` as the field type for all model fields.
+- `[<List of field names>]` to assign `strawberry.auto` as the field type for the enumerated fields. These can be combined with manual type annotations if needed.
 
 ```{.python title=fields_all.py}
 @strawberry.django.type(models.Fruit, fields="__all__")
@@ -145,7 +145,7 @@ class FruitType:
 
 Valid values for `exclude` are:
 
-  * `[<List of field names>]` to exclude from the fields list. All other Django model fields will included and have `strawberry.auto` as the field type. These can also be overriden if another field type should be assigned. An empty list is ignored.
+- `[<List of field names>]` to exclude from the fields list. All other Django model fields will included and have `strawberry.auto` as the field type. These can also be overriden if another field type should be assigned. An empty list is ignored.
 
 ```{.python title=exclude.py}
 @strawberry.django.type(models.Fruit, exclude=["name"])

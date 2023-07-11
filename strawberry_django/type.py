@@ -96,7 +96,7 @@ def _process_type(
     elif isinstance(exclude, collections.abc.Sequence) and len(exclude) > 0:
         model_fields = [f for f in model._meta.fields if f.name not in exclude]
     else:
-        model_fields = list()
+        model_fields = []
 
     for f in model_fields:
         if cls.__annotations__.get(f.name):

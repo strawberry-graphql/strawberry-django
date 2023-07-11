@@ -22,7 +22,7 @@ class Fruit(models.Model):
     types = models.ManyToManyField("FruitType", related_name="fruits")
     sweetness = models.IntegerField(
         default=5,
-        help_text="Level of sweetness, from 1 to 10"
+        help_text="Level of sweetness, from 1 to 10",
     )
 
     def name_upper(self):
