@@ -159,6 +159,8 @@ class FruitType:
     color: int
 ```
 
+Note that if `fields` has precedence over `exclude`, so if both are provided, then `exclude` is ignored.
+
 ## Overriding the field class (advanced)
 
 If in your project, you want to change/add some of the standard `strawberry.django.field()` behaviour,
