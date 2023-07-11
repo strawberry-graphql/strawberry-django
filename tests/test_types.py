@@ -270,8 +270,8 @@ def test_non_existent_fields_ignored():
     name_field = type_def.get_field("name")
     assert name_field is not None
     
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is None
+    sourness_field = type_def.get_field("sourness")
+    assert sourness_field is None
 
 
 def test_resolvers_with_fields():
