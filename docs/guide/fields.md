@@ -159,7 +159,7 @@ class FruitType:
     color: int
 ```
 
-Note that if `fields` has precedence over `exclude`, so if both are provided, then `exclude` is ignored.
+Note that `fields` has precedence over `exclude`, so if both are provided, then `exclude` is ignored.
 
 ## Overriding the field class (advanced)
 
