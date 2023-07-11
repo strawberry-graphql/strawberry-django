@@ -145,7 +145,7 @@ class FruitType:
 
 Valid values for `exclude` are:
 
-  * `[<List of field names>]` to exclude from the fields list. All other Django model fields will included and have `strawberry.auto` as the field type. These can also be overriden if another field type should be assigned.
+  * `[<List of field names>]` to exclude from the fields list. All other Django model fields will included and have `strawberry.auto` as the field type. These can also be overriden if another field type should be assigned. An empty list is ignored.
 
 ```{.python title=exclude.py}
 @strawberry.django.type(models.Fruit, exclude=["name"])
