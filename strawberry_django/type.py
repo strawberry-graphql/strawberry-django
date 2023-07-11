@@ -88,8 +88,6 @@ def _process_type(
 
     if not exclude:
         exclude = []
-    if not fields and is_input:
-        exclude += [model._meta.pk.name]
 
     if fields == "__all__":
         model_fields = list(model._meta.fields)
