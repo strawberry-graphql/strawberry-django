@@ -20,6 +20,7 @@ class Fruit(models.Model):
         on_delete=models.CASCADE,
     )
     types = models.ManyToManyField("FruitType", related_name="fruits")
+    sweetness = models.IntegerField(help_text="Level of sweetness, from 1 to 10")
 
     def name_upper(self):
         return self.name.upper()

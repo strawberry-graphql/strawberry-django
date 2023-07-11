@@ -1,3 +1,4 @@
+import collections
 import copy
 import dataclasses
 import inspect
@@ -79,9 +80,31 @@ def _process_type(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     disable_optimization: bool = False,
+    fields: Union[Optional[List[str]], str] = None,
+    exclude: Optional[List[str]] = None,
     **kwargs,
 ) -> _O:
     is_input = kwargs.get("is_input", False)
+
+    if not exclude:
+        exclude = []
+    if not fields and is_input:
+        exclude += [model._meta.pk.name]
+
+    if fields == "__all__":
+        model_fields = list(model._meta.fields)
+    elif isinstance(fields, collections.abc.Sequence):
+        model_fields = [f for f in model._meta.fields if f.name in fields]
+    elif isinstance(exclude, collections.abc.Sequence) and len(exclude) > 0:
+        model_fields = [f for f in model._meta.fields if f.name not in exclude]
+    else:
+        model_fields = list()
+
+    for f in model_fields:
+        if cls.__annotations__.get(f.name):
+            continue
+        cls.__annotations__[f.name] = strawberry.auto
+
     django_type = StrawberryDjangoDefinition(
         origin=cls,
         model=model,
@@ -394,6 +417,8 @@ def type(  # noqa: A001
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     disable_optimization: bool = False,
+    fields: Union[Optional[List[str]], str] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
@@ -427,6 +452,8 @@ def type(  # noqa: A001
             select_related=select_related,
             prefetch_related=prefetch_related,
             disable_optimization=disable_optimization,
+            fields=fields,
+            exclude=exclude,
         )
 
     return wrapper

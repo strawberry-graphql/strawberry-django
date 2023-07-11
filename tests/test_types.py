@@ -202,3 +202,116 @@ def test_type_resolution_with_resolvers():
     field = type_def.get_field("color")
     assert field
     assert field.type is ColorType
+
+
+@override_settings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+        FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
+        TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
+    ),
+)
+def test_all_fields_works():
+    @strawberry_django.type(Fruit, fields="__all__")
+    class FruitType:
+        pass
+
+    type_def = get_object_definition(FruitType, strict=True)
+    assert type_def.description == "Fruit(id, name, color, sweetness)"
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
+    assert name_field.type == str
+
+    color_field = type_def.get_field("color")
+    assert color_field is not None
+
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is not None
+    assert sweetness_field.type == int
+    assert sweetness_field.description == Fruit._meta.get_field("sweetness").help_text
+    
+
+def test_can_override_type_when_fields_all():
+    @strawberry_django.type(Fruit, fields="__all__")
+    class FruitType:
+        name: int
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
+    assert name_field.type == int
+
+
+def test_fields_can_be_enumerated():
+    @strawberry_django.type(Fruit, fields=["name", "sweetness"])
+    class FruitType:
+        pass
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
+    
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is not None
+
+    color_field = type_def.get_field("color")
+    assert color_field is None
+
+
+def test_exclude_with_fields_is_ignored():
+    @strawberry_django.type(Fruit, fields=["name", "sweetness"], exclude=["name"])
+    class FruitType:
+        pass
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
+    
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is not None
+
+    color_field = type_def.get_field("color")
+    assert color_field is None
+
+
+def test_exclude_includes_non_enumerated_fields():
+    @strawberry_django.type(Fruit, exclude=["name"])
+    class FruitType:
+        pass
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is None
+    
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is not None
+
+    color_field = type_def.get_field("color")
+    assert color_field is not None
+
+
+def test_can_override_type_with_exclude():
+    @strawberry_django.type(Fruit, exclude=["name"])
+    class FruitType:
+        sweetness: str
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is not None
+    assert sweetness_field.type == str
+
+
+def test_can_override_fields_with_exclude():
+    @strawberry_django.type(Fruit, exclude=["name"])
+    class FruitType:
+        name: auto
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
