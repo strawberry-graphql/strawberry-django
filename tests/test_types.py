@@ -260,6 +260,42 @@ def test_fields_can_be_enumerated():
     assert color_field is None
 
 
+def test_non_existent_fields_ignored():
+    @strawberry_django.type(Fruit, fields=["name", "sourness"])
+    class FruitType:
+        pass
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
+    
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is None
+
+
+def test_resolvers_with_fields():
+    @strawberry_django.type(Fruit, fields=["name"])
+    class FruitType:
+        @strawberry.field
+        def color(self, info, root) -> "ColorType":
+            return root.color
+        
+    @strawberry.type
+    class Query:
+        fruit: FruitType = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    type_def = schema.get_type_by_name("FruitType")
+
+    color_field = type_def.get_field("color")
+    assert color_field
+    assert color_field.type is ColorType
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
+
+
 def test_exclude_with_fields_is_ignored():
     @strawberry_django.type(Fruit, fields=["name", "sweetness"], exclude=["name"])
     class FruitType:
@@ -286,6 +322,23 @@ def test_exclude_includes_non_enumerated_fields():
 
     name_field = type_def.get_field("name")
     assert name_field is None
+    
+    sweetness_field = type_def.get_field("sweetness")
+    assert sweetness_field is not None
+
+    color_field = type_def.get_field("color")
+    assert color_field is not None
+
+
+def test_non_existent_fields_exclude_ignored():
+    @strawberry_django.type(Fruit, exclude=["sourness"])
+    class FruitType:
+        pass
+
+    type_def = get_object_definition(FruitType, strict=True)
+
+    name_field = type_def.get_field("name")
+    assert name_field is not None
     
     sweetness_field = type_def.get_field("sweetness")
     assert sweetness_field is not None
