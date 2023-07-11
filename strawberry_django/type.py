@@ -80,7 +80,7 @@ def _process_type(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     disable_optimization: bool = False,
-    fields: Union[Optional[List[str]], str] = None,
+    fields: Optional[Union[List[str], str]] = None,
     exclude: Optional[List[str]] = None,
     **kwargs,
 ) -> _O:
@@ -415,7 +415,7 @@ def type(  # noqa: A001
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     disable_optimization: bool = False,
-    fields: Union[Optional[List[str]], str] = None,
+    fields: Optional[Union[List[str], str]] = None,
     exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
