@@ -114,10 +114,8 @@ def filter_for_user_q(
         app_label = app_labels.pop()
         if app_label != ctype.app_label:  # pragma:nocover
             raise ValueError(
-                (
-                    f"Given perms must have same app label ({app_label!r} !="
-                    f" {ctype.app_label!r})"
-                ),
+                f"Given perms must have same app label ({app_label!r} !="
+                f" {ctype.app_label!r})",
             )
     elif len(app_labels) > 1:  # pragma:nocover
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")

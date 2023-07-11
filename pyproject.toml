@@ -56,7 +56,7 @@ mkdocs-material = "^9.0.4"
 mkdocs-minify-plugin = "^0.6.2"
 pymdown-extensions = "^10.0.1"
 mkdocstrings = { version = "^0.22.0", extras = ["python"] }
-ruff = "^0.0.274"
+ruff = "^0.0.277"
 django-types = "^0.17.0"
 Markdown = "^3.3.7"
 Pygments = "^2.15.1"

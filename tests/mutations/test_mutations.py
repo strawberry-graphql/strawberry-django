@@ -28,10 +28,8 @@ async def test_create_async(mutation):
 
 def test_create_many(mutation):
     result = mutation(
-        (
-            '{ fruits: createFruits(data: [{ name: "strawberry" },'
-            ' { name: "raspberry" }]) { id name } }'
-        ),
+        '{ fruits: createFruits(data: [{ name: "strawberry" },'
+        ' { name: "raspberry" }]) { id name } }',
     )
     assert not result.errors
     assert result.data["fruits"] == [
@@ -61,10 +59,8 @@ def test_update(mutation, fruits):
 
 def test_update_with_filters(mutation, fruits):
     result = mutation(
-        (
-            '{ fruits: updateFruits(data: { name: "orange" },'
-            " filters: { id: { inList: [1, 2] } } ) { id name } }"
-        ),
+        '{ fruits: updateFruits(data: { name: "orange" },'
+        " filters: { id: { inList: [1, 2] } } ) { id name } }",
     )
     assert not result.errors
     assert result.data["fruits"] == [
@@ -91,10 +87,8 @@ def test_delete(mutation, fruits):
 
 def test_delete_with_filters(mutation, fruits):
     result = mutation(
-        (
-            '{ fruits: deleteFruits(filters: { name: { contains: "berry" } }) { id'
-            " name } }"
-        ),
+        '{ fruits: deleteFruits(filters: { name: { contains: "berry" } }) { id'
+        " name } }",
     )
     assert not result.errors
     assert result.data["fruits"] == [

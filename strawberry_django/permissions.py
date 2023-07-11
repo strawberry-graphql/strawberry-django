@@ -517,10 +517,8 @@ class PermDefinition:
         parts = perm.split(".")
         if len(parts) != 2:  # noqa: PLR2004
             raise TypeError(
-                (
-                    "Permissions need to be defined as `app_label.perm`, `app_label.`"
-                    " or `.perm`"
-                ),
+                "Permissions need to be defined as `app_label.perm`, `app_label.`"
+                " or `.perm`",
             )
         return cls(
             app=parts[0].strip() or None,
@@ -871,10 +869,8 @@ class HasSourcePerm(HasPerm):
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.SOURCE
     SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
-        (
-            "Will check if the user has any/all permissions for the parent "
-            "of this field to resolve this."
-        ),
+        "Will check if the user has any/all permissions for the parent "
+        "of this field to resolve this.",
     )
 
 
@@ -903,8 +899,6 @@ class HasRetvalPerm(HasPerm):
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.RETVAL
     SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
-        (
-            "Will check if the user has any/all permissions for the resolved "
-            "value of this field before returning it."
-        ),
+        "Will check if the user has any/all permissions for the resolved "
+        "value of this field before returning it.",
     )

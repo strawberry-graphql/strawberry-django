@@ -307,10 +307,8 @@ class PrefetchInspector:
     def merge(self, other: Self, *, allow_unsafe_ops: bool = False):
         if not allow_unsafe_ops and self.where != other.where:
             raise ValueError(
-                (
-                    "Tried to prefetch 2 queries with different filters to the "
-                    "same attribute. Use `to_attr` in this case..."
-                ),
+                "Tried to prefetch 2 queries with different filters to the "
+                "same attribute. Use `to_attr` in this case...",
             )
 
         # Merge select_related
@@ -322,10 +320,8 @@ class PrefetchInspector:
         # Merge only/deferred
         if not allow_unsafe_ops and (self.defer is None) != (other.defer is None):
             raise ValueError(
-                (
-                    "Tried to prefetch 2 queries with different deferred "
-                    "operations. Use only `only` or `deferred`, not both..."
-                ),
+                "Tried to prefetch 2 queries with different deferred "
+                "operations. Use only `only` or `deferred`, not both...",
             )
         if self.only is not None and other.only is not None:
             self.only = self.only | other.only

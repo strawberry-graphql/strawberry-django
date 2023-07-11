@@ -307,12 +307,10 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                 else:
                     if django_type is None:
                         raise TypeError(
-                            (
-                                "Django connection without a resolver needs to define a"
-                                " connection for one and only one django type. To use"
-                                " it in a union, define your own resolver that handles"
-                                " each of those"
-                            ),
+                            "Django connection without a resolver needs to define a"
+                            " connection for one and only one django type. To use"
+                            " it in a union, define your own resolver that handles"
+                            " each of those",
                         )
 
                     retval = resolve_model_nodes(

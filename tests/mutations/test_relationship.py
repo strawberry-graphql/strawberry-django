@@ -20,10 +20,8 @@ def fruit_type(db):
 
 def test_create_one_to_many(mutation, color):
     result = mutation(
-        (
-            '{ fruit: createFruit(data: { name: "strawberry",'
-            " color: { set: 1 } }) { color { name } } }"
-        ),
+        '{ fruit: createFruit(data: { name: "strawberry",'
+        " color: { set: 1 } }) { color { name } } }",
     )
     assert not result.errors
     assert result.data["fruit"] == {"color": {"name": color.name}}
@@ -51,10 +49,8 @@ def test_update_many_to_one(mutation, fruit, color):
     assert result.data["colors"] == [{"fruits": [{"name": fruit.name}]}]
 
     result = mutation(
-        (
-            "{ colors: updateColors(data: { fruits: { remove: [1] } }) { fruits { name"
-            " } } }"
-        ),
+        "{ colors: updateColors(data: { fruits: { remove: [1] } }) { fruits { name"
+        " } } }",
     )
     assert not result.errors
     assert result.data["colors"] == [{"fruits": []}]
@@ -74,10 +70,8 @@ def test_update_many_to_one(mutation, fruit, color):
 
 def test_create_many_to_many(mutation, fruit):
     result = mutation(
-        (
-            '{ types: createFruitType(data: { name: "Berries",'
-            " fruits: { set: [1] } }) { fruits { name } } }"
-        ),
+        '{ types: createFruitType(data: { name: "Berries",'
+        " fruits: { set: [1] } }) { fruits { name } } }",
     )
     assert not result.errors
     assert result.data["types"] == {"fruits": [{"name": fruit.name}]}
@@ -85,37 +79,29 @@ def test_create_many_to_many(mutation, fruit):
 
 def test_update_many_to_many(mutation, fruit, fruit_type):
     result = mutation(
-        (
-            "{ types: updateFruitTypes(data: { fruits: { add: [1] } }) { fruits { name"
-            " } } }"
-        ),
+        "{ types: updateFruitTypes(data: { fruits: { add: [1] } }) { fruits { name"
+        " } } }",
     )
     assert not result.errors
     assert result.data["types"] == [{"fruits": [{"name": fruit.name}]}]
 
     result = mutation(
-        (
-            "{ types: updateFruitTypes(data: { fruits: { remove: [1] } })"
-            " { fruits { name } } }"
-        ),
+        "{ types: updateFruitTypes(data: { fruits: { remove: [1] } })"
+        " { fruits { name } } }",
     )
     assert not result.errors
     assert result.data["types"] == [{"fruits": []}]
 
     result = mutation(
-        (
-            "{ types: updateFruitTypes(data: { fruits: { set: [1] } }) { fruits { name"
-            " } } }"
-        ),
+        "{ types: updateFruitTypes(data: { fruits: { set: [1] } }) { fruits { name"
+        " } } }",
     )
     assert not result.errors
     assert result.data["types"] == [{"fruits": [{"name": fruit.name}]}]
 
     result = mutation(
-        (
-            "{ types: updateFruitTypes(data: { fruits: { set: [] } }) { fruits { name"
-            " } } }"
-        ),
+        "{ types: updateFruitTypes(data: { fruits: { set: [] } }) { fruits { name"
+        " } } }",
     )
     assert not result.errors
     assert result.data["types"] == [{"fruits": []}]
