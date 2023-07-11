@@ -252,7 +252,7 @@ class StrawberryDjangoField(
 
         get_queryset = getattr(type_, "get_queryset", None)
         if get_queryset:
-            queryset = get_queryset(queryset, info)
+            queryset = get_queryset(queryset, info, **kwargs)
 
         queryset = filter_with_perms(
             super().get_queryset(queryset, info, **kwargs),

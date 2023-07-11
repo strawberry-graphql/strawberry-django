@@ -67,6 +67,7 @@ class StaffType(relay.Node):
         cls,
         queryset: QuerySet[AbstractUser],
         info: Info,
+        **kwargs,
     ) -> QuerySet[AbstractUser]:
         return queryset.filter(is_staff=True)
 
@@ -146,7 +147,7 @@ class FavoriteType(relay.Node):
     issue: "IssueType"
 
     @classmethod
-    def get_queryset(cls, queryset: FavoriteQuerySet, info: Info) -> QuerySet:
+    def get_queryset(cls, queryset: FavoriteQuerySet, info: Info, **kwargs) -> QuerySet:
         return queryset.by_user(info.context.request.user)
 
 

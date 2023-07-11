@@ -92,7 +92,7 @@ like filtering it further.
 class Berry:
 
     @classmethod
-    def get_queryset(cls, queryset, info):
+    def get_queryset(cls, queryset, info, **kwargs):
         return queryset.filter(name__contains="berry")
 ```
 
