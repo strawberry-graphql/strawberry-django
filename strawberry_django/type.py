@@ -5,6 +5,7 @@ import sys
 import types
 from typing import (
     Callable,
+    Collection,
     Generic,
     List,
     Optional,
@@ -13,7 +14,6 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    Collection,
 )
 
 import strawberry
@@ -97,7 +97,7 @@ def _process_type(
 
     existing_annotations = get_annotations(cls)
     if not existing_annotations:
-        cls.__annotations__ = dict()
+        cls.__annotations__ = {}
 
     for f in model_fields:
         if existing_annotations.get(f.name):

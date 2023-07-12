@@ -1,6 +1,7 @@
+import textwrap
+
 import pytest
 import strawberry
-import textwrap
 from django.test import override_settings
 from strawberry import auto
 from strawberry.object_type import StrawberryObjectDefinition
@@ -242,7 +243,7 @@ def test_all_fields_works():
     """
 
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
-    
+
 
 def test_can_override_type_when_fields_all():
     @strawberry_django.type(Fruit, fields="__all__")
@@ -338,7 +339,7 @@ def test_resolvers_with_fields():
         id: ID!
         name: String!
       }
-      
+
       type FruitType {
         name: String!
         color: ColorType!
