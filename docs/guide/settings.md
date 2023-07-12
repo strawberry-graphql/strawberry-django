@@ -41,7 +41,7 @@ A dictionary with the following optional keys:
       an enum of possibilities instead of being exposed as `String`.
       A better option is to use
       [Django's TextChoices/IntegerChoices](https://docs.djangoproject.com/en/4.2/ref/models/fields/#enumeration-types)
-      with the [django-choices-field](/integrations/choices-field) integration.
+      with the [django-choices-field](../../integrations/choices-field.md) integration.
 
 These features can be enabled by adding this code to your `settings.py` file.
 
