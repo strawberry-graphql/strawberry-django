@@ -7,7 +7,7 @@ from strawberry.utils.importer import import_module_symbol
 
 
 class Command(BaseCommand):
-    help = "Export the graphql schema"
+    help = "Export the graphql schema"  # noqa: A003
 
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs=1, type=str, help="The schema location")
@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 default_symbol_name="schema",
             )
         except (ImportError, AttributeError) as e:
-            raise CommandError(str(e))
+            raise CommandError(str(e)) from e
 
         if not isinstance(schema_symbol, Schema):
             raise CommandError("The `schema` must be an instance of strawberry.Schema")
