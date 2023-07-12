@@ -122,7 +122,7 @@ strawberry_django.field_type_map.update({
 
     These new keywords should be used with caution, as they may inadvertently lead to exposure of unwanted data. Especially with `fields="__all__"` or `exclude`, sensitive model attributes may be included and made available in the schema without your awareness.
 
-`strawberry.django.type` includes two optional keyword fields to help you more easily populate fields from the Django model, `fields` and `exclude`.
+`strawberry.django.type` includes two optional keyword fields to help you populate fields from the Django model, `fields` and `exclude`.
 
 Valid values for `fields` are:
 
