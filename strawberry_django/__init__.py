@@ -16,7 +16,7 @@ from .filters import filter
 from .mutations.mutations import input_mutation, mutation
 from .ordering import order
 from .resolvers import django_resolver
-from .type import input, partial, type
+from .type import input, interface, partial, type
 
 __all__ = [
     "DjangoFileType",
@@ -37,6 +37,7 @@ __all__ = [
     "filters",
     "input",
     "input_mutation",
+    "interface",
     "mutation",
     "mutations",
     "node",
