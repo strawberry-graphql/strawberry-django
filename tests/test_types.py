@@ -1,5 +1,6 @@
 import pytest
 import strawberry
+import textwrap
 from django.test import override_settings
 from strawberry import auto
 from strawberry.object_type import StrawberryObjectDefinition
@@ -215,32 +216,62 @@ def test_all_fields_works():
     class FruitType:
         pass
 
-    type_def = get_object_definition(FruitType, strict=True)
-    assert type_def.description == "Fruit(id, name, color, sweetness)"
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
-    assert name_field.type == str
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
 
-    color_field = type_def.get_field("color")
-    assert color_field is not None
+      \"\"\"Fruit(id, name, color, sweetness)\"\"\"
+      type FruitType {
+        id: ID!
+        name: String!
+        color: DjangoModelType
 
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is not None
-    assert sweetness_field.type == int
-    assert sweetness_field.description == Fruit._meta.get_field("sweetness").help_text
+        \"\"\"Level of sweetness, from 1 to 10\"\"\"
+        sweetness: Int!
+      }
 
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+    
 
 def test_can_override_type_when_fields_all():
     @strawberry_django.type(Fruit, fields="__all__")
     class FruitType:
         name: int
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
-    assert name_field.type == int
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        name: Int!
+        id: ID!
+        color: DjangoModelType
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_fields_can_be_enumerated():
@@ -248,16 +279,23 @@ def test_fields_can_be_enumerated():
     class FruitType:
         pass
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type FruitType {
+        name: String!
+        sweetness: Int!
+      }
 
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is not None
+      type Query {
+        fruit: FruitType!
+      }
+    """
 
-    color_field = type_def.get_field("color")
-    assert color_field is None
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_non_existent_fields_ignored():
@@ -265,13 +303,22 @@ def test_non_existent_fields_ignored():
     class FruitType:
         pass
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type FruitType {
+        name: String!
+      }
 
-    sourness_field = type_def.get_field("sourness")
-    assert sourness_field is None
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_resolvers_with_fields():
@@ -286,14 +333,23 @@ def test_resolvers_with_fields():
         fruit: FruitType = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
-    type_def = schema.get_type_by_name("FruitType")
+    expected = """\
+      type ColorType {
+        id: ID!
+        name: String!
+      }
+      
+      type FruitType {
+        name: String!
+        color: ColorType!
+      }
 
-    color_field = type_def.get_field("color")
-    assert color_field
-    assert color_field.type is ColorType
+      type Query {
+        fruit(pk: ID!): FruitType!
+      }
+    """
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_exclude_with_fields_is_ignored():
@@ -301,16 +357,23 @@ def test_exclude_with_fields_is_ignored():
     class FruitType:
         pass
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type FruitType {
+        name: String!
+        sweetness: Int!
+      }
 
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is not None
+      type Query {
+        fruit: FruitType!
+      }
+    """
 
-    color_field = type_def.get_field("color")
-    assert color_field is None
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_exclude_includes_non_enumerated_fields():
@@ -318,16 +381,28 @@ def test_exclude_includes_non_enumerated_fields():
     class FruitType:
         pass
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is None
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
 
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is not None
+      type FruitType {
+        id: ID!
+        color: DjangoModelType
+        sweetness: Int!
+      }
 
-    color_field = type_def.get_field("color")
-    assert color_field is not None
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_non_existent_fields_exclude_ignored():
@@ -335,16 +410,29 @@ def test_non_existent_fields_exclude_ignored():
     class FruitType:
         pass
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
 
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is not None
+      type FruitType {
+        id: ID!
+        name: String!
+        color: DjangoModelType
+        sweetness: Int!
+      }
 
-    color_field = type_def.get_field("color")
-    assert color_field is not None
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_can_override_type_with_exclude():
@@ -352,11 +440,28 @@ def test_can_override_type_with_exclude():
     class FruitType:
         sweetness: str
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    sweetness_field = type_def.get_field("sweetness")
-    assert sweetness_field is not None
-    assert sweetness_field.type == str
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        sweetness: String!
+        id: ID!
+        color: DjangoModelType
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_can_override_fields_with_exclude():
@@ -364,7 +469,26 @@ def test_can_override_fields_with_exclude():
     class FruitType:
         name: auto
 
-    type_def = get_object_definition(FruitType, strict=True)
+    @strawberry.type
+    class Query:
+        fruit: FruitType
 
-    name_field = type_def.get_field("name")
-    assert name_field is not None
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        name: String!
+        id: ID!
+        color: DjangoModelType
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
