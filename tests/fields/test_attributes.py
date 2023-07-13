@@ -1,5 +1,5 @@
 import textwrap
-from typing import cast
+from typing import List, cast
 
 import strawberry
 from django.db import models
@@ -79,7 +79,7 @@ def test_auto_id():
 
     @strawberry.type
     class Query:
-        my_type: list[MyType] = strawberry_django.field(filters=MyTypeFilter)
+        my_type: List[MyType] = strawberry_django.field(filters=MyTypeFilter)
 
     schema = strawberry.Schema(query=Query)
     expected = """\
@@ -114,7 +114,7 @@ def test_auto_id_with_node():
 
     @strawberry.type
     class Query:
-        my_type: list[MyType] = strawberry_django.field(filters=MyTypeFilter)
+        my_type: List[MyType] = strawberry_django.field(filters=MyTypeFilter)
 
     schema = strawberry.Schema(query=Query)
     expected = f'''\
@@ -167,7 +167,7 @@ def test_auto_id_with_node_mapping_global_id():
 
     @strawberry.type
     class Query:
-        my_type: list[MyType] = strawberry_django.field(filters=MyTypeFilter)
+        my_type: List[MyType] = strawberry_django.field(filters=MyTypeFilter)
 
     schema = strawberry.Schema(query=Query)
     expected = f'''\
