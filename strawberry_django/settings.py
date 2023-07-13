@@ -25,13 +25,16 @@ class StrawberryDjangoSettings(TypedDict):
     #: an enum of possibilities instead of being exposed as `String`
     GENERATE_ENUMS_FROM_CHOICES: bool
 
-    #: If True, fields with `choices` will have automatically generate
-    #: an enum of possibilities instead of being exposed as `String`
+    #: Set a custom default name for CUD mutations input type.
     MUTATIONS_DEFAULT_ARGUMENT_NAME: str
 
-    #: If True, fields with `choices` will have automatically generate
-    #: an enum of possibilities instead of being exposed as `String`
+    #: If True, mutations will default to handling django errors by default
+    #: when no option is passed to the field itself.
     MUTATIONS_DEFAULT_HANDLE_ERRORS: bool
+
+    #: If True, `auto` fields that refer to model ids will be mapped to
+    #: `relay.GlobalID` instead of `strawberry.ID` for types and filters.
+    MAP_AUTO_ID_AS_GLOBAL_ID: bool
 
 
 DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
@@ -40,6 +43,7 @@ DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     GENERATE_ENUMS_FROM_CHOICES=False,
     MUTATIONS_DEFAULT_ARGUMENT_NAME="data",
     MUTATIONS_DEFAULT_HANDLE_ERRORS=False,
+    MAP_AUTO_ID_AS_GLOBAL_ID=False,
 )
 
 

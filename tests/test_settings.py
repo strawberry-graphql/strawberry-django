@@ -26,6 +26,7 @@ def test_non_defaults():
             GENERATE_ENUMS_FROM_CHOICES=True,
             MUTATIONS_DEFAULT_ARGUMENT_NAME="id",
             MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
+            MAP_AUTO_ID_AS_GLOBAL_ID=True,
         ),
     ):
         assert (
@@ -36,5 +37,6 @@ def test_non_defaults():
                 GENERATE_ENUMS_FROM_CHOICES=True,
                 MUTATIONS_DEFAULT_ARGUMENT_NAME="id",
                 MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
+                MAP_AUTO_ID_AS_GLOBAL_ID=True,
             )
         )
