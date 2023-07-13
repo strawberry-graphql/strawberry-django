@@ -465,22 +465,24 @@ def resolve_model_field_type(
             model_field._strawberry_enum = field_type  # type: ignore
     # Every other Field possibility
     else:
-        is_relay = issubclass(django_type.origin, relay.Node)
+        force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]
         model_field_type = type(model_field)
         field_type: Any = None
 
         if django_type.is_filter and model_field.is_relation:
-            field_type = NodeInput if is_relay else filters.DjangoModelFilterInput
+            field_type = (
+                NodeInput if force_global_id else filters.DjangoModelFilterInput
+            )
         elif django_type.is_input:
             input_type_map = input_field_type_map
-            if is_relay:
+            if force_global_id:
                 input_type_map = {**input_type_map, **relay_input_field_type_map}
 
             field_type = input_type_map.get(model_field_type, None)
 
         if field_type is None:
             type_map = field_type_map
-            if is_relay:
+            if force_global_id:
                 type_map = {**type_map, **relay_field_type_map}
 
             field_type = type_map.get(model_field_type, NotImplemented)

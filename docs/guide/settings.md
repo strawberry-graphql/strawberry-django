@@ -41,7 +41,13 @@ A dictionary with the following optional keys:
       an enum of possibilities instead of being exposed as `String`.
       A better option is to use
       [Django's TextChoices/IntegerChoices](https://docs.djangoproject.com/en/4.2/ref/models/fields/#enumeration-types)
-      with the [django-choices-field](../../integrations/choices-field.md) integration.
+      with the [django-choices-field](../integrations/choices-field.md) integration.
+
+- **`MAP_AUTO_ID_AS_GLOBAL_ID`** (default: `False`)
+
+      If True, `auto` fields that refer to model ids will be mapped to `relay.GlobalID`
+      instead of `strawberry.ID`. This is mostly useful if all your model types inherit
+      from `relay.Node` and you want to work only with `GlobalID`.
 
 These features can be enabled by adding this code to your `settings.py` file.
 
@@ -52,5 +58,6 @@ STRAWBERRY_DJANGO = {
     "MUTATIONS_DEFAULT_ARGUMENT_NAME": "input",
     "MUTATIONS_DEFAULT_HANDLE_ERRORS": True,
     "GENERATE_ENUMS_FROM_CHOICES": False,
+    "MAP_AUTO_ID_AS_GLOBAL_ID": True,
 }
 ```
