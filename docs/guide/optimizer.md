@@ -231,7 +231,7 @@ The following options are accepted for optimizer hints:
   [QuerySet.only()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#only)
 - `select_related`: a list of relations to join using
   [QuerySet.select_related()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#select-related)
-- `select_related`: a list of relations to prefetch using
+- `prefetch_related`: a list of relations to prefetch using
   [QuerySet.prefetch_related()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#prefetch-related).
   The options here are strings or a callable in the format of `Callable[[Info], Prefetch]`
   (e.g. `prefetch_related=[lambda info: Prefetch(...)]`)
