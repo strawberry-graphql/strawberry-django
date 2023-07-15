@@ -97,7 +97,7 @@ def _process_type(
 
     existing_annotations = get_annotations(cls)
     try:
-        cls.__annotations__
+        cls.__annotations__  # noqa: B018
     except AttributeError:
         # Python 3.8 / 3.9 does not lazily create cls.__annotations__ if it
         #   does not exist, so we create it here.
