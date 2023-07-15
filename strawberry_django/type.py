@@ -96,7 +96,16 @@ def _process_type(
         model_fields = []
 
     existing_annotations = get_annotations(cls)
-    if not existing_annotations:
+    try:
+        cls.__annotations__
+    except AttributeError:
+        # Python 3.8 / 3.9 does not lazily create
+        #   cls.__annotations__ if it does not
+        #   exist, so we create it here.
+        # Note that Python 3.10+ will lazily create
+        #   cls.__annotations__, so this code
+        #   could be refactored / removed
+        #   once versions before 3.10 are not supported.
         cls.__annotations__ = {}
 
     for f in model_fields:
