@@ -355,8 +355,9 @@ def _process_type(
                 default_factory=getattr(f, "default_factory", dataclasses.MISSING),
                 deprecation_reason=getattr(f, "deprecation_reason", None),
                 directives=getattr(f, "directives", ()),
-                filters=getattr(f, "filters", None),
-                order=getattr(f, "order", None),
+                pagination=getattr(f, "pagination", UNSET),
+                filters=getattr(f, "filters", UNSET),
+                order=getattr(f, "order", UNSET),
                 extensions=getattr(f, "extensions", ()),
             )
 

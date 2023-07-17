@@ -423,7 +423,7 @@ type ProjectType implements Node {
   id: GlobalID!
   name: String!
   dueDate: Date
-  milestones: [MilestoneType!]!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
   cost: Decimal @isAuthenticated
 }
 

@@ -107,7 +107,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
                 else None
             )
 
-        return order
+        return order if order is not UNSET else None
 
     def apply_order(
         self,

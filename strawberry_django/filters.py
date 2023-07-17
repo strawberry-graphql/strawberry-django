@@ -254,7 +254,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                 else None
             )
 
-        return filters
+        return filters if filters is not UNSET else None
 
     def apply_filters(
         self,
