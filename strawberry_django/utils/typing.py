@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import sys
 from typing import (
     TYPE_CHECKING,
@@ -93,6 +94,10 @@ def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
     annotations: dict[str, StrawberryAnnotation] = {}
 
     for c in reversed(cls.__mro__):
+        # Skip non dataclass bases other than cls itself
+        if c is not cls and not dataclasses.is_dataclass(c):
+            continue
+
         namespace = sys.modules[c.__module__].__dict__
         for k, v in getattr(c, "__annotations__", {}).items():
             if not is_classvar(c, v):
