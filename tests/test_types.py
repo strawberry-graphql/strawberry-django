@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 import strawberry
 from django.test import override_settings
@@ -202,3 +204,292 @@ def test_type_resolution_with_resolvers():
     field = type_def.get_field("color")
     assert field
     assert field.type is ColorType
+
+
+@override_settings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+        FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
+        TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
+    ),
+)
+def test_all_fields_works():
+    @strawberry_django.type(Fruit, fields="__all__")
+    class FruitType:
+        pass
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      \"\"\"Fruit(id, name, color, sweetness)\"\"\"
+      type FruitType {
+        id: ID!
+        name: String!
+        color: DjangoModelType
+
+        \"\"\"Level of sweetness, from 1 to 10\"\"\"
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_can_override_type_when_fields_all():
+    @strawberry_django.type(Fruit, fields="__all__")
+    class FruitType:
+        name: int
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        name: Int!
+        id: ID!
+        color: DjangoModelType
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_fields_can_be_enumerated():
+    @strawberry_django.type(Fruit, fields=["name", "sweetness"])
+    class FruitType:
+        pass
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type FruitType {
+        name: String!
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_non_existent_fields_ignored():
+    @strawberry_django.type(Fruit, fields=["name", "sourness"])
+    class FruitType:
+        pass
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type FruitType {
+        name: String!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_resolvers_with_fields():
+    @strawberry_django.type(Fruit, fields=["name"])
+    class FruitType:
+        @strawberry.field
+        def color(self, info, root) -> "ColorType":
+            return root.color
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type ColorType {
+        id: ID!
+        name: String!
+      }
+
+      type FruitType {
+        name: String!
+        color: ColorType!
+      }
+
+      type Query {
+        fruit(pk: ID!): FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_exclude_with_fields_is_ignored():
+    @strawberry_django.type(Fruit, fields=["name", "sweetness"], exclude=["name"])
+    class FruitType:
+        pass
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type FruitType {
+        name: String!
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_exclude_includes_non_enumerated_fields():
+    @strawberry_django.type(Fruit, exclude=["name"])
+    class FruitType:
+        pass
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        id: ID!
+        color: DjangoModelType
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_non_existent_fields_exclude_ignored():
+    @strawberry_django.type(Fruit, exclude=["sourness"])
+    class FruitType:
+        pass
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        id: ID!
+        name: String!
+        color: DjangoModelType
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_can_override_type_with_exclude():
+    @strawberry_django.type(Fruit, exclude=["name"])
+    class FruitType:
+        sweetness: str
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        sweetness: String!
+        id: ID!
+        color: DjangoModelType
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_can_override_fields_with_exclude():
+    @strawberry_django.type(Fruit, exclude=["name"])
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruit: FruitType
+
+    schema = strawberry.Schema(query=Query)
+    expected = """\
+      type DjangoModelType {
+        pk: ID!
+      }
+
+      type FruitType {
+        name: String!
+        id: ID!
+        color: DjangoModelType
+        sweetness: Int!
+      }
+
+      type Query {
+        fruit: FruitType!
+      }
+    """
+
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()

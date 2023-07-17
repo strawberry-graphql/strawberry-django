@@ -5,6 +5,7 @@ import sys
 import types
 from typing import (
     Callable,
+    Collection,
     Generic,
     List,
     Optional,
@@ -79,9 +80,37 @@ def _process_type(
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     disable_optimization: bool = False,
+    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+    exclude: Optional[List[str]] = None,
     **kwargs,
 ) -> _O:
     is_input = kwargs.get("is_input", False)
+
+    if fields == "__all__":
+        model_fields = list(model._meta.fields)
+    elif isinstance(fields, Collection):
+        model_fields = [f for f in model._meta.fields if f.name in fields]
+    elif isinstance(exclude, Collection) and len(exclude) > 0:
+        model_fields = [f for f in model._meta.fields if f.name not in exclude]
+    else:
+        model_fields = []
+
+    existing_annotations = get_annotations(cls)
+    try:
+        cls.__annotations__  # noqa: B018
+    except AttributeError:
+        # Python 3.8 / 3.9 does not lazily create cls.__annotations__ if it
+        #   does not exist, so we create it here.
+        # Note that Python 3.10+ will lazily create cls.__annotations__,
+        #   so this code could be refactored / removed once versions before
+        #   3.10 are not supported.
+        cls.__annotations__ = {}
+
+    for f in model_fields:
+        if existing_annotations.get(f.name):
+            continue
+        cls.__annotations__[f.name] = strawberry.auto
+
     django_type = StrawberryDjangoDefinition(
         origin=cls,
         model=model,
@@ -394,6 +423,8 @@ def type(  # noqa: A001
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     disable_optimization: bool = False,
+    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
@@ -427,6 +458,8 @@ def type(  # noqa: A001
             select_related=select_related,
             prefetch_related=prefetch_related,
             disable_optimization=disable_optimization,
+            fields=fields,
+            exclude=exclude,
         )
 
     return wrapper
