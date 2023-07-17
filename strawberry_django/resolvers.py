@@ -39,6 +39,7 @@ def django_resolver(
     f: Callable[_P, _R],
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
+    except_as_none: tuple[type[Exception], ...] | None = None,
 ) -> Callable[_P, AwaitableOrValue[_R]]:
     ...
 
@@ -47,6 +48,7 @@ def django_resolver(
 def django_resolver(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
+    except_as_none: tuple[type[Exception], ...] | None = None,
 ) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
     ...
 
@@ -55,6 +57,7 @@ def django_resolver(
     f=None,
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
+    except_as_none: tuple[type[Exception], ...] | None = None,
 ):
     """Django resolver for handling both sync and async.
 
@@ -71,16 +74,22 @@ def django_resolver(
             return resolver
 
         def sync_resolver(*args, **kwargs):
-            retval = resolver(*args, **kwargs)
+            try:
+                retval = resolver(*args, **kwargs)
 
-            if callable(retval):
-                retval = retval()
+                if callable(retval):
+                    retval = retval()
 
-            if isinstance(retval, BaseManager):
-                retval = retval.all()
+                if isinstance(retval, BaseManager):
+                    retval = retval.all()
 
-            if qs_hook is not None and isinstance(retval, models.QuerySet):
-                retval = qs_hook(retval)
+                if qs_hook is not None and isinstance(retval, models.QuerySet):
+                    retval = qs_hook(retval)
+            except Exception as e:
+                if except_as_none is not None and isinstance(e, except_as_none):
+                    return None
+
+                raise
 
             return retval
 
@@ -120,6 +129,7 @@ def django_getattr(
     name: str,
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+    except_as_none: tuple[type[Exception], ...] | None = None,
 ) -> AwaitableOrValue[Any]:
     ...
 
@@ -131,6 +141,7 @@ def django_getattr(
     default: Any,
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+    except_as_none: tuple[type[Exception], ...] | None = None,
 ) -> AwaitableOrValue[Any]:
     ...
 
@@ -141,9 +152,10 @@ def django_getattr(
     default: Any = _SENTINEL,
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
+    except_as_none: tuple[type[Exception], ...] | None = None,
 ):
     args = (default,) if default is not _SENTINEL else ()
-    return django_resolver(getattr, qs_hook=qs_hook)(
+    return django_resolver(getattr, qs_hook=qs_hook, except_as_none=except_as_none)(
         obj,
         name,
         *args,

@@ -15,6 +15,7 @@ from typing import (
 )
 
 from asgiref.sync import sync_to_async
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.fields.related import (
     ForwardManyToOneDescriptor,
@@ -185,6 +186,9 @@ class StrawberryDjangoField(
                     source,
                     attname,
                     qs_hook=self.get_queryset_hook(**kwargs),
+                    # Reversed OneToOne will raise ObjectDoesNotExist when
+                    # trying to access it if the relation doesn't exist.
+                    except_as_none=(ObjectDoesNotExist,) if self.is_optional else None,
                 )
 
         if is_awaitable:
