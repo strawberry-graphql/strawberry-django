@@ -154,6 +154,9 @@ def test_choices_field():
 
 
 def test_no_choices_enum(mocker: MockerFixture):
+    # We can't use patch with the module name directly as it tries to resolve
+    # strawberry.fields as a function instead of the module for python versions
+    # before 3.11
     mocker.patch.object(types, "TextChoicesField", None)
     mocker.patch.dict(field_type_map, {TextChoicesField: str})
     mocker.patch.object(types, "IntegerChoicesField", None)
