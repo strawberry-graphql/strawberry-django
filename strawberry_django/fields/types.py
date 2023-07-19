@@ -436,7 +436,10 @@ def resolve_model_field_type(
         settings["GENERATE_ENUMS_FROM_CHOICES"]
         and isinstance(model_field, Field)
         and getattr(model_field, "choices", None)
-        and not isinstance(model_field.choices[0][0], int)
+        and not isinstance(
+            getattr(model_field, "choices", [])[0][0],
+            int,
+        )  # Exclude IntegerChoices
     ):
         choices = cast(List[Tuple[Any, str]], model_field.choices)
         field_type = getattr(model_field, "_strawberry_enum", None)
