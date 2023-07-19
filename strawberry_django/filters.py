@@ -6,7 +6,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Generic,
     List,
     Optional,
@@ -20,6 +19,7 @@ from typing import (
 
 import strawberry
 from django.db import models
+from django.db.models import Q
 from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
 from strawberry import UNSET, relay
 from strawberry.arguments import StrawberryArgument
@@ -68,6 +68,23 @@ class FilterLookup(Generic[T]):
     is_null: Optional[bool] = UNSET
     regex: Optional[str] = UNSET
     i_regex: Optional[str] = UNSET
+    n_exact: Optional[T] = UNSET
+    n_i_exact: Optional[T] = UNSET
+    n_contains: Optional[T] = UNSET
+    n_i_contains: Optional[T] = UNSET
+    n_in_list: Optional[List[T]] = UNSET
+    n_gt: Optional[T] = UNSET
+    n_gte: Optional[T] = UNSET
+    n_lt: Optional[T] = UNSET
+    n_lte: Optional[T] = UNSET
+    n_starts_with: Optional[T] = UNSET
+    n_i_starts_with: Optional[T] = UNSET
+    n_ends_with: Optional[T] = UNSET
+    n_i_ends_with: Optional[T] = UNSET
+    n_range: Optional[List[T]] = UNSET
+    n_is_null: Optional[bool] = UNSET
+    n_regex: Optional[str] = UNSET
+    n_i_regex: Optional[str] = UNSET
 
 
 lookup_name_conversion_map = {
@@ -94,8 +111,9 @@ def _resolve_global_id(value: Any):
 
 def build_filter_kwargs(
     filters: WithStrawberryObjectDefinition,
-) -> Tuple[Dict[str, Any], List[Callable]]:
-    filter_kwargs = {}
+    path="",
+) -> Tuple[Q, List[Callable]]:
+    filter_kwargs = Q()
     filter_methods = []
     django_model = (
         filters.__strawberry_django_definition__.model
@@ -114,29 +132,52 @@ def build_filter_kwargs(
         if isinstance(field_value, Enum):
             field_value = field_value.value
 
+        negated = False
+        if field_name.startswith("n_"):
+            field_name = field_name[2:]
+            negated = True
+
         field_name = lookup_name_conversion_map.get(field_name, field_name)
-        filter_method = getattr(filters, f"filter_{field_name}", None)
+        filter_method = getattr(
+            filters,
+            f"filter_{'n_' if negated else ''}{field_name}",
+            None,
+        )
         if filter_method:
             filter_methods.append(filter_method)
             continue
 
-        if django_model and field_name not in get_field_names_from_opts(
-            django_model._meta,
-        ):
-            continue
+        if django_model:
+            if field_name in ("AND", "OR"):
+                if has_object_definition(field_value):
+                    (
+                        subfield_filter_kwargs,
+                        subfield_filter_methods,
+                    ) = build_filter_kwargs(field_value, path)
+                    if field_name == "AND":
+                        filter_kwargs &= subfield_filter_kwargs
+                    else:
+                        filter_kwargs |= subfield_filter_kwargs
+                    filter_methods.extend(subfield_filter_methods)
+                continue
+
+            if field_name not in get_field_names_from_opts(
+                django_model._meta,
+            ):
+                continue
 
         if has_object_definition(field_value):
             subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
                 field_value,
+                f"{path}{field_name}__",
             )
-            for subfield_name, subfield_value in subfield_filter_kwargs.items():
-                if isinstance(subfield_value, Enum):
-                    subfield_value = subfield_value.value  # noqa: PLW2901
-                filter_kwargs[f"{field_name}__{subfield_name}"] = subfield_value
-
+            filter_kwargs &= subfield_filter_kwargs
             filter_methods.extend(subfield_filter_methods)
         else:
-            filter_kwargs[field_name] = field_value
+            filter_kwarg = Q(**{f"{path}{field_name}": field_value})
+            if negated:
+                filter_kwarg = ~filter_kwarg
+            filter_kwargs &= filter_kwarg
 
     return filter_kwargs, filter_methods
 
@@ -177,7 +218,7 @@ def apply(
         return filter_method(queryset=queryset, **kwargs)
 
     filter_kwargs, filter_methods = build_filter_kwargs(filters)
-    queryset = queryset.filter(**filter_kwargs)
+    queryset = queryset.filter(filter_kwargs)
     for filter_method in filter_methods:
         kwargs = {}
         if function_allow_passing_info(

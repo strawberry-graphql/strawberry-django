@@ -92,6 +92,8 @@ def test_auto_id():
     input MyTypeFilter {
       id: ID
       field: String
+      AND: MyTypeFilter
+      OR: MyTypeFilter
     }
 
     type Query {
@@ -133,6 +135,8 @@ def test_auto_id_with_node():
     input MyTypeFilter {{
       id: ID
       field: String
+      AND: MyTypeFilter
+      OR: MyTypeFilter
     }}
 
     """An object with a Globally Unique ID"""
@@ -186,6 +190,8 @@ def test_auto_id_with_node_mapping_global_id():
     input MyTypeFilter {{
       id: GlobalID
       field: String
+      AND: MyTypeFilter
+      OR: MyTypeFilter
     }}
 
     """An object with a Globally Unique ID"""

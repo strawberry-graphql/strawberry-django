@@ -128,6 +128,45 @@ def test_in_list(query, fruits):
     ]
 
 
+def test_not(query, fruits):
+    result = query(
+        """{ fruits(filters: {
+                   name: { nEndsWith: "berry" }
+                   }) { id name } }""",
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_and(query, fruits):
+    result = query(
+        """{ fruits(filters: {
+            name: { endsWith: "berry" },
+            AND: { id: { exact: 2 } }
+        }) { id name } }""",
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "2", "name": "raspberry"},
+    ]
+
+
+def test_or(query, fruits):
+    result = query(
+        """{ fruits(filters: {
+            id: { exact: 1 },
+            OR: { id: { exact: 3 } }
+        }) { id name } }""",
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+        {"id": "3", "name": "banana"},
+    ]
+
+
 def test_relationship(query, fruits):
     color = models.Color.objects.create(name="red")
     color.fruits.set([fruits[0], fruits[1]])

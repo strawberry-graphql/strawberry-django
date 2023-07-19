@@ -30,7 +30,7 @@ from strawberry.private import is_private
 from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
 from strawberry.utils.cached_property import cached_property
 from strawberry.utils.deprecations import DeprecatedDescriptor
-from typing_extensions import Literal, dataclass_transform
+from typing_extensions import Literal, Self, dataclass_transform
 
 from strawberry_django.optimizer import OptimizerStore
 from strawberry_django.relay import (
@@ -110,6 +110,14 @@ def _process_type(
         if existing_annotations.get(f.name):
             continue
         cls.__annotations__[f.name] = strawberry.auto
+
+    if is_filter:
+        cls.__annotations__.update(
+            {
+                "AND": Optional[Self],  # type:ignore
+                "OR": Optional[Self],  # type:ignore
+            },
+        )
 
     django_type = StrawberryDjangoDefinition(
         origin=cls,
