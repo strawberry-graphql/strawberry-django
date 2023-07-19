@@ -9,6 +9,7 @@ from typing import (
     Generic,
     List,
     Optional,
+    Self,
     Sequence,
     Type,
     TypeVar,
@@ -110,6 +111,14 @@ def _process_type(
         if existing_annotations.get(f.name):
             continue
         cls.__annotations__[f.name] = strawberry.auto
+
+    if is_filter:
+        cls.__annotations__.update(
+            {
+                "AND": Optional[Self],
+                "OR": Optional[Self],
+            },
+        )
 
     django_type = StrawberryDjangoDefinition(
         origin=cls,
