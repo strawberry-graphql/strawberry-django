@@ -123,6 +123,23 @@ input DateFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
+  nExact: Date
+  nIExact: Date
+  nContains: Date
+  nIContains: Date
+  nInList: [Date!]
+  nGt: Date
+  nGte: Date
+  nLt: Date
+  nLte: Date
+  nStartsWith: Date
+  nIStartsWith: Date
+  nEndsWith: Date
+  nIEndsWith: Date
+  nRange: [Date!]
+  nIsNull: Boolean
+  nRegex: String
+  nIRegex: String
 }
 
 """Date with time (isoformat)"""
@@ -254,6 +271,8 @@ input MilestoneFilter {
   name: StrFilterLookup
   project: DjangoModelFilterInput
   search: String
+  AND: MilestoneFilter
+  OR: MilestoneFilter
 }
 
 input MilestoneInput {
@@ -405,6 +424,8 @@ type ProjectConnection {
 input ProjectFilter {
   name: StrFilterLookup
   dueDate: DateFilterLookup
+  AND: ProjectFilter
+  OR: ProjectFilter
 }
 
 input ProjectInputPartial {
@@ -712,6 +733,23 @@ input StrFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
+  nExact: String
+  nIExact: String
+  nContains: String
+  nIContains: String
+  nInList: [String!]
+  nGt: String
+  nGte: String
+  nLt: String
+  nLte: String
+  nStartsWith: String
+  nIStartsWith: String
+  nEndsWith: String
+  nIEndsWith: String
+  nRange: [String!]
+  nIsNull: Boolean
+  nRegex: String
+  nIRegex: String
 }
 
 input TagInputPartial {

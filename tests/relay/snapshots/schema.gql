@@ -29,6 +29,8 @@ type FruitEdge {
 input FruitFilter {
   name: StrFilterLookup
   color: StrFilterLookup
+  AND: FruitFilter
+  OR: FruitFilter
 }
 
 input FruitOrder {
@@ -179,4 +181,21 @@ input StrFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
+  nExact: String
+  nIExact: String
+  nContains: String
+  nIContains: String
+  nInList: [String!]
+  nGt: String
+  nGte: String
+  nLt: String
+  nLte: String
+  nStartsWith: String
+  nIStartsWith: String
+  nEndsWith: String
+  nIEndsWith: String
+  nRange: [String!]
+  nIsNull: Boolean
+  nRegex: String
+  nIRegex: String
 }
