@@ -4,7 +4,7 @@ from typing import cast
 import strawberry
 from django.db import models
 from django.test import override_settings
-from django_choices_field import TextChoicesField
+from django_choices_field import IntegerChoicesField, TextChoicesField
 from pytest_mock import MockerFixture
 
 import strawberry_django
@@ -21,25 +21,61 @@ class Choice(models.TextChoices):
     C = "c", "C description"
 
 
+class IntegerChoice(models.IntegerChoices):
+    """IntegerChoice description."""
+
+    X = 1, "1 description"
+    Y = 2, "2 description"
+    Z = 3, "3 description"
+
+
 class ChoicesModel(models.Model):
     attr1 = TextChoicesField(choices_enum=Choice)
-    attr2 = models.CharField(
+    attr2 = IntegerChoicesField(choices_enum=IntegerChoice)
+    attr3 = models.CharField(
         max_length=255,
         choices=[
             ("c", "C description"),
             ("d", "D description"),
         ],
     )
+    attr4 = models.IntegerField(
+        choices=[
+            (4, "4 description"),
+            (5, "5 description"),
+        ],
+    )
+    attr5 = models.CharField(
+        max_length=255,
+        choices=Choice.choices,
+    )
+    attr6 = models.IntegerField(
+        choices=IntegerChoice.choices,
+    )
 
 
 class ChoicesWithExtraFieldsModel(models.Model):
     attr1 = TextChoicesField(choices_enum=Choice)
-    attr2 = models.CharField(
+    attr2 = IntegerChoicesField(choices_enum=IntegerChoice)
+    attr3 = models.CharField(
         max_length=255,
         choices=[
             ("c", "C description"),
             ("d", "D description"),
         ],
+    )
+    attr4 = models.IntegerField(
+        choices=[
+            (4, "4 description"),
+            (5, "5 description"),
+        ],
+    )
+    attr5 = models.CharField(
+        max_length=255,
+        choices=Choice.choices,
+    )
+    attr6 = models.IntegerField(
+        choices=IntegerChoice.choices,
     )
     extra1 = models.CharField(max_length=255)
     extra2 = models.PositiveIntegerField()
@@ -50,12 +86,26 @@ def test_choices_field():
     class ChoicesType:
         attr1: strawberry.auto
         attr2: strawberry.auto
+        attr3: strawberry.auto
+        attr4: strawberry.auto
+        attr5: strawberry.auto
+        attr6: strawberry.auto
 
     @strawberry.type
     class Query:
         @strawberry_django.field
         def obj(self) -> ChoicesType:
-            return cast(ChoicesType, ChoicesModel(attr1=Choice.A, attr2="c"))
+            return cast(
+                ChoicesType,
+                ChoicesModel(
+                    attr1=Choice.A,
+                    attr2=IntegerChoice.X,
+                    attr3="c",
+                    attr4=4,
+                    attr5=Choice.A,
+                    attr6=IntegerChoice.X,
+                ),
+            )
 
     expected = """\
     enum Choice {
@@ -66,7 +116,17 @@ def test_choices_field():
 
     type ChoicesType {
       attr1: Choice!
-      attr2: String!
+      attr2: IntegerChoice!
+      attr3: String!
+      attr4: Int!
+      attr5: String!
+      attr6: Int!
+    }
+
+    enum IntegerChoice {
+      X
+      Y
+      Z
     }
 
     type Query {
@@ -77,33 +137,61 @@ def test_choices_field():
     schema = strawberry.Schema(query=Query)
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync("query { obj { attr1, attr2 }}")
+    result = schema.execute_sync(
+        "query { obj { attr1, attr2, attr3, attr4, attr5, attr6 }}",
+    )
     assert result.errors is None
-    assert result.data == {"obj": {"attr1": "A", "attr2": "c"}}
+    assert result.data == {
+        "obj": {
+            "attr1": "A",
+            "attr2": "X",
+            "attr3": "c",
+            "attr4": 4,
+            "attr5": "a",
+            "attr6": 1,
+        },
+    }
 
 
 def test_no_choices_enum(mocker: MockerFixture):
-    # We can't use patch with the module name directly as it tries to resolve
-    # strawberry.fields as a function instead of the module for python versions
-    # before 3.11
     mocker.patch.object(types, "TextChoicesField", None)
     mocker.patch.dict(field_type_map, {TextChoicesField: str})
+    mocker.patch.object(types, "IntegerChoicesField", None)
+    mocker.patch.dict(field_type_map, {IntegerChoicesField: str})
 
     @strawberry_django.type(ChoicesModel)
     class ChoicesType:
         attr1: strawberry.auto
         attr2: strawberry.auto
+        attr3: strawberry.auto
+        attr4: strawberry.auto
+        attr5: strawberry.auto
+        attr6: strawberry.auto
 
     @strawberry.type
     class Query:
         @strawberry_django.field
         def obj(self) -> ChoicesType:
-            return cast(ChoicesType, ChoicesModel(attr1=Choice.A, attr2="c"))
+            return cast(
+                ChoicesType,
+                ChoicesModel(
+                    attr1=Choice.A,
+                    attr2=IntegerChoice.X,
+                    attr3="c",
+                    attr4=4,
+                    attr5=Choice.A,
+                    attr6=IntegerChoice.X,
+                ),
+            )
 
     expected = """\
     type ChoicesType {
       attr1: String!
       attr2: String!
+      attr3: String!
+      attr4: Int!
+      attr5: String!
+      attr6: Int!
     }
 
     type Query {
@@ -114,9 +202,20 @@ def test_no_choices_enum(mocker: MockerFixture):
     schema = strawberry.Schema(query=Query)
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync("query { obj { attr1, attr2 }}")
+    result = schema.execute_sync(
+        "query { obj { attr1, attr2, attr3, attr4, attr5, attr6 }}",
+    )
     assert result.errors is None
-    assert result.data == {"obj": {"attr1": "a", "attr2": "c"}}
+    assert result.data == {
+        "obj": {
+            "attr1": "a",
+            "attr2": "1",
+            "attr3": "c",
+            "attr4": 4,
+            "attr5": "a",
+            "attr6": 1,
+        },
+    }
 
 
 @override_settings(
@@ -130,12 +229,26 @@ def test_generate_choices_from_enum():
     class ChoicesType:
         attr1: strawberry.auto
         attr2: strawberry.auto
+        attr3: strawberry.auto
+        attr4: strawberry.auto
+        attr5: strawberry.auto
+        attr6: strawberry.auto
 
     @strawberry.type
     class Query:
         @strawberry_django.field
         def obj(self) -> ChoicesType:
-            return cast(ChoicesType, ChoicesModel(attr1=Choice.A, attr2="c"))
+            return cast(
+                ChoicesType,
+                ChoicesModel(
+                    attr1=Choice.A,
+                    attr2=IntegerChoice.X,
+                    attr3="c",
+                    attr4=4,
+                    attr5=Choice.A,
+                    attr6=IntegerChoice.X,
+                ),
+            )
 
     expected = '''\
     enum Choice {
@@ -146,28 +259,60 @@ def test_generate_choices_from_enum():
 
     type ChoicesType {
       attr1: Choice!
-      attr2: TestsChoicesModelAttr2Enum!
+      attr2: IntegerChoice!
+      attr3: TestsChoicesModelAttr3Enum!
+      attr4: Int!
+      attr5: TestsChoicesModelAttr5Enum!
+      attr6: Int!
+    }
+
+    enum IntegerChoice {
+      X
+      Y
+      Z
     }
 
     type Query {
       obj: ChoicesType!
     }
 
-    enum TestsChoicesModelAttr2Enum {
+    enum TestsChoicesModelAttr3Enum {
       """C description"""
       c
 
       """D description"""
       d
     }
+
+    enum TestsChoicesModelAttr5Enum {
+      """A description"""
+      a
+
+      """B description"""
+      b
+
+      """C description"""
+      c
+    }
     '''
 
     schema = strawberry.Schema(query=Query)
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync("query { obj { attr1, attr2 }}")
+    result = schema.execute_sync(
+        "query { obj { attr1, attr2, attr3, attr4, attr5, attr6 }}",
+    )
     assert result.errors is None
-    assert result.data == {"obj": {"attr1": "A", "attr2": "c"}}
+    assert result.data == {
+        "obj": {
+            "attr1": "A",
+            "attr2": "X",
+            "attr3": "c",
+            "attr4": 4,
+            "attr5": "a",
+            "attr6": 1,
+        },
+    }
 
 
 @override_settings(
@@ -181,6 +326,10 @@ def test_generate_choices_from_enum_with_extra_fields():
     class ChoicesWithExtraFieldsType:
         attr1: strawberry.auto
         attr2: strawberry.auto
+        attr3: strawberry.auto
+        attr4: strawberry.auto
+        attr5: strawberry.auto
+        attr6: strawberry.auto
         extra1: strawberry.auto
         extra2: strawberry.auto
 
@@ -192,7 +341,11 @@ def test_generate_choices_from_enum_with_extra_fields():
                 ChoicesWithExtraFieldsType,
                 ChoicesWithExtraFieldsModel(
                     attr1=Choice.A,
-                    attr2="c",
+                    attr2=IntegerChoice.X,
+                    attr3="c",
+                    attr4=4,
+                    attr5=Choice.A,
+                    attr6=IntegerChoice.X,
                     extra1="str1",
                     extra2=99,
                 ),
@@ -207,29 +360,63 @@ def test_generate_choices_from_enum_with_extra_fields():
 
     type ChoicesWithExtraFieldsType {
       attr1: Choice!
-      attr2: TestsChoicesWithExtraFieldsModelAttr2Enum!
+      attr2: IntegerChoice!
+      attr3: TestsChoicesWithExtraFieldsModelAttr3Enum!
+      attr4: Int!
+      attr5: TestsChoicesWithExtraFieldsModelAttr5Enum!
+      attr6: Int!
       extra1: String!
       extra2: Int!
+    }
+
+    enum IntegerChoice {
+      X
+      Y
+      Z
     }
 
     type Query {
       obj: ChoicesWithExtraFieldsType!
     }
 
-    enum TestsChoicesWithExtraFieldsModelAttr2Enum {
+    enum TestsChoicesWithExtraFieldsModelAttr3Enum {
       """C description"""
       c
 
       """D description"""
       d
     }
+
+    enum TestsChoicesWithExtraFieldsModelAttr5Enum {
+      """A description"""
+      a
+
+      """B description"""
+      b
+
+      """C description"""
+      c
+    }
+
+
     '''
 
     schema = strawberry.Schema(query=Query)
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync("query { obj { attr1, attr2, extra1, extra2 }}")
+    result = schema.execute_sync(
+        "query { obj { attr1, attr2, attr3, attr4, attr5, attr6, extra1, extra2 }}",
+    )
     assert result.errors is None
     assert result.data == {
-        "obj": {"attr1": "A", "attr2": "c", "extra1": "str1", "extra2": 99},
+        "obj": {
+            "attr1": "A",
+            "attr2": "X",
+            "attr3": "c",
+            "attr4": 4,
+            "attr5": "a",
+            "attr6": 1,
+            "extra1": "str1",
+            "extra2": 99,
+        },
     }
