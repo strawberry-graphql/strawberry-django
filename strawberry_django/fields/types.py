@@ -439,7 +439,7 @@ def resolve_model_field_type(
         and not isinstance(
             getattr(model_field, "choices", None)[0][0],
             int,
-        )  # Exclude  IntegerChoices
+        )  # Exclude IntegerChoices
     ):
         choices = cast(List[Tuple[Any, str]], model_field.choices)
         field_type = getattr(model_field, "_strawberry_enum", None)
