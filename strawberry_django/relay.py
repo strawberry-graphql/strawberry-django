@@ -378,7 +378,13 @@ def resolve_model_node(
         node_id = node_id.node_id
 
     id_attr = cast(relay.Node, origin).resolve_id_attr()
-    qs = source._default_manager.filter(**{id_attr: node_id})
+    qs = source._default_manager.all()
+
+    get_queryset = getattr(origin, "get_queryset", None)
+    if get_queryset:
+        qs = get_queryset(qs, info)
+
+    qs = qs.filter(**{id_attr: node_id})
 
     if info is not None:
         if filter_perms:
