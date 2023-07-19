@@ -23,6 +23,8 @@ The code above would generate following schema:
 input FruitFilter {
   id: ID
   name: String
+  AND: FruitFilter
+  OR: FruitFilter
 }
 ```
 
@@ -66,6 +68,23 @@ input StrFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
+  nExact: String
+  nIExact: String
+  nContains: String
+  nIContains: String
+  nInList: [String!]
+  nGt: String
+  nGte: String
+  nLt: String
+  nLte: String
+  nStartsWith: String
+  nIStartsWith: String
+  nEndsWith: String
+  nIEndsWith: String
+  nRange: [String!]
+  nIsNull: Boolean
+  nRegex: String
+  nIRegex: String
 }
 
 input IDFilterLookup {
@@ -86,11 +105,30 @@ input IDFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
+  nExact: String
+  nIExact: String
+  nContains: String
+  nIContains: String
+  nInList: [String!]
+  nGt: String
+  nGte: String
+  nLt: String
+  nLte: String
+  nStartsWith: String
+  nIStartsWith: String
+  nEndsWith: String
+  nIEndsWith: String
+  nRange: [String!]
+  nIsNull: Boolean
+  nRegex: String
+  nIRegex: String
 }
 
 input FruitFilter {
   id: IDFilterLookup
   name: StrFilterLookup
+  AND: FruitFilter
+  OR: FruitFilter
 }
 ```
 
@@ -125,12 +163,16 @@ The code above would generate following schema:
 input ColorFilter {
   id: ID
   name: String
+  AND: ColorFilter
+  OR: ColorFilter
 }
 
 input FruitFilter {
   id: ID
   name: String
   color: ColorFilter
+  AND: FruitFilter
+  OR: FruitFilter
 }
 ```
 
