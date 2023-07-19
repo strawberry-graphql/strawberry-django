@@ -114,8 +114,8 @@ def _process_type(
     if is_filter:
         cls.__annotations__.update(
             {
-                "AND": Optional[Self],
-                "OR": Optional[Self],
+                "AND": Optional[Self],  # type:ignore
+                "OR": Optional[Self],  # type:ignore
             },
         )
 

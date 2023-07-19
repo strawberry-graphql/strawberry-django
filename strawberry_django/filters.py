@@ -149,17 +149,16 @@ def build_filter_kwargs(
 
         if django_model:
             if field_name in ("AND", "OR"):
-                if field_value is None:
-                    continue
-                (
-                    subfield_filter_kwargs,
-                    subfield_filter_methods,
-                ) = build_filter_kwargs(field_value, path)
-                if field_name == "AND":
-                    filter_kwargs &= subfield_filter_kwargs
-                else:
-                    filter_kwargs |= subfield_filter_kwargs
-                filter_methods.extend(subfield_filter_methods)
+                if has_object_definition(field_value):
+                    (
+                        subfield_filter_kwargs,
+                        subfield_filter_methods,
+                    ) = build_filter_kwargs(field_value, path)
+                    if field_name == "AND":
+                        filter_kwargs &= subfield_filter_kwargs
+                    else:
+                        filter_kwargs |= subfield_filter_kwargs
+                    filter_methods.extend(subfield_filter_methods)
                 continue
 
             if field_name not in get_field_names_from_opts(
