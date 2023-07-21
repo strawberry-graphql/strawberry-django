@@ -103,23 +103,24 @@ The following CUD mutations are provided by this lib:
 A basic example would be:
 
 ```{.python title=types.py}
+import strawberry
 from strawberry_django import mutations
 
 
 @strawberry_django.type(SomeModel)
 class SomeModelType(relay.Node):
-    name: gql.auto
+    name: strawberry.auto
 
 @strawberry_django.input(SomeModel)
 class SomeModelInput:
-    name: gql.auto
+    name: strawberry.auto
 
 
 @strawberry_django.partial(SomeModel)
 class SomeModelInputPartial(relay.NodeInput):
-    name: gql.auto
+    name: strawberry.auto
 
-@gql.type
+@strawberry.type
 class Mutation:
     create_model: SomeModelType = mutations.create(SomeModelInput)
     update_model: SomeModelType = mutations.update(SomeModelInputPartial)
