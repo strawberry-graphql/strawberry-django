@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from django.db.models import QuerySet
 
 T = TypeVar("T")
+_T = TypeVar("_T", bound=type)
 _QS = TypeVar("_QS", bound="QuerySet")
 
 
@@ -332,7 +333,7 @@ def filter(  # noqa: A001
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
     lookups: bool = False,
-) -> Callable[[T], T]:
+) -> Callable[[_T], _T]:
     from .type import input
 
     return input(

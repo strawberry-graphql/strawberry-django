@@ -61,13 +61,13 @@ __all = [
     "partial",
 ]
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", bound=type)
 _O = TypeVar("_O", bound=Type[WithStrawberryObjectDefinition])
 _M = TypeVar("_M", bound=Model)
 
 
 def _process_type(
-    cls: _O,
+    cls: _T,
     model: Type[Model],
     *,
     field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
@@ -83,7 +83,7 @@ def _process_type(
     fields: Optional[Union[List[str], Literal["__all__"]]] = None,
     exclude: Optional[List[str]] = None,
     **kwargs,
-) -> _O:
+) -> _T:
     is_input = kwargs.get("is_input", False)
 
     if fields == "__all__":
@@ -120,7 +120,7 @@ def _process_type(
         )
 
     django_type = StrawberryDjangoDefinition(
-        origin=cls,
+        origin=cast(Type[WithStrawberryObjectDefinition], cls),
         model=model,
         field_cls=field_cls,
         is_partial=partial,
@@ -233,6 +233,8 @@ def _process_type(
         django_name: Optional[str] = (
             getattr(f, "django_name", None) or f.python_name or f.name
         )
+        assert django_name is not None
+
         description: Optional[str] = getattr(f, "description", None)
         type_annotation: Optional[StrawberryAnnotation] = getattr(
             f,
@@ -255,8 +257,6 @@ def _process_type(
             )
 
         try:
-            if django_name is None:
-                raise FieldDoesNotExist  # noqa: TRY301
             model_attr = get_model_field(django_type.model, django_name)
         except FieldDoesNotExist as e:
             model_attr = getattr(django_type.model, django_name, None)
@@ -448,7 +448,7 @@ def type(  # noqa: A001
 
     """
 
-    def wrapper(cls):
+    def wrapper(cls: _T) -> _T:
         return _process_type(
             cls,
             model,
@@ -502,7 +502,7 @@ def interface(
 
     """
 
-    def wrapper(cls):
+    def wrapper(cls: _T) -> _T:
         return _process_type(
             cls,
             model,
@@ -546,7 +546,7 @@ def input(  # noqa: A001
 
     """
 
-    def wrapper(cls):
+    def wrapper(cls: _T) -> _T:
         return _process_type(
             cls,
             model,
@@ -590,7 +590,7 @@ def partial(
 
     """
 
-    def wrapper(cls):
+    def wrapper(cls: _T) -> _T:
         return _process_type(
             cls,
             model,
