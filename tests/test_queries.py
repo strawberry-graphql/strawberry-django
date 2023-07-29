@@ -72,7 +72,6 @@ def query(db):
 
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.django_db(transaction=True),
 ]
 

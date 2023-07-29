@@ -248,6 +248,10 @@ def resolve_model_nodes(
 
     qs = source._default_manager.all()
 
+    get_queryset = getattr(origin, "get_queryset", None)
+    if get_queryset:
+        qs = get_queryset(qs, info)
+
     id_attr = cast(relay.Node, origin).resolve_id_attr()
     if node_ids is not None:
         qs = qs.filter(
