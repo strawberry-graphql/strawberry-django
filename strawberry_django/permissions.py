@@ -265,7 +265,10 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
 
     def apply(self, field: StrawberryField) -> None:  # pragma: no cover
         if self.use_directives:
-            field.directives.append(self.schema_directive)
+            directive = self.schema_directive
+            # Avoid interfaces duplicating the directives
+            if directive not in field.directives:
+                field.directives.append(self.schema_directive)
 
     @cached_property
     def schema_directive(self) -> object:
