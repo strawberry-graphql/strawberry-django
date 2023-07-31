@@ -49,7 +49,7 @@ _M = TypeVar("_M", bound=models.Model)
 _R = TypeVar("_R")
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_model_fields(
     model: Type[models.Model],
     *,

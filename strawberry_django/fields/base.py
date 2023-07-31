@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
 from strawberry import LazyType, relay
@@ -15,7 +16,6 @@ from strawberry.type import (
     get_object_definition,
 )
 from strawberry.union import StrawberryUnion
-from strawberry.utils.cached_property import cached_property
 
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import (
@@ -65,7 +65,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
         """
         return False
 
-    @cached_property
+    @functools.cached_property
     def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
         origin = self.type
 
@@ -101,7 +101,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
 
         return origin if has_django_definition(origin) else None
 
-    @cached_property
+    @functools.cached_property
     def django_model(self) -> type[models.Model] | None:
         django_type = self.django_type
         return (
@@ -110,11 +110,11 @@ class StrawberryDjangoFieldBase(StrawberryField):
             else None
         )
 
-    @cached_property
+    @functools.cached_property
     def is_optional(self) -> bool:
         return isinstance(self.type, StrawberryOptional)
 
-    @cached_property
+    @functools.cached_property
     def is_list(self) -> bool:
         type_ = self.type
         if isinstance(type_, StrawberryOptional):
@@ -122,7 +122,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
 
         return isinstance(type_, StrawberryList)
 
-    @cached_property
+    @functools.cached_property
     def is_connection(self) -> bool:
         type_ = self.type
         if isinstance(type_, StrawberryOptional):
@@ -130,7 +130,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
 
         return isinstance(type_, type) and issubclass(type_, relay.Connection)
 
-    @cached_property
+    @functools.cached_property
     def safe_resolver(self):
         resolver = self.base_resolver
         assert resolver

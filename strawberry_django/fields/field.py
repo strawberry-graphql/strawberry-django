@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -27,7 +28,6 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.utils.cached_property import cached_property
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument

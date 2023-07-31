@@ -39,7 +39,6 @@ from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import await_maybe
-from strawberry.utils.cached_property import cached_property
 from typing_extensions import Literal, Self, assert_never
 
 from strawberry_django.fields.types import OperationInfo, OperationMessage
@@ -270,7 +269,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
             if directive not in field.directives:
                 field.directives.append(self.schema_directive)
 
-    @cached_property
+    @functools.cached_property
     def schema_directive(self) -> object:
         key = "__strawberry_directive_type__"
         directive_class = getattr(self.__class__, key, None)
@@ -667,7 +666,7 @@ class HasPerm(DjangoPermissionExtension):
         self.with_anonymous = with_anonymous
         self.with_superuser = with_superuser
 
-    @cached_property
+    @functools.cached_property
     def schema_directive(self) -> object:
         key = "__strawberry_directive_class__"
         directive_class = getattr(self.__class__, key, None)

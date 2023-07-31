@@ -1,5 +1,6 @@
 import copy
 import dataclasses
+import functools
 import inspect
 import sys
 import types
@@ -28,7 +29,6 @@ from strawberry.exceptions import (
 from strawberry.field import StrawberryField
 from strawberry.private import is_private
 from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
-from strawberry.utils.cached_property import cached_property
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Literal, Self, dataclass_transform
 
@@ -275,7 +275,7 @@ def _process_type(
                 f_is_auto = False
             elif model_attr is not None and isinstance(
                 model_attr,
-                (property, cached_property),
+                (property, functools.cached_property),
             ):
                 func = (
                     model_attr.fget
