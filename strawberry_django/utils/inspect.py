@@ -95,7 +95,7 @@ def get_possible_types(
     elif isinstance(gql_type, LazyType):
         yield from get_possible_types(gql_type.resolve_type())
     elif isinstance(gql_type, StrawberryTypeVar) and object_definition is not None:
-        resolved = object_definition.type_var_map.get(gql_type.type_var, None)
+        resolved = object_definition.type_var_map.get(gql_type.type_var.__name__, None)
         if resolved is not None:
             yield from get_possible_types(resolved)
     elif isinstance(gql_type, StrawberryContainer):
