@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
 from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
@@ -72,14 +72,14 @@ class StrawberryDjangoFieldBase(StrawberryField):
         object_definition = get_object_definition(origin)
 
         if object_definition and issubclass(object_definition.origin, relay.Connection):
-            origin = object_definition.type_var_map.get(cast(TypeVar, relay.NodeType))
+            origin = object_definition.type_var_map.get(relay.NodeType.__name__)
 
             if origin is None:
                 specialized_type_var_map = (
                     object_definition.specialized_type_var_map or {}
                 )
 
-                origin = specialized_type_var_map[cast(TypeVar, relay.NodeType)]
+                origin = specialized_type_var_map[relay.NodeType.__name__]
 
             if isinstance(origin, LazyType):
                 origin = origin.resolve_type()

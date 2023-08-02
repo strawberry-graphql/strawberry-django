@@ -289,13 +289,13 @@ files = [
 
 [[package]]
 name = "django"
-version = "4.2.3"
+version = "4.2.4"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "Django-4.2.3-py3-none-any.whl", hash = "sha256:f7c7852a5ac5a3da5a8d5b35cc6168f31b605971441798dac845f17ca8028039"},
-    {file = "Django-4.2.3.tar.gz", hash = "sha256:45a747e1c5b3d6df1b141b1481e193b033fd1fdbda3ff52677dc81afdaacbaed"},
+    {file = "Django-4.2.4-py3-none-any.whl", hash = "sha256:860ae6a138a238fc4f22c99b52f3ead982bb4b1aad8c0122bcd8c8a3a02e409d"},
+    {file = "Django-4.2.4.tar.gz", hash = "sha256:7e4225ec065e0f354ccf7349a22d209de09cc1c074832be9eb84c51c1799c432"},
 ]
 
 [package.dependencies]
@@ -659,13 +659,13 @@ files = [
 
 [[package]]
 name = "mkdocs"
-version = "1.5.1"
+version = "1.5.2"
 description = "Project documentation with Markdown."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "mkdocs-1.5.1-py3-none-any.whl", hash = "sha256:67e889f8d8ba1fe5decdfc59f5f8f21d6a8925a129339e93dede303bdea03a98"},
-    {file = "mkdocs-1.5.1.tar.gz", hash = "sha256:f2f323c62fffdf1b71b84849e39aef56d6852b3f0a5571552bca32cefc650209"},
+    {file = "mkdocs-1.5.2-py3-none-any.whl", hash = "sha256:60a62538519c2e96fe8426654a67ee177350451616118a41596ae7c876bb7eac"},
+    {file = "mkdocs-1.5.2.tar.gz", hash = "sha256:70d0da09c26cff288852471be03c23f0f521fc15cf16ac89c7a3bfb9ae8d24f9"},
 ]
 
 [package.dependencies]
@@ -1324,13 +1324,13 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.198.0"
+version = "0.199.0"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "strawberry_graphql-0.198.0-py3-none-any.whl", hash = "sha256:ae2316641b380c309a70ef71e21c5ef606ef151032c1471936c6c731834eaf90"},
-    {file = "strawberry_graphql-0.198.0.tar.gz", hash = "sha256:12f57e435b0c07497a6b0d84d5f21e638a254db571826af53a1a45604506c023"},
+    {file = "strawberry_graphql-0.199.0-py3-none-any.whl", hash = "sha256:eb3cb0c4b0eda573ce38731cdc60527a76e0a33e6db17fcabc72b9870f36e4ad"},
+    {file = "strawberry_graphql-0.199.0.tar.gz", hash = "sha256:30b8bb28adf57a64af9f6915a6d58400898e32aa60e7578bfdb642d6d562199d"},
 ]
 
 [package.dependencies]
@@ -1501,4 +1501,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "683684ebd8961214bbe39c36cb26e67f763d0abec54d22d61467472a4deedaee"
+content-hash = "ccec95f79da9dbb29838f1d11f4dc8aafca9e1c4f010c841451892c6956edc77"
