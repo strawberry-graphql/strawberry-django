@@ -298,11 +298,11 @@ def test_pk_inserted_for_root_field_only():
         name: str
 
     @strawberry_django.type(models.Group, filters=GroupFilter)
-    class GroupType(models.Group):
+    class GroupType:
         name: strawberry.auto
 
     @strawberry_django.type(models.User)
-    class UserType(models.Group):
+    class UserType:
         name: strawberry.auto
         group: Optional[GroupType]
         get_group: GroupType
