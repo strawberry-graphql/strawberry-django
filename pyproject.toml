@@ -62,6 +62,7 @@ Markdown = "^3.3.7"
 Pygments = "^2.15.1"
 factory-boy = "^3.2.1"
 django-guardian = "^2.4.0"
+channels = {extras = ["daphne"], version = "^4.0.0"}
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]

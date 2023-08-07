@@ -3,6 +3,7 @@ from typing import List
 import pytest
 from django.contrib.auth.models import Permission
 from guardian.shortcuts import assign_perm
+from strawberry.channels.testing import GraphQLWebsocketCommunicator
 from strawberry.relay import to_base64
 from typing_extensions import Literal, TypeAlias
 
@@ -54,6 +55,17 @@ def test_is_authenticated(db, gql_client: GraphQLTestClient):
                 "name": issue.name,
             },
         }
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_channels_authenticated(
+    db,
+    channels_client: GraphQLWebsocketCommunicator,
+):
+    async for _res in channels_client.subscribe(
+        "subscription { subscribeRequiresAuth }",
+    ):
+        raise NotImplementedError
 
 
 @pytest.mark.django_db(transaction=True)

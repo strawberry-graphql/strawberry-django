@@ -327,7 +327,11 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         info: Info,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        user = info.context.request.user
+        try:
+            user = info.context.request.user
+        except AttributeError:
+            # this is a channels request
+            user = info.context["request"].user
         try:
             from .integrations.guardian import get_user_or_anonymous
         except (ImportError, RuntimeError):  # pragma: no cover

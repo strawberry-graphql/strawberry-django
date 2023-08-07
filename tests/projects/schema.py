@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import decimal
-from typing import Iterable, List, Optional, Type, cast
+from typing import AsyncGenerator, Iterable, List, Optional, Type, cast
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -431,9 +431,19 @@ class Mutation:
         )
 
 
+@strawberry.type
+class Subscription:
+    @strawberry.subscription(extensions=[IsAuthenticated()])
+    async def subscribe_requires_auth(self) -> AsyncGenerator[int, None]:
+        for i in range(5):
+            yield i
+            await asyncio.sleep(0.01)
+
+
 schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
+    subscription=Subscription,
     extensions=[
         DjangoOptimizerExtension,
     ],

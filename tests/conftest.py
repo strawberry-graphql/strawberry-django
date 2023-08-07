@@ -8,6 +8,8 @@ from django.test.client import (
     AsyncClient,  # type: ignore
     Client,
 )
+from strawberry.channels import GraphQLWSConsumer
+from strawberry.channels.testing import GraphQLWebsocketCommunicator
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -34,6 +36,15 @@ def gql_client(request):
         optimizer_ctx = DjangoOptimizerExtension.disabled
 
     with optimizer_ctx(), GraphQLTestClient(path, client()) as c:
+        yield c
+
+
+@pytest.fixture()
+async def channels_client() -> GraphQLWebsocketCommunicator:
+    from .projects.schema import schema
+
+    app = GraphQLWSConsumer.as_asgi(schema=schema)
+    async with GraphQLWebsocketCommunicator(application=app, path="") as c:
         yield c
 
 
