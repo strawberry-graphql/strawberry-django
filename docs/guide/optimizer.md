@@ -220,7 +220,7 @@ class OrderItem:
     price: strawberry.auto
     quantity: strawberry.auto
 
-    @strawberry.django(only=["price", "quantity"])
+    @strawberry.django.field(only=["price", "quantity"])
     def total(self, root: models.OrderItem) -> decimal.Decimal:
         return root.price * root.quantity  # or root.total directly
 ```
