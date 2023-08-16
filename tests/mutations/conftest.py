@@ -3,6 +3,7 @@ from typing import List
 import pytest
 import strawberry
 from django.conf import settings
+from django.utils.functional import SimpleLazyObject
 from strawberry import auto
 
 import strawberry_django
@@ -35,6 +36,27 @@ class Mutation:
         FruitPartialInput,
         filters=FruitFilter,
     )
+
+    @strawberry_django.mutation
+    def update_lazy_fruit(self, info, data: FruitPartialInput) -> Fruit:
+        fruit = SimpleLazyObject(lambda: models.Fruit.objects.get())
+        return mutations.resolvers.update(
+            info,
+            fruit,
+            mutations.resolvers.parse_input(
+                info,
+                vars(data),
+            ),
+        )
+
+    @strawberry_django.mutation
+    def delete_lazy_fruit(self, info) -> Fruit:
+        fruit = SimpleLazyObject(lambda: models.Fruit.objects.get())
+        return mutations.resolvers.delete(
+            info,
+            fruit,
+        )
+
     delete_fruits: List[Fruit] = mutations.delete(filters=FruitFilter)
 
     create_color: Color = mutations.create(ColorInput)
@@ -64,3 +86,8 @@ def mutation(db):
         mutation = Mutation
 
     return utils.generate_query(mutation=mutation)
+
+
+@pytest.fixture()
+def fruit(db):
+    return models.Fruit.objects.create(name="Strawberry")

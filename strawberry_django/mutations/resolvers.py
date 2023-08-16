@@ -23,6 +23,7 @@ from django.db.models.fields.reverse_related import (
     ManyToOneRel,
     OneToOneRel,
 )
+from django.utils.functional import LazyObject
 from strawberry import UNSET, relay
 from typing_extensions import Literal, TypeAlias, TypedDict
 
@@ -268,7 +269,12 @@ def update(
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-):
+) -> _M | list[_M]:
+    # Unwrap lazy objects since they have a proxy __iter__ method that will make
+    # them iterables even if the wrapped object isn't
+    if isinstance(instance, LazyObject):
+        instance = cast(_M, instance.__reduce__()[1][0])
+
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)
@@ -379,7 +385,12 @@ def delete(
 
 
 @transaction.atomic
-def delete(info, instance, *, data=None):
+def delete(info, instance, *, data=None) -> _M | list[_M]:
+    # Unwrap lazy objects since they have a proxy __iter__ method that will make
+    # them iterables even if the wrapped object isn't
+    if isinstance(instance, LazyObject):
+        instance = cast(_M, instance.__reduce__()[1][0])
+
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)

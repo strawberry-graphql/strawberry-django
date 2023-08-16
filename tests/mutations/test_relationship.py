@@ -4,11 +4,6 @@ from tests import models
 
 
 @pytest.fixture()
-def fruit(db):
-    return models.Fruit.objects.create(name="Strawberry")
-
-
-@pytest.fixture()
 def color(db):
     return models.Color.objects.create(name="red")
 
