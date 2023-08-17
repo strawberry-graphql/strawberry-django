@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable
 
 import strawberry
 from django.core.exceptions import (
@@ -37,9 +37,6 @@ if TYPE_CHECKING:
     from strawberry.types import Info
     from strawberry.types.types import StrawberryObjectDefinition
     from typing_extensions import Literal, Self
-
-
-_M = TypeVar("_M", bound=models.Model)
 
 
 def _get_validation_errors(error: Exception):

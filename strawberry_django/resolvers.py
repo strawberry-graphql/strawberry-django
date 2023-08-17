@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from graphql.pyutils import AwaitableOrValue
 
 _SENTINEL = object()
-_T = TypeVar("_T")
 _R = TypeVar("_R")
 _P = ParamSpec("_P")
 _M = TypeVar("_M", bound=models.Model)

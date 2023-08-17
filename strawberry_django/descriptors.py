@@ -27,7 +27,6 @@ __all__ = [
     "model_cached_property",
 ]
 
-_T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 _R = TypeVar("_R")
 

@@ -39,7 +39,7 @@ django-debug-toolbar = { version = ">=3.4", optional = true }
 django-choices-field = { version = ">=2.2.2", optional = true }
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^2.21.0"
+pre-commit = "^3.3.3"
 pytest = "^7.1.2"
 pytest-asyncio = "^0.21.0"
 pytest-django = "^4.1.0"
@@ -48,15 +48,15 @@ pytest-watch = "^4.2.0"
 pytest-mock = "^3.5.1"
 pytest-snapshot = "^0.9.0"
 pytest-cov = "^4.0.0"
-django-debug-toolbar = "^3.2.4"
+django-debug-toolbar = "^4.2.0"
 django-choices-field = "^2.2.2"
 mkdocs = "^1.4.2"
 mkdocs-markdownextradata-plugin = "^0.2.5"
 mkdocs-material = "^9.0.4"
-mkdocs-minify-plugin = "^0.6.2"
+mkdocs-minify-plugin = "^0.7.1"
 pymdown-extensions = "^10.0.1"
 mkdocstrings = { version = "^0.22.0", extras = ["python"] }
-ruff = "^0.0.280"
+ruff = "^0.0.284"
 django-types = "^0.17.0"
 Markdown = "^3.3.7"
 Pygments = "^2.15.1"

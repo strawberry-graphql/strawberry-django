@@ -9,7 +9,6 @@ from typing import (
     List,
     Optional,
     Type,
-    TypeVar,
     Union,
     cast,
 )
@@ -42,11 +41,6 @@ from typing_extensions import Self, assert_never
 from strawberry_django.fields.types import resolve_model_field_name
 
 from .pyutils import DictTree, dicttree_insersection_differs, dicttree_merge
-
-_T = TypeVar("_T")
-_O = TypeVar("_O", bound=type)
-_M = TypeVar("_M", bound=models.Model)
-_R = TypeVar("_R")
 
 
 @functools.lru_cache

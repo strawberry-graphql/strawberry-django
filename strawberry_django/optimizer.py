@@ -69,7 +69,6 @@ __all__ = [
     "optimize",
 ]
 
-_T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
