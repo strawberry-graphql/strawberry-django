@@ -324,11 +324,11 @@ def _get_model_hints(
         if level > 0:
             return None
 
-        n_type = object_definition.type_var_map.get(relay.NodeType.__name__)
+        n_type = object_definition.type_var_map.get("NodeType")
         if n_type is None:
             specialized_type_var_map = object_definition.specialized_type_var_map or {}
 
-            n_type = specialized_type_var_map[relay.NodeType.__name__]
+            n_type = specialized_type_var_map["NodeType"]
         if isinstance(n_type, LazyType):
             n_type = n_type.resolve_type()
 
