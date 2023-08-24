@@ -1,7 +1,6 @@
 import functools
 from typing import TYPE_CHECKING, List, Optional, Set, Type, TypeVar, cast
 
-from django.contrib.contenttypes.models import ContentTypeManager
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Exists, F, Model, Q, QuerySet
 from django.db.models.functions import Cast
@@ -82,7 +81,7 @@ def filter_for_user_q(
         model = model._meta.concrete_model
 
     try:
-        from django.contrib.contenttypes.models import ContentType
+        from django.contrib.contenttypes.models import ContentType, ContentTypeManager
     except (ImportError, RuntimeError):  # pragma: no cover
         ctype = None
     else:
