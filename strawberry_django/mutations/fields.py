@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable, Union
 
 import strawberry
 from django.core.exceptions import (
@@ -15,6 +15,7 @@ from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import UNRESOLVED
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
+from typing_extensions import Annotated
 
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
@@ -125,7 +126,10 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
                 types_ = (*types_, OperationInfo)
 
                 name = capitalize_first(to_camel_case(self.python_name))
-                resolved = strawberry.union(f"{name}Payload", types_)
+                resolved = Annotated[
+                    Union[types_],  # type: ignore
+                    strawberry.union(f"{name}Payload"),
+                ]
                 self.type_annotation = StrawberryAnnotation(
                     resolved,
                     namespace=getattr(self.type_annotation, "namespace", None),
