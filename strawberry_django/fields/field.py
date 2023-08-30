@@ -63,7 +63,6 @@ if TYPE_CHECKING:
 
 
 _T = TypeVar("_T")
-_M = TypeVar("_M", bound=models.Model)
 
 
 class StrawberryDjangoField(

@@ -57,7 +57,6 @@ if TYPE_CHECKING:
     from strawberry.django.context import StrawberryDjangoContext
 
 
-_T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 
 

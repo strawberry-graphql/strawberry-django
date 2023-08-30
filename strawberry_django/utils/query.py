@@ -78,10 +78,10 @@ def filter_for_user_q(
 
     model = cast(Type[Model], qs.model)
     if model._meta.concrete_model:
-        model = cast(Type[Model], model._meta.concrete_model)
+        model = model._meta.concrete_model
 
     try:
-        from django.contrib.contenttypes.models import ContentType
+        from django.contrib.contenttypes.models import ContentType, ContentTypeManager
     except (ImportError, RuntimeError):  # pragma: no cover
         ctype = None
     else:
@@ -97,7 +97,7 @@ def filter_for_user_q(
         except KeyError:  # pragma:nocover
             # If we are not running async, retrieve it
             ctype = (
-                ContentType.objects.get_for_model(model)
+                cast(ContentTypeManager, ContentType.objects).get_for_model(model)
                 if not in_async_context()
                 else None
             )
