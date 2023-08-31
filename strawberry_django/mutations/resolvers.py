@@ -23,6 +23,7 @@ from django.db.models.fields.reverse_related import (
     ManyToOneRel,
     OneToOneRel,
 )
+from django.utils.functional import LazyObject
 from strawberry import UNSET, relay
 from typing_extensions import Literal, TypeAlias, TypedDict
 
@@ -214,9 +215,9 @@ def create(
 
 @transaction.atomic
 def create(
-    info,
-    model,
-    data,
+    info: Info,
+    model: type[_M],
+    data: dict[str, Any] | list[dict[str, Any]],
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
@@ -262,13 +263,18 @@ def update(
 
 @transaction.atomic
 def update(
-    info,
-    instance,
-    data,
+    info: Info,
+    instance: _M | Iterable[_M],
+    data: dict[str, Any],
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-):
+) -> _M | list[_M]:
+    # Unwrap lazy objects since they have a proxy __iter__ method that will make
+    # them iterables even if the wrapped object isn't
+    if isinstance(instance, LazyObject):
+        instance = cast(_M, instance.__reduce__()[1][0])
+
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)
@@ -346,7 +352,7 @@ def update(
 
         full_clean_options = full_clean if isinstance(full_clean, dict) else {}
         if full_clean:
-            instance.full_clean(**full_clean_options)
+            instance.full_clean(**full_clean_options)  # type: ignore
 
         instance.save()
 
@@ -379,7 +385,12 @@ def delete(
 
 
 @transaction.atomic
-def delete(info, instance, *, data=None):
+def delete(info: Info, instance: _M | Iterable[_M], *, data=None) -> _M | list[_M]:
+    # Unwrap lazy objects since they have a proxy __iter__ method that will make
+    # them iterables even if the wrapped object isn't
+    if isinstance(instance, LazyObject):
+        instance = cast(_M, instance.__reduce__()[1][0])
+
     if isinstance(instance, Iterable):
         many = True
         instances = list(instance)

@@ -57,6 +57,14 @@ def test_update(mutation, fruits):
     ]
 
 
+def test_update_lazy_object(mutation, fruit):
+    result = mutation(
+        '{ fruit: updateLazyFruit(data: { name: "orange" }) { id name } }',
+    )
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "orange"}
+
+
 def test_update_with_filters(mutation, fruits):
     result = mutation(
         '{ fruits: updateFruits(data: { name: "orange" },'
@@ -82,6 +90,13 @@ def test_delete(mutation, fruits):
         {"id": "2", "name": "raspberry"},
         {"id": "3", "name": "banana"},
     ]
+    assert list(models.Fruit.objects.values("id", "name")) == []
+
+
+def test_delete_lazy_object(mutation, fruit):
+    result = mutation("{ fruit: deleteLazyFruit { id name } }")
+    assert not result.errors
+    assert result.data["fruit"] == {"id": "1", "name": "Strawberry"}
     assert list(models.Fruit.objects.values("id", "name")) == []
 
 
