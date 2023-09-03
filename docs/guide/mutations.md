@@ -104,11 +104,13 @@ A basic example would be:
 
 ```{.python title=types.py}
 import strawberry
-from strawberry_django import mutations
+from strawberry_django import mutations, NodeInput
+from strawberry.relay import Node
+
 
 
 @strawberry_django.type(SomeModel)
-class SomeModelType(relay.Node):
+class SomeModelType(Node):
     name: strawberry.auto
 
 @strawberry_django.input(SomeModel)
@@ -117,14 +119,14 @@ class SomeModelInput:
 
 
 @strawberry_django.partial(SomeModel)
-class SomeModelInputPartial(relay.NodeInput):
+class SomeModelInputPartial(NodeInput):
     name: strawberry.auto
 
 @strawberry.type
 class Mutation:
     create_model: SomeModelType = mutations.create(SomeModelInput)
     update_model: SomeModelType = mutations.update(SomeModelInputPartial)
-    delete_model: SomeModelType = mutations.delete(relay.NodeInput)
+    delete_model: SomeModelType = mutations.delete(NodeInput)
 ```
 
 Some things to note here:
