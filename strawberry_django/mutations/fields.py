@@ -52,12 +52,13 @@ def _get_validation_errors(error: Exception):
 
     if isinstance(error, ValidationError) and hasattr(error, "error_dict"):
         # convert field errors
-        for field, field_errors in error.message_dict.items():
+        for field, field_errors in error.error_dict.items():
             for e in field_errors:
                 yield OperationMessage(
                     kind=kind,
                     field=to_camel_case(field) if field != NON_FIELD_ERRORS else None,
-                    message=e,
+                    message=e.message % e.params if e.params else e.message,
+                    code=getattr(e, "code", None),
                 )
     elif isinstance(error, ValidationError) and hasattr(error, "error_list"):
         # convert non-field errors
@@ -65,6 +66,7 @@ def _get_validation_errors(error: Exception):
             yield OperationMessage(
                 kind=kind,
                 message=e.message % e.params if e.params else e.message,
+                code=getattr(error, "code", None),
             )
     else:
         msg = getattr(error, "msg", None)
@@ -74,6 +76,7 @@ def _get_validation_errors(error: Exception):
         yield OperationMessage(
             kind=kind,
             message=msg,
+            code=getattr(error, "code", None),
         )
 
 

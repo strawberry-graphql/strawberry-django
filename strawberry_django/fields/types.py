@@ -178,6 +178,9 @@ class OperationMessage:
         ),
         default=None,
     )
+    code: Optional[str] = strawberry.field(
+        description="The error code, or `null` if no error code was set.",
+    )
 
     def __eq__(self, other: Self):
         if not isinstance(other, OperationMessage):
@@ -187,10 +190,11 @@ class OperationMessage:
             self.kind == other.kind
             and self.message == other.message
             and self.field == other.field
+            and self.code == other.code
         )
 
     def __hash__(self):
-        return hash((self.__class__, self.kind, self.message, self.field))
+        return hash((self.__class__, self.kind, self.message, self.field, self.code))
 
 
 @strawberry.type

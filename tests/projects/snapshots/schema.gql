@@ -380,6 +380,9 @@ type OperationMessage {
   The field that caused the error, or `null` if it isn't associated with any particular field.
   """
   field: String
+
+  """The error code, or `null` if no error code was set."""
+  code: String
 }
 
 enum OperationMessageKind {
