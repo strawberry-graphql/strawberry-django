@@ -398,8 +398,7 @@ def field(
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     disable_optimization: bool = False,
-) -> _T:
-    ...
+) -> _T: ...
 
 
 @overload
@@ -426,8 +425,7 @@ def field(
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     disable_optimization: bool = False,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 @overload
@@ -454,8 +452,7 @@ def field(
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     disable_optimization: bool = False,
-) -> StrawberryDjangoField:
-    ...
+) -> StrawberryDjangoField: ...
 
 
 def field(
@@ -614,8 +611,7 @@ def connection(
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     disable_optimization: bool = False,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 @overload
@@ -641,8 +637,7 @@ def connection(
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     disable_optimization: bool = False,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 def connection(

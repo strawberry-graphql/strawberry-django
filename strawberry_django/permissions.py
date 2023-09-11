@@ -136,8 +136,7 @@ def get_with_perms(
     *,
     required: Literal[True],
     model: Type[_M],
-) -> _M:
-    ...
+) -> _M: ...
 
 
 @overload
@@ -147,8 +146,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     model: Type[_M],
-) -> Optional[_M]:
-    ...
+) -> Optional[_M]: ...
 
 
 @overload
@@ -158,8 +156,7 @@ def get_with_perms(
     *,
     required: Literal[True],
     model: Type[_M],
-) -> _M:
-    ...
+) -> _M: ...
 
 
 @overload
@@ -169,8 +166,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     model: Type[_M],
-) -> Optional[_M]:
-    ...
+) -> Optional[_M]: ...
 
 
 @overload
@@ -179,8 +175,7 @@ def get_with_perms(
     info: Info,
     *,
     required: Literal[True],
-) -> Any:
-    ...
+) -> Any: ...
 
 
 @overload
@@ -189,8 +184,7 @@ def get_with_perms(
     info: Info,
     *,
     required: bool = ...,
-) -> Optional[Any]:
-    ...
+) -> Optional[Any]: ...
 
 
 def get_with_perms(pk, info, *, required=False, model=None):
@@ -281,8 +275,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
                 description=self.SCHEMA_DIRECTIVE_DESCRIPTION,
                 repeatable=True,
             )
-            class AutoDirective:
-                ...
+            class AutoDirective: ...
 
             directive_class = AutoDirective
 
@@ -417,8 +410,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         *,
         info: Info,
         source: Any,
-    ):
-        ...
+    ): ...
 
 
 class IsAuthenticated(DjangoPermissionExtension):

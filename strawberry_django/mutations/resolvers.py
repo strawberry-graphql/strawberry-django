@@ -119,23 +119,19 @@ class ParsedObjectList:
 
 
 @overload
-def parse_input(info: Info, data: dict[str, _T]) -> dict[str, _T]:
-    ...
+def parse_input(info: Info, data: dict[str, _T]) -> dict[str, _T]: ...
 
 
 @overload
-def parse_input(info: Info, data: list[_T]) -> list[_T]:
-    ...
+def parse_input(info: Info, data: list[_T]) -> list[_T]: ...
 
 
 @overload
-def parse_input(info: Info, data: relay.GlobalID) -> relay.Node:
-    ...
+def parse_input(info: Info, data: relay.GlobalID) -> relay.Node: ...
 
 
 @overload
-def parse_input(info: Info, data: Any) -> Any:
-    ...
+def parse_input(info: Info, data: Any) -> Any: ...
 
 
 def parse_input(info: Info, data: Any):
@@ -197,8 +193,7 @@ def create(
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-) -> _M:
-    ...
+) -> _M: ...
 
 
 @overload
@@ -209,8 +204,7 @@ def create(
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-) -> list[_M]:
-    ...
+) -> list[_M]: ...
 
 
 @transaction.atomic
@@ -245,8 +239,7 @@ def update(
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-) -> _M:
-    ...
+) -> _M: ...
 
 
 @overload
@@ -257,8 +250,7 @@ def update(
     *,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-) -> list[_M]:
-    ...
+) -> list[_M]: ...
 
 
 @transaction.atomic
@@ -370,8 +362,7 @@ def delete(
     instance: _M,
     *,
     data: dict[str, Any] | None = None,
-) -> _M:
-    ...
+) -> _M: ...
 
 
 @overload
@@ -380,8 +371,7 @@ def delete(
     instance: Iterable[_M],
     *,
     data: dict[str, Any] | None = None,
-) -> list[_M]:
-    ...
+) -> list[_M]: ...
 
 
 @transaction.atomic

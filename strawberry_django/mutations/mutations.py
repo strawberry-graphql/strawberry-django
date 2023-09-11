@@ -48,8 +48,7 @@ def mutation(
     graphql_type: Optional[Any] = None,
     extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
-) -> _T:
-    ...
+) -> _T: ...
 
 
 @overload
@@ -69,8 +68,7 @@ def mutation(
     graphql_type: Optional[Any] = None,
     extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 @overload
@@ -90,8 +88,7 @@ def mutation(
     graphql_type: Optional[Any] = None,
     extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
-) -> DjangoMutationBase:
-    ...
+) -> DjangoMutationBase: ...
 
 
 def mutation(
@@ -157,8 +154,7 @@ def input_mutation(
     graphql_type: Optional[Any] = None,
     extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
-) -> _T:
-    ...
+) -> _T: ...
 
 
 @overload
@@ -178,8 +174,7 @@ def input_mutation(
     graphql_type: Optional[Any] = None,
     extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
-) -> Any:
-    ...
+) -> Any: ...
 
 
 @overload
@@ -199,8 +194,7 @@ def input_mutation(
     graphql_type: Optional[Any] = None,
     extensions: List[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
-) -> DjangoMutationBase:
-    ...
+) -> DjangoMutationBase: ...
 
 
 def input_mutation(

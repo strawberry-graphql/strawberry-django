@@ -93,8 +93,7 @@ def test_global_id_resolve_node_sync_ensure_type():
 
 
 def test_global_id_resolve_node_sync_ensure_type_with_union():
-    class Foo:
-        ...
+    class Foo: ...
 
     gid = relay.GlobalID(type_name="Fruit", node_id="1")
     fruit = gid.resolve_node_sync(fake_info, ensure_type=Union[FruitModel, Foo])
@@ -105,8 +104,7 @@ def test_global_id_resolve_node_sync_ensure_type_with_union():
 
 
 def test_global_id_resolve_node_sync_ensure_type_wrong_type():
-    class Foo:
-        ...
+    class Foo: ...
 
     gid = relay.GlobalID(type_name="Fruit", node_id="1")
     with pytest.raises(TypeError):
@@ -145,8 +143,7 @@ async def test_global_id_resolve_node_ensure_type():
 
 
 async def test_global_id_resolve_node_ensure_type_with_union():
-    class Foo:
-        ...
+    class Foo: ...
 
     gid = relay.GlobalID(type_name="Fruit", node_id="1")
     fruit = await gid.resolve_node(fake_info, ensure_type=Union[FruitModel, Foo])
@@ -157,8 +154,7 @@ async def test_global_id_resolve_node_ensure_type_with_union():
 
 
 async def test_global_id_resolve_node_ensure_type_wrong_type():
-    class Foo:
-        ...
+    class Foo: ...
 
     gid = relay.GlobalID(type_name="Fruit", node_id="1")
     with pytest.raises(TypeError):

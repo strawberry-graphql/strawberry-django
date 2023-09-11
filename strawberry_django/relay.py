@@ -123,8 +123,7 @@ def resolve_model_nodes(
     node_ids: Iterable[Union[str, relay.GlobalID]],
     required: Literal[True],
     filter_perms: bool = False,
-) -> AwaitableOrValue[Iterable[_M]]:
-    ...
+) -> AwaitableOrValue[Iterable[_M]]: ...
 
 
 @overload
@@ -139,8 +138,7 @@ def resolve_model_nodes(
     node_ids: None = None,
     required: Literal[True],
     filter_perms: bool = False,
-) -> AwaitableOrValue[models.QuerySet[_M]]:
-    ...
+) -> AwaitableOrValue[models.QuerySet[_M]]: ...
 
 
 @overload
@@ -155,8 +153,7 @@ def resolve_model_nodes(
     node_ids: Iterable[Union[str, relay.GlobalID]],
     required: Literal[False],
     filter_perms: bool = False,
-) -> AwaitableOrValue[Iterable[Optional[_M]]]:
-    ...
+) -> AwaitableOrValue[Iterable[Optional[_M]]]: ...
 
 
 @overload
@@ -171,8 +168,7 @@ def resolve_model_nodes(
     node_ids: None = None,
     required: Literal[False],
     filter_perms: bool = False,
-) -> AwaitableOrValue[Optional[models.QuerySet[_M]]]:
-    ...
+) -> AwaitableOrValue[Optional[models.QuerySet[_M]]]: ...
 
 
 @overload
@@ -194,8 +190,7 @@ def resolve_model_nodes(
         Iterable[Optional[_M]],
         Optional[models.QuerySet[_M]],
     ]
-]:
-    ...
+]: ...
 
 
 def resolve_model_nodes(
@@ -318,8 +313,7 @@ def resolve_model_node(
     info: Optional[Info] = ...,
     required: Literal[False] = ...,
     filter_perms: bool = False,
-) -> AwaitableOrValue[Optional[_M]]:
-    ...
+) -> AwaitableOrValue[Optional[_M]]: ...
 
 
 @overload
@@ -334,8 +328,7 @@ def resolve_model_node(
     info: Optional[Info] = ...,
     required: Literal[True],
     filter_perms: bool = False,
-) -> AwaitableOrValue[_M]:
-    ...
+) -> AwaitableOrValue[_M]: ...
 
 
 def resolve_model_node(

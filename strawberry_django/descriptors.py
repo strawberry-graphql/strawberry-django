@@ -65,12 +65,10 @@ class ModelProperty(Generic[_M, _R]):
         self.name = name
 
     @overload
-    def __get__(self, obj: _M, cls: Type[_M]) -> _R:
-        ...
+    def __get__(self, obj: _M, cls: Type[_M]) -> _R: ...
 
     @overload
-    def __get__(self, obj: None, cls: Type[_M]) -> Self:
-        ...
+    def __get__(self, obj: None, cls: Type[_M]) -> Self: ...
 
     def __get__(self, obj, cls=None):
         if obj is None:
@@ -110,8 +108,7 @@ def model_property(
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
-) -> ModelProperty[_M, _R]:
-    ...
+) -> ModelProperty[_M, _R]: ...
 
 
 @overload
@@ -123,8 +120,7 @@ def model_property(
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
-) -> Callable[[Callable[[_M], _R]], ModelProperty[_M, _R]]:
-    ...
+) -> Callable[[Callable[[_M], _R]], ModelProperty[_M, _R]]: ...
 
 
 def model_property(

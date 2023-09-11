@@ -39,8 +39,7 @@ def django_resolver(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
-) -> Callable[_P, AwaitableOrValue[_R]]:
-    ...
+) -> Callable[_P, AwaitableOrValue[_R]]: ...
 
 
 @overload
@@ -48,8 +47,7 @@ def django_resolver(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] | None = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
-) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]:
-    ...
+) -> Callable[[Callable[_P, _R]], Callable[_P, AwaitableOrValue[_R]]]: ...
 
 
 def django_resolver(
@@ -129,8 +127,7 @@ def django_getattr(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
-) -> AwaitableOrValue[Any]:
-    ...
+) -> AwaitableOrValue[Any]: ...
 
 
 @overload
@@ -141,8 +138,7 @@ def django_getattr(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
-) -> AwaitableOrValue[Any]:
-    ...
+) -> AwaitableOrValue[Any]: ...
 
 
 def django_getattr(

@@ -67,8 +67,7 @@ def test_non_dataclass_annotations_are_ignored_on_input():
     @strawberry.type
     class Query:
         @strawberry.field
-        def some_field(self, my_input: SomeModelInput) -> str:
-            ...
+        def some_field(self, my_input: SomeModelInput) -> str: ...
 
     schema = strawberry.Schema(query=Query)
     expected = """\

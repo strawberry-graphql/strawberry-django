@@ -58,8 +58,7 @@ def get_django_definition(
     obj: Any,
     *,
     strict: Literal[True],
-) -> StrawberryDjangoDefinition:
-    ...
+) -> StrawberryDjangoDefinition: ...
 
 
 @overload
@@ -67,8 +66,7 @@ def get_django_definition(
     obj: Any,
     *,
     strict: bool = False,
-) -> StrawberryDjangoDefinition | None:
-    ...
+) -> StrawberryDjangoDefinition | None: ...
 
 
 def get_django_definition(
@@ -107,13 +105,11 @@ def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
 
 
 @overload
-def unwrap_type(type_: StrawberryContainer) -> StrawberryType | type:
-    ...
+def unwrap_type(type_: StrawberryContainer) -> StrawberryType | type: ...
 
 
 @overload
-def unwrap_type(type_: _Type) -> _Type:
-    ...
+def unwrap_type(type_: _Type) -> _Type: ...
 
 
 def unwrap_type(type_):
