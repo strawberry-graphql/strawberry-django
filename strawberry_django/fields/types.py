@@ -180,6 +180,7 @@ class OperationMessage:
     )
     code: Optional[str] = strawberry.field(
         description="The error code, or `null` if no error code was set.",
+        default=None,
     )
 
     def __eq__(self, other: Self):
