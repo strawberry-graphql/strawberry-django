@@ -43,7 +43,88 @@ def test_input_mutation(db, gql_client: GraphQLTestClient):
                 # The cost is properly set, but this user doesn't have
                 # permission to see it
                 "cost": None,
-                "dueDate": "2030-01-01T00:00:00",
+                "dueDate": "2030-01-01",
+            },
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_mutation_with_internal_error_code(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateProject ($input: CreateProjectInput!) {
+        createProject (input: $input) {
+          ... on ProjectType {
+            name
+            cost
+          }
+          ... on OperationInfo {
+            messages {
+              field
+              message
+              kind
+              code
+            }
+          }
+        }
+      }
+    """
+    with assert_num_queries(0):
+        res = gql_client.query(
+            query,
+            {"input": {"name": 100 * "way to long", "cost": "10.40"}},
+        )
+        assert res.data == {
+            "createProject": {
+                "messages": [
+                    {
+                        "field": "name",
+                        "kind": "VALIDATION",
+                        "message": (
+                            "Ensure this value has at most 255 characters (it has"
+                            " 1100)."
+                        ),
+                        "code": "max_length",
+                    },
+                ],
+            },
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_mutation_with_explicit_error_code(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation CreateProject ($input: CreateProjectInput!) {
+        createProject (input: $input) {
+          ... on ProjectType {
+            name
+            cost
+          }
+          ... on OperationInfo {
+            messages {
+              field
+              message
+              kind
+              code
+            }
+          }
+        }
+      }
+    """
+    with assert_num_queries(0):
+        res = gql_client.query(
+            query,
+            {"input": {"name": "Some Project", "cost": "-1"}},
+        )
+        assert res.data == {
+            "createProject": {
+                "messages": [
+                    {
+                        "field": "cost",
+                        "kind": "VALIDATION",
+                        "message": "Cost cannot be lower than zero",
+                        "code": "min_cost",
+                    },
+                ],
             },
         }
 
@@ -62,6 +143,7 @@ def test_input_mutation_with_errors(db, gql_client: GraphQLTestClient):
               field
               message
               kind
+              code
             }
           }
         }
@@ -79,6 +161,7 @@ def test_input_mutation_with_errors(db, gql_client: GraphQLTestClient):
                         "field": "cost",
                         "kind": "VALIDATION",
                         "message": "Cost cannot be higher than 500",
+                        "code": None,
                     },
                 ],
             },

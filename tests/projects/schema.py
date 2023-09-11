@@ -402,15 +402,29 @@ class Mutation:
     ) -> ProjectType:
         """Create project documentation."""
         if cost > 500:
+            # Field error without error code:
             raise ValidationError({"cost": "Cost cannot be higher than 500"})
+        if cost < 0:
+            # Field error with error code:
+            raise ValidationError(
+                {
+                    "cost": ValidationError(
+                        "Cost cannot be lower than zero",
+                        code="min_cost",
+                    ),
+                },
+            )
+        project = Project(
+            name=name,
+            cost=cost,
+            due_date=due_date,
+        )
+        project.full_clean()
+        project.save()
 
         return cast(
             ProjectType,
-            Project.objects.create(
-                name=name,
-                cost=cost,
-                due_date=due_date,
-            ),
+            project,
         )
 
     @mutations.input_mutation(handle_django_errors=True)
