@@ -69,7 +69,7 @@ def _parse_pk(
     if isinstance(value, dict):
         return None, value
 
-    return model._default_manager.get(pk=value), None
+    return cast(_M, model._default_manager.get(pk=value)), None
 
 
 def _parse_data(info: Info, model: type[_M], value: Any):
@@ -108,7 +108,7 @@ class ParsedObject:
             assert isinstance(self.pk, model)
             return self.pk, self.data
 
-        return model._default_manager.get(pk=self.pk), self.data
+        return cast(_M, model._default_manager.get(pk=self.pk)), self.data
 
 
 @dataclasses.dataclass
