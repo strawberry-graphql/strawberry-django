@@ -502,7 +502,8 @@ def update_m2m(
 
                 existing.discard(obj)
             else:
-                manager.create(**data)
+                obj, _ = manager.get_or_create(**data)
+                existing.discard(obj)
 
         for remaining in existing:
             if use_remove:
@@ -520,7 +521,7 @@ def update_m2m(
                 # Do this later in a bulk
                 to_add.append(obj)
             elif data:
-                manager.create(**data)
+                manager.get_or_create(**data)
             else:
                 raise AssertionError
 
