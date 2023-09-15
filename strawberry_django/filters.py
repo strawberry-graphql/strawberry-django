@@ -132,6 +132,12 @@ def build_filter_kwargs(
 
         if isinstance(field_value, Enum):
             field_value = field_value.value
+        elif (
+            isinstance(field_value, list)
+            and len(field_value) > 0
+            and isinstance(field_value[0], Enum)
+        ):
+            field_value = [el.value for el in field_value]
 
         negated = False
         if field_name.startswith("n_"):

@@ -1,6 +1,6 @@
 import textwrap
 from enum import Enum
-from typing import List, Optional
+from typing import Generic, List, Optional, TypeVar
 
 import pytest
 import strawberry
@@ -32,7 +32,21 @@ class FruitEnum(Enum):
 
 @strawberry_django.filters.filter(models.Fruit)
 class EnumFilter:
-    name: FruitEnum
+    name: Optional[FruitEnum] = strawberry.UNSET
+
+
+_T = TypeVar("_T")
+
+
+@strawberry.input
+class FilterInLookup(Generic[_T]):
+    exact: Optional[_T] = strawberry.UNSET
+    in_list: Optional[List[_T]] = strawberry.UNSET
+
+
+@strawberry_django.filters.filter(models.Fruit)
+class EnumLookupFilter:
+    name: Optional[FilterInLookup[FruitEnum]] = strawberry.UNSET
 
 
 @strawberry.input
@@ -74,6 +88,7 @@ class Query:
     field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
     type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
     enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
+    enum_lookup_filter: List[Fruit] = strawberry_django.field(filters=EnumLookupFilter)
 
 
 @pytest.fixture()
@@ -288,6 +303,40 @@ def test_enum(query, fruits):
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_enum_lookup_exact(query, fruits):
+    result = query(
+        """{ fruits: enumLookupFilter(filters: {
+            name: { exact: strawberry }
+        }) { id name } }""",
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_enum_lookup_in(query, fruits):
+    result = query(
+        """{ fruits: enumLookupFilter(filters: {
+            name: { inList: [strawberry] }
+        }) { id name } }""",
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
+    result = query(
+        """{ fruits: enumLookupFilter(filters: {
+            name: { inList: [strawberry, banana] }
+        }) { id name } }""",
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+        {"id": "3", "name": "banana"},
     ]
 
 
