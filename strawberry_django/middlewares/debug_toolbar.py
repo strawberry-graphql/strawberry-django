@@ -11,7 +11,7 @@ from typing import Optional
 from asgiref.sync import sync_to_async
 from debug_toolbar.middleware import (
     _HTML_TYPES,
-    show_toolbar,
+    get_show_toolbar,
 )
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
@@ -156,7 +156,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
 
     def process_request(self, request: HttpRequest):
         response = super().__call__(request)
-
+        show_toolbar = get_show_toolbar()
         if not show_toolbar(request) or DebugToolbar.is_toolbar_request(request):
             return response
 
