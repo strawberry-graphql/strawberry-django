@@ -488,6 +488,7 @@ def interface(
     field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
+    disable_optimization: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL interface.
 
@@ -511,6 +512,7 @@ def interface(
             is_interface=True,
             description=description,
             directives=directives,
+            disable_optimization=disable_optimization,
         )
 
     return wrapper
