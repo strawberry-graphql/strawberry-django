@@ -4,9 +4,9 @@ You can use the [official strawberry relay integration](https://strawberry.rocks
 directly with django types like this:
 
 ```{.python title=types.py}
+from django.db import models
 import strawberry
 import strawberry_django
-from strawberry import relay
 from strawberry_django.relay import ListConnectionWithTotalCount
 
 
@@ -21,14 +21,21 @@ class FruitType(relay.Node):
 
 @strawberry.type
 class Query:
-    some_model_conn: relay.ListConnection[FruitType] = gql.django.connection()
-    some_model_conn_with_total_count: ListConnectionWithTotalCount[
-        FruitType
-    ] = gql.django.connection()
+    # Option 1: Default relay without totalCount
+    # This is the default strawberry relay behaviour.
+    # NOTE: you need to use strawberry_django.connection() - not the default strawberry.relay.connection()
+    fruit: strawberry.relay.ListConnection[FruitType] = strawberry_django.connection()
 
-    @gql.django.connection(gql.relay.ListConnection[FruitType])
-    def some_model_conn_with_resolver(self, root: SomeModel) -> models.QuerySet[SomeModel]:
-        return SomeModel.objects.all()
+    # Option 2: Strawberry django also comes with ListConnectionWithTotalCount
+    # this will allow you to get total-count on your query.
+    fruit_with_total_count: ListConnectionWithTotalCount[
+        FruitType
+    ] = strawberry_django.connection()
+
+    # Option 3: You can manually create resolver by your method manually.
+    @strawberry_django.connection(ListConnectionWithTotalCount[FruitType])
+    def fruit_with_custom_resolver(self) -> models.QuerySet[SomeModel]:
+        return Fruit.objects.all()
 ```
 
 Behind the scenes this extension is doing the following for you:
@@ -36,7 +43,7 @@ Behind the scenes this extension is doing the following for you:
 - Automatically resolve the `relay.NodeID` field using the [model's pk](https://docs.djangoproject.com/en/4.2/ref/models/fields/#django.db.models.Field.primary_key)
 - Automatically generate resolves for connections that doesn't define one. For example,
   `some_model_conn` and `some_model_conn_with_total_count` will both define a custom resolver
-  that returns `SomeModel.objects.all()`.
+  automatically that returns `SomeModel.objects.all()`.
 - Integrate connection resolution with all other features available in this lib. For example,
   [filters](filters.md), [ordering](ordering.md) and
   [permissions](permissions.md) can be used together with connections defined
