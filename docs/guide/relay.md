@@ -4,7 +4,6 @@ You can use the [official strawberry relay integration](https://strawberry.rocks
 directly with django types like this:
 
 ```{.python title=types.py}
-from django.db import models
 import strawberry
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount
@@ -34,7 +33,7 @@ class Query:
 
     # Option 3: You can manually create resolver by your method manually.
     @strawberry_django.connection(ListConnectionWithTotalCount[FruitType])
-    def fruit_with_custom_resolver(self) -> models.QuerySet[SomeModel]:
+    def fruit_with_custom_resolver(self) -> List[SomeModel]:
         return Fruit.objects.all()
 ```
 
