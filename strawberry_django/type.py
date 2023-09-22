@@ -544,6 +544,8 @@ def input(  # noqa: A001
     directives: Optional[Sequence[object]] = (),
     is_filter: Union[Literal["lookups"], bool] = False,
     partial: bool = False,
+    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL input.
 
@@ -569,6 +571,8 @@ def input(  # noqa: A001
             description=description,
             directives=directives,
             partial=partial,
+            fields=fields,
+            exclude=exclude,
         )
 
     return wrapper
@@ -588,6 +592,8 @@ def partial(
     field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
+    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 
@@ -612,6 +618,8 @@ def partial(
             description=description,
             directives=directives,
             partial=True,
+            fields=fields,
+            exclude=exclude
         )
 
     return wrapper
