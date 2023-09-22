@@ -619,7 +619,7 @@ def partial(
             directives=directives,
             partial=True,
             fields=fields,
-            exclude=exclude
+            exclude=exclude,
         )
 
     return wrapper
