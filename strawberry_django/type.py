@@ -99,8 +99,7 @@ def _process_type(
     # from fields or it will override the GlobalID and return the default
     # django id instead in the query-result. This adjustment however still
     # does not fix if the id was set to auto manually on the ModelType.
-    MAP_AUTO_ID_AS_GLOBAL_ID = django_settings().get("MAP_AUTO_ID_AS_GLOBAL_ID", False)
-    if MAP_AUTO_ID_AS_GLOBAL_ID:
+    if django_settings().get("MAP_AUTO_ID_AS_GLOBAL_ID", False):
         model_fields = [f for f in model_fields if f.name != "id"]
 
     existing_annotations = get_annotations(cls)
