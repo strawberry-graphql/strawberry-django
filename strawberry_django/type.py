@@ -95,6 +95,13 @@ def _process_type(
     else:
         model_fields = []
 
+    # If MAP_AUTO_ID_AS_GLOBAL_ID is True, we can no longer set the id
+    # from fields or it will override the GlobalID and return the default
+    # django id instead in the query-result. This adjustment however still
+    # does not fix if the id was set to auto manually on the ModelType.
+    if django_settings().get("MAP_AUTO_ID_AS_GLOBAL_ID", False):
+        model_fields = [f for f in model_fields if f.name != "id"]
+
     existing_annotations = get_annotations(cls)
     try:
         cls.__annotations__  # noqa: B018
@@ -534,6 +541,8 @@ def input(  # noqa: A001
     directives: Optional[Sequence[object]] = (),
     is_filter: Union[Literal["lookups"], bool] = False,
     partial: bool = False,
+    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL input.
 
@@ -559,6 +568,8 @@ def input(  # noqa: A001
             description=description,
             directives=directives,
             partial=partial,
+            fields=fields,
+            exclude=exclude,
         )
 
     return wrapper
@@ -578,6 +589,8 @@ def partial(
     field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
+    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 
@@ -602,6 +615,8 @@ def partial(
             description=description,
             directives=directives,
             partial=True,
+            fields=fields,
+            exclude=exclude,
         )
 
     return wrapper
