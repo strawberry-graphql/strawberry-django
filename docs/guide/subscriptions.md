@@ -121,3 +121,17 @@ class Subscription:
 ```
 
 That's pretty much it for this basic start.
+See for yourself by running your test server `./manange.py runserver` and opening `http://127.0.0.1:8000/graphql/` in your browser.   Now run:
+
+```graphql
+subscription{count(target:10)}
+```
+
+You should see something like (where the count changes every .5s to a max of 9)
+```json
+{
+  "data": {
+    "count": 9
+  }
+}
+```
