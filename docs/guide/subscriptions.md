@@ -1,4 +1,4 @@
-### Subscriptions
+# Subscriptions
 
 Subscriptions are supported using the
 [Strawberry Django Channels](https://strawberry.rocks/docs/integrations/channels) integration.
@@ -6,14 +6,14 @@ Subscriptions are supported using the
 This guide will give you a minimal working example to get you going.
 There are 3 parts to this guide:
 
-1. Making Django compatible with websockets
-2. Changing your habits when testing locally
-2. Creating your first subscription
+1. Making Django compatible
+2. Setup local testing
+3. Creating your first subscription
 
 ## Making Django compatible
 
 It's important to realise that Django doesnt support websockets out of the box. 
-So we'll need to make a few changes.
+To resolve this, we can help the platform along a little.
 
 
 Edit your `MyProject.asgi.py` file and replace it with the following content.
@@ -42,66 +42,65 @@ application = GraphQLProtocolTypeRouter(
 )
 ```
 
+Also, ensure that you enable subscriptions on your AsgiGraphQLView in `MyProject.urls.py`:
+
+```python
+...
+
+urlpatterns = [
+	...
+    path('graphql/', AsyncGraphQLView.as_view(
+        schema=schema,
+        graphiql=settings.DEBUG,
+        subscriptions_enabled=True
+        )
+    ),
+    ...
+]
+
+```
+
 Note, django-channels allows for a lot more complexity. Here we just cover the basic framework to get 
 subscriptions to run on Django with minimal effort.
 
 
-## Changing your habits when testing locally
+## Setup local testing
 
-Traditionally you would run `./manage runserver` or some variation of that to test your app locally.
-From now on - or at least when using subscriptions - you will need to run `./manage runserver_asgi
-
-In order to use this new test-server we need to take again 3 steps.
+The classic `./manage.py runserver` will not support subscriptions.  However, Django has daphne support out of the box to ensure that we can actually use Daphne for the runserver command. [Source](https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/daphne/)
 
 
-Firstly, we need an asgi server to handle the workload, so let's install it:
+Firstly, we need install Daphne to handle the workload, so let's install it:
 
 ```bash
-pip install hypercorn
+pip install daphne
 ```
 
-Secondly, we need to add `strawberry_django` to your settings.py file.
+Secondly, we need to add `daphne` to your settings.py file before 'django.contrib.staticfiles'
 
 ```python
 INSTALLED_APPS = [
 	...
-    'strawberry-graphql-django'
+    'daphne',
+    'django.contrib.staticfiles',
     ...
 ]
 ``` 
 
-And thirdly, running the new test-server will not load the static-files we need automatically.
-So we'll add the following code to `MyProject.urls.py`
+and add your ASGI_APPLICATION setting in your settings.py
 
 ```python
-if settings.DEBUG:
-    from django.conf.urls.static import static
-    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-    from django.views.generic.base import RedirectView
-
-    urlpatterns += staticfiles_urlpatterns()
-    urlpatterns += static(settings.MEDIA_URL,
-                          document_root=settings.MEDIA_ROOT)
-    urlpatterns += [
-        path(r'favicon\.ico',
-            RedirectView.as_view(
-                url=settings.STATIC_URL + 'favicon.ico', permanent=True
-            )
-        ),
-    ]
+# settings.py
+...
+ASGI_APPLICATION = 'MyProject.asgi.application'
+...
 ```
 
 
-Now you can run your test-server like this:
+Now you can run your test-server like as usual:
 
 ```bash
-./manage.py runserver_asgi
-# To see other options:
-# ./manage.py runserver_asgi --help
+./manage.py runserver
 ```
-
-Why is the test-server based on hypercorn, when you can use Daphne or Uvicorn?  We're picking hypercorn as it supports auto-reload which is great when developing and mimics the behaviour of the original runserver script.
-
 
 ## Creating your first subscription
 
