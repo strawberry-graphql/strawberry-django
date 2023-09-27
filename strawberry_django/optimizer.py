@@ -19,6 +19,7 @@ from typing import (
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
+from django.db.models.expressions import BaseExpression
 from django.db.models.fields.reverse_related import (
     ManyToManyRel,
     ManyToOneRel,
@@ -50,8 +51,11 @@ from .utils.inspect import (
     get_selections,
 )
 from .utils.typing import (
+    AnnotateCallable,
+    AnnotateType,
     PrefetchCallable,
     PrefetchType,
+    TypeOrMapping,
     TypeOrSequence,
     get_django_definition,
 )
@@ -72,6 +76,7 @@ __all__ = [
 _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
+_annotate_placeholder = "__annotated_placeholder__"
 _interfaces: defaultdict[
     Schema,
     dict[StrawberryObjectDefinition, list[StrawberryObjectDefinition]],
@@ -92,6 +97,8 @@ class OptimizerConfig:
             Enable `QuerySet.select_related` optimizations
         enable_prefetch_related:
             Enable `QuerySet.prefetch_related` optimizations
+        enable_annotate:
+            Enable `QuerySet.annotate` optimizations
         prefetch_custom_queryset:
             Use custom instead of _base_manager for prefetch querysets
 
@@ -100,6 +107,7 @@ class OptimizerConfig:
     enable_only: bool = dataclasses.field(default=True)
     enable_select_related: bool = dataclasses.field(default=True)
     enable_prefetch_related: bool = dataclasses.field(default=True)
+    enable_annotate: bool = dataclasses.field(default=True)
     prefetch_custom_queryset: bool = dataclasses.field(default=False)
 
 
@@ -121,14 +129,18 @@ class OptimizerStore:
     only: list[str] = dataclasses.field(default_factory=list)
     select_related: list[str] = dataclasses.field(default_factory=list)
     prefetch_related: list[PrefetchType] = dataclasses.field(default_factory=list)
+    annotate: dict[str, AnnotateType] = dataclasses.field(default_factory=dict)
 
     def __bool__(self):
-        return any([self.only, self.select_related, self.prefetch_related])
+        return any(
+            [self.only, self.select_related, self.prefetch_related, self.annotate],
+        )
 
     def __ior__(self, other: OptimizerStore):
         self.only.extend(other.only)
         self.select_related.extend(other.select_related)
         self.prefetch_related.extend(other.prefetch_related)
+        self.annotate.update(other.annotate)
         return self
 
     def __or__(self, other: OptimizerStore):
@@ -139,6 +151,7 @@ class OptimizerStore:
             only=self.only[:],
             select_related=self.select_related[:],
             prefetch_related=self.prefetch_related[:],
+            annotate=self.annotate.copy(),
         )
 
     @classmethod
@@ -148,6 +161,7 @@ class OptimizerStore:
         only: TypeOrSequence[str] | None = None,
         select_related: TypeOrSequence[str] | None = None,
         prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+        annotate: TypeOrMapping[AnnotateType] | None = None,
     ):
         return cls(
             only=[only] if isinstance(only, str) else list(only or []),
@@ -160,6 +174,13 @@ class OptimizerStore:
                 [prefetch_related]
                 if isinstance(prefetch_related, (str, Prefetch, Callable))
                 else list(prefetch_related or [])
+            ),
+            annotate=(
+                # placeholder here,
+                # because field name is evaluated later on .annotate call:
+                {_annotate_placeholder: annotate}
+                if isinstance(annotate, (BaseExpression, Callable))
+                else dict(annotate or {})
             ),
         )
 
@@ -178,10 +199,18 @@ class OptimizerStore:
             else:  # pragma:nocover
                 assert_never(p)
 
+        annotate = {}
+        for k, v in self.annotate.items():
+            if isinstance(v, Callable):
+                assert_type(v, AnnotateCallable)
+                v = v(info)  # noqa: PLW2901
+            annotate[f"{prefix}{LOOKUP_SEP}{k}"] = v
+
         return self.__class__(
             only=[f"{prefix}{LOOKUP_SEP}{i}" for i in self.only],
             select_related=[f"{prefix}{LOOKUP_SEP}{i}" for i in self.select_related],
             prefetch_related=prefetch_related,
+            annotate=annotate,
         )
 
     def apply(
@@ -252,6 +281,15 @@ class OptimizerStore:
 
         if config.enable_only and self.only:
             qs = qs.only(*self.only)
+
+        if config.enable_annotate and self.annotate:
+            to_annotate = {}
+            for k, v in self.annotate.items():
+                if isinstance(v, Callable):
+                    assert_type(v, AnnotateCallable)
+                    v = v(info)  # noqa: PLW2901
+                to_annotate[k] = v
+            qs = qs.annotate(**to_annotate)
 
         return qs
 
@@ -399,6 +437,18 @@ def _get_model_hints(
         # Add annotations from the field if they exist
         field_store = getattr(field, "store", None)
         if field_store is not None:
+            if (
+                len(field_store.annotate) == 1
+                and _annotate_placeholder in field_store.annotate
+            ):
+                # This is a special case where we need to update the field name,
+                # because when field_store was created on __init__,
+                # the field name wasn't available.
+                # This allows for annotate expressions to be declared as:
+                # Instead of the more redundant:
+                field_store.annotate = {
+                    field.name: field_store.annotate[_annotate_placeholder],
+                }
             store |= (
                 field_store.with_prefix(prefix, info=info) if prefix else field_store
             )
@@ -676,6 +726,8 @@ class DjangoOptimizerExtension(SchemaExtension):
             Enable `QuerySet.select_related` optimizations
         enable_prefetch_related_optimization:
             Enable `QuerySet.prefetch_related` optimizations
+        enable_annotate_optimization:
+            Enable `QuerySet.annotate` optimizations
 
     Examples
     --------
@@ -704,13 +756,15 @@ class DjangoOptimizerExtension(SchemaExtension):
         enable_only_optimization: bool = True,
         enable_select_related_optimization: bool = True,
         enable_prefetch_related_optimization: bool = True,
+        enable_annotate_optimization: bool = True,
         execution_context: ExecutionContext | None = None,
         prefetch_custom_queryset: bool = False,
     ):
         super().__init__(execution_context=execution_context)  # type: ignore
-        self.enable_ony = enable_only_optimization
+        self.enable_only = enable_only_optimization
         self.enable_select_related = enable_select_related_optimization
         self.enable_prefetch_related = enable_prefetch_related_optimization
+        self.enable_annotate_optimization = enable_annotate_optimization
         self.prefetch_custom_queryset = prefetch_custom_queryset
 
     def on_execute(self) -> Generator[None, None, None]:
@@ -738,7 +792,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         if isinstance(ret, QuerySet) and ret._result_cache is None:  # type: ignore
             config = OptimizerConfig(
                 enable_only=(
-                    self.enable_ony and info.operation.operation == OperationType.QUERY
+                    self.enable_only and info.operation.operation == OperationType.QUERY
                 ),
                 enable_select_related=self.enable_select_related,
                 enable_prefetch_related=self.enable_prefetch_related,
@@ -768,10 +822,11 @@ class DjangoOptimizerExtension(SchemaExtension):
             return qs
 
         config = OptimizerConfig(
-            enable_only=self.enable_ony
+            enable_only=self.enable_only
             and info.operation.operation == OperationType.QUERY,
             enable_select_related=self.enable_select_related,
             enable_prefetch_related=self.enable_prefetch_related,
+            enable_annotate=self.enable_annotate_optimization,
             prefetch_custom_queryset=self.prefetch_custom_queryset,
         )
         return optimize(qs, info, config=config, store=store)

@@ -1,6 +1,8 @@
+import datetime
 from typing import Any, List, cast
 
 import pytest
+from django.utils import timezone
 from strawberry.relay import to_base64
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -13,7 +15,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Assignee
+from .projects.models import Assignee, Issue
 from .utils import GraphQLTestClient, assert_num_queries
 
 
@@ -694,3 +696,118 @@ def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
         res = gql_client.query(query)
 
     assert res.data == expected
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_annotate(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($node_id: GlobalID!) {
+        project (id: $node_id) {
+          id
+          name
+          isDelayed
+          milestonesCount
+        }
+      }
+    """
+
+    expected = []
+    today = timezone.now().date()
+    for p in ProjectFactory.create_batch(2):
+        ms = MilestoneFactory.create_batch(3, project=p)
+        p_res: dict[str, Any] = {
+            "id": to_base64("ProjectType", p.id),
+            "name": p.name,
+            "isDelayed": p.due_date < today,
+            "milestonesCount": len(ms),
+        }
+        expected.append(p_res)
+    for p in ProjectFactory.create_batch(
+        2,
+        due_date=today - datetime.timedelta(days=1),
+    ):
+        ms = MilestoneFactory.create_batch(2, project=p)
+        p_res: dict[str, Any] = {
+            "id": to_base64("ProjectType", p.id),
+            "name": p.name,
+            "isDelayed": p.due_date < today,
+            "milestonesCount": len(ms),
+        }
+        expected.append(p_res)
+
+    assert len(expected) == 4
+    for e in expected:
+        if DjangoOptimizerExtension.enabled.get():
+            with assert_num_queries(1):
+                res = gql_client.query(query, {"node_id": e["id"]})
+                assert res.data == {"project": e}
+        else:
+            # isDelayed and milestonesCount requires the optimizer to be turned on
+            res = gql_client.query(
+                query,
+                {"node_id": e["id"]},
+                asserts_errors=False,
+            )
+            assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_annotate_with_callable(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($node_id: GlobalID!) {
+        project (id: $node_id) {
+          id
+          name
+          milestones {
+            id
+            name
+            myBugsCount
+          }
+        }
+      }
+    """
+
+    user = UserFactory.create()
+    expected = []
+    for p in ProjectFactory.create_batch(2):
+        p_res: dict[str, Any] = {
+            "id": to_base64("ProjectType", p.id),
+            "name": p.name,
+            "milestones": [],
+        }
+        expected.append(p_res)
+        for m in MilestoneFactory.create_batch(2, project=p):
+            m_res: dict[str, Any] = {
+                "id": to_base64("MilestoneType", m.id),
+                "name": m.name,
+                "myBugsCount": 0,
+            }
+            p_res["milestones"].append(m_res)
+
+            # Those issues are not assigned to the user,
+            # thus they should not be counted
+            IssueFactory.create_batch(2, milestone=m, kind=Issue.Kind.BUG)
+            # Those issues are not bugs,
+            # thus they should not be counted
+            IssueFactory.create_batch(3, milestone=m, kind=Issue.Kind.FEATURE)
+            # Those issues are bugs assigned to the user,
+            # thus they will be counted
+            for i in IssueFactory.create_batch(4, milestone=m, kind=Issue.Kind.BUG):
+                Assignee.objects.create(user=user, issue=i)
+                m_res["myBugsCount"] += 1
+
+    assert len(expected) == 2
+    for e in expected:
+        with gql_client.login(user):
+            if DjangoOptimizerExtension.enabled.get():
+                with assert_num_queries(4):
+                    res = gql_client.query(query, {"node_id": e["id"]})
+                    assert res.data == {"project": e}
+            else:
+                # myBugsCount requires the optimizer to be turned on
+                res = gql_client.query(
+                    query,
+                    {"node_id": e["id"]},
+                    asserts_errors=False,
+                )
+                assert res.errors
