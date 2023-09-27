@@ -445,7 +445,9 @@ def _get_model_hints(
                 # because when field_store was created on __init__,
                 # the field name wasn't available.
                 # This allows for annotate expressions to be declared as:
+                #   total: int = gql.django.field(annotate=Sum("price"))  # noqa: ERA001, E501
                 # Instead of the more redundant:
+                #   total: int = gql.django.field(annotate={"total": Sum("price")})  # noqa: ERA001, E501
                 field_store.annotate = {
                     field.name: field_store.annotate[_annotate_placeholder],
                 }
