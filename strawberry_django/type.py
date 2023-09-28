@@ -40,7 +40,9 @@ from strawberry_django.relay import (
     resolve_model_nodes,
 )
 from strawberry_django.utils.typing import (
+    AnnotateType,
     PrefetchType,
+    TypeOrMapping,
     TypeOrSequence,
     WithStrawberryDjangoObjectDefinition,
     get_annotations,
@@ -79,6 +81,7 @@ def _process_type(
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[AnnotateType]] = None,
     disable_optimization: bool = False,
     fields: Optional[Union[List[str], Literal["__all__"]]] = None,
     exclude: Optional[List[str]] = None,
@@ -141,6 +144,7 @@ def _process_type(
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
+            annotate=annotate,
         ),
     )
 
@@ -438,6 +442,7 @@ def type(  # noqa: A001
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
+    annotate: Optional[TypeOrMapping[AnnotateType]] = None,
     disable_optimization: bool = False,
     fields: Optional[Union[List[str], Literal["__all__"]]] = None,
     exclude: Optional[List[str]] = None,
@@ -473,6 +478,7 @@ def type(  # noqa: A001
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
+            annotate=annotate,
             disable_optimization=disable_optimization,
             fields=fields,
             exclude=exclude,

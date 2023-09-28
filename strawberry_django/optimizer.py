@@ -123,6 +123,8 @@ class OptimizerStore:
             Set of values to optimize using `QuerySet.select_related`
         prefetch_related:
             Set of values to optimize using `QuerySet.prefetch_related`
+        annotate:
+            Dict of values to use in `QuerySet.annotate`
 
     """
 
@@ -798,6 +800,7 @@ class DjangoOptimizerExtension(SchemaExtension):
                 ),
                 enable_select_related=self.enable_select_related,
                 enable_prefetch_related=self.enable_prefetch_related,
+                enable_annotate=self.enable_annotate_optimization,
                 prefetch_custom_queryset=self.prefetch_custom_queryset,
             )
             ret = django_fetch(optimize(qs=ret, info=info, config=config))

@@ -82,3 +82,29 @@ def test_non_dataclass_annotations_are_ignored_on_input():
     }
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_optimizer_hints_on_type():
+    class OtherModel(models.Model):
+        name = models.CharField(max_length=255)
+
+    class SomeModel(models.Model):
+        name = models.CharField(max_length=255)
+        other = models.ForeignKey(OtherModel, on_delete=models.CASCADE)
+
+    @strawberry_django.type(
+        SomeModel,
+        only=["name", "other", "other_name"],
+        select_related=["other"],
+        prefetch_related=["other"],
+        annotate={"other_name": models.F("other__name")},
+    )
+    class SomeModelType:
+        name: str
+
+    store = SomeModelType.__strawberry_django_definition__.store
+
+    assert store.only == ["name", "other", "other_name"]
+    assert store.select_related == ["other"]
+    assert store.prefetch_related == ["other"]
+    assert store.annotate == {"other_name": models.F("other__name")}
