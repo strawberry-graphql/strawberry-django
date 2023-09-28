@@ -217,7 +217,7 @@ def get_selections(
                 else:
                     ret[f_name] = f
         else:  # pragma:nocover
-            assert_never(s)
+            raise TypeError(s)
 
     return ret
 
