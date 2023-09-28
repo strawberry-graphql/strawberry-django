@@ -707,6 +707,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
           name
           isDelayed
           milestonesCount
+          isSmall
         }
       }
     """
@@ -720,6 +721,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
             "name": p.name,
             "isDelayed": p.due_date < today,
             "milestonesCount": len(ms),
+            "isSmall": len(ms) < 3,
         }
         expected.append(p_res)
     for p in ProjectFactory.create_batch(
@@ -732,6 +734,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
             "name": p.name,
             "isDelayed": p.due_date < today,
             "milestonesCount": len(ms),
+            "isSmall": len(ms) < 3,
         }
         expected.append(p_res)
 

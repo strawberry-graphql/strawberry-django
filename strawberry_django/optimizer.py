@@ -615,8 +615,8 @@ def optimize(
     """Optimize the given queryset considering the gql info.
 
     This will look through the gql selections, fields and model hints and apply
-    `only`, `select_related` and `prefetch_related` optimizations according those
-    on the `QuerySet`_.
+    `only`, `select_related`, `prefetch_related` and `annotate` optimizations
+    according those on the `QuerySet`_.
 
     Note:
     ----

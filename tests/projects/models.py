@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import Count, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
 
@@ -49,6 +49,10 @@ class Project(models.Model):
         blank=True,
         default=None,
     )
+
+    @model_property(annotate={"_milestone_count": Count("milestone")})
+    def is_small(self) -> int:
+        return self._milestone_count < 3
 
 
 class Milestone(models.Model):

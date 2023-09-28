@@ -100,6 +100,7 @@ class ProjectType(relay.Node):
         ),
     )
     cost: strawberry.auto = strawberry_django.field(extensions=[IsAuthenticated()])
+    is_small: strawberry.auto
 
 
 @strawberry_django.filter(Milestone, lookups=True)
