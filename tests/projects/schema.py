@@ -162,8 +162,8 @@ class MilestoneType(relay.Node):
             ),
         },
     )
-    def my_bugs_count(self) -> int:
-        return self._my_bugs_count  # type: ignore
+    def my_bugs_count(self, root: Milestone) -> int:
+        return root._my_bugs_count  # type: ignore
 
     @strawberry_django.field
     async def async_field(self, value: str) -> str:

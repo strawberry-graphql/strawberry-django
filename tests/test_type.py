@@ -5,6 +5,7 @@ import strawberry
 from django.db import models
 
 import strawberry_django
+from strawberry_django.utils.typing import get_django_definition
 
 
 def test_non_dataclass_annotations_are_ignored_on_type():
@@ -102,7 +103,7 @@ def test_optimizer_hints_on_type():
     class SomeModelType:
         name: str
 
-    store = SomeModelType.__strawberry_django_definition__.store
+    store = get_django_definition(SomeModelType, strict=True).store
 
     assert store.only == ["name", "other", "other_name"]
     assert store.select_related == ["other"]
