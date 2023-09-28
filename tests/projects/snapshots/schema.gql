@@ -452,6 +452,7 @@ type ProjectType implements Node {
   milestonesCount: Int!
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
+  isSmall: Int!
 }
 
 """An edge in a connection."""
