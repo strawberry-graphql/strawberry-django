@@ -138,7 +138,7 @@ Artist.objects.all().only("id", "name").prefetch_related(
         )
     ),
 ).annotate(
-  albums_count=Count("albums")
+    albums_count=Count("albums")
 )
 
 # For "songs" query
