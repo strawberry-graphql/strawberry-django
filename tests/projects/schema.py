@@ -7,7 +7,16 @@ import strawberry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import (
+    BooleanField,
+    Count,
+    Exists,
+    ExpressionWrapper,
+    OuterRef,
+    Prefetch,
+    Q,
+)
+from django.db.models.functions import Now
 from django.db.models.query import QuerySet
 from strawberry import relay
 from strawberry.types.info import Info
@@ -83,7 +92,15 @@ class ProjectType(relay.Node):
     name: strawberry.auto
     due_date: strawberry.auto
     milestones: List["MilestoneType"]
+    milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
+    is_delayed: bool = strawberry_django.field(
+        annotate=ExpressionWrapper(
+            Q(due_date__lt=Now()),
+            output_field=BooleanField(),
+        ),
+    )
     cost: strawberry.auto = strawberry_django.field(extensions=[IsAuthenticated()])
+    is_small: strawberry.auto
 
 
 @strawberry_django.filter(Milestone, lookups=True)
@@ -133,6 +150,20 @@ class MilestoneType(relay.Node):
     )
     def my_issues(self) -> List["IssueType"]:
         return self._my_issues  # type: ignore
+
+    @strawberry_django.field(
+        annotate={
+            "_my_bugs_count": lambda info: Count(
+                "issue",
+                filter=Q(
+                    issue__issue_assignee__user_id=info.context.request.user.id,
+                    issue__kind=Issue.Kind.BUG,
+                ),
+            ),
+        },
+    )
+    def my_bugs_count(self, root: Milestone) -> int:
+        return root._my_bugs_count  # type: ignore
 
     @strawberry_django.field
     async def async_field(self, value: str) -> str:

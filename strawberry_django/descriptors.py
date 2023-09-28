@@ -19,7 +19,7 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from strawberry_django.optimizer import OptimizerStore
 
-    from .utils.typing import PrefetchType, TypeOrSequence
+    from .utils.typing import AnnotateType, PrefetchType, TypeOrMapping, TypeOrSequence
 
 __all__ = [
     "ModelProperty",
@@ -46,6 +46,7 @@ class ModelProperty(Generic[_M, _R]):
         only: Optional["TypeOrSequence[str]"] = None,
         select_related: Optional["TypeOrSequence[str]"] = None,
         prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
+        annotate: Optional["TypeOrMapping[AnnotateType]"] = None,
     ):
         from .optimizer import OptimizerStore
 
@@ -58,6 +59,7 @@ class ModelProperty(Generic[_M, _R]):
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
+            annotate=annotate,
         )
 
     def __set_name__(self, owner: Type[_M], name: str):
@@ -108,6 +110,7 @@ def model_property(
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
+    annotate: Optional["TypeOrMapping[AnnotateType]"] = None,
 ) -> ModelProperty[_M, _R]: ...
 
 
@@ -120,6 +123,7 @@ def model_property(
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
+    annotate: Optional["TypeOrMapping[AnnotateType]"] = None,
 ) -> Callable[[Callable[[_M], _R]], ModelProperty[_M, _R]]: ...
 
 
@@ -131,6 +135,7 @@ def model_property(
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
+    annotate: Optional["TypeOrMapping[AnnotateType]"] = None,
 ) -> Any:
     def wrapper(f):
         return ModelProperty(
@@ -140,6 +145,7 @@ def model_property(
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
+            annotate=annotate,
         )
 
     if func is not None:
@@ -155,6 +161,7 @@ def model_cached_property(
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
+    annotate: Optional["TypeOrMapping[AnnotateType]"] = None,
 ):
     """Property with gql optimization hinting.
 
@@ -174,6 +181,8 @@ def model_cached_property(
             Optional sequence of values to optimize using `QuerySet.select_related`
         prefetch_related:
             Optional sequence of values to optimize using `QuerySet.prefetch_related`
+        annotate:
+            Optional mapping of values to use in `QuerySet.annotate`
 
     Returns:
     -------
@@ -205,4 +214,5 @@ def model_cached_property(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        annotate=annotate,
     )

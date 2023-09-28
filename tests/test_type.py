@@ -5,6 +5,7 @@ import strawberry
 from django.db import models
 
 import strawberry_django
+from strawberry_django.utils.typing import get_django_definition
 
 
 def test_non_dataclass_annotations_are_ignored_on_type():
@@ -82,3 +83,29 @@ def test_non_dataclass_annotations_are_ignored_on_input():
     }
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_optimizer_hints_on_type():
+    class OtherModel(models.Model):
+        name = models.CharField(max_length=255)
+
+    class SomeModel(models.Model):
+        name = models.CharField(max_length=255)
+        other = models.ForeignKey(OtherModel, on_delete=models.CASCADE)
+
+    @strawberry_django.type(
+        SomeModel,
+        only=["name", "other", "other_name"],
+        select_related=["other"],
+        prefetch_related=["other"],
+        annotate={"other_name": models.F("other__name")},
+    )
+    class SomeModelType:
+        name: str
+
+    store = get_django_definition(SomeModelType, strict=True).store
+
+    assert store.only == ["name", "other", "other_name"]
+    assert store.select_related == ["other"]
+    assert store.prefetch_related == ["other"]
+    assert store.annotate == {"other_name": models.F("other__name")}
