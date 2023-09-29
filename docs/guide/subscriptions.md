@@ -12,9 +12,8 @@ There are 3 parts to this guide:
 
 ## Making Django compatible
 
-It's important to realise that Django doesnt support websockets out of the box. 
+It's important to realise that Django doesn't support websockets out of the box.
 To resolve this, we can help the platform along a little.
-
 
 Edit your `MyProject.asgi.py` file and replace it with the following content.
 Ensure that you replace the relevant code with your setup.
@@ -34,8 +33,6 @@ django_asgi_app = get_asgi_application()
 # for the schema.
 
 from .schema import schema  # CHANGE path to where you housed your schema file.
- 
- 
 application = AuthGraphQLProtocolTypeRouter(
     schema,
     django_application=django_asgi_app,
@@ -49,25 +46,25 @@ Also, ensure that you enable subscriptions on your AsgiGraphQLView in `MyProject
 
 urlpatterns = [
 	...
-    path('graphql/', AsyncGraphQLView.as_view(
-        schema=schema,
-        graphiql=settings.DEBUG,
-        subscriptions_enabled=True
-        )
+    path(
+        'graphql/',
+        AsyncGraphQLView.as_view(
+            schema=schema,
+            graphiql=settings.DEBUG,
+            subscriptions_enabled=True,
+        ),
     ),
     ...
 ]
 
 ```
 
-Note, django-channels allows for a lot more complexity. Here we just cover the basic framework to get 
+Note, django-channels allows for a lot more complexity. Here we just cover the basic framework to get
 subscriptions to run on Django with minimal effort.
-
 
 ## Setup local testing
 
-The classic `./manage.py runserver` will not support subscriptions.  However, Django has daphne support out of the box to ensure that we can actually use Daphne for the runserver command. [Source](https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/daphne/)
-
+The classic `./manage.py runserver` will not support subscriptions. However, Django has daphne support out of the box to ensure that we can actually use Daphne for the runserver command. [Source](https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/daphne/)
 
 Firstly, we need install Daphne to handle the workload, so let's install it:
 
@@ -84,9 +81,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     ...
 ]
-``` 
+```
 
-and add your ASGI_APPLICATION setting in your settings.py
+and add your `ASGI_APPLICATION` setting in your settings.py
 
 ```python
 # settings.py
@@ -94,7 +91,6 @@ and add your ASGI_APPLICATION setting in your settings.py
 ASGI_APPLICATION = 'MyProject.asgi.application'
 ...
 ```
-
 
 Now you can run your test-server like as usual:
 
@@ -108,12 +104,12 @@ Once you've taken care of those 2 setup steps, your first subscription is a bree
 Go and edit your schema-file and add:
 
 ```python
-from strawberry import type, subscription
 import asyncio
+import strawberry
 
-@type
+@strawberry.type
 class Subscription:
-    @subscription
+    @strawberry.subscription
     async def count(self, target: int = 100) -> int:
         for i in range(target):
             yield i
@@ -121,13 +117,16 @@ class Subscription:
 ```
 
 That's pretty much it for this basic start.
-See for yourself by running your test server `./manange.py runserver` and opening `http://127.0.0.1:8000/graphql/` in your browser.   Now run:
+See for yourself by running your test server `./manange.py runserver` and opening `http://127.0.0.1:8000/graphql/` in your browser. Now run:
 
 ```graphql
-subscription{count(target:10)}
+subscription {
+  count(target: 10)
+}
 ```
 
 You should see something like (where the count changes every .5s to a max of 9)
+
 ```json
 {
   "data": {
