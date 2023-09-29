@@ -106,12 +106,12 @@ Once you've taken care of those 2 setup steps, your first subscription is a bree
 Go and edit your schema-file and add:
 
 ```python
-from strawberry import type, subscription
 import asyncio
+import strawberry
 
-@type
+@strawberry.type
 class Subscription:
-    @subscription
+    @strawberry.subscription
     async def count(self, target: int = 100) -> int:
         for i in range(target):
             yield i
