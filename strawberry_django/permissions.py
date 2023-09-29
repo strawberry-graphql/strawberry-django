@@ -41,9 +41,9 @@ from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import await_maybe
 from typing_extensions import Literal, Self, assert_never
 
+from strawberry_django.auth.queries import get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
 from strawberry_django.resolvers import django_resolver
-from strawberry_django.auth.queries import get_current_user
 
 from .utils.query import filter_for_user
 from .utils.typing import UserType
@@ -290,7 +290,6 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         info: Info,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        
         user = get_current_user(info)
 
         try:
@@ -323,7 +322,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         **kwargs: Dict[str, Any],
     ) -> Any:
         user = get_current_user(info)
-    
+
         try:
             from .integrations.guardian import get_user_or_anonymous
         except (ImportError, RuntimeError):  # pragma: no cover

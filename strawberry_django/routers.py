@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from django.urls import re_path
-
+from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
-from channels.auth import AuthMiddlewareStack
-
+from django.urls import re_path
 from strawberry.channels.handlers.http_handler import GraphQLHTTPConsumer
 from strawberry.channels.handlers.ws_handler import GraphQLWSConsumer
 
@@ -16,9 +14,8 @@ if TYPE_CHECKING:
 
 
 class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
-    """
-    Convenience class to set up GraphQL on both HTTP and Websocket whilte enabling AuthMiddlewareStack
-    and the AllowedHostsOriginValidator
+    """Convenience class to set up GraphQL on both HTTP and Websocket whilte enabling AuthMiddlewareStack
+    and the AllowedHostsOriginValidator.
 
     ```
     from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
@@ -41,7 +38,7 @@ class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
     def __init__(
         self,
         schema: BaseSchema,
-        django_application: Optional[str] = None,
+        django_application: str | None = None,
         url_pattern: str = "^graphql",
     ):
         http_urls = [re_path(url_pattern, GraphQLHTTPConsumer.as_asgi(schema=schema))]
@@ -52,17 +49,20 @@ class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
             {
                 "http": AuthMiddlewareStack(
                     URLRouter(
-                        http_urls
+                        http_urls,
                     ),
                 ),
                 "websocket": AllowedHostsOriginValidator(
                     AuthMiddlewareStack(
                         URLRouter(
                             [
-                                re_path(url_pattern, GraphQLWSConsumer.as_asgi(schema=schema)),
+                                re_path(
+                                    url_pattern,
+                                    GraphQLWSConsumer.as_asgi(schema=schema),
+                                ),
                             ],
                         ),
                     ),
                 ),
-            }
+            },
         )
