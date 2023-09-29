@@ -85,7 +85,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-and add your ASGI_APPLICATION setting in your settings.py
+and add your `ASGI_APPLICATION` setting in your settings.py
 
 ```python
 # settings.py
