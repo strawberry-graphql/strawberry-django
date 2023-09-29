@@ -17,6 +17,7 @@ import strawberry_django
 from strawberry_django import mutations
 from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartial
 from strawberry_django.mutations import resolvers
+from strawberry_django.auth.queries import get_current_user
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.permissions import (
     HasPerm,
@@ -348,7 +349,7 @@ class Query:
 
     @strawberry_django.field
     def me(self, info: Info) -> Optional[UserType]:
-        user = info.context.request.user
+        user = get_current_user()
         if not user.is_authenticated:
             return None
 

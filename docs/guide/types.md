@@ -103,12 +103,15 @@ You can use that `info` parameter to, for example,
 limit access to results based on the current user in the request:
 
 ```{.python title=types.py}
+from stawberry_django.auth.queries import get_current_user
+
 @strawberry.django.type(models.Fruit)
 class Berry:
 
     @classmethod
     def get_queryset(cls, queryset, info, **kwargs):
-        if not info.context.request.user.is_staff:
+        user = get_current_user(info)
+        if not user.is_staff:
             # Restrict access to top secret berries if the user is not a staff member
             queryset = queryset.filter(is_top_secret=False)
         return queryset.filter(name__contains="berry")

@@ -11,11 +11,13 @@ def resolver(root, info: Info):
 
 ## How to access the current user object in resolvers?
 
-The current user object is accessible via the `info.context.request.user` object.
+The current user object is accessible via the `get_current_user` method.
 
 ```python
+from strawberry_django.auth.queries import get_current_user
+
 def resolver(root, info: Info):
-    current_user = info.context.request.user
+    current_user = get_current_user(info)
 ```
 
 ## Autocompletion with editors

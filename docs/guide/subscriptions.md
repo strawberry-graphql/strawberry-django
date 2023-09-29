@@ -24,7 +24,7 @@ Ensure that you replace the relevant code with your setup.
 import os
 
 from django.core.asgi import get_asgi_application
-from strawberry.channels import GraphQLProtocolTypeRouter
+from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
  
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MyProject.settings")  # CHANGE the project name
 django_asgi_app = get_asgi_application()
@@ -36,7 +36,7 @@ django_asgi_app = get_asgi_application()
 from .schema import schema  # CHANGE path to where you housed your schema file.
  
  
-application = GraphQLProtocolTypeRouter(
+application = AuthGraphQLProtocolTypeRouter(
     schema,
     django_application=django_asgi_app,
 )
