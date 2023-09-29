@@ -13,9 +13,11 @@ There are 3 parts to this guide:
 ## Making Django compatible
 
 It's important to realise that Django doesn't support websockets out of the box.
-To resolve this, we can help the platform along a little.
+To resolve this, we can help the platform along a little. 
 
-Edit your `MyProject.asgi.py` file and replace it with the following content.
+This implementation is based on Django Channels - this means that should you wish - there is a lot more websockets fun to be had.  If you're interested, head over to [Django Schannels](https://channels.readthedocs.io).
+
+To add the base compatibility, go to your `MyProject.asgi.py` file and replace it with the following content.
 Ensure that you replace the relevant code with your setup.
 
 ```python
@@ -64,9 +66,11 @@ subscriptions to run on Django with minimal effort.
 
 ## Setup local testing
 
-The classic `./manage.py runserver` will not support subscriptions. However, Django has daphne support out of the box to ensure that we can actually use Daphne for the runserver command. [Source](https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/daphne/)
+The classic `./manage.py runserver` will not support subscriptions as it runs on WSGI mode. However, Django has ASGI server support out of the box through Daphne, which will override the runserver command to support our desired ASGI support.  
 
-Firstly, we need install Daphne to handle the workload, so let's install it:
+ There are other asgi servers available, such as Uvicorn and Hypercorn.  For the sake of simplicity we'll use Daphne as it comes with the runserver override. [Django Docs](https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/daphne/) This shouldn't stop you from using any of the other ASGI flavours in production or local testing like Uvicorn or Hypercorn
+
+To get started: Firstly, we need install Daphne to handle the workload, so let's install it:
 
 ```bash
 pip install daphne
@@ -92,7 +96,7 @@ ASGI_APPLICATION = 'MyProject.asgi.application'
 ...
 ```
 
-Now you can run your test-server like as usual:
+Now you can run your test-server like as usual, but with ASGI support:
 
 ```bash
 ./manage.py runserver
