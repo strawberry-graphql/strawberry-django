@@ -12,7 +12,7 @@ There are 3 parts to this guide:
 
 ## Making Django compatible
 
-It's important to realise that Django doesnt support websockets out of the box.
+It's important to realise that Django doesn't support websockets out of the box.
 To resolve this, we can help the platform along a little.
 
 Edit your `MyProject.asgi.py` file and replace it with the following content.
