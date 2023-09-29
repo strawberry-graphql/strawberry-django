@@ -12,6 +12,9 @@ What it does:
 3. Call [QuerySet.only()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#only)
    on all selected fields to reduce the database payload and only requesting what is actually being
    selected
+4. Call [QuerySet.annotate()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#annotate)
+   to support any passed annotations
+   of [Query Expressions](https://docs.djangoproject.com/en/4.2/ref/models/expressions/).
 
 Those are specially useful to avoid some common GraphQL pitfalls, like the famous `n+1` issue.
 
@@ -63,6 +66,7 @@ import strawberry.django
 class ArtistType:
     name: auto
     albums: list["AlbumType"]
+    albums_count: int = strawberry.django.field(annotate=Count("albums"))
 
 
 @strawberry.django.type(Album)
@@ -101,6 +105,7 @@ query {
         name
       }
     }
+    albumsCount
   }
   song {
     id
@@ -132,6 +137,8 @@ Artist.objects.all().only("id", "name").prefetch_related(
             Song.objects.all().only("id", "name"),
         )
     ),
+).annotate(
+    albums_count=Count("albums")
 )
 
 # For "songs" query
@@ -235,6 +242,12 @@ The following options are accepted for optimizer hints:
   [QuerySet.prefetch_related()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#prefetch-related).
   The options here are strings or a callable in the format of `Callable[[Info], Prefetch]`
   (e.g. `prefetch_related=[lambda info: Prefetch(...)]`)
+- `annotate`: a dict of expressions to annotate using
+  [QuerySet.annotate()](https://docs.djangoproject.com/en/4.2/ref/models/querysets/#annotate).
+  The keys of this dict are strings,
+  and each value is a [Query Expression](https://docs.djangoproject.com/en/4.2/ref/models/expressions/)
+  or a callable in the format of `Callable[[Info], BaseExpression]`
+  (e.g. `annotate={"total": lambda info: Sum(...)}`)
 
 ## Optimization hints on model (ModelProperty)
 

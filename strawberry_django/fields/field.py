@@ -59,7 +59,12 @@ if TYPE_CHECKING:
     from strawberry.unset import UnsetType
     from typing_extensions import Literal
 
-    from strawberry_django.utils.typing import PrefetchType, TypeOrSequence
+    from strawberry_django.utils.typing import (
+        AnnotateType,
+        PrefetchType,
+        TypeOrMapping,
+        TypeOrSequence,
+    )
 
 
 _T = TypeVar("_T")
@@ -97,6 +102,7 @@ class StrawberryDjangoField(
         only: TypeOrSequence[str] | None = None,
         select_related: TypeOrSequence[str] | None = None,
         prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+        annotate: TypeOrMapping[AnnotateType] | None = None,
         disable_optimization: bool = False,
         **kwargs,
     ):
@@ -105,6 +111,7 @@ class StrawberryDjangoField(
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
+            annotate=annotate,
         )
         super().__init__(*args, **kwargs)
 
@@ -397,6 +404,7 @@ def field(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
 ) -> _T: ...
 
@@ -424,6 +432,7 @@ def field(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
 ) -> Any: ...
 
@@ -451,6 +460,7 @@ def field(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
 ) -> StrawberryDjangoField: ...
 
@@ -477,6 +487,7 @@ def field(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -518,6 +529,7 @@ def field(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        annotate=annotate,
         disable_optimization=disable_optimization,
     )
 
@@ -544,6 +556,7 @@ def node(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -610,6 +623,7 @@ def connection(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
 ) -> Any: ...
 
@@ -636,6 +650,7 @@ def connection(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
 ) -> Any: ...
 
@@ -660,6 +675,7 @@ def connection(
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -745,6 +761,7 @@ def connection(
         only=only,
         select_related=select_related,
         prefetch_related=prefetch_related,
+        annotate=annotate,
         disable_optimization=disable_optimization,
     )
 

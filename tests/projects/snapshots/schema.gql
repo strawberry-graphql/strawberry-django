@@ -303,6 +303,7 @@ type MilestoneType implements Node {
   project: ProjectType!
   issues: [IssueType!]!
   myIssues: [IssueType!]!
+  myBugsCount: Int!
   asyncField(value: String!): String!
 }
 
@@ -448,7 +449,10 @@ type ProjectType implements Node {
   name: String!
   dueDate: Date
   milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  milestonesCount: Int!
+  isDelayed: Boolean!
   cost: Decimal @isAuthenticated
+  isSmall: Boolean!
 }
 
 """An edge in a connection."""

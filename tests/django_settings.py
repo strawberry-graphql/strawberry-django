@@ -11,6 +11,8 @@ for cls in [QuerySet, BaseManager, models.ForeignKey, models.ManyToManyField]:
 
 DEBUG = True
 SECRET_KEY = 1
+USE_TZ = True
+TIME_ZONE = "UTC"
 
 DATABASES = {
     "default": {

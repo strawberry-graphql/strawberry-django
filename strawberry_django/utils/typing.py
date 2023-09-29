@@ -8,6 +8,7 @@ from typing import (
     Callable,
     ClassVar,
     Iterable,
+    Mapping,
     Sequence,
     TypeVar,
     Union,
@@ -15,6 +16,7 @@ from typing import (
 )
 
 from django.db.models import Prefetch
+from django.db.models.expressions import BaseExpression
 from graphql.type.definition import GraphQLResolveInfo
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
@@ -37,10 +39,13 @@ _T = TypeVar("_T")
 _Type = TypeVar("_Type", bound="StrawberryType | type")
 
 TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
+TypeOrMapping: TypeAlias = Union[_T, Mapping[str, _T]]
 TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
 UserType: TypeAlias = Union["AbstractBaseUser", "AnonymousUser"]
 PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
 PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
+AnnotateCallable: TypeAlias = Callable[[GraphQLResolveInfo], BaseExpression]
+AnnotateType: TypeAlias = Union[BaseExpression, AnnotateCallable]
 
 
 class WithStrawberryDjangoObjectDefinition(WithStrawberryObjectDefinition, Protocol):
