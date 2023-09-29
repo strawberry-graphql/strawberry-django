@@ -48,11 +48,13 @@ Also, ensure that you enable subscriptions on your AsgiGraphQLView in `MyProject
 
 urlpatterns = [
 	...
-    path('graphql/', AsyncGraphQLView.as_view(
-        schema=schema,
-        graphiql=settings.DEBUG,
-        subscriptions_enabled=True
-        )
+    path(
+        'graphql/',
+        AsyncGraphQLView.as_view(
+            schema=schema,
+            graphiql=settings.DEBUG,
+            subscriptions_enabled=True,
+        ),
     ),
     ...
 ]
