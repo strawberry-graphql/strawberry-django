@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import copy
 import dataclasses
 import itertools
 from collections import defaultdict
-from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -198,7 +198,7 @@ class OptimizerStore:
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
             elif isinstance(p, Prefetch):
                 # add_prefix modifies the field's prefetch object, so we copy it before
-                p_copy = deepcopy(p)
+                p_copy = copy.copy(p)
                 p_copy.add_prefix(prefix)
                 prefetch_related.append(p_copy)
             else:  # pragma:nocover
