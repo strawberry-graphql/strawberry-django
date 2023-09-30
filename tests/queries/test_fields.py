@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, cast
 
 import pytest
 import strawberry
 from django.conf import settings
+from strawberry.types import ExecutionResult
 
 import strawberry_django
 from tests import models, types, utils
@@ -24,7 +25,9 @@ def test_field_name(user):
     query = generate_query(MyUser)
 
     result = query("{ users { myName } }")
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["users"] == [{"myName": "user"}]
 
 
@@ -36,7 +39,9 @@ def test_relational_field_name(user, group):
     query = generate_query(MyUser)
 
     result = query("{ users { myGroup { name } } }")
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
 
 
@@ -47,12 +52,14 @@ async def test_sync_resolver(user, group):
     class MyUser:
         @strawberry_django.field
         def my_group(self, info) -> types.Group:
-            return models.Group.objects.get()
+            return cast(types.Group, models.Group.objects.get())
 
     query = generate_query(MyUser)
 
-    result = await query("{ users { myGroup { name } } }")
+    result = await query("{ users { myGroup { name } } }")  # type: ignore
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
 
 
@@ -65,12 +72,14 @@ async def test_async_resolver(user, group):
         async def my_group(self, info) -> types.Group:
             from asgiref.sync import sync_to_async
 
-            return await sync_to_async(models.Group.objects.get)()
+            return cast(types.Group, await sync_to_async(models.Group.objects.get)())
 
     query = generate_query(MyUser)
 
-    result = await query("{ users { myGroup { name } } }")
+    result = await query("{ users { myGroup { name } } }")  # type: ignore
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
 
 

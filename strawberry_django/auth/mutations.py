@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 @django_resolver
-def resolve_login(info: Info, username: str, password: str):
+def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser | None:
     request = info.context.request
     user = auth.authenticate(request, username=username, password=password)
     if user is not None:

@@ -716,6 +716,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
     today = timezone.now().date()
     for p in ProjectFactory.create_batch(2):
         ms = MilestoneFactory.create_batch(3, project=p)
+        assert p.due_date is not None
         p_res: dict[str, Any] = {
             "id": to_base64("ProjectType", p.id),
             "name": p.name,
@@ -729,6 +730,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
         due_date=today - datetime.timedelta(days=1),
     ):
         ms = MilestoneFactory.create_batch(2, project=p)
+        assert p.due_date is not None
         p_res: dict[str, Any] = {
             "id": to_base64("ProjectType", p.id),
             "name": p.name,

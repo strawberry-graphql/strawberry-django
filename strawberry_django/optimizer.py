@@ -19,7 +19,7 @@ from typing import (
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
-from django.db.models.expressions import BaseExpression
+from django.db.models.expressions import BaseExpression, Combinable
 from django.db.models.fields.reverse_related import (
     ManyToManyRel,
     ManyToOneRel,
@@ -181,7 +181,7 @@ class OptimizerStore:
                 # placeholder here,
                 # because field name is evaluated later on .annotate call:
                 {_annotate_placeholder: annotate}
-                if isinstance(annotate, (BaseExpression, Callable))
+                if isinstance(annotate, (BaseExpression, Combinable, Callable))
                 else dict(annotate or {})
             ),
         )

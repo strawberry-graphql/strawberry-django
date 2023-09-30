@@ -109,7 +109,7 @@ def test_field_metadata_default():
 
 
 @override_settings(
-    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
         FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
         TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
     ),
@@ -134,7 +134,7 @@ def test_field_metadata_preserved():
 
 
 @override_settings(
-    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
         FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
         TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
     ),
@@ -158,7 +158,7 @@ def test_field_metadata_overridden():
 
 
 @override_settings(
-    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
         FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
         TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
     ),
@@ -207,7 +207,7 @@ def test_type_resolution_with_resolvers():
 
 
 @override_settings(
-    STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
         FIELD_DESCRIPTION_FROM_HELP_TEXT=True,
         TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING=True,
     ),

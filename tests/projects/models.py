@@ -52,7 +52,7 @@ class Project(models.Model):
 
     @model_property(annotate={"_milestone_count": Count("milestone")})
     def is_small(self) -> bool:
-        return self._milestone_count < 3
+        return self._milestone_count < 3  # type: ignore
 
 
 class Milestone(models.Model):
