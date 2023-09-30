@@ -1,7 +1,7 @@
 from strawberry.types import Info
-from django.contrib.auth.models import AbstractBaseUser
 
-def get_current_user(info: Info) -> AbstractBaseUser:
+
+def get_current_user(info: Info):
     """
     Get and return the current user based on various scenarios.
     """
@@ -18,5 +18,5 @@ def get_current_user(info: Info) -> AbstractBaseUser:
     return user
 
 
-async def aget_current_user(info: Info) -> AbstractBaseUser: 
+async def aget_current_user(info: Info): 
     return sync_to_async(get_current_user)(info)
