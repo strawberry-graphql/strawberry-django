@@ -17,7 +17,7 @@ def get_current_user(info):
 
 
 def resolve_current_user(info):
-    user = get_current_user()
+    user = get_current_user(info)
 
     if not user.is_authenticated:
         return None
