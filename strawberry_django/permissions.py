@@ -41,9 +41,9 @@ from strawberry.union import StrawberryUnion
 from strawberry.utils.await_maybe import await_maybe
 from typing_extensions import Literal, Self, assert_never
 
+from strawberry_django.auth.utils import get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
 from strawberry_django.resolvers import django_resolver
-from strawberry_django.auth.utils import get_current_user
 
 from .utils.query import filter_for_user
 from .utils.typing import UserType
