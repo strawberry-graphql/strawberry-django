@@ -16,7 +16,6 @@ def get_current_user(info: Info):
     # Access an attribute inside the user object to force loading it in async contexts.
     user.is_authenticated
 
-
     return user
 
 
