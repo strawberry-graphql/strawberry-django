@@ -15,7 +15,7 @@ There are 3 parts to this guide:
 It's important to realise that Django doesn't support websockets out of the box.
 To resolve this, we can help the platform along a little.
 
-This implementation is based on Django Channels - this means that should you wish - there is a lot more websockets fun to be had. If you're interested, head over to [Django Schannels](https://channels.readthedocs.io).
+This implementation is based on Django Channels - this means that should you wish - there is a lot more websockets fun to be had. If you're interested, head over to [Django Channels](https://channels.readthedocs.io).
 
 To add the base compatibility, go to your `MyProject.asgi.py` file and replace it with the following content.
 Ensure that you replace the relevant code with your setup.
