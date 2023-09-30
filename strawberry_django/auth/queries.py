@@ -1,5 +1,7 @@
 from strawberry.types import Info
+
 import strawberry_django
+
 from .utils import get_current_user
 
 
