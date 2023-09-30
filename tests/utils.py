@@ -15,6 +15,7 @@ from django.test.utils import CaptureQueriesContext
 from strawberry.test.client import Response
 from strawberry.utils.inspect import in_async_context
 
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.test.client import TestClient
 
 _client: contextvars.ContextVar["GraphQLTestClient"] = contextvars.ContextVar(
@@ -22,7 +23,7 @@ _client: contextvars.ContextVar["GraphQLTestClient"] = contextvars.ContextVar(
 )
 
 
-def generate_query(query=None, mutation=None):
+def generate_query(query=None, mutation=None, enable_optimizer=False):
     append_mutation = mutation and not query
     if query is None:
 
@@ -31,7 +32,11 @@ def generate_query(query=None, mutation=None):
             x: int
 
         query = Query
-    schema = strawberry.Schema(query=query, mutation=mutation)
+    extensions = []
+
+    if enable_optimizer:
+        extensions = [DjangoOptimizerExtension()]
+    schema = strawberry.Schema(query=query, mutation=mutation, extensions=extensions)
 
     def process_result(result):
         return result

@@ -2,11 +2,16 @@ import datetime
 from typing import Any, List, cast
 
 import pytest
+import strawberry
+from django.db.models import Prefetch
 from django.utils import timezone
 from strawberry.relay import to_base64
 
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
+from . import utils
+from .models import Group, User
 from .projects.faker import (
     IssueFactory,
     MilestoneFactory,
@@ -48,6 +53,81 @@ def test_user_query(db, gql_client: GraphQLTestClient):
                 "fullName": "John Snow",
             },
         }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_query_with_prefetch(db, groups, users):
+    @strawberry_django.type(
+        Group,
+    )
+    class GroupTypeWithPrefetch:
+        @strawberry_django.field(
+            name="name",
+            prefetch_related=[
+                Prefetch(
+                    "users",
+                    queryset=User.objects.all(),
+                    to_attr="prefetched_users",
+                ),
+            ],
+        )
+        def name(self, info) -> str:
+            if hasattr(self, "prefetched_users"):
+                return "prefetched"
+            return "not prefetched"
+
+    @strawberry_django.type(
+        User,
+    )
+    class UsersWithNestedPrefetch:
+        group: GroupTypeWithPrefetch
+
+    for user in users:
+        user.group = groups[0]
+        user.save()
+
+    @strawberry.type
+    class Query:
+        groups_with_prefetch: List[GroupTypeWithPrefetch] = strawberry_django.field()
+        users: List[UsersWithNestedPrefetch] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    query_str = """
+      query TestQuery {
+        users {
+            group {
+                name
+            }
+        }
+      }
+    """
+    assert DjangoOptimizerExtension.enabled.get()
+    result = query(query_str)
+
+    assert not result.errors
+    assert result.data == {
+        "users": [
+            {
+                "group": {
+                    "name": "prefetched",
+                },
+            }
+            for _ in range(3)
+        ],
+    }
+
+    result2 = query(query_str)
+    assert not result2.errors
+    assert result2.data == {
+        "users": [
+            {
+                "group": {
+                    "name": "prefetched",
+                },
+            }
+            for _ in range(3)
+        ],
+    }
 
 
 @pytest.mark.django_db(transaction=True)
