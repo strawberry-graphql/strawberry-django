@@ -15,6 +15,10 @@ def get_current_user(info: Info):
             # When using this through websockets / subscriptions, scope sits inside of the request
             user = info.context.get('request').scope.get('user')
 
+    # Access an attribute inside the user object to force loading it in async contexts.
+    user.is_authenticated
+
+
     return user
 
 
