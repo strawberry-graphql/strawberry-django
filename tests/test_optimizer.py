@@ -11,7 +11,6 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 from . import utils
-from .models import Group, User
 from .projects.faker import (
     IssueFactory,
     MilestoneFactory,
@@ -20,7 +19,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Assignee, Issue
+from .projects.models import Assignee, Issue, Milestone, Project
 from .utils import GraphQLTestClient, assert_num_queries
 
 
@@ -822,47 +821,43 @@ def test_query_annotate_with_callable(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_user_query_with_prefetch(db, groups, users):
+def test_user_query_with_prefetch():
     @strawberry_django.type(
-        Group,
+        Project,
     )
-    class GroupTypeWithPrefetch:
+    class ProjectTypeWithPrefetch:
         @strawberry_django.field(
-            name="name",
             prefetch_related=[
                 Prefetch(
-                    "users",
-                    queryset=User.objects.all(),
-                    to_attr="prefetched_users",
+                    "milestones",
+                    queryset=Milestone.objects.all(),
+                    to_attr="prefetched_milestones",
                 ),
             ],
         )
-        def name(self, info) -> str:
-            if hasattr(self, "prefetched_users"):
+        def custom_field(self, info) -> str:
+            if hasattr(self, "prefetched_milestones"):
                 return "prefetched"
             return "not prefetched"
 
     @strawberry_django.type(
-        User,
+        Milestone,
     )
-    class UsersWithNestedPrefetch:
-        group: GroupTypeWithPrefetch
+    class MilestoneTypeWithNestedPrefetch:
+        project: ProjectTypeWithPrefetch
 
-    for user in users:
-        user.group = groups[0]
-        user.save()
+    MilestoneFactory.create()
 
     @strawberry.type
     class Query:
-        groups_with_prefetch: List[GroupTypeWithPrefetch] = strawberry_django.field()
-        users: List[UsersWithNestedPrefetch] = strawberry_django.field()
+        milestones: List[MilestoneTypeWithNestedPrefetch] = strawberry_django.field()
 
     query = utils.generate_query(Query, enable_optimizer=True)
     query_str = """
       query TestQuery {
-        users {
-            group {
-                name
+        milestones {
+            project {
+                customField
             }
         }
       }
@@ -872,25 +867,23 @@ def test_user_query_with_prefetch(db, groups, users):
 
     assert not result.errors
     assert result.data == {
-        "users": [
+        "milestones": [
             {
-                "group": {
-                    "name": "prefetched",
+                "project": {
+                    "customField": "prefetched",
                 },
-            }
-            for _ in range(3)
+            },
         ],
     }
 
     result2 = query(query_str)
     assert not result2.errors
     assert result2.data == {
-        "users": [
+        "milestones": [
             {
-                "group": {
-                    "name": "prefetched",
+                "project": {
+                    "customField": "prefetched",
                 },
-            }
-            for _ in range(3)
+            },
         ],
     }
