@@ -380,7 +380,7 @@ class Query:
 
     @strawberry_django.field
     def me(self, info: Info) -> Optional[UserType]:
-        user = get_current_user()
+        user = get_current_user(info)
         if not user.is_authenticated:
             return None
 
