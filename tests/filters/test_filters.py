@@ -144,12 +144,31 @@ def test_in_list(query, fruits):
     ]
 
 
-def test_not(query, fruits):
+def test_deprecated_not(query, fruits):
     result = query(
         """{ fruits(filters: {
                    name: { nEndsWith: "berry" }
                    }) { id name } }""",
     )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_not(query, fruits):
+    result = query("""{
+      fruits(
+        filters: {
+          NOT: {
+            name: { endsWith: "berry" }
+          }
+        }
+      ) {
+        id
+        name
+      }
+    }""")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},

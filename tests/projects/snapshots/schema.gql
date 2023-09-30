@@ -123,23 +123,23 @@ input DateFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
-  nExact: Date
-  nIExact: Date
-  nContains: Date
-  nIContains: Date
-  nInList: [Date!]
-  nGt: Date
-  nGte: Date
-  nLt: Date
-  nLte: Date
-  nStartsWith: Date
-  nIStartsWith: Date
-  nEndsWith: Date
-  nIEndsWith: Date
-  nRange: [Date!]
-  nIsNull: Boolean
-  nRegex: String
-  nIRegex: String
+  nExact: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIExact: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nContains: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIContains: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nInList: [Date!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nGt: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nGte: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nLt: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nLte: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nStartsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIStartsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nEndsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIEndsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nRange: [Date!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIsNull: Boolean @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
 }
 
 """Date with time (isoformat)"""
@@ -273,6 +273,7 @@ input MilestoneFilter {
   search: String
   AND: MilestoneFilter
   OR: MilestoneFilter
+  NOT: MilestoneFilter
 }
 
 input MilestoneInput {
@@ -430,6 +431,7 @@ input ProjectFilter {
   dueDate: DateFilterLookup
   AND: ProjectFilter
   OR: ProjectFilter
+  NOT: ProjectFilter
 }
 
 input ProjectInputPartial {
@@ -740,23 +742,23 @@ input StrFilterLookup {
   isNull: Boolean
   regex: String
   iRegex: String
-  nExact: String
-  nIExact: String
-  nContains: String
-  nIContains: String
-  nInList: [String!]
-  nGt: String
-  nGte: String
-  nLt: String
-  nLte: String
-  nStartsWith: String
-  nIStartsWith: String
-  nEndsWith: String
-  nIEndsWith: String
-  nRange: [String!]
-  nIsNull: Boolean
-  nRegex: String
-  nIRegex: String
+  nExact: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIExact: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nContains: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIContains: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nInList: [String!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nGt: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nGte: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nLt: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nLte: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nStartsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIStartsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nEndsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIEndsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nRange: [String!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIsNull: Boolean @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+  nIRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
 }
 
 input TagInputPartial {
