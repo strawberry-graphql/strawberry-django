@@ -1,23 +1,11 @@
+from strawberry.types import Info
 import strawberry_django
+from .utils import get_current_user
+from django.contrib.auth.models import AbstractBaseUser
 
 
-def get_current_user(info):
-    """Get and return the current user based on various scenarios."""
-    try:
-        user = info.context.request.user
-    except AttributeError:
-        try:
-            # When running queries/mutations in ASGI mode, the user is moved into the consumer scope
-            user = info.context.get("request").consumer.scope["user"]
-        except AttributeError:
-            # When using this through websockets / subscriptions, scope sits inside of the request
-            user = info.context.get("request").scope.get("user")
-
-    return user
-
-
-def resolve_current_user(info):
-    user = get_current_user(info)
+def resolve_current_user(info: Info) -> AbstractBaseUser:
+    user = get_current_user()
 
     if not user.is_authenticated:
         return None
