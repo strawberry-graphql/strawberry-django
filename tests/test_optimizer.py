@@ -56,81 +56,6 @@ def test_user_query(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_user_query_with_prefetch(db, groups, users):
-    @strawberry_django.type(
-        Group,
-    )
-    class GroupTypeWithPrefetch:
-        @strawberry_django.field(
-            name="name",
-            prefetch_related=[
-                Prefetch(
-                    "users",
-                    queryset=User.objects.all(),
-                    to_attr="prefetched_users",
-                ),
-            ],
-        )
-        def name(self, info) -> str:
-            if hasattr(self, "prefetched_users"):
-                return "prefetched"
-            return "not prefetched"
-
-    @strawberry_django.type(
-        User,
-    )
-    class UsersWithNestedPrefetch:
-        group: GroupTypeWithPrefetch
-
-    for user in users:
-        user.group = groups[0]
-        user.save()
-
-    @strawberry.type
-    class Query:
-        groups_with_prefetch: List[GroupTypeWithPrefetch] = strawberry_django.field()
-        users: List[UsersWithNestedPrefetch] = strawberry_django.field()
-
-    query = utils.generate_query(Query, enable_optimizer=True)
-    query_str = """
-      query TestQuery {
-        users {
-            group {
-                name
-            }
-        }
-      }
-    """
-    assert DjangoOptimizerExtension.enabled.get()
-    result = query(query_str)
-
-    assert not result.errors
-    assert result.data == {
-        "users": [
-            {
-                "group": {
-                    "name": "prefetched",
-                },
-            }
-            for _ in range(3)
-        ],
-    }
-
-    result2 = query(query_str)
-    assert not result2.errors
-    assert result2.data == {
-        "users": [
-            {
-                "group": {
-                    "name": "prefetched",
-                },
-            }
-            for _ in range(3)
-        ],
-    }
-
-
-@pytest.mark.django_db(transaction=True)
 def test_staff_query(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery {
@@ -894,3 +819,78 @@ def test_query_annotate_with_callable(db, gql_client: GraphQLTestClient):
                     asserts_errors=False,
                 )
                 assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_query_with_prefetch(db, groups, users):
+    @strawberry_django.type(
+        Group,
+    )
+    class GroupTypeWithPrefetch:
+        @strawberry_django.field(
+            name="name",
+            prefetch_related=[
+                Prefetch(
+                    "users",
+                    queryset=User.objects.all(),
+                    to_attr="prefetched_users",
+                ),
+            ],
+        )
+        def name(self, info) -> str:
+            if hasattr(self, "prefetched_users"):
+                return "prefetched"
+            return "not prefetched"
+
+    @strawberry_django.type(
+        User,
+    )
+    class UsersWithNestedPrefetch:
+        group: GroupTypeWithPrefetch
+
+    for user in users:
+        user.group = groups[0]
+        user.save()
+
+    @strawberry.type
+    class Query:
+        groups_with_prefetch: List[GroupTypeWithPrefetch] = strawberry_django.field()
+        users: List[UsersWithNestedPrefetch] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    query_str = """
+      query TestQuery {
+        users {
+            group {
+                name
+            }
+        }
+      }
+    """
+    assert DjangoOptimizerExtension.enabled.get()
+    result = query(query_str)
+
+    assert not result.errors
+    assert result.data == {
+        "users": [
+            {
+                "group": {
+                    "name": "prefetched",
+                },
+            }
+            for _ in range(3)
+        ],
+    }
+
+    result2 = query(query_str)
+    assert not result2.errors
+    assert result2.data == {
+        "users": [
+            {
+                "group": {
+                    "name": "prefetched",
+                },
+            }
+            for _ in range(3)
+        ],
+    }
