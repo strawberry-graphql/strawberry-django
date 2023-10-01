@@ -126,6 +126,7 @@ def _process_type(
             {
                 "AND": Optional[Self],  # type:ignore
                 "OR": Optional[Self],  # type:ignore
+                "NOT": Optional[Self],  # type:ignore
             },
         )
 

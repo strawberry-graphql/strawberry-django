@@ -27,7 +27,7 @@ from strawberry.field import StrawberryField, field
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
-from typing_extensions import Self, dataclass_transform
+from typing_extensions import Self, assert_never, dataclass_transform
 
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
@@ -50,6 +50,11 @@ class DjangoModelFilterInput:
     pk: strawberry.ID
 
 
+_n_deprecation_reason = """\
+The "n" prefix is deprecated and will be removed in the future, use `NOT` instead.
+"""
+
+
 @strawberry.input
 class FilterLookup(Generic[T]):
     exact: Optional[T] = UNSET
@@ -69,23 +74,74 @@ class FilterLookup(Generic[T]):
     is_null: Optional[bool] = UNSET
     regex: Optional[str] = UNSET
     i_regex: Optional[str] = UNSET
-    n_exact: Optional[T] = UNSET
-    n_i_exact: Optional[T] = UNSET
-    n_contains: Optional[T] = UNSET
-    n_i_contains: Optional[T] = UNSET
-    n_in_list: Optional[List[T]] = UNSET
-    n_gt: Optional[T] = UNSET
-    n_gte: Optional[T] = UNSET
-    n_lt: Optional[T] = UNSET
-    n_lte: Optional[T] = UNSET
-    n_starts_with: Optional[T] = UNSET
-    n_i_starts_with: Optional[T] = UNSET
-    n_ends_with: Optional[T] = UNSET
-    n_i_ends_with: Optional[T] = UNSET
-    n_range: Optional[List[T]] = UNSET
-    n_is_null: Optional[bool] = UNSET
-    n_regex: Optional[str] = UNSET
-    n_i_regex: Optional[str] = UNSET
+    n_exact: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_i_exact: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_contains: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_i_contains: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_in_list: Optional[List[T]] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_gt: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_gte: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_lt: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_lte: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_starts_with: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_i_starts_with: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_ends_with: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_i_ends_with: Optional[T] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_range: Optional[List[T]] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_is_null: Optional[bool] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_regex: Optional[str] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
+    n_i_regex: Optional[str] = strawberry.field(
+        default=UNSET,
+        deprecation_reason=_n_deprecation_reason,
+    )
 
 
 lookup_name_conversion_map = {
@@ -155,7 +211,7 @@ def build_filter_kwargs(
             continue
 
         if django_model:
-            if field_name in ("AND", "OR"):
+            if field_name in ("AND", "OR", "NOT"):
                 if has_object_definition(field_value):
                     (
                         subfield_filter_kwargs,
@@ -163,8 +219,13 @@ def build_filter_kwargs(
                     ) = build_filter_kwargs(field_value, path)
                     if field_name == "AND":
                         filter_kwargs &= subfield_filter_kwargs
-                    else:
+                    elif field_name == "OR":
                         filter_kwargs |= subfield_filter_kwargs
+                    elif field_name == "NOT":
+                        filter_kwargs &= ~subfield_filter_kwargs
+                    else:
+                        assert_never(field_name)
+
                     filter_methods.extend(subfield_filter_methods)
                 continue
 

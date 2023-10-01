@@ -25,6 +25,7 @@ input FruitFilter {
   name: String
   AND: FruitFilter
   OR: FruitFilter
+  NOT: FruitFilter
 }
 ```
 
@@ -129,6 +130,7 @@ input FruitFilter {
   name: StrFilterLookup
   AND: FruitFilter
   OR: FruitFilter
+  NOT: FruitFilter
 }
 ```
 
@@ -165,6 +167,7 @@ input ColorFilter {
   name: String
   AND: ColorFilter
   OR: ColorFilter
+  NOT: ColorFilter
 }
 
 input FruitFilter {
@@ -173,6 +176,7 @@ input FruitFilter {
   color: ColorFilter
   AND: FruitFilter
   OR: FruitFilter
+  NOT: FruitFilter
 }
 ```
 
