@@ -37,6 +37,8 @@ jobs:
           poetry install -E debug-toolbar
       - name: Check for pyright errors
         uses: jakebailey/pyright-action@v1
+        with:
+          extra-args: strawberry_django tests examples
   tests:
     runs-on: ubuntu-latest
     strategy:
