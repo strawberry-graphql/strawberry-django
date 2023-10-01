@@ -1,3 +1,4 @@
+from asgiref.sync import sync_to_async
 from strawberry.types import Info
 
 
@@ -7,14 +8,14 @@ def get_current_user(info: Info):
         user = info.context.request.user
     except AttributeError:
         try:
-            # When running queries/mutations in ASGI mode, the user is moved into the consumer scope
+            # queries/mutations in ASGI move the user into consumer scope
             user = info.context.get("request").consumer.scope["user"]
         except AttributeError:
-            # When using this through websockets / subscriptions, scope sits inside of the request
+            # websockets / subscriptions move scope inside of the request
             user = info.context.get("request").scope.get("user")
 
     # Access an attribute inside the user object to force loading it in async contexts.
-    user.is_authenticated
+    _ = user.is_authenticated
 
     return user
 

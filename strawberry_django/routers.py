@@ -14,12 +14,14 @@ if TYPE_CHECKING:
 
 
 class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
-    """Convenience class to set up GraphQL on both HTTP and Websocket whilte enabling AuthMiddlewareStack
-    and the AllowedHostsOriginValidator.
+    """Convenience class to set up GraphQL on both HTTP and Websocket.
+
+     This convenience class will include AuthMiddlewareStack and the
+     AllowedHostsOriginValidator to ensure you have user object available.
 
     ```
     from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
-    from django.core.asgi import get_asgi_application
+    from django.core.asgi import get_asgi_application.
 
     django_asgi = get_asgi_application()
 
