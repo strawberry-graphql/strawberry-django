@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import copy
 import dataclasses
 import itertools
 from collections import defaultdict
@@ -196,8 +197,10 @@ class OptimizerStore:
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
             elif isinstance(p, Prefetch):
-                p.add_prefix(prefix)
-                prefetch_related.append(p)
+                # add_prefix modifies the field's prefetch object, so we copy it before
+                p_copy = copy.copy(p)
+                p_copy.add_prefix(prefix)
+                prefetch_related.append(p_copy)
             else:  # pragma:nocover
                 assert_never(p)
 
