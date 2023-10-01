@@ -4,8 +4,8 @@ packages = [{ include = "strawberry_django" }]
 version = "0.19.0"
 description = "Strawberry GraphQL Django extension"
 authors = [
-  "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
-  "Thiago Bellini Ribeiro <thiago@bellini.dev>",
+    "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
+    "Thiago Bellini Ribeiro <thiago@bellini.dev>",
 ]
 maintainers = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
 repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
@@ -14,21 +14,21 @@ license = "MIT"
 readme = "README.md"
 keywords = ["graphql", "api", "django", "strawberry-graphql"]
 classifiers = [
-  "Environment :: Web Environment",
-  "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Framework :: Django",
-  "Framework :: Django :: 3.2",
-  "Framework :: Django :: 4.0",
-  "Framework :: Django :: 4.1",
-  "Framework :: Django :: 4.2",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: Django",
+    "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.0",
+    "Framework :: Django :: 4.1",
+    "Framework :: Django :: 4.2",
 ]
 
 [tool.poetry.dependencies]
@@ -73,69 +73,69 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 select = [
-  "A",
-  "ASYNC100",
-  "ASYNC101",
-  "ASYNC102",
-  "B",
-  "BLE",
-  "C4",
-  "COM",
-  "D",
-  "D2",
-  "D3",
-  "D4",
-  "DTZ",
-  "E",
-  "ERA",
-  "EXE",
-  "F",
-  "FURB",
-  "G",
-  "I",
-  "ICN001",
-  "INP",
-  "ISC",
-  "N",
-  "PERF",
-  "PGH",
-  "PIE",
-  "PL",
-  "PT",
-  "PTH",
-  "PYI",
-  "Q",
-  "RET",
-  "RSE",
-  "RUF",
-  "SIM",
-  "SLF",
-  "SLOT",
-  "T10",
-  "T20",
-  "TCH",
-  "TID",
-  "TRY",
-  "UP",
-  "W",
-  "YTT",
+    "A",
+    "ASYNC100",
+    "ASYNC101",
+    "ASYNC102",
+    "B",
+    "BLE",
+    "C4",
+    "COM",
+    "D",
+    "D2",
+    "D3",
+    "D4",
+    "DTZ",
+    "E",
+    "ERA",
+    "EXE",
+    "F",
+    "FURB",
+    "G",
+    "I",
+    "ICN001",
+    "INP",
+    "ISC",
+    "N",
+    "PERF",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "SLOT",
+    "T10",
+    "T20",
+    "TCH",
+    "TID",
+    "TRY",
+    "UP",
+    "W",
+    "YTT",
 ]
 ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003", "D417"]
 # FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
 unfixable = ["UP006"]
 target-version = "py38"
 exclude = [
-  ".eggs",
-  ".git",
-  ".hg",
-  ".mypy_cache",
-  ".tox",
-  ".venv",
-  "__pycached__",
-  "_build",
-  "buck-out",
-  "build",
-  "dist",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "__pycached__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
 ]
 
 [tool.ruff.per-file-ignores]
@@ -168,8 +168,6 @@ exclude = '''
 [tool.pyright]
 pythonVersion = "3.8"
 useLibraryCodeForTypes = true
-venvPath = "."
-venv = ".venv"
 exclude = [".venv", "**/migrations", "dist", "docs"]
 reportCallInDefaultInitializer = "warning"
 reportMatchNotExhaustive = "warning"

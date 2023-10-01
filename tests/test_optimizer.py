@@ -6,6 +6,7 @@ import strawberry
 from django.db.models import Prefetch
 from django.utils import timezone
 from strawberry.relay import to_base64
+from strawberry.types import ExecutionResult
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -867,6 +868,7 @@ def test_user_query_with_prefetch():
     assert DjangoOptimizerExtension.enabled.get()
     result = query(query_str)
 
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
     assert result.data == {
         "milestones": [
@@ -879,6 +881,7 @@ def test_user_query_with_prefetch():
     }
 
     result2 = query(query_str)
+    assert isinstance(result2, ExecutionResult)
     assert not result2.errors
     assert result2.data == {
         "milestones": [
