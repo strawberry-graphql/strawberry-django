@@ -15,7 +15,8 @@ def get_current_user(info: Info):
             user = info.context.get("request").scope.get("user")
 
     # Access an attribute inside the user object to force loading it in async contexts.
-    _ = user.is_authenticated
+    if user is not None:
+        _ = user.is_authenticated
 
     return user
 
