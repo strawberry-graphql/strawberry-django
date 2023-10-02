@@ -1,8 +1,11 @@
+from typing import Optional
+
 from asgiref.sync import sync_to_async
+from django.contrib.auth.models import AbstractBaseUser
 from strawberry.types import Info
 
 
-def get_current_user(info: Info):
+def get_current_user(info: Info) -> Optional[AbstractBaseUser]:
     """Get and return the current user based on various scenarios."""
     try:
         user = info.context.request.user
@@ -21,5 +24,5 @@ def get_current_user(info: Info):
     return user
 
 
-async def aget_current_user(info: Info):
+async def aget_current_user(info: Info) -> Optional[AbstractBaseUser]:
     return sync_to_async(get_current_user)(info)
