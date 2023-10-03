@@ -2,11 +2,16 @@ import datetime
 from typing import Any, List, cast
 
 import pytest
+import strawberry
+from django.db.models import Prefetch
 from django.utils import timezone
 from strawberry.relay import to_base64
+from strawberry.types import ExecutionResult
 
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
+from . import utils
 from .projects.faker import (
     IssueFactory,
     MilestoneFactory,
@@ -15,7 +20,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Assignee, Issue
+from .projects.models import Assignee, Issue, Milestone, Project
 from .utils import GraphQLTestClient, assert_num_queries
 
 
@@ -716,6 +721,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
     today = timezone.now().date()
     for p in ProjectFactory.create_batch(2):
         ms = MilestoneFactory.create_batch(3, project=p)
+        assert p.due_date is not None
         p_res: dict[str, Any] = {
             "id": to_base64("ProjectType", p.id),
             "name": p.name,
@@ -729,6 +735,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
         due_date=today - datetime.timedelta(days=1),
     ):
         ms = MilestoneFactory.create_batch(2, project=p)
+        assert p.due_date is not None
         p_res: dict[str, Any] = {
             "id": to_base64("ProjectType", p.id),
             "name": p.name,
@@ -814,3 +821,74 @@ def test_query_annotate_with_callable(db, gql_client: GraphQLTestClient):
                     asserts_errors=False,
                 )
                 assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_query_with_prefetch():
+    @strawberry_django.type(
+        Project,
+    )
+    class ProjectTypeWithPrefetch:
+        @strawberry_django.field(
+            prefetch_related=[
+                Prefetch(
+                    "milestones",
+                    queryset=Milestone.objects.all(),
+                    to_attr="prefetched_milestones",
+                ),
+            ],
+        )
+        def custom_field(self, info) -> str:
+            if hasattr(self, "prefetched_milestones"):
+                return "prefetched"
+            return "not prefetched"
+
+    @strawberry_django.type(
+        Milestone,
+    )
+    class MilestoneTypeWithNestedPrefetch:
+        project: ProjectTypeWithPrefetch
+
+    MilestoneFactory.create()
+
+    @strawberry.type
+    class Query:
+        milestones: List[MilestoneTypeWithNestedPrefetch] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    query_str = """
+      query TestQuery {
+        milestones {
+            project {
+                customField
+            }
+        }
+      }
+    """
+    assert DjangoOptimizerExtension.enabled.get()
+    result = query(query_str)
+
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data == {
+        "milestones": [
+            {
+                "project": {
+                    "customField": "prefetched",
+                },
+            },
+        ],
+    }
+
+    result2 = query(query_str)
+    assert isinstance(result2, ExecutionResult)
+    assert not result2.errors
+    assert result2.data == {
+        "milestones": [
+            {
+                "project": {
+                    "customField": "prefetched",
+                },
+            },
+        ],
+    }

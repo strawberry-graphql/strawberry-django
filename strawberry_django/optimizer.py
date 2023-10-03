@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import copy
 import dataclasses
 import itertools
 from collections import defaultdict
@@ -19,7 +20,7 @@ from typing import (
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
-from django.db.models.expressions import BaseExpression
+from django.db.models.expressions import BaseExpression, Combinable
 from django.db.models.fields.reverse_related import (
     ManyToManyRel,
     ManyToOneRel,
@@ -181,7 +182,7 @@ class OptimizerStore:
                 # placeholder here,
                 # because field name is evaluated later on .annotate call:
                 {_annotate_placeholder: annotate}
-                if isinstance(annotate, (BaseExpression, Callable))
+                if isinstance(annotate, (BaseExpression, Combinable, Callable))
                 else dict(annotate or {})
             ),
         )
@@ -196,8 +197,10 @@ class OptimizerStore:
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
             elif isinstance(p, Prefetch):
-                p.add_prefix(prefix)
-                prefetch_related.append(p)
+                # add_prefix modifies the field's prefetch object, so we copy it before
+                p_copy = copy.copy(p)
+                p_copy.add_prefix(prefix)
+                prefetch_related.append(p_copy)
             else:  # pragma:nocover
                 assert_never(p)
 

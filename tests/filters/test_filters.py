@@ -1,11 +1,12 @@
 import textwrap
 from enum import Enum
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, List, Optional, TypeVar, cast
 
 import pytest
 import strawberry
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.types import ExecutionResult
 
 import strawberry_django
 from tests import models, utils
@@ -143,12 +144,31 @@ def test_in_list(query, fruits):
     ]
 
 
-def test_not(query, fruits):
+def test_deprecated_not(query, fruits):
     result = query(
         """{ fruits(filters: {
                    name: { nEndsWith: "berry" }
                    }) { id name } }""",
     )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_not(query, fruits):
+    result = query("""{
+      fruits(
+        filters: {
+          NOT: {
+            name: { endsWith: "berry" }
+          }
+        }
+      ) {
+        id
+        name
+      }
+    }""")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
@@ -219,11 +239,13 @@ def test_resolver_filter(fruits):
         @strawberry.field
         def fruits(self, filters: FruitFilter) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return strawberry_django.filters.apply(filters, queryset)
+            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
 
     query = utils.generate_query(Query)
     result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
@@ -248,11 +270,16 @@ def test_resolver_filter_with_info(fruits):
         @strawberry.field
         def fruits(self, filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return strawberry_django.filters.apply(filters, queryset, info=info)
+            return cast(
+                List[Fruit],
+                strawberry_django.filters.apply(filters, queryset, info=info),
+            )
 
     query = utils.generate_query(Query)
     result = query("{ fruits(filters: { customField: true }) { id name } }")
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
     ]
@@ -275,11 +302,16 @@ def test_resolver_filter_override_with_info(fruits):
         @strawberry.field
         def fruits(self, filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return strawberry_django.filters.apply(filters, queryset, info=info)
+            return cast(
+                List[Fruit],
+                strawberry_django.filters.apply(filters, queryset, info=info),
+            )
 
     query = utils.generate_query(Query)
     result = query("{ fruits(filters: { customField: true }) { id name } }")
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
     ]
@@ -291,10 +323,11 @@ def test_resolver_nonfilter(fruits):
         @strawberry.field
         def fruits(self, filters: NonFilter) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return strawberry_django.filters.apply(filters, queryset)
+            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
 
     query = utils.generate_query(Query)
     result = query("{ fruits(filters: { name: strawberry } ) { id name } }")
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
 
 

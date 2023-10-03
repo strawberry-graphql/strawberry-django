@@ -25,6 +25,7 @@ def test_filter():
         ("types", StrawberryOptional(DjangoModelFilterInput)),
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
+        ("NOT", StrawberryOptional(Filter)),
     ]
 
 
@@ -47,6 +48,7 @@ def test_lookups():
         ("types", "DjangoModelFilterInput"),
         ("AND", "Filter"),
         ("OR", "Filter"),
+        ("NOT", "Filter"),
     ]
 
 
@@ -70,6 +72,7 @@ def test_inherit(testtype):
         ("types", StrawberryOptional(DjangoModelFilterInput)),
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
+        ("NOT", StrawberryOptional(Filter)),
     ]
 
 
@@ -87,6 +90,7 @@ def test_relationship():
         ("color", StrawberryOptional(ColorFilter)),
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
+        ("NOT", StrawberryOptional(Filter)),
     ]
 
 
@@ -108,4 +112,5 @@ def test_relationship_with_inheritance():
         ("color", StrawberryOptional(ColorFilter)),
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
+        ("NOT", StrawberryOptional(Filter)),
     ]

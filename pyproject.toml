@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
 packages = [{ include = "strawberry_django" }]
-version = "0.18.0"
+version = "0.20.0"
 description = "Strawberry GraphQL Django extension"
 authors = [
   "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
@@ -24,6 +24,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Framework :: Django",
   "Framework :: Django :: 3.2",
   "Framework :: Django :: 4.0",
@@ -34,7 +35,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.8,<4.0"
 Django = ">=3.2"
-strawberry-graphql = ">=0.199.0"
+strawberry-graphql = ">=0.209.4"
 django-debug-toolbar = { version = ">=3.4", optional = true }
 django-choices-field = { version = ">=2.2.2", optional = true }
 
@@ -56,8 +57,8 @@ mkdocs-material = "^9.0.4"
 mkdocs-minify-plugin = "^0.7.1"
 pymdown-extensions = "^10.0.1"
 mkdocstrings = { version = "^0.23.0", extras = ["python"] }
-ruff = "^0.0.287"
-django-types = "^0.17.0"
+ruff = "^0.0.292"
+django-types = "^0.18.0"
 Markdown = "^3.3.7"
 Pygments = "^2.15.1"
 factory-boy = "^3.2.1"
@@ -120,7 +121,18 @@ select = [
   "W",
   "YTT",
 ]
-ignore = ["D1", "D203", "D213", "PLR09", "SLF001", "TRY003", "PGH003", "D417"]
+ignore = [
+  "D1",
+  "D203",
+  "D213",
+  "D417",
+  "E203",
+  "PGH003",
+  "PLR09",
+  "SLF001",
+  "TRY003",
+
+]
 # FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
 unfixable = ["UP006"]
 target-version = "py38"
@@ -144,7 +156,6 @@ exclude = [
 "**/migrations/*" = ["RUF012"]
 
 [tool.ruff.isort]
-known-first-party = ["strawberry-django-plus"]
 
 [tool.black]
 target-version = ['py38', 'py39', 'py310', 'py311']
@@ -168,8 +179,6 @@ exclude = '''
 [tool.pyright]
 pythonVersion = "3.8"
 useLibraryCodeForTypes = true
-venvPath = "."
-venv = ".venv"
 exclude = [".venv", "**/migrations", "dist", "docs"]
 reportCallInDefaultInitializer = "warning"
 reportMatchNotExhaustive = "warning"

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 
 import pytest
 import strawberry
@@ -8,6 +8,7 @@ from strawberry import auto
 
 import strawberry_django
 from strawberry_django import mutations
+from strawberry_django.mutations import resolvers
 from tests import models, utils
 from tests.types import (
     Color,
@@ -40,21 +41,27 @@ class Mutation:
     @strawberry_django.mutation
     def update_lazy_fruit(self, info, data: FruitPartialInput) -> Fruit:
         fruit = SimpleLazyObject(lambda: models.Fruit.objects.get())
-        return mutations.resolvers.update(
-            info,
-            fruit,
-            mutations.resolvers.parse_input(
+        return cast(
+            Fruit,
+            resolvers.update(
                 info,
-                vars(data),
+                fruit,
+                resolvers.parse_input(
+                    info,
+                    vars(data),
+                ),
             ),
         )
 
     @strawberry_django.mutation
     def delete_lazy_fruit(self, info) -> Fruit:
         fruit = SimpleLazyObject(lambda: models.Fruit.objects.get())
-        return mutations.resolvers.delete(
-            info,
-            fruit,
+        return cast(
+            Fruit,
+            resolvers.delete(
+                info,
+                fruit,
+            ),
         )
 
     delete_fruits: List[Fruit] = mutations.delete(filters=FruitFilter)

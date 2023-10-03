@@ -11,6 +11,10 @@ from .typing import TypeOrIterable, UserType
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
     from django.contrib.contenttypes.models import ContentType
+    from guardian.managers import (
+        GroupObjectPermissionManager,
+        UserObjectPermissionManager,
+    )
 
 _Q = TypeVar("_Q", bound=QuerySet)
 
@@ -81,7 +85,7 @@ def filter_for_user_q(
         model = model._meta.concrete_model
 
     try:
-        from django.contrib.contenttypes.models import ContentType, ContentTypeManager
+        from django.contrib.contenttypes.models import ContentType
     except (ImportError, RuntimeError):  # pragma: no cover
         ctype = None
     else:
@@ -97,7 +101,7 @@ def filter_for_user_q(
         except KeyError:  # pragma:nocover
             # If we are not running async, retrieve it
             ctype = (
-                cast(ContentTypeManager, ContentType.objects).get_for_model(model)
+                ContentType.objects.get_for_model(model)
                 if not in_async_context()
                 else None
             )
@@ -170,7 +174,7 @@ def filter_for_user_q(
             model=model,
             ctype=ctype,
         )
-        if user_model.objects.is_generic():
+        if cast("UserObjectPermissionManager", user_model.objects).is_generic():
             user_qs = user_qs.filter(content_type=F("permission__content_type"))
         else:
             user_qs = user_qs.annotate(object_pk=F("content_object"))
@@ -191,7 +195,7 @@ def filter_for_user_q(
                 model=model,
                 ctype=ctype,
             )
-            if group_model.objects.is_generic():
+            if cast("GroupObjectPermissionManager", group_model.objects).is_generic():
                 group_qs = group_qs.filter(content_type=F("permission__content_type"))
             else:
                 group_qs = group_qs.annotate(object_pk=F("content_object"))

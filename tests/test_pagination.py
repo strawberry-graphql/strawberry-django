@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, cast
 
 import pytest
 import strawberry
 from strawberry import auto
+from strawberry.types import ExecutionResult
 
 import strawberry_django
 from strawberry_django.pagination import OffsetPaginationInput, apply
@@ -57,11 +58,13 @@ def test_resolver_pagination(fruits):
         @strawberry.field
         def fruits(self, pagination: OffsetPaginationInput) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
-            return apply(pagination, queryset)
+            return cast(List[Fruit], apply(pagination, queryset))
 
     query = utils.generate_query(Query)
     result = query("{ fruits(pagination: { limit: 1 }) { id name } }")
+    assert isinstance(result, ExecutionResult)
     assert not result.errors
+    assert result.data is not None
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]

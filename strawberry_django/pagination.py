@@ -22,7 +22,7 @@ class OffsetPaginationInput:
     limit: int = -1
 
 
-def apply(pagination: Optional[type], queryset: _QS) -> _QS:
+def apply(pagination: Optional[object], queryset: _QS) -> _QS:
     if pagination in (None, strawberry.UNSET):
         return queryset
 
@@ -77,14 +77,18 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
 
         return OffsetPaginationInput if has_pagination else None
 
-    def apply_pagination(self, queryset: _QS, pagination: Optional[type] = None) -> _QS:
+    def apply_pagination(
+        self,
+        queryset: _QS,
+        pagination: Optional[object] = None,
+    ) -> _QS:
         return apply(pagination, queryset)
 
     def get_queryset(
         self,
         queryset: _QS,
         info: Info,
-        pagination: Optional[type] = None,
+        pagination: Optional[object] = None,
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
