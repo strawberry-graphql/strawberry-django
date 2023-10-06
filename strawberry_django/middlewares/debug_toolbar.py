@@ -9,10 +9,7 @@ import weakref
 from typing import Optional
 
 from asgiref.sync import sync_to_async
-from debug_toolbar.middleware import (
-    _HTML_TYPES,
-    show_toolbar,
-)
+from debug_toolbar.middleware import _HTML_TYPES, get_show_toolbar
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
@@ -157,7 +154,12 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
     def process_request(self, request: HttpRequest):
         response = super().__call__(request)
 
-        if not show_toolbar(request) or DebugToolbar.is_toolbar_request(request):
+        show_toolbar = get_show_toolbar()
+        if (
+            callable(show_toolbar)
+            and not show_toolbar(request)
+            or DebugToolbar.is_toolbar_request(request)
+        ):
             return response
 
         content_type = response.get("Content-Type", "").split(";")[0]
