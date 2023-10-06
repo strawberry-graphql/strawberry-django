@@ -156,10 +156,8 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
 
         show_toolbar = get_show_toolbar()
         if (
-            callable(show_toolbar)
-            and not show_toolbar(request)
-            or DebugToolbar.is_toolbar_request(request)
-        ):
+            callable(show_toolbar) and not show_toolbar(request)
+        ) or DebugToolbar.is_toolbar_request(request):
             return response
 
         content_type = response.get("Content-Type", "").split(";")[0]
