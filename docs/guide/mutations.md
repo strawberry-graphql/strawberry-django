@@ -144,17 +144,18 @@ Some things to note here:
   and instead will respect explicit type annotations;
   see [partial input types](./types.md#input-types) documentation for examples.
 - I's also possible to update or delete model by using unique identifier other than id by providing `key_attr` property :
+
 ```{.python}
 @strawberry_django.partial(SomeModel)
 class SomeModelInputPartial:
     unique_field: strawberry.auto
-    
+
 @strawberry.type
 class Mutation:
     update_model: SomeModelType = mutations.update(
         SomeModelInputPartial, key_attr="unique_field")
     delete_model: SomeModelType = mutations.delete(
-        SomeModelInputPartial, key_attr="unique_field")    
+        SomeModelInputPartial, key_attr="unique_field")
 ```
 
 ## Filtering

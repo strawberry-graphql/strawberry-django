@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Iterable, Union, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Union
 
 import strawberry
 from django.core.exceptions import (
@@ -177,7 +177,7 @@ class DjangoMutationCUD(DjangoMutationBase):
         input_type: type | None = None,
         full_clean: bool = True,
         argument_name: str | None = None,
-        key_attr: str = 'id',
+        key_attr: str = "id",
         **kwargs,
     ):
         self.full_clean = full_clean
@@ -285,7 +285,9 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 
         pk = get_pk(vdata, self.key_attr)
         if pk not in (None, UNSET):
-            instance = get_with_perms(pk, info, required=True, model=model, key_attr=self.key_attr)
+            instance = get_with_perms(
+                pk, info, required=True, model=model, key_attr=self.key_attr
+            )
         else:
             instance = filter_with_perms(
                 self.get_queryset(
@@ -336,7 +338,9 @@ class DjangoDeleteMutation(
 
         pk = get_pk(vdata, self.key_attr)
         if pk not in (None, UNSET):
-            instance = get_with_perms(pk, info, required=True, model=model, key_attr=self.key_attr)
+            instance = get_with_perms(
+                pk, info, required=True, model=model, key_attr=self.key_attr
+            )
         else:
             instance = filter_with_perms(
                 self.get_queryset(

@@ -891,7 +891,9 @@ def test_input_update_mutation_with_key_attr(db, gql_client: GraphQLTestClient):
     for removed in remove_tags:
         expected_tags.remove(removed)
 
-    assert {frozenset(t.items()) for t in res.data["updateIssueWithKeyAttr"].pop("tags")} == {
+    assert {
+        frozenset(t.items()) for t in res.data["updateIssueWithKeyAttr"].pop("tags")
+    } == {
         frozenset({"id": to_base64("TagType", t.pk), "name": t.name}.items())
         for t in expected_tags
     }
