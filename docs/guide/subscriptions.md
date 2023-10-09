@@ -61,8 +61,7 @@ urlpatterns = [
 
 ```
 
-Note, django-channels allows for a lot more complexity. Here we just cover the basic framework to get
-subscriptions to run on Django with minimal effort.
+Note, django-channels allows for a lot more complexity. Here we merely cover the basic framework to get subscriptions to run on Django with minimal effort. Should you be interested in discovering the far more advanced capabilities of Dango channels, head over to [channels docs](https://channels.readthedocs.io)
 
 ## Setup local testing
 
