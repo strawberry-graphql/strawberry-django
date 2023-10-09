@@ -187,12 +187,12 @@ def get_with_perms(
 ) -> Optional[Any]: ...
 
 
-def get_with_perms(pk, info, *, required=False, model=None):
+def get_with_perms(pk, info, *, required=False, model=None, key_attr: Optional[str] = 'id'):
     if isinstance(pk, relay.GlobalID):
         instance = pk.resolve_node_sync(info, required=required, ensure_type=model)
     else:
         assert model
-        instance = model._default_manager.get(pk=pk)
+        instance = model._default_manager.get(**{key_attr: pk})
 
     if instance is None:
         return None

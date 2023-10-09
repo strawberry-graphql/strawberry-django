@@ -252,6 +252,13 @@ class IssueInputPartial(NodeInput, IssueInput):
     issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
 
 
+@strawberry_django.partial(Issue)
+class IssueInputPartialWithoutId(IssueInput):
+    tags: Optional[ListInput[TagInputPartial]]
+    assignees: Optional[ListInput[AssigneeInputPartial]]
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
+
+
 @strawberry_django.input(Issue)
 class MilestoneIssueInput:
     name: strawberry.auto
@@ -404,10 +411,22 @@ class Mutation:
         handle_django_errors=True,
         argument_name="input",
     )
+    update_issue_with_key_attr: IssueType = mutations.update(
+        IssueInputPartialWithoutId,
+        handle_django_errors=True,
+        argument_name="input",
+        key_attr="name",
+    )
     delete_issue: IssueType = mutations.delete(
         NodeInput,
         handle_django_errors=True,
         argument_name="input",
+    )
+    delete_issue_with_key_attr: IssueType = mutations.delete(
+        MilestoneIssueInput,
+        handle_django_errors=True,
+        argument_name="input",
+        key_attr="name",
     )
     update_project: ProjectType = mutations.update(
         ProjectInputPartial,

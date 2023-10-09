@@ -140,6 +140,19 @@ Some things to note here:
   To change it to `"info"` for example, you can change it by passing
   `argument_name="info"` to the mutation, or set `MUTATIONS_DEFAULT_ARGUMENT_NAME="info"`
   in your [strawberry django settings](../settings) to make it the default when not provided.
+- I's also possible to update or delete model by using unique identifier other than id by providing `key_attr` property :
+```{.python}
+@strawberry_django.partial(SomeModel)
+class SomeModelInputPartial:
+    unique_field: strawberry.auto
+    
+@strawberry.type
+class Mutation:
+    update_model: SomeModelType = mutations.update(
+        SomeModelInputPartial, key_attr="unique_field")
+    delete_model: SomeModelType = mutations.delete(
+        SomeModelInputPartial, key_attr="unique_field")    
+```
 
 ## Filtering
 
