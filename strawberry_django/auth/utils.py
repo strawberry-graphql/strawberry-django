@@ -24,16 +24,7 @@ def get_current_user(info: Info, *, strict: bool = False) -> Optional[UserType]:
             user = info.context.get("request").consumer.scope["user"]
         except AttributeError:
             # websockets / subscriptions move scope inside of the request
-            try:
-                user = info.context.get("request").scope.get("user")
-            except AttributeError:
-                # When running tests, we must manually add a context.
-                # For now let's grab it here:
-                is_test_mode = info.context.get("is_test_mode")
-                if is_test_mode:
-                    user = info.context.get("user")
-                else:
-                    raise
+            user = info.context.get("request").scope.get("user")
 
     if user is None:
         raise ValueError("No user found in the current request")
