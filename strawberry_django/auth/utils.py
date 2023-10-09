@@ -12,7 +12,16 @@ def get_current_user(info: Info):
             user = info.context.get("request").consumer.scope["user"]
         except AttributeError:
             # websockets / subscriptions move scope inside of the request
-            user = info.context.get("request").scope.get("user")
+            try:
+                user = info.context.get("request").scope.get("user")
+            except AttributeError:
+                # When running tests, we must manually add a context.
+                # For now let's grab it here:
+                is_test_mode = info.context.get("is_test_mode")
+                if is_test_mode:
+                    user = info.context.get("user")
+                else:
+                    raise
 
     # Access an attribute inside the user object to force loading it in async contexts.
     if user is not None:
