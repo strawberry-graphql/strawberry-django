@@ -1,8 +1,20 @@
+from typing import Literal, Optional, overload
+
 from asgiref.sync import sync_to_async
 from strawberry.types import Info
 
+from strawberry_django.utils.typing import UserType
 
-def get_current_user(info: Info):
+
+@overload
+def get_current_user(info: Info, *, strict: Literal[True]) -> UserType: ...
+
+
+@overload
+def get_current_user(info: Info, *, strict: bool = False) -> Optional[UserType]: ...
+
+
+def get_current_user(info: Info, *, strict: bool = False) -> Optional[UserType]:
     """Get and return the current user based on various scenarios."""
     try:
         user = info.context.request.user
@@ -23,6 +35,9 @@ def get_current_user(info: Info):
                 else:
                     raise
 
+    if user is None:
+        raise ValueError("No user found in the current request")
+
     # Access an attribute inside the user object to force loading it in async contexts.
     if user is not None:
         _ = user.is_authenticated
@@ -30,5 +45,21 @@ def get_current_user(info: Info):
     return user
 
 
-async def aget_current_user(info: Info):
-    return sync_to_async(get_current_user)(info)
+@overload
+async def aget_current_user(
+    info: Info,
+    *,
+    strict: Literal[True],
+) -> UserType: ...
+
+
+@overload
+async def aget_current_user(
+    info: Info,
+    *,
+    strict: bool = False,
+) -> Optional[UserType]: ...
+
+
+async def aget_current_user(info: Info, *, strict: bool = False) -> Optional[UserType]:
+    return await sync_to_async(get_current_user)(info, strict=strict)

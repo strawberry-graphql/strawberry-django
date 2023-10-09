@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
-from django.urls import re_path
+from django.urls import URLPattern, URLResolver, re_path
 from strawberry.channels.handlers.http_handler import GraphQLHTTPConsumer
 from strawberry.channels.handlers.ws_handler import GraphQLWSConsumer
 
 if TYPE_CHECKING:
+    from django.core.handlers.asgi import ASGIHandler
     from strawberry.schema import BaseSchema
 
 
@@ -40,12 +41,14 @@ class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
     def __init__(
         self,
         schema: BaseSchema,
-        django_application: str | None = None,
+        django_application: ASGIHandler | None = None,
         url_pattern: str = "^graphql",
     ):
-        http_urls = [re_path(url_pattern, GraphQLHTTPConsumer.as_asgi(schema=schema))]
+        http_urls: list[URLPattern | URLResolver] = [
+            re_path(url_pattern, GraphQLHTTPConsumer.as_asgi(schema=schema)),
+        ]
         if django_application is not None:
-            http_urls.append(re_path("^", django_application))
+            http_urls.append(re_path(r"^", django_application))
 
         super().__init__(
             {

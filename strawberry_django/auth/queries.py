@@ -8,7 +8,7 @@ from .utils import get_current_user
 def resolve_current_user(info: Info):
     user = get_current_user(info)
 
-    if not user.is_authenticated:
+    if not getattr(user, "is_authenticated", False):
         return None
 
     return user

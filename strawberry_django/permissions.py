@@ -5,6 +5,7 @@ import copy
 import dataclasses
 import enum
 import functools
+import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -38,7 +39,6 @@ from strawberry.schema_directive import Location
 from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
-from strawberry.utils.await_maybe import await_maybe
 from typing_extensions import Literal, Self, assert_never
 
 from strawberry_django.auth.utils import get_current_user
@@ -297,10 +297,11 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         except (ImportError, RuntimeError):  # pragma: no cover
             pass
         else:
-            user = get_user_or_anonymous(user)
+            user = user and get_user_or_anonymous(user)
 
         # make sure the user is loaded
-        user.is_anonymous  # noqa: B018
+        if user is not None:
+            user.is_authenticated  # noqa: B018
 
         try:
             retval = self.resolve_for_user(
@@ -328,20 +329,20 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         except (ImportError, RuntimeError):  # pragma: no cover
             pass
         else:
-            user = await sync_to_async(get_user_or_anonymous)(user)
+            user = user and await sync_to_async(get_user_or_anonymous)(user)
 
         # make sure the user is loaded
         await sync_to_async(getattr)(user, "is_anonymous")
 
         try:
-            retval = await await_maybe(
-                self.resolve_for_user(
-                    functools.partial(next_, source, info, **kwargs),
-                    user,
-                    info=info,
-                    source=source,
-                ),
+            retval = self.resolve_for_user(
+                functools.partial(next_, source, info, **kwargs),
+                user,
+                info=info,
+                source=source,
             )
+            while inspect.isawaitable(retval):
+                retval = await retval
         except DjangoNoPermission as e:
             retval = self.handle_no_permission(e, info=info)
 
@@ -409,7 +410,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
     def resolve_for_user(  # pragma: no cover
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
@@ -424,15 +425,16 @@ class IsAuthenticated(DjangoPermissionExtension):
         "Can only be resolved by authenticated users.",
     )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if not user.is_authenticated or not user.is_active:
+        if user is None or not user.is_authenticated or not user.is_active:
             raise DjangoNoPermission
 
         return resolver()
@@ -446,15 +448,20 @@ class IsStaff(DjangoPermissionExtension):
         "Can only be resolved by staff users.",
     )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if not user.is_authenticated or not getattr(user, "is_staff", False):
+        if (
+            user is None
+            or not user.is_authenticated
+            or not getattr(user, "is_staff", False)
+        ):
             raise DjangoNoPermission
 
         return resolver()
@@ -468,15 +475,20 @@ class IsSuperuser(DjangoPermissionExtension):
         "Can only be resolved by superuser users.",
     )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if not user.is_authenticated or not getattr(user, "is_superuser", False):
+        if (
+            user is None
+            or not user.is_authenticated
+            or not getattr(user, "is_superuser", False)
+        ):
             raise DjangoNoPermission
 
         return resolver()
@@ -690,15 +702,16 @@ class HasPerm(DjangoPermissionExtension):
             any=self.any_perm,
         )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if self.with_anonymous and user.is_anonymous:
+        if user is None or self.with_anonymous and user.is_anonymous:
             raise DjangoNoPermission
 
         if (
@@ -718,11 +731,14 @@ class HasPerm(DjangoPermissionExtension):
     def resolve_for_user_with_perms(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
+        if user is None:
+            raise DjangoNoPermission
+
         if self.target == PermTarget.GLOBAL:
             if not self._has_perm(source, user, info=info):
                 raise DjangoNoPermission
