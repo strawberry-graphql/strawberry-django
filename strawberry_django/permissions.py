@@ -421,6 +421,7 @@ class IsAuthenticated(DjangoPermissionExtension):
         "Can only be resolved by authenticated users.",
     )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
@@ -443,6 +444,7 @@ class IsStaff(DjangoPermissionExtension):
         "Can only be resolved by staff users.",
     )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
@@ -465,6 +467,7 @@ class IsSuperuser(DjangoPermissionExtension):
         "Can only be resolved by superuser users.",
     )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
@@ -687,6 +690,7 @@ class HasPerm(DjangoPermissionExtension):
             any=self.any_perm,
         )
 
+    @django_resolver(qs_hook=None)
     def resolve_for_user(
         self,
         resolver: Callable,
