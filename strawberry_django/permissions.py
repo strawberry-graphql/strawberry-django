@@ -5,6 +5,7 @@ import copy
 import dataclasses
 import enum
 import functools
+import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -38,7 +39,6 @@ from strawberry.schema_directive import Location
 from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
-from strawberry.utils.await_maybe import await_maybe
 from typing_extensions import Literal, Self, assert_never
 
 from strawberry_django.fields.types import OperationInfo, OperationMessage
@@ -331,14 +331,14 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         await sync_to_async(getattr)(user, "is_anonymous")
 
         try:
-            retval = await await_maybe(
-                self.resolve_for_user(
-                    functools.partial(next_, source, info, **kwargs),
-                    user,
-                    info=info,
-                    source=source,
-                ),
+            retval = self.resolve_for_user(
+                functools.partial(next_, source, info, **kwargs),
+                user,
+                info=info,
+                source=source,
             )
+            while inspect.isawaitable(retval):
+                retval = await retval
         except DjangoNoPermission as e:
             retval = self.handle_no_permission(e, info=info)
 
