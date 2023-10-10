@@ -172,7 +172,6 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
 
 
 class DjangoMutationCUD(DjangoMutationBase):
-
     def __init__(
         self,
         input_type: type | None = None,
