@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Iterable, Union
+from typing import TYPE_CHECKING, Any, Iterable, Union, Optional
 
 import strawberry
 from django.core.exceptions import (
@@ -260,7 +260,7 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 def get_pk(
     data: dict[str, Any],
     *,
-    key_attr: str | None = "pk",
+    key_attr: Optional[str] = "pk",
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
     pk = data.pop(key_attr, UNSET)
     if pk is UNSET:
