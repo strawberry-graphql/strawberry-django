@@ -172,6 +172,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
 
 
 class DjangoMutationCUD(DjangoMutationBase):
+
     def __init__(
         self,
         input_type: type | None = None,
@@ -264,7 +265,7 @@ def get_pk(
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
     pk = data.pop(key_attr, UNSET)
     if pk is UNSET:
-        pk = data.pop("pk", UNSET)
+        pk = data.pop("id", UNSET)
     return pk
 
 
@@ -284,7 +285,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
 
-        pk = get_pk(vdata, self.key_attr)
+        pk = get_pk(vdata, key_attr=self.key_attr)
         if pk not in (None, UNSET):
             instance = get_with_perms(
                 pk,
