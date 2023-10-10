@@ -177,7 +177,7 @@ class DjangoMutationCUD(DjangoMutationBase):
         input_type: type | None = None,
         full_clean: bool = True,
         argument_name: str | None = None,
-        key_attr: str = "id",
+        key_attr: str | None = "pk",
         **kwargs,
     ):
         self.full_clean = full_clean
