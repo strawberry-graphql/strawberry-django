@@ -262,7 +262,8 @@ def get_pk(
     *,
     key_attr: str | None = "pk",
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
-    pk = data.pop(key_attr, UNSET)
+    pk = data.pop(key_attr, UNSET) if key_attr else UNSET
+
     if pk is UNSET:
         pk = data.pop("id", UNSET)
     return pk
