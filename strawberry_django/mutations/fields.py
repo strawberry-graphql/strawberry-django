@@ -341,7 +341,7 @@ class DjangoDeleteMutation(
         data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
 
-        pk = get_pk(vdata, self.key_attr)
+        pk = get_pk(vdata, key_attr=self.key_attr)
         if pk not in (None, UNSET):
             instance = get_with_perms(
                 pk,
