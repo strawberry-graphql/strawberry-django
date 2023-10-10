@@ -136,6 +136,7 @@ def get_with_perms(
     *,
     required: Literal[True],
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> _M: ...
 
 
@@ -146,6 +147,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> Optional[_M]: ...
 
 
@@ -156,6 +158,7 @@ def get_with_perms(
     *,
     required: Literal[True],
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> _M: ...
 
 
@@ -166,6 +169,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> Optional[_M]: ...
 
 
@@ -175,6 +179,7 @@ def get_with_perms(
     info: Info,
     *,
     required: Literal[True],
+    key_attr: Optional[str] = ...,
 ) -> Any: ...
 
 
@@ -184,6 +189,7 @@ def get_with_perms(
     info: Info,
     *,
     required: bool = ...,
+    key_attr: Optional[str] = ...,
 ) -> Optional[Any]: ...
 
 
