@@ -259,7 +259,8 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 
 def get_pk(
     data: dict[str, Any],
-    key_attr: str,
+    *,
+    key_attr: str | None = "pk",
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
     pk = data.pop(key_attr, UNSET)
     if pk is UNSET:
