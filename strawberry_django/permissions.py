@@ -188,7 +188,12 @@ def get_with_perms(
 
 
 def get_with_perms(
-    pk, info, *, required=False, model=None, key_attr: Optional[str] = "id"
+    pk,
+    info,
+    *,
+    required=False,
+    model=None,
+    key_attr: Optional[str] = "id",
 ):
     if isinstance(pk, relay.GlobalID):
         instance = pk.resolve_node_sync(info, required=required, ensure_type=model)

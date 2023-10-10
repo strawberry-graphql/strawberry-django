@@ -286,7 +286,11 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         pk = get_pk(vdata, self.key_attr)
         if pk not in (None, UNSET):
             instance = get_with_perms(
-                pk, info, required=True, model=model, key_attr=self.key_attr
+                pk,
+                info,
+                required=True,
+                model=model,
+                key_attr=self.key_attr,
             )
         else:
             instance = filter_with_perms(
@@ -339,7 +343,11 @@ class DjangoDeleteMutation(
         pk = get_pk(vdata, self.key_attr)
         if pk not in (None, UNSET):
             instance = get_with_perms(
-                pk, info, required=True, model=model, key_attr=self.key_attr
+                pk,
+                info,
+                required=True,
+                model=model,
+                key_attr=self.key_attr,
             )
         else:
             instance = filter_with_perms(
