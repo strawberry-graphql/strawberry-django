@@ -153,9 +153,13 @@ class SomeModelInputPartial:
 @strawberry.type
 class Mutation:
     update_model: SomeModelType = mutations.update(
-        SomeModelInputPartial, key_attr="unique_field")
+        SomeModelInputPartial,
+        key_attr="unique_field",
+    )
     delete_model: SomeModelType = mutations.delete(
-        SomeModelInputPartial, key_attr="unique_field")
+        SomeModelInputPartial,
+        key_attr="unique_field",
+    )
 ```
 
 ## Filtering
