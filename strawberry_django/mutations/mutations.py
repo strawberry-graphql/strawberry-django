@@ -378,7 +378,7 @@ def delete(
     graphql_type: Optional[Any] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    key_attr: Optional[str] = "id",
+    key_attr: Optional[str] = "pk",
 ) -> Any:
     return DjangoDeleteMutation(
         input_type=input_type,
