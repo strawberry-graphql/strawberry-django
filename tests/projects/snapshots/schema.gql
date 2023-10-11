@@ -150,6 +150,8 @@ scalar Decimal
 
 union DeleteIssuePayload = IssueType | OperationInfo
 
+union DeleteIssueWithKeyAttrPayload = IssueType | OperationInfo
+
 input DjangoModelFilterInput {
   pk: ID!
 }
@@ -211,6 +213,16 @@ input IssueInput {
 
 input IssueInputPartial {
   id: GlobalID!
+  name: String
+  milestone: MilestoneInputPartial!
+  priority: Int
+  kind: String
+  tags: TagInputPartialListInput
+  assignees: AssigneeInputPartialListInput
+  issueAssignees: IssueAssigneeInputPartialListInput
+}
+
+input IssueInputPartialWithoutId {
   name: String
   milestone: MilestoneInputPartial!
   priority: Int
@@ -332,7 +344,9 @@ type MilestoneTypeEdge {
 type Mutation {
   createIssue(input: IssueInput!): CreateIssuePayload!
   updateIssue(input: IssueInputPartial!): UpdateIssuePayload!
+  updateIssueWithKeyAttr(input: IssueInputPartialWithoutId!): UpdateIssueWithKeyAttrPayload!
   deleteIssue(input: NodeInput!): DeleteIssuePayload!
+  deleteIssueWithKeyAttr(input: MilestoneIssueInput!): DeleteIssueWithKeyAttrPayload!
   updateProject(input: ProjectInputPartial!): UpdateProjectPayload!
   createMilestone(input: MilestoneInput!): CreateMilestonePayload!
   createProject(
@@ -814,6 +828,8 @@ type TagTypeEdge {
 }
 
 union UpdateIssuePayload = IssueType | OperationInfo
+
+union UpdateIssueWithKeyAttrPayload = IssueType | OperationInfo
 
 union UpdateProjectPayload = ProjectType | OperationInfo
 
