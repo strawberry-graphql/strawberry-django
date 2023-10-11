@@ -319,7 +319,7 @@ def update(
     extensions: List[FieldExtension] = (),  # type: ignore
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    key_attr: Optional[str] = "id",
+    key_attr: Optional[str] = "pk",
 ) -> Any:
     """Update mutation for django input fields.
 
