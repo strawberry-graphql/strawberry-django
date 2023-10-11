@@ -1,10 +1,17 @@
+from strawberry.types import Info
+
 import strawberry_django
 
+from .utils import get_current_user
 
-def resolve_current_user(info):
-    if not info.context.request.user.is_authenticated:
+
+def resolve_current_user(info: Info):
+    user = get_current_user(info)
+
+    if not getattr(user, "is_authenticated", False):
         return None
-    return info.context.request.user
+
+    return user
 
 
 def current_user():

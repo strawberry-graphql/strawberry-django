@@ -24,6 +24,7 @@ from typing_extensions import Annotated
 
 import strawberry_django
 from strawberry_django import mutations
+from strawberry_django.auth.queries import get_current_user
 from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartial
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -379,7 +380,7 @@ class Query:
 
     @strawberry_django.field
     def me(self, info: Info) -> Optional[UserType]:
-        user = info.context.request.user
+        user = get_current_user(info, strict=True)
         if not user.is_authenticated:
             return None
 

@@ -41,6 +41,7 @@ from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
 from typing_extensions import Literal, Self, assert_never
 
+from strawberry_django.auth.utils import get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
 from strawberry_django.resolvers import django_resolver
 
@@ -289,16 +290,18 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         info: Info,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        user = info.context.request.user
+        user = get_current_user(info)
+
         try:
             from .integrations.guardian import get_user_or_anonymous
         except (ImportError, RuntimeError):  # pragma: no cover
             pass
         else:
-            user = get_user_or_anonymous(user)
+            user = user and get_user_or_anonymous(user)
 
         # make sure the user is loaded
-        user.is_anonymous  # noqa: B018
+        if user is not None:
+            user.is_authenticated  # noqa: B018
 
         try:
             retval = self.resolve_for_user(
@@ -319,13 +322,14 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         info: Info,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        user = info.context.request.user
+        user = get_current_user(info)
+
         try:
             from .integrations.guardian import get_user_or_anonymous
         except (ImportError, RuntimeError):  # pragma: no cover
             pass
         else:
-            user = await sync_to_async(get_user_or_anonymous)(user)
+            user = user and await sync_to_async(get_user_or_anonymous)(user)
 
         # make sure the user is loaded
         await sync_to_async(getattr)(user, "is_anonymous")
@@ -406,7 +410,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
     def resolve_for_user(  # pragma: no cover
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
@@ -425,12 +429,12 @@ class IsAuthenticated(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if not user.is_authenticated or not user.is_active:
+        if user is None or not user.is_authenticated or not user.is_active:
             raise DjangoNoPermission
 
         return resolver()
@@ -448,12 +452,16 @@ class IsStaff(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if not user.is_authenticated or not getattr(user, "is_staff", False):
+        if (
+            user is None
+            or not user.is_authenticated
+            or not getattr(user, "is_staff", False)
+        ):
             raise DjangoNoPermission
 
         return resolver()
@@ -471,12 +479,16 @@ class IsSuperuser(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if not user.is_authenticated or not getattr(user, "is_superuser", False):
+        if (
+            user is None
+            or not user.is_authenticated
+            or not getattr(user, "is_superuser", False)
+        ):
             raise DjangoNoPermission
 
         return resolver()
@@ -694,12 +706,12 @@ class HasPerm(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
-        if self.with_anonymous and user.is_anonymous:
+        if user is None or self.with_anonymous and user.is_anonymous:
             raise DjangoNoPermission
 
         if (
@@ -719,11 +731,14 @@ class HasPerm(DjangoPermissionExtension):
     def resolve_for_user_with_perms(
         self,
         resolver: Callable,
-        user: UserType,
+        user: Optional[UserType],
         *,
         info: Info,
         source: Any,
     ):
+        if user is None:
+            raise DjangoNoPermission
+
         if self.target == PermTarget.GLOBAL:
             if not self._has_perm(source, user, info=info):
                 raise DjangoNoPermission
