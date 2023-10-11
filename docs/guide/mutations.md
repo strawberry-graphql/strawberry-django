@@ -140,6 +140,9 @@ Some things to note here:
   To change it to `"info"` for example, you can change it by passing
   `argument_name="info"` to the mutation, or set `MUTATIONS_DEFAULT_ARGUMENT_NAME="info"`
   in your [strawberry django settings](../settings) to make it the default when not provided.
+- Take note that inputs using `partial` will _not_ automatically mark non-auto fields optional
+  and instead will respect explicit type annotations;
+  see [partial input types](./types.md#input-types) documentation for examples.
 
 ## Filtering
 
