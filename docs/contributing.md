@@ -10,7 +10,13 @@ poetry install
 poetry run pytest
 ```
 
-This will install all the dependencies (including dev ones) and run the tests.
+This will install all the dependencies (including the dev ones) and run the tests.
+
+If the tests fail with `SpatiaLite requires SQLite to be configured to allow extension loading` error,
+it means that your python interpreter is not built with `--enable-loadable-sqlite-extensions` flag.
+For example, if you are using pyenv, it can be fixed like this:
+
+`PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions" pyenv install 3.12.0`
 
 ### Pre commit
 
