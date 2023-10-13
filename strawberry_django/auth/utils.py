@@ -24,10 +24,10 @@ def get_current_user(info: Info, *, strict: bool = False) -> Optional[UserType]:
     except AttributeError:
         try:
             # queries/mutations in ASGI move the user into consumer scope
-            user = request.consumer.scope["user"]
+            user = request.consumer.scope["user"]  # type: ignore
         except AttributeError:
             # websockets / subscriptions move scope inside of the request
-            user = request.scope.get("user")
+            user = request.scope.get("user")  # type: ignore
 
     if user is None:
         raise ValueError("No user found in the current request")
