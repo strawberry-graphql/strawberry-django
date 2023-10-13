@@ -11,6 +11,7 @@ from strawberry_django.mutations import mutations, resolvers
 from strawberry_django.mutations.fields import DjangoCreateMutation
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.resolvers import django_resolver
+from strawberry_django.utils.requests import get_request
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -19,18 +20,20 @@ if TYPE_CHECKING:
 
 @django_resolver
 def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser | None:
-    request = info.context.request
+    request = get_request(info)
     user = auth.authenticate(request, username=username, password=password)
+
     if user is not None:
         auth.login(request, user)
         return user
+
     auth.logout(request)
     return None
 
 
 @django_resolver
 def resolve_logout(info: Info) -> bool:
-    request = info.context.request
+    request = get_request(info)
     ret = request.user.is_authenticated
     auth.logout(request)
     return ret
