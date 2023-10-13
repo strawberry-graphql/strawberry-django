@@ -4,9 +4,12 @@ import functools
 from typing import TYPE_CHECKING, Any, Type, cast
 
 import strawberry
+from asgiref.sync import async_to_sync
+from channels import auth as channels_auth
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
 
+from strawberry_django.auth.utils import get_current_user
 from strawberry_django.mutations import mutations, resolvers
 from strawberry_django.mutations.fields import DjangoCreateMutation
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -24,18 +27,35 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser 
     user = auth.authenticate(request, username=username, password=password)
 
     if user is not None:
-        auth.login(request, user)
+        try:
+            auth.login(request, user)
+        except AttributeError:
+            # ASGI in combo with websockets needs the channels login functionality.
+            # to ensure we're talking about channels, let's veriy that our
+            # request is actually channelsrequest
+            scope = request.consumer.scope
+            async_to_sync(channels_auth.login)(scope, user)
+            # According to channels docs you must save the session
+            scope["session"].save()
         return user
 
+    # FIXME: Why call logout inside login??
     auth.logout(request)
     return None
 
 
 @django_resolver
 def resolve_logout(info: Info) -> bool:
-    request = get_request(info)
-    ret = request.user.is_authenticated
-    auth.logout(request)
+    user = get_current_user(info)
+    ret = user.is_authenticated
+
+    try:
+        request = get_request(info)
+        auth.logout(request)
+    except AttributeError:
+        scope = request.consumer.scope
+        async_to_sync(channels_auth.logout)(scope)
+
     return ret
 
 
