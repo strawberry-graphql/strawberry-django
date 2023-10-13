@@ -33,7 +33,7 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser 
             # ASGI in combo with websockets needs the channels login functionality.
             # to ensure we're talking about channels, let's veriy that our
             # request is actually channelsrequest
-            scope = request.consumer.scope
+            scope = request.consumer.scope  # type: ignore
             async_to_sync(channels_auth.login)(scope, user)
             # According to channels docs you must save the session
             scope["session"].save()
@@ -47,13 +47,13 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser 
 @django_resolver
 def resolve_logout(info: Info) -> bool:
     user = get_current_user(info)
-    ret = user.is_authenticated
+    ret = user.is_authenticated  # type: ignore
 
     try:
         request = get_request(info)
         auth.logout(request)
     except AttributeError:
-        scope = request.consumer.scope
+        scope = request.consumer.scope  # type: ignore
         async_to_sync(channels_auth.logout)(scope)
 
     return ret
