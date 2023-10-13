@@ -137,6 +137,7 @@ def get_with_perms(
     *,
     required: Literal[True],
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> _M: ...
 
 
@@ -147,6 +148,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> Optional[_M]: ...
 
 
@@ -157,6 +159,7 @@ def get_with_perms(
     *,
     required: Literal[True],
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> _M: ...
 
 
@@ -167,6 +170,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     model: Type[_M],
+    key_attr: Optional[str] = ...,
 ) -> Optional[_M]: ...
 
 
@@ -176,6 +180,7 @@ def get_with_perms(
     info: Info,
     *,
     required: Literal[True],
+    key_attr: Optional[str] = ...,
 ) -> Any: ...
 
 
@@ -185,15 +190,23 @@ def get_with_perms(
     info: Info,
     *,
     required: bool = ...,
+    key_attr: Optional[str] = ...,
 ) -> Optional[Any]: ...
 
 
-def get_with_perms(pk, info, *, required=False, model=None):
+def get_with_perms(
+    pk,
+    info,
+    *,
+    required=False,
+    model=None,
+    key_attr: Optional[str] = "pk",
+):
     if isinstance(pk, relay.GlobalID):
         instance = pk.resolve_node_sync(info, required=required, ensure_type=model)
     else:
         assert model
-        instance = model._default_manager.get(pk=pk)
+        instance = model._default_manager.get(**{key_attr: pk})
 
     if instance is None:
         return None

@@ -177,10 +177,12 @@ class DjangoMutationCUD(DjangoMutationBase):
         input_type: type | None = None,
         full_clean: bool = True,
         argument_name: str | None = None,
+        key_attr: str | None = "pk",
         **kwargs,
     ):
         self.full_clean = full_clean
         self.input_type = input_type
+        self.key_attr = key_attr
 
         if argument_name is None:
             settings = strawberry_django_settings()
@@ -257,10 +259,13 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 
 def get_pk(
     data: dict[str, Any],
+    *,
+    key_attr: str | None = "pk",
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
-    pk = data.pop("id", UNSET)
+    pk = data.pop(key_attr, UNSET) if key_attr else UNSET
+
     if pk is UNSET:
-        pk = data.pop("pk", UNSET)
+        pk = data.pop("id", UNSET)
     return pk
 
 
@@ -280,9 +285,15 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
 
-        pk = get_pk(vdata)
+        pk = get_pk(vdata, key_attr=self.key_attr)
         if pk not in (None, UNSET):
-            instance = get_with_perms(pk, info, required=True, model=model)
+            instance = get_with_perms(
+                pk,
+                info,
+                required=True,
+                model=model,
+                key_attr=self.key_attr,
+            )
         else:
             instance = filter_with_perms(
                 self.get_queryset(
@@ -331,9 +342,15 @@ class DjangoDeleteMutation(
         data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
 
-        pk = get_pk(vdata)
+        pk = get_pk(vdata, key_attr=self.key_attr)
         if pk not in (None, UNSET):
-            instance = get_with_perms(pk, info, required=True, model=model)
+            instance = get_with_perms(
+                pk,
+                info,
+                required=True,
+                model=model,
+                key_attr=self.key_attr,
+            )
         else:
             instance = filter_with_perms(
                 self.get_queryset(
