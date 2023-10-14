@@ -297,7 +297,8 @@ def create(
         update_field(info, dummy_instance, field, value)
 
     # FIXME: This pre-save hook will not actually do anything
-    # since the dummy-intance is not saved.
+    # since the dummy-intance is not saved.  Users should be using
+    # pre_save signals instead.
     if pre_save_hook is not None:
         pre_save_hook(dummy_instance)
 
