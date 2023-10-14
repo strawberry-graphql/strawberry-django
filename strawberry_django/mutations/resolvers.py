@@ -221,6 +221,18 @@ def create(
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
 
+    # Also, the appraoch below will use the manager to create the instnace
+    # rather then manually creating it.  If you have a pre_save_hook
+    # use the update method instead.
+    if pre_save_hook:
+        return update(
+            info,
+            model(),
+            data,
+            full_clean=full_clean,
+            pre_save_hook=pre_save_hook,
+        )
+
     # We will use a dummy-instance to trigger form validation
     # However, this instance should not be saved as it will
     # circumvent the manager create method.
@@ -301,11 +313,6 @@ def create(
     # Create the instance using the manager create method to respect
     # manager create overrides for proxy-models.
     instance = model._default_manager.create(**create_kwargs)
-
-    # FIXME: This pre-save hook will run after save(). Probably not
-    # the desired result.
-    if pre_save_hook is not None:
-        pre_save_hook(instance)
 
     # Now that the instance has been created, go and assign
     # files and many2many fields.
