@@ -216,19 +216,114 @@ def create(
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ):
+    # Before creating your instance, verify this is not a bulk create
+    # if so, add them one by one. Othewise, get to work.
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
 
-    if dataclasses.is_dataclass(data):
-        data = vars(cast(object, data))
+    # Unwrap lazy objects since they have a proxy __iter__ method that will make
+    # them iterables even if the wrapped object isn't
+    if isinstance(model, LazyObject):
+        model = cast(_M, model.__reduce__()[1][0])
 
-    return update(
-        info,
-        model(),
-        data,
-        full_clean=full_clean,
-        pre_save_hook=pre_save_hook,
-    )
+    # We will use a dummy-instance to trigger form validation
+    # However, this instance should not be saved as it will
+    # circumvent the manager create method.
+    dummy_instance = model()
+
+    fields = get_model_fields(model)
+    files: list[
+        tuple[
+            models.FileField,
+            Upload | Literal[False],
+        ]
+    ] = []
+    m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
+    create_kwargs = {}
+
+    if dataclasses.is_dataclass(data):
+        data = vars(data)
+
+    for name, value in data.items():
+        field = fields.get(name)
+        create_populate_field = True
+
+        if field is None or value is UNSET:
+            # Dont use these, fallback to model defaults.
+            create_populate_field = False
+            continue
+
+        if isinstance(field, models.FileField):
+            if value is None:
+                # We want to reset the file field value when None was passed in the
+                # input, but `FileField.save_form_data` ignores None values. In that
+                # case we manually pass False which clears the file.
+                value = False  # noqa: PLW2901
+
+            # set filefields at the same time so their hooks can use other set values
+            files.append((field, value))
+            create_populate_field = False
+            continue
+
+        if isinstance(field, (ManyToManyField, ForeignObjectRel)):
+            # m2m will be processed later
+            m2m.append((field, value))
+            create_populate_field = False
+            continue
+
+        if isinstance(field, models.ForeignKey) and isinstance(
+            value,
+            # We are using str here because strawberry.ID can't be used for isinstance
+            (ParsedObject, str),
+        ):
+            value, value_data = _parse_data(  # noqa: PLW2901
+                info,
+                field.related_model,
+                value,
+            )
+            if value is None and not value_data:
+                value = None  # noqa: PLW2901
+            elif value is None:
+                value = field.related_model._default_manager.create(  # noqa: PLW2901
+                    **value_data,
+                )
+            else:
+                update(info, value, value_data, full_clean=full_clean)
+
+        if create_populate_field:
+            create_kwargs.update({name: value})
+
+        # Populate the dummy_instance field for validation purposes.
+        update_field(info, dummy_instance, field, value)
+
+    # FIXME: This pre-save hook will not actually do anything
+    # since the dummy-intance is not saved.
+    if pre_save_hook is not None:
+        pre_save_hook(dummy_instance)
+
+    # Creating the instance directly via .create withouth full-clean will
+    # raise ugly error messages. To make them more user-friendly we want to
+    # have full-clean trigger form-validation style error messages.
+    full_clean_options = full_clean if isinstance(full_clean, dict) else {}
+    if full_clean:
+        dummy_instance.full_clean(**full_clean_options)  # type: ignore
+
+    # Create the instance using the manager create method to respect
+    # manager create overrides for proxy-models.
+    instance = model._default_manager.create(**create_kwargs)
+
+    # Now that the instance has been created, go and assign
+    # files and many2many fields.
+    for file_field, value in files:
+        file_field.save_form_data(instance, value)
+
+    for field, value in m2m:
+        update_m2m(info, instance, field, value)
+
+    # FIXME: Should you really need to refresh the object from db?
+    instance.refresh_from_db()
+
+    return instance
 
 
 @overload
@@ -351,7 +446,8 @@ def update(
         for field, value in m2m:
             update_m2m(info, instance, field, value)
 
-        retval.append(instance.__class__._default_manager.get(pk=instance.pk))
+        instance.refresh_from_db()
+        retval.append(instance)
 
     return retval if many else retval[0]
 
