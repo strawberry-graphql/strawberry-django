@@ -291,12 +291,6 @@ def create(
         # Populate the dummy_instance field for validation purposes.
         update_field(info, dummy_instance, field, value)
 
-    # FIXME: This pre-save hook will not actually do anything
-    # since the dummy-intance is not saved.  Users should be using
-    # pre_save signals instead.
-    if pre_save_hook is not None:
-        pre_save_hook(dummy_instance)
-
     # Creating the instance directly via .create withouth full-clean will
     # raise ugly error messages. To make them more user-friendly we want to
     # have full-clean trigger form-validation style error messages.
@@ -307,6 +301,11 @@ def create(
     # Create the instance using the manager create method to respect
     # manager create overrides for proxy-models.
     instance = model._default_manager.create(**create_kwargs)
+
+    # FIXME: This pre-save hook will run after save(). Probably not
+    # the desired result.
+    if pre_save_hook is not None:
+        pre_save_hook(instance)
 
     # Now that the instance has been created, go and assign
     # files and many2many fields.
