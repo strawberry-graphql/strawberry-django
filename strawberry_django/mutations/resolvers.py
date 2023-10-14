@@ -221,11 +221,6 @@ def create(
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
 
-    # Unwrap lazy objects since they have a proxy __iter__ method that will make
-    # them iterables even if the wrapped object isn't
-    if isinstance(model, LazyObject):
-        model = cast(_M, model.__reduce__()[1][0])
-
     # We will use a dummy-instance to trigger form validation
     # However, this instance should not be saved as it will
     # circumvent the manager create method.
