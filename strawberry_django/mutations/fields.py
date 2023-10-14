@@ -247,7 +247,7 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         model = self.django_model
         assert model is not None
 
-        # Do not optimize anything while retrieving the object to update
+        # Do not optimize anything while retrieving the object to create
         with DjangoOptimizerExtension.disabled():
             return resolvers.create(
                 info,
