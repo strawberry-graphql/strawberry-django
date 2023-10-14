@@ -3,7 +3,7 @@
 Those are some community maintained projects worth mentioning:
 
 |                                              Project                                               |                                                         Description                                                         |
-|:--------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------------:|
+| :------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------: |
 | [:material-github: strawberry-django-plus](https://github.com/blb-ventures/strawberry-django-plus) |     :material-information: Additional features that are out of this project scope (deprecated since merged to this lib)     |
 |   [:material-github: strawberry-django-jwt](https://github.com/KundaPanda/strawberry-django-jwt)   |                            :material-information: JWT implementation with Strawberry and Django.                            |
 |   [:material-github: strawberry-django-auth](https://github.com/nrbnlulu/strawberry-django-auth)   |                          :material-information: Authentication System for Django using Strawberry.                          |
