@@ -474,6 +474,7 @@ def update_m2m(
                 if data:
                     for k, inner_value in data.items():
                         setattr(obj, k, inner_value)
+                    obj.full_clean()
                     obj.save()
 
                 if hasattr(manager, "through"):
@@ -496,6 +497,7 @@ def update_m2m(
 
                     for k, inner_value in through_defaults.items():
                         setattr(im, k, inner_value)
+                    im.full_clean()
                     im.save()
                 elif obj not in existing:
                     to_add.append(obj)
@@ -503,6 +505,7 @@ def update_m2m(
                 existing.discard(obj)
             else:
                 obj, _ = manager.get_or_create(**data)
+                obj.full_clean()
                 existing.discard(obj)
 
         for remaining in existing:
@@ -515,6 +518,7 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
             obj, data = _parse_data(info, manager.model, v)
+            obj.full_clean()
             if obj and data:
                 manager.add(obj, **data)
             elif obj:
