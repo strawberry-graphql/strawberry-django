@@ -101,7 +101,7 @@ def filter_for_user_q(
         except KeyError:  # pragma:nocover
             # If we are not running async, retrieve it
             ctype = (
-                ContentType.objects.get_for_model(model)
+                ContentType.objects.get_for_model(model, for_concrete_model=False)
                 if not in_async_context()
                 else None
             )
