@@ -1,4 +1,5 @@
 """Tests for `strawberry_django/settings.py`."""
+
 from django.test import override_settings
 
 from strawberry_django import settings
