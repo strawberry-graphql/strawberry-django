@@ -39,8 +39,6 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser 
             scope["session"].save()
         return user
 
-    # FIXME: Why call logout inside login??
-    auth.logout(request)
     return None
 
 
