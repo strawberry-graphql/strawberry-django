@@ -143,7 +143,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
 
         return self.process_request(request)
 
-    async def __acall__(self, request: HttpRequest):
+    async def __acall__(self, request: HttpRequest):  # noqa: PLW3201
         if _is_websocket(request):
             return await self._original_get_response(request)
 

@@ -27,7 +27,7 @@ type UserType implements Node {
   id: GlobalID!
   name: String!
 }
-'''  # noqa: E501
+'''
 
 
 def test_relay_with_nodeid():

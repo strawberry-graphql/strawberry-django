@@ -157,7 +157,8 @@ def test_deprecated_not(query, fruits):
 
 
 def test_not(query, fruits):
-    result = query("""{
+    result = query(
+        """{
       fruits(
         filters: {
           NOT: {
@@ -168,7 +169,8 @@ def test_not(query, fruits):
         id
         name
       }
-    }""")
+    }"""
+    )
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},

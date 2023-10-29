@@ -90,8 +90,7 @@ async def test_required_pk_single(query, users):
     assert len(result.errors) == 1
     assert isinstance(result.errors[0], GraphQLError)
     assert (
-        result.errors[0].message
-        == "Field 'user' argument 'pk' of type 'ID!' is "
+        result.errors[0].message == "Field 'user' argument 'pk' of type 'ID!' is "
         "required, but it was not provided."
     )
 
@@ -190,12 +189,14 @@ def test_field_name():
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync("""\
+    result = schema.execute_sync(
+        """\
       query TestQuery {
         fruit {
           name
           colorId
         }
       }
-    """)
+    """
+    )
     assert result.data == {"fruit": {"colorId": 1, "name": "Banana"}}
