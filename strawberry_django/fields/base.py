@@ -145,9 +145,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
         *,
         type_definition: StrawberryObjectDefinition | None = None,
     ) -> (
-        StrawberryType
-        | type[WithStrawberryObjectDefinition]
-        | Literal[UNRESOLVED]  # type: ignore
+        StrawberryType | type[WithStrawberryObjectDefinition] | Literal[UNRESOLVED]  # type: ignore
     ):
         resolved = super().resolve_type(type_definition=type_definition)
         if resolved is UNRESOLVED:

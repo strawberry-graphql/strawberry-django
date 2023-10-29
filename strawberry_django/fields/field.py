@@ -289,11 +289,11 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
         if "filters" not in args:
             filters = field.get_filters()
-            if filters not in (None, UNSET):
+            if filters not in (None, UNSET):  # noqa: PLR6201
                 args["filters"] = argument("filters", filters, is_optional=True)
         if "order" not in args:
             order = field.get_order()
-            if order not in (None, UNSET):
+            if order not in (None, UNSET):  # noqa: PLR6201
                 args["order"] = argument("order", order, is_optional=True)
 
         field.arguments = list(args.values())

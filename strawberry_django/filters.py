@@ -211,7 +211,7 @@ def build_filter_kwargs(
             continue
 
         if django_model:
-            if field_name in ("AND", "OR", "NOT"):
+            if field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
                 if has_object_definition(field_value):
                     (
                         subfield_filter_kwargs,
@@ -267,10 +267,10 @@ def apply(
     info: Optional[Info] = None,
     pk: Optional[Any] = None,
 ) -> _QS:
-    if pk not in (None, strawberry.UNSET):
+    if pk not in (None, strawberry.UNSET):  # noqa: PLR6201
         queryset = queryset.filter(pk=pk)
 
-    if filters in (None, strawberry.UNSET) or not has_django_definition(filters):
+    if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # noqa: PLR6201
         return queryset
 
     # Custom filter function in the filters object

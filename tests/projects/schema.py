@@ -193,9 +193,9 @@ class IssueType(relay.Node):
     name_with_kind: str = strawberry_django.field(only=["kind", "name"])
     tags: List["TagType"]
     issue_assignees: List["AssigneeType"]
-    favorite_set: ListConnectionWithTotalCount["FavoriteType"] = (
-        strawberry_django.connection()
-    )
+    favorite_set: ListConnectionWithTotalCount[
+        "FavoriteType"
+    ] = strawberry_django.connection()
 
 
 @strawberry_django.type(Tag)
@@ -318,18 +318,18 @@ class Query:
     project_list: List[ProjectType] = strawberry_django.field()
     tag_list: List[TagType] = strawberry_django.field()
 
-    favorite_conn: ListConnectionWithTotalCount[FavoriteType] = (
-        strawberry_django.connection()
-    )
+    favorite_conn: ListConnectionWithTotalCount[
+        FavoriteType
+    ] = strawberry_django.connection()
     issue_conn: ListConnectionWithTotalCount[
         strawberry.LazyType[
             "IssueType",
             "tests.projects.schema",  # type: ignore  # noqa: F821
         ]
     ] = strawberry_django.connection()
-    milestone_conn: ListConnectionWithTotalCount[MilestoneType] = (
-        strawberry_django.connection()
-    )
+    milestone_conn: ListConnectionWithTotalCount[
+        MilestoneType
+    ] = strawberry_django.connection()
 
     project_conn: ProjectConnection = strawberry_django.connection()
     tag_conn: ListConnectionWithTotalCount[TagType] = strawberry_django.connection()
@@ -364,10 +364,10 @@ class Query:
     issue_list_perm_required: List[IssueType] = strawberry_django.field(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
-    issue_conn_perm_required: ListConnectionWithTotalCount[IssueType] = (
-        strawberry_django.connection(
-            extensions=[HasPerm(perms=["projects.view_issue"])],
-        )
+    issue_conn_perm_required: ListConnectionWithTotalCount[
+        IssueType
+    ] = strawberry_django.connection(
+        extensions=[HasPerm(perms=["projects.view_issue"])],
     )
     # User permission on the resolved object for "projects.view_issue"
     issue_obj_perm_required: IssueType = strawberry_django.node(
@@ -379,10 +379,10 @@ class Query:
     issue_list_obj_perm_required: List[IssueType] = strawberry_django.field(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
-    issue_conn_obj_perm_required: ListConnectionWithTotalCount[IssueType] = (
-        strawberry_django.connection(
-            extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
-        )
+    issue_conn_obj_perm_required: ListConnectionWithTotalCount[
+        IssueType
+    ] = strawberry_django.connection(
+        extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
 
     @strawberry_django.field

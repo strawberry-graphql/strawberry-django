@@ -115,9 +115,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
         *,
         type_definition: StrawberryObjectDefinition | None = None,
     ) -> (
-        StrawberryType
-        | type[WithStrawberryObjectDefinition]
-        | Literal[UNRESOLVED]  # type: ignore
+        StrawberryType | type[WithStrawberryObjectDefinition] | Literal[UNRESOLVED]  # type: ignore
     ):
         resolved = super().resolve_type(type_definition=type_definition)
         if resolved is UNRESOLVED:
@@ -286,7 +284,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         vdata = vars(data).copy() if data is not None else {}
 
         pk = get_pk(vdata, key_attr=self.key_attr)
-        if pk not in (None, UNSET):
+        if pk not in (None, UNSET):  # noqa: PLR6201
             instance = get_with_perms(
                 pk,
                 info,
@@ -343,7 +341,7 @@ class DjangoDeleteMutation(
         vdata = vars(data).copy() if data is not None else {}
 
         pk = get_pk(vdata, key_attr=self.key_attr)
-        if pk not in (None, UNSET):
+        if pk not in (None, UNSET):  # noqa: PLR6201
             instance = get_with_perms(
                 pk,
                 info,

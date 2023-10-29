@@ -91,7 +91,7 @@ def get_django_definition(
 
 def is_auto(obj: Any) -> bool:
     if isinstance(obj, str):
-        return obj in ["auto", "strawberry.auto"]
+        return obj in {"auto", "strawberry.auto"}
 
     return isinstance(obj, StrawberryAuto)
 
