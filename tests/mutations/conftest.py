@@ -40,7 +40,7 @@ class Mutation:
 
     @strawberry_django.mutation
     def update_lazy_fruit(self, info, data: FruitPartialInput) -> Fruit:
-        fruit = SimpleLazyObject(lambda: models.Fruit.objects.get())
+        fruit = SimpleLazyObject(models.Fruit.objects.get)
         return cast(
             Fruit,
             resolvers.update(
@@ -55,7 +55,7 @@ class Mutation:
 
     @strawberry_django.mutation
     def delete_lazy_fruit(self, info) -> Fruit:
-        fruit = SimpleLazyObject(lambda: models.Fruit.objects.get())
+        fruit = SimpleLazyObject(models.Fruit.objects.get)
         return cast(
             Fruit,
             resolvers.delete(

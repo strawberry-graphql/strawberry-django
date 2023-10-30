@@ -401,7 +401,7 @@ def _process_type(
         "_django_type",
     ).inject(cls)
 
-    return cls
+    return cast(_T, cls)
 
 
 @dataclasses.dataclass

@@ -23,7 +23,7 @@ class OffsetPaginationInput:
 
 
 def apply(pagination: Optional[object], queryset: _QS) -> _QS:
-    if pagination in (None, strawberry.UNSET):
+    if pagination in (None, strawberry.UNSET):  # noqa: PLR6201
         return queryset
 
     if not isinstance(pagination, OffsetPaginationInput):

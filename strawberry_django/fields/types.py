@@ -285,14 +285,14 @@ else:
     Point = strawberry.scalar(
         NewType("Point", Tuple[float, float, Optional[float]]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
-        parse_value=lambda v: geos.Point(v),
+        parse_value=geos.Point,
         description="Represents a point as `(x, y, z)` or `(x, y)`.",
     )
 
     LineString = strawberry.scalar(
         NewType("LineString", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
-        parse_value=lambda v: geos.LineString(v),
+        parse_value=geos.LineString,
         description=(
             "A geographical line that gets multiple 'x, y' or 'x, y, z'"
             " tuples to form a line."
@@ -302,7 +302,7 @@ else:
     LinearRing = strawberry.scalar(
         NewType("LinearRing", Tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
-        parse_value=lambda v: geos.LinearRing(v),
+        parse_value=geos.LinearRing,
         description=(
             "A geographical line that gets multiple 'x, y' or 'x, y, z' "
             "tuples to form a line. It must be a circle. "

@@ -58,7 +58,7 @@ def generate_order_args(order: WithStrawberryObjectDefinition, prefix: str = "")
 
 
 def apply(order: Optional[WithStrawberryObjectDefinition], queryset: _QS) -> _QS:
-    if order in (None, strawberry.UNSET):
+    if order in (None, strawberry.UNSET):  # noqa: PLR6201
         return queryset
 
     args = generate_order_args(order)
