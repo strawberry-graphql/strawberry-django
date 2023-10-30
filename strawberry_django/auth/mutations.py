@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import functools
 from typing import TYPE_CHECKING, Any, Type, cast
 
@@ -16,10 +15,12 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.requests import get_request
 
-with contextlib.suppress(ModuleNotFoundError):
+try:
     # Django-channels is not always used/intalled,
     # therefore it shouldn't be it a hard requirement.
     from channels import auth as channels_auth
+except ModuleNotFoundError:
+    channels_auth = None
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
