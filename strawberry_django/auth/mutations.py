@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 from typing import TYPE_CHECKING, Any, Type, cast
 
 import strawberry
 from asgiref.sync import async_to_sync
-from channels import auth as channels_auth
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
 
@@ -15,6 +15,11 @@ from strawberry_django.mutations.fields import DjangoCreateMutation
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.requests import get_request
+
+with contextlib.suppress(ModuleNotFoundError):
+    # Django-channels is not always used/intalled,
+    # therefore it shouldn't be it a hard requirement.
+    from channels import auth as channels_auth
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -33,10 +38,15 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser 
             # ASGI in combo with websockets needs the channels login functionality.
             # to ensure we're talking about channels, let's veriy that our
             # request is actually channelsrequest
-            scope = request.consumer.scope  # type: ignore
-            async_to_sync(channels_auth.login)(scope, user)
-            # According to channels docs you must save the session
-            scope["session"].save()
+            try:
+                scope = request.consumer.scope  # type: ignore
+                async_to_sync(channels_auth.login)(scope, user)
+                # According to channels docs you must save the session
+                scope["session"].save()
+            except (AttributeError, NameError):
+                # When Django-channels is not installed,
+                # this code will be non-existing
+                pass
         return user
 
     return None
@@ -51,8 +61,13 @@ def resolve_logout(info: Info) -> bool:
         request = get_request(info)
         auth.logout(request)
     except AttributeError:
-        scope = request.consumer.scope  # type: ignore
-        async_to_sync(channels_auth.logout)(scope)
+        try:
+            scope = request.consumer.scope  # type: ignore
+            async_to_sync(channels_auth.logout)(scope)
+        except (AttributeError, NameError):
+            # When Django-channels is not installed,
+            # this code will be non-existing
+            pass
 
     return ret
 
