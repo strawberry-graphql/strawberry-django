@@ -40,7 +40,7 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser 
             # request is actually channelsrequest
             try:
                 scope = request.consumer.scope  # type: ignore
-                async_to_sync(channels_auth.login)(scope, user)
+                async_to_sync(channels_auth.login)(scope, user)  # type: ignore
                 # According to channels docs you must save the session
                 scope["session"].save()
             except (AttributeError, NameError):
@@ -63,7 +63,7 @@ def resolve_logout(info: Info) -> bool:
     except AttributeError:
         try:
             scope = request.consumer.scope  # type: ignore
-            async_to_sync(channels_auth.logout)(scope)
+            async_to_sync(channels_auth.logout)(scope)  # type: ignore
         except (AttributeError, NameError):
             # When Django-channels is not installed,
             # this code will be non-existing
