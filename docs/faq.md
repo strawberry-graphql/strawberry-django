@@ -2,11 +2,13 @@
 
 ## How to access Django request object in resolvers?
 
-The request object is accessible via the `info.context.request` object.
+The request object is accessible via the `get_request` method.
 
 ```python
+from strawberry_django.auth.utils import get_request
+
 def resolver(root, info: Info):
-    request = info.context.request
+    request = get_request(info)
 ```
 
 ## How to access the current user object in resolvers?

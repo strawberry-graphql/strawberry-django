@@ -63,11 +63,11 @@ class Query:
     fruits_lazy: ListConnectionWithTotalCount[
         Annotated["Fruit", strawberry.lazy("tests.relay.schema")]
     ] = strawberry_django.connection()
-    fruits_with_filters_and_order: ListConnectionWithTotalCount[Fruit] = (
-        strawberry_django.connection(
-            filters=FruitFilter,
-            order=FruitOrder,
-        )
+    fruits_with_filters_and_order: ListConnectionWithTotalCount[
+        Fruit
+    ] = strawberry_django.connection(
+        filters=FruitFilter,
+        order=FruitOrder,
     )
 
     @strawberry_django.connection(ListConnectionWithTotalCount[Fruit])

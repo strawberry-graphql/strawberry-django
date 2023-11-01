@@ -450,9 +450,9 @@ def _get_model_hints(
                 # because when field_store was created on __init__,
                 # the field name wasn't available.
                 # This allows for annotate expressions to be declared as:
-                #   total: int = gql.django.field(annotate=Sum("price"))  # noqa: ERA001, E501
+                #   total: int = gql.django.field(annotate=Sum("price"))  # noqa: ERA001
                 # Instead of the more redundant:
-                #   total: int = gql.django.field(annotate={"total": Sum("price")})  # noqa: ERA001, E501
+                #   total: int = gql.django.field(annotate={"total": Sum("price")})  # noqa: ERA001
                 field_store.annotate = {
                     field.name: field_store.annotate[_annotate_placeholder],
                 }
@@ -653,8 +653,7 @@ def optimize(
 
     # Avoid optimizing twice and also modify an already resolved queryset
     if (
-        getattr(qs, "_gql_optimized", False)
-        or qs._result_cache is not None  # type: ignore
+        getattr(qs, "_gql_optimized", False) or qs._result_cache is not None  # type: ignore
     ):
         return qs
 
@@ -714,11 +713,11 @@ def optimize(
     return qs
 
 
-optimizer: contextvars.ContextVar[DjangoOptimizerExtension | None] = (
-    contextvars.ContextVar(
-        "optimizer_ctx",
-        default=None,
-    )
+optimizer: contextvars.ContextVar[
+    DjangoOptimizerExtension | None
+] = contextvars.ContextVar(
+    "optimizer_ctx",
+    default=None,
 )
 
 
