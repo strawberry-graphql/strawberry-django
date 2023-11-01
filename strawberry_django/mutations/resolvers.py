@@ -221,7 +221,7 @@ def create(
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
 
-    # Also, the appraoch below will use the manager to create the instnace
+    # Also, the approach below will use the manager to create the instance
     # rather then manually creating it.  If you have a pre_save_hook
     # use the update method instead.
     if pre_save_hook:
