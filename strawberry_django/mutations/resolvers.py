@@ -322,9 +322,6 @@ def create(
     for field, value in m2m:
         update_m2m(info, instance, field, value)
 
-    # FIXME: Should you really need to refresh the object from db?
-    instance.refresh_from_db()
-
     return instance
 
 
