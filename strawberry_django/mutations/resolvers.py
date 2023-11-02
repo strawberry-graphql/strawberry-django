@@ -518,8 +518,8 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
             obj, data = _parse_data(info, manager.model, v)
-            obj.full_clean()
             if obj and data:
+                obj.full_clean()
                 manager.add(obj, **data)
             elif obj:
                 # Do this later in a bulk
