@@ -512,15 +512,15 @@ def update_m2m(
                     try:
                         im = intermediate_model._default_manager.get(
                             **{
-                                manager.source_field_name: instance,  # type: ignore
-                                manager.target_field_name: obj,  # type: ignore
+                                manager.source_field_name: instance,
+                                manager.target_field_name: obj,
                             },
                         )
                     except intermediate_model.DoesNotExist:
                         im = intermediate_model(
                             **{
-                                manager.source_field_name: instance,  # type: ignore
-                                manager.target_field_name: obj,  # type: ignore
+                                manager.source_field_name: instance,
+                                manager.target_field_name: obj,
                             },
                         )
 
@@ -569,4 +569,4 @@ def update_m2m(
         manager.filter(pk__in=[item.pk for item in to_delete]).delete()
 
     if need_remove_cache:
-        manager._remove_prefetched_objects()  # type: ignore
+        manager._remove_prefetched_objects()
