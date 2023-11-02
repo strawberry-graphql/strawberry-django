@@ -7,8 +7,6 @@ from typing import (
     Callable,
     Iterable,
     List,
-    TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -25,7 +23,6 @@ from django.db.models.fields.reverse_related import (
 )
 from django.utils.functional import LazyObject
 from strawberry import UNSET, relay
-from typing_extensions import Literal, TypeAlias, TypedDict
 
 from strawberry_django.fields.types import (
     ListInput,
@@ -37,20 +34,19 @@ from strawberry_django.fields.types import (
 )
 from strawberry_django.utils.inspect import get_model_fields
 
+from .dataclasses import (
+    _M,
+    _T,
+    FullCleanOptions,
+    ParsedObject,
+    ParsedObjectList,
+    _InputListTypes,
+)
+
 if TYPE_CHECKING:
-    from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
     from strawberry.file_uploads.scalars import Upload
     from strawberry.types.info import Info
-
-_T = TypeVar("_T")
-_M = TypeVar("_M", bound=Model)
-_InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
-
-
-class FullCleanOptions(TypedDict, total=False):
-    exclude: list[str]
-    validate_unique: bool
-    validate_constraints: bool
+    from typing_extensions import Literal
 
 
 def _parse_pk(
@@ -93,29 +89,6 @@ def _parse_data(info: Info, model: type[_M], value: Any):
                 parsed_data[k] = v
 
     return obj, parsed_data
-
-
-@dataclasses.dataclass
-class ParsedObject:
-    pk: strawberry.ID | Model | None
-    data: dict[str, Any] | None = None
-
-    def parse(self, model: type[_M]) -> tuple[_M | None, dict[str, Any] | None]:
-        if self.pk is None or self.pk is UNSET:
-            return None, self.data
-
-        if isinstance(self.pk, models.Model):
-            assert isinstance(self.pk, model)
-            return self.pk, self.data
-
-        return cast(_M, model._default_manager.get(pk=self.pk)), self.data
-
-
-@dataclasses.dataclass
-class ParsedObjectList:
-    add: list[_InputListTypes] | None = None
-    remove: list[_InputListTypes] | None = None
-    set: list[_InputListTypes] | None = None  # noqa: A003
 
 
 @overload
@@ -185,6 +158,87 @@ def parse_input(info: Info, data: Any):
     return data
 
 
+def prepare_create_update(
+    *,
+    info: Info,
+    instance: type[_M],
+    data: dict[str, Any] | list[dict[str, Any]],
+    full_clean: bool | FullCleanOptions = True,
+):
+    """Prepare data for updates and creates.
+
+    This method is a helper function for the create and
+    update resolver methods.  It's to prepare the data
+    for updating or creating.
+    """
+    model = instance.__class__
+    fields = get_model_fields(model)
+    files: list[
+        tuple[
+            models.FileField,
+            Upload | Literal[False],
+        ]
+    ] = []
+    m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
+    direct_field_values = {}
+
+    if dataclasses.is_dataclass(data):
+        data = vars(data)
+
+    for name, value in data.items():
+        field = fields.get(name)
+        direct_field_value = True
+
+        if field is None or value is UNSET:
+            # Dont use these, fallback to model defaults.
+            direct_field_value = False
+            continue
+
+        if isinstance(field, models.FileField):
+            if value is None:
+                # We want to reset the file field value when None was passed in the
+                # input, but `FileField.save_form_data` ignores None values. In that
+                # case we manually pass False which clears the file.
+                value = False  # noqa: PLW2901
+
+            # set FileFields at the same time so their hooks can use other set values
+            files.append((field, value))
+            direct_field_value = False
+            continue
+
+        if isinstance(field, (ManyToManyField, ForeignObjectRel)):
+            # m2m will be processed later
+            m2m.append((field, value))
+            direct_field_value = False
+            continue
+
+        if isinstance(field, models.ForeignKey) and isinstance(
+            value,
+            # We are using str here because strawberry.ID can't be used for isinstance
+            (ParsedObject, str),
+        ):
+            value, value_data = _parse_data(  # noqa: PLW2901
+                info,
+                field.related_model,
+                value,
+            )
+            if value is None and not value_data:
+                value = None  # noqa: PLW2901
+            elif value is None:
+                value = field.related_model._default_manager.create(  # noqa: PLW2901
+                    **value_data,
+                )
+            else:
+                update(info, value, value_data, full_clean=full_clean)
+
+        if direct_field_value:
+            direct_field_values.update({name: value})
+
+        update_field(info, instance, field, value)
+
+    return instance, direct_field_values, files, m2m
+
+
 @overload
 def create(
     info: Info,
@@ -217,12 +271,12 @@ def create(
     pre_save_hook: Callable[[_M], None] | None = None,
 ):
     # Before creating your instance, verify this is not a bulk create
-    # if so, add them one by one. Othewise, get to work.
+    # if so, add them one by one. Otherwise, get to work.
     if isinstance(data, list):
         return [create(info, model, d, full_clean=full_clean) for d in data]
 
     # Also, the approach below will use the manager to create the instance
-    # rather then manually creating it.  If you have a pre_save_hook
+    # rather than manually creating it.  If you have a pre_save_hook
     # use the update method instead.
     if pre_save_hook:
         return update(
@@ -237,73 +291,11 @@ def create(
     # However, this instance should not be saved as it will
     # circumvent the manager create method.
     dummy_instance = model()
+    _, create_kwargs, files, m2m = prepare_create_update(
+        info=info, instance=dummy_instance, data=data, full_clean=full_clean
+    )
 
-    fields = get_model_fields(model)
-    files: list[
-        tuple[
-            models.FileField,
-            Upload | Literal[False],
-        ]
-    ] = []
-    m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
-    create_kwargs = {}
-
-    if dataclasses.is_dataclass(data):
-        data = vars(data)
-
-    for name, value in data.items():
-        field = fields.get(name)
-        create_populate_field = True
-
-        if field is None or value is UNSET:
-            # Dont use these, fallback to model defaults.
-            create_populate_field = False
-            continue
-
-        if isinstance(field, models.FileField):
-            if value is None:
-                # We want to reset the file field value when None was passed in the
-                # input, but `FileField.save_form_data` ignores None values. In that
-                # case we manually pass False which clears the file.
-                value = False  # noqa: PLW2901
-
-            # set filefields at the same time so their hooks can use other set values
-            files.append((field, value))
-            create_populate_field = False
-            continue
-
-        if isinstance(field, (ManyToManyField, ForeignObjectRel)):
-            # m2m will be processed later
-            m2m.append((field, value))
-            create_populate_field = False
-            continue
-
-        if isinstance(field, models.ForeignKey) and isinstance(
-            value,
-            # We are using str here because strawberry.ID can't be used for isinstance
-            (ParsedObject, str),
-        ):
-            value, value_data = _parse_data(  # noqa: PLW2901
-                info,
-                field.related_model,
-                value,
-            )
-            if value is None and not value_data:
-                value = None  # noqa: PLW2901
-            elif value is None:
-                value = field.related_model._default_manager.create(  # noqa: PLW2901
-                    **value_data,
-                )
-            else:
-                update(info, value, value_data, full_clean=full_clean)
-
-        if create_populate_field:
-            create_kwargs.update({name: value})
-
-        # Populate the dummy_instance field for validation purposes.
-        update_field(info, dummy_instance, field, value)
-
-    # Creating the instance directly via .create withouth full-clean will
+    # Creating the instance directly via .create without full-clean will
     # raise ugly error messages. To make them more user-friendly we want to
     # have full-clean trigger form-validation style error messages.
     full_clean_options = full_clean if isinstance(full_clean, dict) else {}
@@ -311,7 +303,7 @@ def create(
         dummy_instance.full_clean(**full_clean_options)  # type: ignore
 
     # Create the instance using the manager create method to respect
-    # manager create overrides for proxy-models.
+    # manager create overrides.  This also ensures support for proxy-models.
     instance = model._default_manager.create(**create_kwargs)
 
     # Now that the instance has been created, go and assign
@@ -362,93 +354,36 @@ def update(
         instance = cast(_M, instance.__reduce__()[1][0])
 
     if isinstance(instance, Iterable):
-        many = True
         instances = list(instance)
-        if not instances:
-            return []
-    else:
-        many = False
-        instances = [instance]
-
-    obj_models = [obj.__class__ for obj in instances]
-    assert len(set(obj_models)) == 1
-    fields = get_model_fields(obj_models[0])
-    files: list[
-        tuple[
-            models.FileField,
-            Upload | Literal[False],
-        ]
-    ] = []
-    m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
-
-    if dataclasses.is_dataclass(data):
-        data = vars(data)
-
-    for name, value in data.items():
-        field = fields.get(name)
-
-        if field is None or value is UNSET:
-            continue
-
-        if isinstance(field, models.FileField):
-            if value is None:
-                # We want to reset the file field value when None was passed in the
-                # input, but `FileField.save_form_data` ignores None values. In that
-                # case we manually pass False which clears the file.
-                value = False  # noqa: PLW2901
-
-            # set filefields at the same time so their hooks can use other set values
-            files.append((field, value))
-            continue
-
-        if isinstance(field, (ManyToManyField, ForeignObjectRel)):
-            # m2m will be processed later
-            m2m.append((field, value))
-            continue
-
-        if isinstance(field, models.ForeignKey) and isinstance(
-            value,
-            # We are using str here because strawberry.ID can't be used for isinstance
-            (ParsedObject, str),
-        ):
-            value, value_data = _parse_data(  # noqa: PLW2901
-                info,
-                field.related_model,
-                value,
+        return [
+            update(
+                info, instance, data, full_clean=full_clean, pre_save_hook=pre_save_hook
             )
-            if value is None and not value_data:
-                value = None  # noqa: PLW2901
-            elif value is None:
-                value = field.related_model._default_manager.create(  # noqa: PLW2901
-                    **value_data,
-                )
-            else:
-                update(info, value, value_data, full_clean=full_clean)
+            for instance in instances
+        ]
 
-        for instance in instances:
-            update_field(info, instance, field, value)
+    instance, _, files, m2m = prepare_create_update(
+        info=info, instance=instance, data=data, full_clean=full_clean
+    )
 
-    retval = []
-    for instance in instances:
-        for file_field, value in files:
-            file_field.save_form_data(instance, value)
+    for file_field, value in files:
+        file_field.save_form_data(instance, value)
 
-        if pre_save_hook is not None:
-            pre_save_hook(instance)
+    if pre_save_hook is not None:
+        pre_save_hook(instance)
 
-        full_clean_options = full_clean if isinstance(full_clean, dict) else {}
-        if full_clean:
-            instance.full_clean(**full_clean_options)  # type: ignore
+    full_clean_options = full_clean if isinstance(full_clean, dict) else {}
+    if full_clean:
+        instance.full_clean(**full_clean_options)  # type: ignore
 
-        instance.save()
+    instance.save()
 
-        for field, value in m2m:
-            update_m2m(info, instance, field, value)
+    for field, value in m2m:
+        update_m2m(info, instance, field, value)
 
-        instance.refresh_from_db()
-        retval.append(instance)
+    instance.refresh_from_db()
 
-    return retval if many else retval[0]
+    return instance
 
 
 @overload
@@ -537,12 +472,12 @@ def update_m2m(
 
     use_remove = True
     if isinstance(field, ManyToManyField):
-        manager = cast("RelatedManager", getattr(instance, field.attname))
+        manager = cast("RelatedManager", getattr(instance, field.attname))  # noqa: F821
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
         accessor_name = field.get_accessor_name()
         assert accessor_name
-        manager = cast("RelatedManager", getattr(instance, accessor_name))
+        manager = cast("RelatedManager", getattr(instance, accessor_name))  # noqa: F821
         if field.one_to_many:
             # remove if field is nullable, otherwise delete
             use_remove = field.remote_field.null is True
@@ -572,7 +507,7 @@ def update_m2m(
                     obj.save()
 
                 if hasattr(manager, "through"):
-                    manager = cast("ManyToManyRelatedManager", manager)
+                    manager = cast("ManyToManyRelatedManager", manager)  # noqa: F821
                     intermediate_model = manager.through
                     try:
                         im = intermediate_model._default_manager.get(
