@@ -1,10 +1,11 @@
 import dataclasses
-from typing import Any, TypeAlias, TypedDict, TypeVar, Union, cast
+from typing import Any, TypeVar, Union, cast
 
 import strawberry
 from django.db import models
 from django.db.models import Model
 from strawberry import UNSET
+from typing_extensions import TypeAlias, TypedDict
 
 _T = TypeVar("_T")  # noqa: PYI018
 _M = TypeVar("_M", bound=Model)
