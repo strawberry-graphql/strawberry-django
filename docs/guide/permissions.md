@@ -54,7 +54,7 @@ class SomeType:
     )
     obj_perm_required_field: OtherType = strawberry_django.field(
         # will check the permission for the resolved value
-        extensions=[HasObjPerm("some_app.some_perm")],
+        extensions=[HasRetvalPerm("some_app.some_perm")],
     )
 ```
 
@@ -77,9 +77,9 @@ Available options are:
 
 !!! note
 
-    The `HasObjPerm` extension requires having an
+    The `HasSourcePerm` and `HasRetvalPerm` require having an
     [authentication backend](https://docs.djangoproject.com/en/4.2/topics/auth/customizing/)
-    which supports resolving object permissions. This lib is works out of the box with
+    which supports resolving object permissions. This lib works out of the box with
     [django-guardian](https://django-guardian.readthedocs.io/en/stable/), so if you are
     using it you don't need to do anything else.
 
