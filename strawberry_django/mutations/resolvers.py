@@ -376,12 +376,12 @@ def update(
     if full_clean:
         instance.full_clean(**full_clean_options)  # type: ignore
 
-    instance.save()
+    instance.save()  # type: ignore
 
     for field, value in m2m:
-        update_m2m(info, instance, field, value)
+        update_m2m(info, instance, field, value)  # type: ignore
 
-    instance.refresh_from_db()
+    instance.refresh_from_db()  # type: ignore
 
     return instance
 
