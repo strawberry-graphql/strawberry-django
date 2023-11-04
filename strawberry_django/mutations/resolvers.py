@@ -161,8 +161,8 @@ def parse_input(info: Info, data: Any):
 def prepare_create_update(
     *,
     info: Info,
-    instance: type[_M],
-    data: dict[str, Any] | list[dict[str, Any]],
+    instance: Model,
+    data: dict[str, Any],
     full_clean: bool | FullCleanOptions = True,
 ) -> list[type[_M], dict, list, list]:
     """Prepare data for updates and creates.
