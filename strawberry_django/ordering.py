@@ -2,9 +2,11 @@ import enum
 from typing import (
     TYPE_CHECKING,
     Callable,
+    Dict,
     List,
     Optional,
     Sequence,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -12,13 +14,14 @@ from typing import (
 
 import strawberry
 from django.db import models
+from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
-from typing_extensions import Self, dataclass_transform
+from typing_extensions import Self, TypeAlias, dataclass_transform
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.utils.typing import is_auto
@@ -31,6 +34,7 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 _QS = TypeVar("_QS", bound="QuerySet")
+_OrderSequence: TypeAlias = Dict[str, Tuple[int, "_OrderSequence"]]
 
 
 @strawberry.enum
@@ -39,9 +43,18 @@ class Ordering(enum.Enum):
     DESC = "DESC"
 
 
-def generate_order_args(order: WithStrawberryObjectDefinition, prefix: str = ""):
+def generate_order_args(
+    order: WithStrawberryObjectDefinition,
+    *,
+    sequence: Optional[_OrderSequence] = None,
+    prefix: str = "",
+):
+    sequence = sequence or {}
     args = []
-    for f in order.__strawberry_definition__.fields:
+    for f in sorted(
+        order.__strawberry_definition__.fields,
+        key=lambda f: (seq := sequence.get(f.name, (0,))) and seq[0],
+    ):
         ordering = getattr(order, f.name, UNSET)
         if ordering is UNSET:
             continue
@@ -51,17 +64,42 @@ def generate_order_args(order: WithStrawberryObjectDefinition, prefix: str = "")
         elif ordering == Ordering.DESC:
             args.append(f"-{prefix}{f.name}")
         else:
-            subargs = generate_order_args(ordering, prefix=f"{prefix}{f.name}__")
+            subargs = generate_order_args(
+                ordering,
+                prefix=f"{prefix}{f.name}__",
+                sequence=(_seq := sequence.get(f.name)) and _seq[1],
+            )
             args.extend(subargs)
 
     return args
 
 
-def apply(order: Optional[WithStrawberryObjectDefinition], queryset: _QS) -> _QS:
+def apply(
+    order: Optional[WithStrawberryObjectDefinition],
+    queryset: _QS,
+    info: Optional[Info] = None,
+) -> _QS:
     if order in (None, strawberry.UNSET):  # noqa: PLR6201
         return queryset
 
-    args = generate_order_args(order)
+    sequence: _OrderSequence = {}
+    if info is not None and info._raw_info.field_nodes:
+        field_node = info._raw_info.field_nodes[0]
+        for arg in field_node.arguments:
+            if arg.name.value != "order" or not isinstance(arg.value, ObjectValueNode):
+                continue
+
+            def parse_and_fill(field: ObjectValueNode, seq: _OrderSequence):
+                for i, f in enumerate(field.fields):
+                    f_sequence: _OrderSequence = {}
+                    if isinstance(f.value, ObjectValueNode):
+                        parse_and_fill(f.value, f_sequence)
+
+                    seq[f.name.value] = (i, f_sequence)
+
+            parse_and_fill(arg.value, sequence)
+
+    args = generate_order_args(order, sequence=sequence)
     if not args:
         return queryset
     return queryset.order_by(*args)
@@ -113,8 +151,9 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         self,
         queryset: _QS,
         order: Optional[WithStrawberryObjectDefinition] = None,
+        info: Optional[Info] = None,
     ) -> _QS:
-        return apply(order, queryset)
+        return apply(order, queryset, info=info)
 
     def get_queryset(
         self,
@@ -124,7 +163,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return self.apply_order(queryset, order)
+        return self.apply_order(queryset, order, info=info)
 
 
 @dataclass_transform(
