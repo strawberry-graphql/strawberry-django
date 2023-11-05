@@ -1,3 +1,4 @@
+import dataclasses
 import enum
 from typing import (
     TYPE_CHECKING,
@@ -6,7 +7,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -21,7 +21,7 @@ from strawberry.field import StrawberryField, field
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
-from typing_extensions import Self, TypeAlias, dataclass_transform
+from typing_extensions import Self, dataclass_transform
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.utils.typing import is_auto
@@ -34,9 +34,14 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 _QS = TypeVar("_QS", bound="QuerySet")
-_OrderSequence: TypeAlias = Dict[str, Tuple[int, "_OrderSequence"]]
 
 ORDER_ARG = "order"
+
+
+@dataclasses.dataclass
+class _OrderSequence:
+    seq: int = 0
+    children: Optional[Dict[str, "_OrderSequence"]] = None
 
 
 @strawberry.enum
@@ -48,15 +53,18 @@ class Ordering(enum.Enum):
 def generate_order_args(
     order: WithStrawberryObjectDefinition,
     *,
-    sequence: Optional[_OrderSequence] = None,
+    sequence: Optional[Dict[str, _OrderSequence]] = None,
     prefix: str = "",
 ):
     sequence = sequence or {}
     args = []
-    for f in sorted(
-        order.__strawberry_definition__.fields,
-        key=lambda f: (seq := sequence.get(f.name, (0,))) and seq[0],
-    ):
+
+    def sort_key(f: StrawberryField) -> int:
+        if not (seq := sequence.get(f.name)):
+            return 0
+        return seq.seq
+
+    for f in sorted(order.__strawberry_definition__.fields, key=sort_key):
         ordering = getattr(order, f.name, UNSET)
         if ordering is UNSET:
             continue
@@ -69,7 +77,7 @@ def generate_order_args(
             subargs = generate_order_args(
                 ordering,
                 prefix=f"{prefix}{f.name}__",
-                sequence=(_seq := sequence.get(f.name)) and _seq[1],
+                sequence=(seq := sequence.get(f.name)) and seq.children,
             )
             args.extend(subargs)
 
@@ -84,7 +92,7 @@ def apply(
     if order in (None, strawberry.UNSET):  # noqa: PLR6201
         return queryset
 
-    sequence: _OrderSequence = {}
+    sequence: Dict[str, _OrderSequence] = {}
     if info is not None and info._raw_info.field_nodes:
         field_node = info._raw_info.field_nodes[0]
         for arg in field_node.arguments:
@@ -93,13 +101,13 @@ def apply(
             ):
                 continue
 
-            def parse_and_fill(field: ObjectValueNode, seq: _OrderSequence):
+            def parse_and_fill(field: ObjectValueNode, seq: Dict[str, _OrderSequence]):
                 for i, f in enumerate(field.fields):
-                    f_sequence: _OrderSequence = {}
+                    f_sequence: Dict[str, _OrderSequence] = {}
                     if isinstance(f.value, ObjectValueNode):
                         parse_and_fill(f.value, f_sequence)
 
-                    seq[f.name.value] = (i, f_sequence)
+                    seq[f.name.value] = _OrderSequence(seq=i, children=f_sequence)
 
             parse_and_fill(arg.value, sequence)
 
