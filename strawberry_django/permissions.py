@@ -603,7 +603,7 @@ class HasPerm(DjangoPermissionExtension):
 
         >>> @strawberry.type
         ... class Query:
-        ...     @strawberry.mutation(directives=[PermRequired("product.add_product")])
+        ...     @strawberry.mutation(directives=[HasPerm("product.add_product")])
         ...     def create_product(self, name: str) -> ProductType:
         ...         ...
 
@@ -875,7 +875,7 @@ class HasSourcePerm(HasPerm):
 
     This will check the permissions for the source object to access the given field.
 
-    Unlike `ObjPermRequired`, this uses the source value (the object where the field
+    Unlike `HasRetvalPerm`, this uses the source value (the object where the field
     is defined) to resolve the field, which means that this cannot be used for source
     queries and types.
 
@@ -885,9 +885,9 @@ class HasSourcePerm(HasPerm):
         the user has "product.view_field" in it in the django system:
 
         >>> @gql.django.type(Product)
-        ... class ProdyctType:
+        ... class ProductType:
         ...     some_field: str = strawberry.field(
-        ...         directives=[SourcePermRequired(".add_product")],
+        ...         directives=[HasSourcePerm(".add_product")],
         ...     )
 
     """
@@ -906,7 +906,7 @@ class HasRetvalPerm(HasPerm):
     if he has any of the permissions defined in this directive.
 
     Note that this depends on resolving the object to check the permissions
-    specifically for that object, unlike `PermRequired` which checks it before resolving
+    specifically for that object, unlike `HasPerm` which checks it before resolving.
 
     Examples
     --------
@@ -917,7 +917,7 @@ class HasRetvalPerm(HasPerm):
         >>> @strawberry.type
         ... class SomeType:
         ...     product: ProductType = strawberry.field(
-        ...         directives=[ObjPermRequired(".add_product")],
+        ...         directives=[HasRetvalPerm(".add_product")],
         ...     )
 
     """
