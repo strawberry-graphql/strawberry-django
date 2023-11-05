@@ -36,6 +36,8 @@ _T = TypeVar("_T")
 _QS = TypeVar("_QS", bound="QuerySet")
 _OrderSequence: TypeAlias = Dict[str, Tuple[int, "_OrderSequence"]]
 
+ORDER_ARG = "order"
+
 
 @strawberry.enum
 class Ordering(enum.Enum):
@@ -86,7 +88,9 @@ def apply(
     if info is not None and info._raw_info.field_nodes:
         field_node = info._raw_info.field_nodes[0]
         for arg in field_node.arguments:
-            if arg.name.value != "order" or not isinstance(arg.value, ObjectValueNode):
+            if arg.name.value != ORDER_ARG or not isinstance(
+                arg.value, ObjectValueNode
+            ):
                 continue
 
             def parse_and_fill(field: ObjectValueNode, seq: _OrderSequence):
