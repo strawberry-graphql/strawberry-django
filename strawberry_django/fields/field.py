@@ -33,9 +33,9 @@ from strawberry_django import optimizer
 from strawberry_django.arguments import argument
 from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
-from strawberry_django.filters import StrawberryDjangoFieldFilters
+from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
 from strawberry_django.optimizer import OptimizerStore
-from strawberry_django.ordering import StrawberryDjangoFieldOrdering
+from strawberry_django.ordering import ORDER_ARG, StrawberryDjangoFieldOrdering
 from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.permissions import filter_with_perms
 from strawberry_django.relay import resolve_model_nodes
@@ -121,7 +121,7 @@ class StrawberryDjangoField(
             return False
 
         return not any(
-            p.name == "filters" or p.kind == p.VAR_KEYWORD
+            p.name == FILTERS_ARG or p.kind == p.VAR_KEYWORD
             for p in self.base_resolver.signature.parameters.values()
         )
 
@@ -131,7 +131,7 @@ class StrawberryDjangoField(
             return False
 
         return not any(
-            p.name == "order" or p.kind == p.VAR_KEYWORD
+            p.name == ORDER_ARG or p.kind == p.VAR_KEYWORD
             for p in self.base_resolver.signature.parameters.values()
         )
 
@@ -147,9 +147,9 @@ class StrawberryDjangoField(
         if self.base_resolver is not None:
             resolver_kwargs = kwargs.copy()
             if self._need_remove_order_argument:
-                resolver_kwargs.pop("order", None)
+                resolver_kwargs.pop(ORDER_ARG, None)
             if self._need_remove_filters_argument:
-                resolver_kwargs.pop("filters", None)
+                resolver_kwargs.pop(FILTERS_ARG, None)
 
             result = self.resolver(source, info, args, resolver_kwargs)
             is_awaitable = inspect.isawaitable(result)
@@ -287,14 +287,14 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
             a.python_name: a for a in field.arguments
         }
 
-        if "filters" not in args:
+        if FILTERS_ARG not in args:
             filters = field.get_filters()
             if filters not in (None, UNSET):  # noqa: PLR6201
-                args["filters"] = argument("filters", filters, is_optional=True)
-        if "order" not in args:
+                args[FILTERS_ARG] = argument(FILTERS_ARG, filters, is_optional=True)
+        if ORDER_ARG not in args:
             order = field.get_order()
             if order not in (None, UNSET):  # noqa: PLR6201
-                args["order"] = argument("order", order, is_optional=True)
+                args[ORDER_ARG] = argument(ORDER_ARG, order, is_optional=True)
 
         field.arguments = list(args.values())
 

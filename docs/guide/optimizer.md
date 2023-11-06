@@ -109,16 +109,17 @@ query {
   }
   song {
     id
-    album
-    id
-    name
-    artist {
+    album {
       id
       name
-      albums {
+      artist {
         id
         name
-        release_date
+        albums {
+          id
+          name
+          release_date
+        }
       }
     }
   }
@@ -133,8 +134,10 @@ Artist.objects.all().only("id", "name").prefetch_related(
     Prefetch(
         "albums",
         queryset=Album.objects.all().only("id", "name").prefetch_related(
-            "songs",
-            Song.objects.all().only("id", "name"),
+            Prefetch(
+               "songs",
+               Song.objects.all().only("id", "name"),
+            )
         )
     ),
 ).annotate(
@@ -154,9 +157,8 @@ Song.objects.all().only(
     "album",
     "album__artist",
 ).prefetch_related(
-    "album__artist__albums",
     Prefetch(
-        "albums",
+       "album__artist__albums",
         Album.objects.all().only("id", "name", "release_date"),
     )
 )
