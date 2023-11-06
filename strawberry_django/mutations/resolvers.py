@@ -296,15 +296,15 @@ def create(
         info=info, instance=dummy_instance, data=data, full_clean=full_clean
     )
 
-    # Creating the instance directly via .create without full-clean will
-    # raise ugly error messages. To make them more user-friendly we want to
-    # have full-clean trigger form-validation style error messages.
+    # Creating the instance directly via create() without full-clean will
+    # raise ugly error messages. To generate user-friendly ones, we want
+    # full-clean() to trigger form-validation style error messages.
     full_clean_options = full_clean if isinstance(full_clean, dict) else {}
     if full_clean:
         dummy_instance.full_clean(**full_clean_options)  # type: ignore
 
     # Create the instance using the manager create method to respect
-    # manager create overrides.  This also ensures support for proxy-models.
+    # manager create overrides. This also ensures support for proxy-models.
     instance = model._default_manager.create(**create_kwargs)
 
     # Now that the instance has been created, go and assign
