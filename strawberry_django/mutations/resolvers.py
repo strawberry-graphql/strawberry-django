@@ -508,20 +508,20 @@ def update_m2m(
                     obj.save()
 
                 if hasattr(manager, "through"):
-                    manager = cast("ManyToManyRelatedManager", manager)  # type: ignore
+                    manager = cast("ManyToManyRelatedManager", manager)
                     intermediate_model = manager.through
                     try:
                         im = intermediate_model._default_manager.get(
                             **{
-                                manager.source_field_name: instance,
-                                manager.target_field_name: obj,
+                                manager.source_field_name: instance,  # type: ignore
+                                manager.target_field_name: obj,  # type: ignore
                             },
                         )
                     except intermediate_model.DoesNotExist:
                         im = intermediate_model(
                             **{
-                                manager.source_field_name: instance,
-                                manager.target_field_name: obj,
+                                manager.source_field_name: instance,  # type: ignore
+                                manager.target_field_name: obj,  # type: ignore
                             },
                         )
 
@@ -570,4 +570,4 @@ def update_m2m(
         manager.filter(pk__in=[item.pk for item in to_delete]).delete()
 
     if need_remove_cache:
-        manager._remove_prefetched_objects()
+        manager._remove_prefetched_objects()  # type: ignore
