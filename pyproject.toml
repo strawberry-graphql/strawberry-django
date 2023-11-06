@@ -58,7 +58,7 @@ mkdocs-minify-plugin = "^0.7.1"
 pymdown-extensions = "^10.0.1"
 mkdocstrings = { version = "^0.23.0", extras = ["python"] }
 ruff = "^0.1.3"
-django-types = "^0.18.0"
+django-types = "^0.19.1"
 Markdown = "^3.3.7"
 Pygments = "^2.15.1"
 factory-boy = "^3.2.1"
@@ -135,6 +135,7 @@ ignore = [
   "SLF001",
   "TRY003",
   "PLR6301",
+  "PLC0415",
   # ruff formatter recommends to disable those
   "COM812",
   "COM819",

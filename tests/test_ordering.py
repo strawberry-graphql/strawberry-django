@@ -12,12 +12,14 @@ from tests.types import Fruit
 
 @strawberry_django.ordering.order(models.Color)
 class ColorOrder:
+    pk: auto
     name: auto
 
 
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
     name: auto
+    sweetness: auto
     color: Optional[ColorOrder]
 
 
@@ -86,3 +88,40 @@ def test_relationship(query, fruits):
         {"id": "1", "name": "strawberry", "color": {"name": "red"}},
         {"id": "2", "name": "raspberry", "color": {"name": "dark red"}},
     ]
+
+
+def test_arguments_order_respected(query, db):
+    yellow = models.Color.objects.create(name="yellow")
+    red = models.Color.objects.create(name="red")
+
+    f1 = models.Fruit.objects.create(
+        name="strawberry",
+        sweetness=1,
+        color=red,
+    )
+    f2 = models.Fruit.objects.create(
+        name="banana",
+        sweetness=2,
+        color=yellow,
+    )
+    f3 = models.Fruit.objects.create(
+        name="apple",
+        sweetness=0,
+        color=red,
+    )
+
+    result = query("{ fruits(order: { name: ASC, sweetness: ASC }) { id } }")
+    assert not result.errors
+    assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f3, f2, f1]]
+
+    result = query("{ fruits(order: { sweetness: DESC, name: ASC }) { id } }")
+    assert not result.errors
+    assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f2, f1, f3]]
+
+    result = query("{ fruits(order: { color: {name: ASC}, name: ASC }) { id } }")
+    assert not result.errors
+    assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f3, f1, f2]]
+
+    result = query("{ fruits(order: { color: {pk: ASC}, name: ASC }) { id } }")
+    assert not result.errors
+    assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f2, f3, f1]]

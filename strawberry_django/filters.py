@@ -44,6 +44,8 @@ T = TypeVar("T")
 _T = TypeVar("_T", bound=type)
 _QS = TypeVar("_QS", bound="QuerySet")
 
+FILTERS_ARG = "filters"
+
 
 @strawberry.input
 class DjangoModelFilterInput:
@@ -341,7 +343,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
             ):
                 arguments.append(argument("pk", strawberry.ID))
             elif filters is not None and self.is_list:
-                arguments.append(argument("filters", filters, is_optional=True))
+                arguments.append(argument(FILTERS_ARG, filters, is_optional=True))
 
         return super().arguments + arguments
 
