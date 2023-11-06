@@ -44,6 +44,7 @@ from .dataclasses import (
 )
 
 if TYPE_CHECKING:
+    from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
     from strawberry.file_uploads.scalars import Upload
     from strawberry.types.info import Info
     from typing_extensions import Literal
@@ -472,12 +473,12 @@ def update_m2m(
 
     use_remove = True
     if isinstance(field, ManyToManyField):
-        manager = cast("RelatedManager", getattr(instance, field.attname))  # noqa: F821 pyright: ignore[reportUndefinedVariable]
+        manager = cast("RelatedManager", getattr(instance, field.attname))
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
         accessor_name = field.get_accessor_name()
         assert accessor_name
-        manager = cast("RelatedManager", getattr(instance, accessor_name))  # noqa: F821 pyright: ignore[reportUndefinedVariable]
+        manager = cast("RelatedManager", getattr(instance, accessor_name))
         if field.one_to_many:
             # remove if field is nullable, otherwise delete
             use_remove = field.remote_field.null is True
@@ -507,7 +508,7 @@ def update_m2m(
                     obj.save()
 
                 if hasattr(manager, "through"):
-                    manager = cast("ManyToManyRelatedManager", manager)  # noqa: F821 pyright: ignore[reportUndefinedVariable]
+                    manager = cast("ManyToManyRelatedManager", manager)
                     intermediate_model = manager.through
                     try:
                         im = intermediate_model._default_manager.get(
