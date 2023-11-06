@@ -164,7 +164,7 @@ def prepare_create_update(
     instance: Model,
     data: dict[str, Any],
     full_clean: bool | FullCleanOptions = True,
-) -> list[type[_M], dict, list, list]:
+) -> tuple[Model, dict, list, list]:
     """Prepare data for updates and creates.
 
     This method is a helper function for the create and
