@@ -473,12 +473,12 @@ def update_m2m(
 
     use_remove = True
     if isinstance(field, ManyToManyField):
-        manager = cast("RelatedManager", getattr(instance, field.attname))
+        manager = cast("RelatedManager", getattr(instance, field.attname))  # type: ignore
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
         accessor_name = field.get_accessor_name()
         assert accessor_name
-        manager = cast("RelatedManager", getattr(instance, accessor_name))
+        manager = cast("RelatedManager", getattr(instance, accessor_name))  # type: ignore
         if field.one_to_many:
             # remove if field is nullable, otherwise delete
             use_remove = field.remote_field.null is True
@@ -508,7 +508,7 @@ def update_m2m(
                     obj.save()
 
                 if hasattr(manager, "through"):
-                    manager = cast("ManyToManyRelatedManager", manager)
+                    manager = cast("ManyToManyRelatedManager", manager)  # type: ignore
                     intermediate_model = manager.through
                     try:
                         im = intermediate_model._default_manager.get(
