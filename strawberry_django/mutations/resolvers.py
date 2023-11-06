@@ -349,7 +349,7 @@ def update(
         instance.save()
 
         for field, value in m2m:
-            update_m2m(info, instance, field, value)
+            update_m2m(info, instance, field, value, full_clean)
 
         retval.append(instance.__class__._default_manager.get(pk=instance.pk))
 
@@ -422,6 +422,7 @@ def update_m2m(
     instance: Model,
     field: ManyToManyField | ForeignObjectRel,
     value: Any,
+    full_clean: bool | FullCleanOptions = True,
 ):
     if value is UNSET:
         return
@@ -457,6 +458,8 @@ def update_m2m(
     to_delete = []
     need_remove_cache = False
 
+    full_clean_options = full_clean if isinstance(full_clean, dict) else {}
+
     values = value.set if isinstance(value, ParsedObjectList) else value
     if isinstance(values, list):
         if isinstance(value, ParsedObjectList) and getattr(value, "add", None):
@@ -474,7 +477,8 @@ def update_m2m(
                 if data:
                     for k, inner_value in data.items():
                         setattr(obj, k, inner_value)
-                    obj.full_clean()
+                    if full_clean:
+                        obj.full_clean(**full_clean_options)
                     obj.save()
 
                 if hasattr(manager, "through"):
@@ -497,7 +501,8 @@ def update_m2m(
 
                     for k, inner_value in through_defaults.items():
                         setattr(im, k, inner_value)
-                    im.full_clean()
+                    if full_clean:
+                        im.full_clean(**full_clean_options)
                     im.save()
                 elif obj not in existing:
                     to_add.append(obj)
@@ -505,7 +510,8 @@ def update_m2m(
                 existing.discard(obj)
             else:
                 obj, _ = manager.get_or_create(**data)
-                obj.full_clean()
+                if full_clean:
+                    obj.full_clean(**full_clean_options)
                 existing.discard(obj)
 
         for remaining in existing:
@@ -519,7 +525,8 @@ def update_m2m(
         for v in value.add or []:
             obj, data = _parse_data(info, manager.model, v)
             if obj and data:
-                obj.full_clean()
+                if full_clean:
+                    obj.full_clean(**full_clean_options)
                 manager.add(obj, **data)
             elif obj:
                 # Do this later in a bulk
