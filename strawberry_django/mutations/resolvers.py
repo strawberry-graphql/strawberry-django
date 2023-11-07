@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Iterable,
     List,
+    TypeVar,
     cast,
     overload,
 )
@@ -35,13 +36,14 @@ from strawberry_django.fields.types import (
 from strawberry_django.utils.inspect import get_model_fields
 
 from .types import (
-    _M,
-    _T,
     FullCleanOptions,
+    InputListTypes,
     ParsedObject,
     ParsedObjectList,
-    _InputListTypes,
 )
+
+_T = TypeVar("_T")
+_M = TypeVar("_M", bound=Model)
 
 if TYPE_CHECKING:
     from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
@@ -145,9 +147,9 @@ def parse_input(info: Info, data: Any):
             }
 
         return ParsedObjectList(
-            add=cast(List[_InputListTypes], parse_input(info, data.add)),
-            remove=cast(List[_InputListTypes], parse_input(info, data.remove)),
-            set=cast(List[_InputListTypes], parse_input(info, data.set)),
+            add=cast(List[InputListTypes], parse_input(info, data.add)),
+            remove=cast(List[InputListTypes], parse_input(info, data.remove)),
+            set=cast(List[InputListTypes], parse_input(info, data.set)),
         )
 
     if dataclasses.is_dataclass(data):

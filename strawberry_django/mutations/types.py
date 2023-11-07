@@ -11,7 +11,7 @@ from typing_extensions import TypeAlias, TypedDict
 
 _T = TypeVar("_T")  # noqa: PYI018
 _M = TypeVar("_M", bound=Model)
-_InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
+InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
 
 
 class FullCleanOptions(TypedDict, total=False):
@@ -38,6 +38,6 @@ class ParsedObject:
 
 @dataclasses.dataclass
 class ParsedObjectList:
-    add: list[_InputListTypes] | None = None
-    remove: list[_InputListTypes] | None = None
-    set: list[_InputListTypes] | None = None  # noqa: A003
+    add: list[InputListTypes] | None = None
+    remove: list[InputListTypes] | None = None
+    set: list[InputListTypes] | None = None  # noqa: A003
