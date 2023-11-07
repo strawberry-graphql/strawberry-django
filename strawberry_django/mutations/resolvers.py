@@ -42,14 +42,15 @@ from .types import (
     ParsedObjectList,
 )
 
-_T = TypeVar("_T")
-_M = TypeVar("_M", bound=Model)
-
 if TYPE_CHECKING:
     from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
     from strawberry.file_uploads.scalars import Upload
     from strawberry.types.info import Info
     from typing_extensions import Literal
+
+
+_T = TypeVar("_T")
+_M = TypeVar("_M", bound=Model)
 
 
 def _parse_pk(
