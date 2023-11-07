@@ -34,7 +34,7 @@ from strawberry_django.fields.types import (
 )
 from strawberry_django.utils.inspect import get_model_fields
 
-from .dataclasses import (
+from .types import (
     _M,
     _T,
     FullCleanOptions,
