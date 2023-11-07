@@ -43,8 +43,6 @@ from .types import (
 )
 
 if TYPE_CHECKING:
-    import datetime
-
     from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
     from strawberry.file_uploads.scalars import Upload
     from strawberry.types.info import Info
@@ -172,9 +170,14 @@ def prepare_create_update(
     full_clean: bool | FullCleanOptions = True,
 ) -> tuple[
     Model,
-    dict[str, str | int | float | datetime.date | datetime.datetime],
-    list[str, Any],
-    list[ManyToManyField | ForeignObjectRel, Any],
+    dict[str, object],
+    list[
+        tuple[
+            models.FileField,
+            Upload | Literal[False],
+        ]
+    ],
+    list[tuple[ManyToManyField | ForeignObjectRel, Any]],
 ]:
     """Prepare data for updates and creates.
 
@@ -191,7 +194,7 @@ def prepare_create_update(
         ]
     ] = []
     m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
-    direct_field_values = {}
+    direct_field_values: dict[str, object] = {}
 
     if dataclasses.is_dataclass(data):
         data = vars(data)
@@ -384,7 +387,7 @@ def update(
     instance.save()
 
     for field, value in m2m:
-        update_m2m(info, instance, field, value)
+        update_m2m(info, instance, field, value, full_clean)
 
     instance.refresh_from_db()
 
@@ -457,6 +460,7 @@ def update_m2m(
     instance: Model,
     field: ManyToManyField | ForeignObjectRel,
     value: Any,
+    full_clean: bool | FullCleanOptions = True,
 ):
     if value is UNSET:
         return
@@ -477,12 +481,12 @@ def update_m2m(
 
     use_remove = True
     if isinstance(field, ManyToManyField):
-        manager = cast("RelatedManager", getattr(instance, field.attname))  # type: ignore
+        manager = cast("RelatedManager", getattr(instance, field.attname))
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
         accessor_name = field.get_accessor_name()
         assert accessor_name
-        manager = cast("RelatedManager", getattr(instance, accessor_name))  # type: ignore
+        manager = cast("RelatedManager", getattr(instance, accessor_name))
         if field.one_to_many:
             # remove if field is nullable, otherwise delete
             use_remove = field.remote_field.null is True
@@ -491,6 +495,8 @@ def update_m2m(
     to_remove = []
     to_delete = []
     need_remove_cache = False
+
+    full_clean_options = full_clean if isinstance(full_clean, dict) else {}
 
     values = value.set if isinstance(value, ParsedObjectList) else value
     if isinstance(values, list):
@@ -509,6 +515,8 @@ def update_m2m(
                 if data:
                     for k, inner_value in data.items():
                         setattr(obj, k, inner_value)
+                    if full_clean:
+                        obj.full_clean(**full_clean_options)
                     obj.save()
 
                 if hasattr(manager, "through"):
@@ -531,6 +539,8 @@ def update_m2m(
 
                     for k, inner_value in through_defaults.items():
                         setattr(im, k, inner_value)
+                    if full_clean:
+                        im.full_clean(**full_clean_options)
                     im.save()
                 elif obj not in existing:
                     to_add.append(obj)
@@ -538,6 +548,8 @@ def update_m2m(
                 existing.discard(obj)
             else:
                 obj, _ = manager.get_or_create(**data)
+                if full_clean:
+                    obj.full_clean(**full_clean_options)
                 existing.discard(obj)
 
         for remaining in existing:
@@ -551,6 +563,8 @@ def update_m2m(
         for v in value.add or []:
             obj, data = _parse_data(info, manager.model, v)
             if obj and data:
+                if full_clean:
+                    obj.full_clean(**full_clean_options)
                 manager.add(obj, **data)
             elif obj:
                 # Do this later in a bulk

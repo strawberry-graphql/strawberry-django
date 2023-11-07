@@ -55,7 +55,7 @@ if settings.GEOS_IMPORTED:
 
 @strawberry_django.input(models.Fruit)
 class FruitInput(Fruit):
-    pass
+    types: List[FruitTypeInput] | None  # noqa: UP006
 
 
 @strawberry_django.input(models.Color)
@@ -70,7 +70,7 @@ class FruitTypeInput(FruitType):
 
 @strawberry_django.input(models.Fruit, partial=True)
 class FruitPartialInput(FruitInput):
-    pass
+    types: List[FruitTypePartialInput] | None  # noqa: UP006
 
 
 @strawberry_django.input(models.Color, partial=True)
