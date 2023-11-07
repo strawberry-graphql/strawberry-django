@@ -241,7 +241,7 @@ def _process_type(
     type_def = get_object_definition(cls, strict=True)
     description_from_doc = settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]
     new_fields: List[StrawberryField] = []
-    for f in type_def._fields:
+    for f in type_def.fields:
         django_name: Optional[str] = (
             getattr(f, "django_name", None) or f.python_name or f.name
         )
@@ -389,7 +389,7 @@ def _process_type(
         if f.base_resolver and f.python_name:
             setattr(cls, f.python_name, f)
 
-    type_def._fields = new_fields
+    type_def.fields = new_fields
     cls.__strawberry_django_definition__ = django_type  # type: ignore
     # TODO: remove when deprecating _type_definition
     DeprecatedDescriptor(
