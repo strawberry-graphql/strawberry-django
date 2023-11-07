@@ -43,6 +43,8 @@ from .types import (
 )
 
 if TYPE_CHECKING:
+    import datetime
+
     from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
     from strawberry.file_uploads.scalars import Upload
     from strawberry.types.info import Info
@@ -168,7 +170,12 @@ def prepare_create_update(
     instance: Model,
     data: dict[str, Any],
     full_clean: bool | FullCleanOptions = True,
-) -> tuple[Model, dict, list, list]:
+) -> tuple[
+    Model,
+    dict[str, str | int | float | datetime.date | datetime.datetime],
+    list[str, Any],
+    list[ManyToManyField | ForeignObjectRel, Any],
+]:
     """Prepare data for updates and creates.
 
     This method is a helper function for the create and
