@@ -384,7 +384,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 def field(
     *,
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
-    resolver: Callable[[], _T],
+    resolver: _RESOLVER_TYPE[_T],
     name: str | None = None,
     field_name: str | None = None,
     is_subscription: bool = False,
@@ -439,7 +439,7 @@ def field(
 
 @overload
 def field(
-    resolver: StrawberryResolver | Callable | staticmethod | classmethod,
+    resolver: _RESOLVER_TYPE,
     *,
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,
