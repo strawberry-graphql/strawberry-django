@@ -196,9 +196,7 @@ def prepare_create_update(
         if field is None or value is UNSET:
             # Dont use these, fallback to model defaults.
             direct_field_value = False
-            continue
-
-        if isinstance(field, models.FileField):
+        elif isinstance(field, models.FileField):
             if value is None:
                 # We want to reset the file field value when None was passed in the
                 # input, but `FileField.save_form_data` ignores None values. In that
@@ -208,15 +206,11 @@ def prepare_create_update(
             # set FileFields at the same time so their hooks can use other set values
             files.append((field, value))
             direct_field_value = False
-            continue
-
-        if isinstance(field, (ManyToManyField, ForeignObjectRel)):
+        elif isinstance(field, (ManyToManyField, ForeignObjectRel)):
             # m2m will be processed later
             m2m.append((field, value))
             direct_field_value = False
-            continue
-
-        if isinstance(field, models.ForeignKey) and isinstance(
+        elif isinstance(field, models.ForeignKey) and isinstance(
             value,
             # We are using str here because strawberry.ID can't be used for isinstance
             (ParsedObject, str),
