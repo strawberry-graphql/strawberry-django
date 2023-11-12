@@ -282,7 +282,7 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
     assert res.data
     assert isinstance(res.data["createMilestone"], dict)
 
-    typename, pk = from_base64(res.data["createMilestone"].pop("id"))
+    typename, _pk = from_base64(res.data["createMilestone"].pop("id"))
     assert typename == "MilestoneType"
 
     project = Project.objects.get(name="New Project")
