@@ -352,6 +352,8 @@ def _process_type(
             # seeing it, just update its annotations/description/etc
             f.type_annotation = type_annotation
             f.description = description
+        elif isinstance(f, StrawberryDjangoField):
+            f = copy.copy(f)  # noqa: PLW2901
         elif (
             not isinstance(f, StrawberryDjangoField)
             and getattr(f, "base_resolver", None) is not None
