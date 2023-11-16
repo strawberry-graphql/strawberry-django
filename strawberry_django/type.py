@@ -391,7 +391,7 @@ def _process_type(
         if f.base_resolver and f.python_name:
             setattr(cls, f.python_name, f)
 
-    type_def._fields = new_fields
+    type_def.fields = new_fields
     cls.__strawberry_django_definition__ = django_type  # type: ignore
     # TODO: remove when deprecating _type_definition
     DeprecatedDescriptor(
