@@ -48,17 +48,21 @@ from strawberry_django.resolvers import django_resolver
 from .utils.query import filter_for_user
 from .utils.typing import UserType
 
-try:
-    # Try to use the smaller/faster cache decorator if available
-    _cache = functools.cache  # type: ignore
-except AttributeError:
-    _cache = functools.lru_cache
-
 if TYPE_CHECKING:
     from strawberry.django.context import StrawberryDjangoContext
 
 
 _M = TypeVar("_M", bound=Model)
+
+
+@functools.lru_cache
+def _get_user_or_anonymous_getter() -> Optional[Callable[[UserType], UserType]]:
+    try:
+        from .integrations.guardian import get_user_or_anonymous
+    except (ImportError, RuntimeError):  # pragma: no cover
+        return None
+
+    return get_user_or_anonymous
 
 
 @dataclasses.dataclass
@@ -216,11 +220,7 @@ def get_with_perms(
         return instance
 
     user = cast("StrawberryDjangoContext", info.context).request.user
-    try:
-        from .integrations.guardian import get_user_or_anonymous
-    except (ImportError, RuntimeError):  # pragma: no cover
-        pass
-    else:
+    if user and (get_user_or_anonymous := _get_user_or_anonymous_getter()) is not None:
         user = get_user_or_anonymous(user)
 
     for check in context.checkers:
@@ -305,12 +305,11 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
     ) -> Any:
         user = get_current_user(info)
 
-        try:
-            from .integrations.guardian import get_user_or_anonymous
-        except (ImportError, RuntimeError):  # pragma: no cover
-            pass
-        else:
-            user = user and get_user_or_anonymous(user)
+        if (
+            user
+            and (get_user_or_anonymous := _get_user_or_anonymous_getter()) is not None
+        ):
+            user = get_user_or_anonymous(user)
 
         # make sure the user is loaded
         if user is not None:

@@ -305,8 +305,10 @@ def _get_prefetch_queryset(
     config: OptimizerConfig | None,
     info: GraphQLResolveInfo,
 ) -> QuerySet:
+    qs = remote_model._base_manager.all()  # type: ignore
     if not config or not config.prefetch_custom_queryset:
-        return remote_model._base_manager.all()  # type: ignore
+        return qs
+
     remote_type_defs = get_args(field.type_annotation.annotation)
     if len(remote_type_defs) != 1:
         raise TypeError(f"Expected exactly one remote type: {remote_type_defs}")
@@ -318,7 +320,11 @@ def _get_prefetch_queryset(
         )
     else:
         remote_type = remote_type_defs[0]
-    return remote_type.get_queryset(remote_model.objects.all(), info)
+
+    if get_queryset := getattr(remote_type, "get_queryset", None):
+        return get_queryset(qs, info)
+
+    return qs
 
 
 def _get_model_hints(

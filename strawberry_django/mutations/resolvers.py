@@ -69,7 +69,7 @@ def _parse_pk(
     if isinstance(value, dict):
         return None, value
 
-    return cast(_M, model._default_manager.get(pk=value)), None
+    return model._default_manager.get(pk=value), None
 
 
 def _parse_data(info: Info, model: type[_M], value: Any):

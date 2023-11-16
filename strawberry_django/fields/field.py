@@ -57,7 +57,7 @@ if TYPE_CHECKING:
     from strawberry.relay.types import NodeIterableType
     from strawberry.types.info import Info
     from strawberry.unset import UnsetType
-    from typing_extensions import Literal
+    from typing_extensions import Literal, Self
 
     from strawberry_django.utils.typing import (
         AnnotateType,
@@ -114,6 +114,12 @@ class StrawberryDjangoField(
             annotate=annotate,
         )
         super().__init__(*args, **kwargs)
+
+    def __copy__(self) -> Self:
+        new_field = super().__copy__()
+        new_field.disable_optimization = self.disable_optimization
+        new_field.store = self.store.copy()
+        return new_field
 
     @cached_property
     def _need_remove_filters_argument(self):
@@ -384,7 +390,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 def field(
     *,
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
-    resolver: Callable[[], _T],
+    resolver: _RESOLVER_TYPE[_T],
     name: str | None = None,
     field_name: str | None = None,
     is_subscription: bool = False,
@@ -439,7 +445,7 @@ def field(
 
 @overload
 def field(
-    resolver: StrawberryResolver | Callable | staticmethod | classmethod,
+    resolver: _RESOLVER_TYPE,
     *,
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,

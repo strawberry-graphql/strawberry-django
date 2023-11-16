@@ -241,7 +241,7 @@ def resolve_model_nodes(
         django_type = get_django_definition(source, strict=True)
         source = cast(Type[_M], django_type.model)
 
-    qs = source._default_manager.all()
+    qs = cast(models.QuerySet[_M], source._default_manager.all())
 
     get_queryset = getattr(origin, "get_queryset", None)
     if get_queryset:
@@ -409,7 +409,7 @@ def resolve_model_id_attr(source: Type) -> str:
 
     """
     try:
-        id_attr = super(source, source).resolve_id_attr()
+        id_attr = super(source, source).resolve_id_attr()  # type: ignore
     except NodeIDAnnotationError:
         id_attr = "pk"
 
