@@ -15,7 +15,6 @@ from typing import (
     overload,
 )
 
-from django.db.models import Prefetch
 from django.db.models.expressions import BaseExpression, Combinable
 from graphql.type.definition import GraphQLResolveInfo
 from strawberry.annotation import StrawberryAnnotation
@@ -31,6 +30,7 @@ from typing_extensions import Protocol
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
     from django.contrib.auth.models import AnonymousUser
+    from django.db.models import Prefetch
     from typing_extensions import Literal, TypeAlias, TypeGuard
 
     from strawberry_django.type import StrawberryDjangoDefinition
@@ -42,8 +42,8 @@ TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
 TypeOrMapping: TypeAlias = Union[_T, Mapping[str, _T]]
 TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
 UserType: TypeAlias = Union["AbstractBaseUser", "AnonymousUser"]
-PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
-PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
+PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], "Prefetch[Any]"]
+PrefetchType: TypeAlias = Union[str, "Prefetch[Any]", PrefetchCallable]
 AnnotateCallable: TypeAlias = Callable[
     [GraphQLResolveInfo],
     Union[BaseExpression, Combinable],
