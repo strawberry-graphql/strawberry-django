@@ -46,7 +46,7 @@ class Artist(models.Model):
     name = models.CharField()
 
 
-class Album(models.Moodel):
+class Album(models.Model):
     name = models.CharField()
     release_date = models.DateTimeField()
     artist = models.ForeignKey("Artist", related_name="albums")
