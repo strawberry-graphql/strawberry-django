@@ -240,9 +240,13 @@ def prepare_create_update(
                 update(info, value, value_data, full_clean=full_clean)
 
         if direct_field_value:
+            # We want to return the direct fields for processing
+            # sepperatly when we're creating objects.
+            # You can see this in the create() function
             direct_field_values.update({name: value})
-
-        update_field(info, instance, field, value)
+            # Make sure you dont pass Many2Many and FileFields
+            # to your update_field function. This will not work.
+            update_field(info, instance, field, value)
 
     return instance, direct_field_values, files, m2m
 
@@ -465,6 +469,9 @@ def update_m2m(
     if value is UNSET:
         return
 
+    # FIXME / NOTE:  Should this be here?
+    # The field can only be ManyToManyField | ForeignObjectRel according to the definition
+    # so why are there checks for OneTOneRel?
     if isinstance(field, OneToOneRel):
         remote_field = field.remote_field
         value, data = _parse_pk(value, remote_field.model)
@@ -478,6 +485,7 @@ def update_m2m(
         if data:
             update(info, value, data)
         return
+    # END FIXME
 
     use_remove = True
     if isinstance(field, ManyToManyField):
