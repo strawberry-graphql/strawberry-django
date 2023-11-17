@@ -445,7 +445,7 @@ def field(
 
 @overload
 def field(
-    resolver: _RESOLVER_TYPE,
+    resolver: _RESOLVER_TYPE[Any],
     *,
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,
@@ -472,7 +472,7 @@ def field(
 
 
 def field(
-    resolver=None,
+    resolver: _RESOLVER_TYPE[Any] | None = None,
     *,
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,

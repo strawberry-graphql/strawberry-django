@@ -42,8 +42,8 @@ TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
 TypeOrMapping: TypeAlias = Union[_T, Mapping[str, _T]]
 TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
 UserType: TypeAlias = Union["AbstractBaseUser", "AnonymousUser"]
-PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], Prefetch]
-PrefetchType: TypeAlias = Union[str, Prefetch, PrefetchCallable]
+PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], "Prefetch[Any]"]
+PrefetchType: TypeAlias = Union[str, "Prefetch[Any]", PrefetchCallable]
 AnnotateCallable: TypeAlias = Callable[
     [GraphQLResolveInfo],
     Union[BaseExpression, Combinable],
