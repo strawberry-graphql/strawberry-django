@@ -15,7 +15,6 @@ from typing import (
     overload,
 )
 
-from django.db.models import Prefetch
 from django.db.models.expressions import BaseExpression, Combinable
 from graphql.type.definition import GraphQLResolveInfo
 from strawberry.annotation import StrawberryAnnotation
@@ -29,6 +28,7 @@ from strawberry.utils.typing import is_classvar
 from typing_extensions import Protocol
 
 if TYPE_CHECKING:
+    from django.db.models import Prefetch
     from django.contrib.auth.base_user import AbstractBaseUser
     from django.contrib.auth.models import AnonymousUser
     from typing_extensions import Literal, TypeAlias, TypeGuard
