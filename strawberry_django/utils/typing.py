@@ -28,9 +28,9 @@ from strawberry.utils.typing import is_classvar
 from typing_extensions import Protocol
 
 if TYPE_CHECKING:
-    from django.db.models import Prefetch
     from django.contrib.auth.base_user import AbstractBaseUser
     from django.contrib.auth.models import AnonymousUser
+    from django.db.models import Prefetch
     from typing_extensions import Literal, TypeAlias, TypeGuard
 
     from strawberry_django.type import StrawberryDjangoDefinition
