@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, TypeVar, Union, cast
+from typing import Any, TypeVar, Union
 
 import strawberry
 from django.db import models
@@ -33,7 +33,7 @@ class ParsedObject:
             assert isinstance(self.pk, model)
             return self.pk, self.data
 
-        return cast(_M, model._default_manager.get(pk=self.pk)), self.data
+        return model._default_manager.get(pk=self.pk), self.data
 
 
 @dataclasses.dataclass
