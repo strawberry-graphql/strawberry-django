@@ -246,7 +246,7 @@ def prepare_create_update(
             direct_field_values.update({name: value})
             # Make sure you dont pass Many2Many and FileFields
             # to your update_field function. This will not work.
-            update_field(info, instance, field, value)
+            update_field(info, instance, field, value)  # type: ignore
 
     return instance, direct_field_values, files, m2m
 
