@@ -54,7 +54,7 @@ def test_login_with_wrong_password(mutation, user, context):
         '{ login(username: "user", password: "wrong") { username } }',
         context_value=context,
     )
-    assert not result.errors
+    assert result.errors
     assert result.data["login"] is None
 
     assert context.request.user.is_anonymous
