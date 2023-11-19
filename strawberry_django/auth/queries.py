@@ -8,11 +8,12 @@ from .exceptions import UserNotLoggedInError
 from .utils import get_current_user
 
 if TYPE_CHECKING:
-    from django.contrib.auth.base_user import AbstractBaseUser
     from strawberry.types import Info
 
+    from strawberry_django.utils.typing import UserType
 
-def resolve_current_user(info: Info) -> AbstractBaseUser:
+
+def resolve_current_user(info: Info) -> UserType:
     user = get_current_user(info)
 
     if not getattr(user, "is_authenticated", False):
