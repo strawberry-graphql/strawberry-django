@@ -1,12 +1,17 @@
 from typing import TYPE_CHECKING, Optional
 
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import models
 
 from strawberry_django.descriptors import model_property
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
+
+
+def validate_fruit_type(value: str):
+    if "rotten" in value:
+        raise ValidationError("We do not allow rotten fruits.")
 
 
 class Fruit(models.Model):
@@ -43,7 +48,7 @@ class Color(models.Model):
 
 
 class FruitType(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, validators=[validate_fruit_type])
 
 
 class User(models.Model):

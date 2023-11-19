@@ -36,7 +36,7 @@ from strawberry.types.nodes import (
 from strawberry.types.types import StrawberryObjectDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
-from typing_extensions import Self, assert_never
+from typing_extensions import assert_never
 
 from strawberry_django.fields.types import resolve_model_field_name
 
@@ -190,6 +190,9 @@ def get_selections(
 
     for s in selection.selections:
         if isinstance(s, SelectedField):
+            # FIXME: pyright issue
+            s = cast(SelectedField, s)
+
             # @include(if: <bool>)
             include = s.directives.get("include")
             if include and not include["if"]:
@@ -298,7 +301,7 @@ class PrefetchInspector:
     def where(self, value: Optional[WhereNode]):
         self.query.where = value or WhereNode()
 
-    def merge(self, other: Self, *, allow_unsafe_ops: bool = False):
+    def merge(self, other: "PrefetchInspector", *, allow_unsafe_ops: bool = False):
         if not allow_unsafe_ops and self.where != other.where:
             raise ValueError(
                 "Tried to prefetch 2 queries with different filters to the "

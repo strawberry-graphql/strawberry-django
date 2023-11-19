@@ -3,8 +3,10 @@ import textwrap
 
 import strawberry
 from django.db import models
+from strawberry.type import get_object_definition
 
 import strawberry_django
+from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.utils.typing import get_django_definition
 
 
@@ -109,3 +111,22 @@ def test_optimizer_hints_on_type():
     assert store.select_related == ["other"]
     assert store.prefetch_related == ["other"]
     assert store.annotate == {"other_name": models.F("other__name")}
+
+
+def test_custom_field_kept_on_inheritance():
+    class SomeModel(models.Model):
+        foo = models.CharField(max_length=255)
+
+    class CustomField(StrawberryDjangoField): ...
+
+    @strawberry_django.type(SomeModel)
+    class SomeModelType:
+        foo: strawberry.auto = CustomField()
+
+    @strawberry_django.type(SomeModel)
+    class SomeModelSubclassType(SomeModelType): ...
+
+    for type_ in [SomeModelType, SomeModelSubclassType]:
+        object_definition = get_object_definition(type_, strict=True)
+        field = object_definition.get_field("foo")
+        assert isinstance(field, CustomField)
