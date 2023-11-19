@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import strawberry_django
 
+from .exceptions import UserNotLoggedInError
 from .utils import get_current_user
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ def resolve_current_user(info: Info) -> AbstractBaseUser:
     user = get_current_user(info)
 
     if not getattr(user, "is_authenticated", False):
-        return None
+        raise UserNotLoggedInError()  # noqa: RSE102
 
     return user
 
