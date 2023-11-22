@@ -180,7 +180,9 @@ def build_filter_kwargs(
         else None
     )
 
-    for f in filters.__strawberry_definition__.fields:
+    for f in sorted(
+        filters.__strawberry_definition__.fields, key=lambda f: f.name, reverse=True
+    ):
         field_name = f.name
         field_value = _resolve_global_id(getattr(filters, field_name))
 
