@@ -14,6 +14,18 @@ def validate_fruit_type(value: str):
         raise ValidationError("We do not allow rotten fruits.")
 
 
+class NameDescriptionMixin(models.Model):
+    name = models.CharField(max_length=20)
+    description = models.TextField()
+
+    class Meta:
+        abstract = True
+
+
+class Vegetable(NameDescriptionMixin):
+    world_production = models.FloatField()
+
+
 class Fruit(models.Model):
     name = models.CharField(max_length=20)
     color_id: Optional[int]
