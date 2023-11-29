@@ -7,6 +7,7 @@ import strawberry
 from asgiref.sync import async_to_sync
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 from strawberry_django.auth.utils import get_current_user
 from strawberry_django.mutations import mutations, resolvers
@@ -14,8 +15,6 @@ from strawberry_django.mutations.fields import DjangoCreateMutation
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.requests import get_request
-
-from .exceptions import IncorrectUsernamePasswordError
 
 try:
     # Django-channels is not always used/intalled,
@@ -35,7 +34,7 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser:
     user = auth.authenticate(request, username=username, password=password)
 
     if user is None:
-        raise IncorrectUsernamePasswordError()  # noqa: RSE102
+        raise ValidationError("Incorrect username/password")
 
     try:
         auth.login(request, user)

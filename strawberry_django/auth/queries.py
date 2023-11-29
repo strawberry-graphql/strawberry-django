@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.core.exceptions import ValidationError
+
 import strawberry_django
 
-from .exceptions import UserNotLoggedInError
 from .utils import get_current_user
 
 if TYPE_CHECKING:
@@ -17,7 +18,7 @@ def resolve_current_user(info: Info) -> UserType:
     user = get_current_user(info)
 
     if not getattr(user, "is_authenticated", False):
-        raise UserNotLoggedInError()  # noqa: RSE102
+        raise ValidationError("User is not logged in.")
 
     return user
 
