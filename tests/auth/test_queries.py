@@ -35,5 +35,5 @@ def test_current_user(query, user, context):
 
 def test_current_user_not_logged_in(query, user, context):
     result = query("{ currentUser { username } }", context_value=context)
-    assert not result.errors
+    assert result.errors
     assert result.data == {"currentUser": None}
