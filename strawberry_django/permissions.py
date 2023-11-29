@@ -312,8 +312,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
             user = get_user_or_anonymous(user)
 
         # make sure the user is loaded
-        if user is not None:
-            user.is_authenticated  # noqa: B018
+        user.is_authenticated  # noqa: B018
 
         try:
             retval = self.resolve_for_user(

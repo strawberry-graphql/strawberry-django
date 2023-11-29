@@ -58,7 +58,7 @@ def resolve_login(info: Info, username: str, password: str) -> AbstractBaseUser:
 @django_resolver
 def resolve_logout(info: Info) -> bool:
     user = get_current_user(info)
-    ret = user.is_authenticated  # type: ignore
+    ret = user.is_authenticated
 
     try:
         request = get_request(info)

@@ -190,9 +190,6 @@ def get_selections(
 
     for s in selection.selections:
         if isinstance(s, SelectedField):
-            # FIXME: pyright issue
-            s = cast(SelectedField, s)
-
             # @include(if: <bool>)
             include = s.directives.get("include")
             if include and not include["if"]:

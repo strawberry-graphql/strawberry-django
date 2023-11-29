@@ -200,7 +200,7 @@ def _process_type(
 
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
-        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))  # type: ignore
+        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))
 
     # Default querying methods for relay
     if issubclass(cls, relay.Node):
