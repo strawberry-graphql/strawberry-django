@@ -285,8 +285,26 @@ def test_resolver_filter_with_inheritance(vegetables):
 
     query = utils.generate_query(Query)
     result = query(
-        "{ vegetables(filters:  { worldProduction: { gt: 100e6 } "
-        'OR: { name: { exact: "cucumber" } } }) { id name } }'
+        """
+      {
+        vegetables(
+          filters: {
+            worldProduction: {
+              gt: 100e6
+            }
+            OR: {
+              name: {
+                exact: "cucumber"
+              }
+            }
+          }
+        )
+        {
+          id
+          name
+        }
+      }
+    """
     )
     assert isinstance(result, ExecutionResult)
     assert not result.errors
