@@ -21,6 +21,7 @@ from strawberry.field import StrawberryField, field
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.types import Info
 from strawberry.unset import UnsetType
+from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Self, dataclass_transform
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
@@ -60,7 +61,7 @@ def generate_order_args(
     args = []
 
     def sort_key(f: StrawberryField) -> int:
-        if not (seq := sequence.get(f.name)):
+        if not (seq := sequence.get(to_camel_case(f.name))):
             return 0
         return seq.seq
 
@@ -77,7 +78,7 @@ def generate_order_args(
             subargs = generate_order_args(
                 ordering,
                 prefix=f"{prefix}{f.name}__",
-                sequence=(seq := sequence.get(f.name)) and seq.children,
+                sequence=(seq := sequence.get(to_camel_case(f.name))) and seq.children,
             )
             args.extend(subargs)
 
