@@ -18,6 +18,7 @@ class ColorOrder:
 
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
+    color_id: auto
     name: auto
     sweetness: auto
     color: Optional[ColorOrder]
@@ -125,3 +126,11 @@ def test_arguments_order_respected(query, db):
     result = query("{ fruits(order: { color: {pk: ASC}, name: ASC }) { id } }")
     assert not result.errors
     assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f2, f3, f1]]
+
+    result = query("{ fruits(order: { colorId: ASC, name: ASC }) { id } }")
+    assert not result.errors
+    assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f2, f3, f1]]
+
+    result = query("{ fruits(order: { name: ASC, colorId: ASC }) { id } }")
+    assert not result.errors
+    assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f3, f2, f1]]
