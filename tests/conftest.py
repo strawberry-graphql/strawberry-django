@@ -44,6 +44,16 @@ def fruits(db):
 
 
 @pytest.fixture()
+def vegetables(db):
+    vegetable_names = ["carrot", "cucumber", "onion"]
+    vegetable_world_production = [40.0e6, 75.2e6, 102.2e6]  # in tons
+    return [
+        models.Vegetable.objects.create(name=n, world_production=p)
+        for n, p in zip(vegetable_names, vegetable_world_production)
+    ]
+
+
+@pytest.fixture()
 def tag(db):
     return models.Tag.objects.create(name="tag")
 

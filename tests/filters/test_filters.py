@@ -12,6 +12,18 @@ import strawberry_django
 from tests import models, utils
 
 
+@strawberry_django.filter(models.NameDescriptionMixin)
+class NameDescriptionFilter:
+    name: auto
+    description: auto
+
+
+@strawberry_django.filter(models.Vegetable, lookups=True)
+class VegetableFilter(NameDescriptionFilter):
+    id: auto
+    world_production: auto
+
+
 @strawberry_django.filters.filter(models.Color, lookups=True)
 class ColorFilter:
     id: auto
@@ -75,6 +87,14 @@ class TypeFilter:
             return queryset
 
         return queryset.filter(name__icontains=self.name)
+
+
+@strawberry_django.type(models.Vegetable, filters=VegetableFilter)
+class Vegetable:
+    id: auto
+    name: auto
+    description: auto
+    world_production: auto
 
 
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
@@ -250,6 +270,48 @@ def test_resolver_filter(fruits):
     assert result.data is not None
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_resolver_filter_with_inheritance(vegetables):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def vegetables(self, filters: VegetableFilter) -> List[Vegetable]:
+            queryset = models.Vegetable.objects.all()
+            return cast(
+                List[Vegetable], strawberry_django.filters.apply(filters, queryset)
+            )
+
+    query = utils.generate_query(Query)
+    result = query(
+        """
+      {
+        vegetables(
+          filters: {
+            worldProduction: {
+              gt: 100e6
+            }
+            OR: {
+              name: {
+                exact: "cucumber"
+              }
+            }
+          }
+        )
+        {
+          id
+          name
+        }
+      }
+    """
+    )
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["vegetables"] == [
+        {"id": "2", "name": "cucumber"},
+        {"id": "3", "name": "onion"},
     ]
 
 

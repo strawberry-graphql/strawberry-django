@@ -180,7 +180,11 @@ def build_filter_kwargs(
         else None
     )
 
-    for f in filters.__strawberry_definition__.fields:
+    # This loop relies on the filter field order: AND, OR, and NOT fields are expected to be last. Since this is not
+    # true in case of filter inheritance, we need to explicitely sort them.
+    for f in sorted(
+        filters.__strawberry_definition__.fields, key=lambda f: f.name, reverse=True
+    ):
         field_name = f.name
         field_value = _resolve_global_id(getattr(filters, field_name))
 
