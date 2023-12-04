@@ -29,35 +29,6 @@ def test_filter():
     ]
 
 
-def test_filter_field_order_with_inheritance():
-    @strawberry_django.filter(models.NameDescriptionMixin)
-    class NameDescriptionFilter:
-        name: auto
-        description: auto
-
-    @strawberry_django.filter(models.Vegetable)
-    class VegetableFilter(NameDescriptionFilter):
-        id: auto
-        world_production: auto
-
-    # What is the expected order in case of filter inheritance?
-    # Base class fields first followed by subclass fields or alphabetical order?
-    # Maybe it is possible to use __init_subclass__ to order the filter fields in a deterministic way?
-    object_definition = get_object_definition(VegetableFilter, strict=True)
-    assert [
-        (f.name, f.type.of_type.__name__)  # type: ignore
-        for f in object_definition.fields
-    ] == [
-        ("id", "FilterLookup"),
-        ("name", "FilterLookup"),
-        ("description", "FilterLookup"),
-        ("world_production", "FilterLookup"),
-        ("AND", "Filter"),
-        ("OR", "Filter"),
-        ("NOT", "Filter"),
-    ]
-
-
 def test_lookups():
     @strawberry_django.filters.filter(models.Fruit, lookups=True)
     class Filter:
