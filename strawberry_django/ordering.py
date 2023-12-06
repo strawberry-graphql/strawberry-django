@@ -172,6 +172,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         self,
         queryset: _QS,
         info: Info,
+        *,
         order: Optional[WithStrawberryObjectDefinition] = None,
         **kwargs,
     ) -> _QS:

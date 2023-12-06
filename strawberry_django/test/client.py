@@ -54,7 +54,7 @@ class AsyncTestClient(TestClient):
         query: str,
         variables: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, object]] = None,
-        asserts_errors: bool = True,
+        asserts_errors: Optional[bool] = True,
         files: Optional[Dict[str, object]] = None,
     ) -> Response:
         body = self._build_body(query, variables, files)
@@ -73,7 +73,7 @@ class AsyncTestClient(TestClient):
         return response
 
     @contextlib.asynccontextmanager
-    async def login(self, user: AbstractBaseUser):
+    async def login(self, user: AbstractBaseUser):  # type: ignore
         await sync_to_async(self.client.force_login)(user)
         yield
         await sync_to_async(self.client.logout)()

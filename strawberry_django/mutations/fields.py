@@ -143,7 +143,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
     def get_result(
         self,
         source: Any,
-        info: Info,
+        info: Info | None,
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> AwaitableOrValue[Any]:
@@ -222,10 +222,12 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
     def resolver(
         self,
         source: Any,
-        info: Info,
+        info: Info | None,
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:
+        assert info is not None
+
         data: list[Any] | Any = kwargs.get(self.argument_name)
 
         if self.is_list:
@@ -273,10 +275,12 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
     def resolver(
         self,
         source: Any,
-        info: Info,
+        info: Info | None,
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:
+        assert info is not None
+
         model = self.django_model
         assert model is not None
 
@@ -330,10 +334,12 @@ class DjangoDeleteMutation(
     def resolver(
         self,
         source: Any,
-        info: Info,
+        info: Info | None,
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:
+        assert info is not None
+
         model = self.django_model
         assert model is not None
 

@@ -192,7 +192,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
     def resolver(
         self,
         source: Any,
-        info: Info,
+        info: Info | None,
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> Any:

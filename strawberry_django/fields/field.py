@@ -53,7 +53,7 @@ if TYPE_CHECKING:
         FieldExtension,
         SyncExtensionResolver,
     )
-    from strawberry.field import _RESOLVER_TYPE
+    from strawberry.field import _RESOLVER_TYPE, StrawberryField
     from strawberry.relay.types import NodeIterableType
     from strawberry.types.info import Info
     from strawberry.unset import UnsetType
@@ -144,7 +144,7 @@ class StrawberryDjangoField(
     def get_result(
         self,
         source: models.Model | None,
-        info: Info,
+        info: Info | None,
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> AwaitableOrValue[Any]:
@@ -157,6 +157,7 @@ class StrawberryDjangoField(
             if self._need_remove_filters_argument:
                 resolver_kwargs.pop(FILTERS_ARG, None)
 
+            assert info
             result = self.resolver(source, info, args, resolver_kwargs)
             is_awaitable = inspect.isawaitable(result)
         elif source is None:
@@ -284,7 +285,12 @@ class StrawberryDjangoField(
 
 
 class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
-    def apply(self, field: StrawberryDjangoField) -> None:
+    def apply(self, field: StrawberryField) -> None:
+        if not isinstance(field, StrawberryDjangoField):
+            raise TypeError(
+                "The extension can only be applied to StrawberryDjangoField"
+            )
+
         # NOTE: Because we have a base_resolver defined, our parents will not add
         # order/filters resolvers in here, so we need to add them by hand (unless they
         # are somewhat in there). We are not adding pagination because it doesn't make
@@ -311,6 +317,8 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                 info: Info,
                 **kwargs: Any,
             ) -> Iterable[Any]:
+                assert isinstance(field, StrawberryDjangoField)
+
                 django_type = field.django_type
 
                 if root is not None:

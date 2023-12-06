@@ -248,14 +248,14 @@ class AssigneeInputPartial(NodeInputPartial):
 
 @strawberry_django.partial(Issue)
 class IssueInputPartial(NodeInput, IssueInput):
-    tags: Optional[ListInput[TagInputPartial]]
+    tags: Optional[ListInput[TagInputPartial]]  # type: ignore
     assignees: Optional[ListInput[AssigneeInputPartial]]
     issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
 
 
 @strawberry_django.partial(Issue)
 class IssueInputPartialWithoutId(IssueInput):
-    tags: Optional[ListInput[TagInputPartial]]
+    tags: Optional[ListInput[TagInputPartial]]  # type: ignore
     assignees: Optional[ListInput[AssigneeInputPartial]]
     issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
 

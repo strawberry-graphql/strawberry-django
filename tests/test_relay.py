@@ -1,5 +1,6 @@
 import strawberry
 from strawberry import auto, relay
+from typing_extensions import Self
 
 import strawberry_django
 
@@ -55,7 +56,7 @@ def test_relay_with_resolve_id_attr():
 
         @classmethod
         def resolve_id_attr(cls):
-            return id
+            return "foobar"
 
     @strawberry.type
     class Query:
@@ -74,8 +75,8 @@ def test_relay_with_resolve_id_and_node_id():
         name: auto
 
         @classmethod
-        def resolve_id(cls, root):
-            return root.id
+        def resolve_id(cls, root: Self, *, info):
+            return str(root.id)
 
     @strawberry.type
     class Query:

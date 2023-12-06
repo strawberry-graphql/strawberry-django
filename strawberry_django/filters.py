@@ -384,6 +384,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         self,
         queryset: _QS,
         info: Info,
+        *,
         filters: Optional[WithStrawberryDjangoObjectDefinition] = None,
         pk: Optional[Any] = None,
         **kwargs,

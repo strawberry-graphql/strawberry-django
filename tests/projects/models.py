@@ -89,7 +89,7 @@ class FavoriteQuerySet(QuerySet):
 class Favorite(models.Model):
     """A user's favorite issues."""
 
-    class Meta:
+    class Meta:  # type: ignore
         # Needed to allow type's get_queryset() to access a model's custom QuerySet
         base_manager_name = "objects"
 
@@ -173,7 +173,7 @@ class Issue(models.Model):
 
 
 class Assignee(models.Model):
-    class Meta:
+    class Meta:  # type: ignore
         unique_together = [  # noqa: RUF012
             ("issue", "user"),
         ]

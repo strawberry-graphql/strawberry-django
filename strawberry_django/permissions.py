@@ -28,6 +28,7 @@ import strawberry
 from asgiref.sync import sync_to_async
 from django.core.exceptions import PermissionDenied
 from django.db.models import Model, QuerySet
+from graphql.pyutils import AwaitableOrValue
 from strawberry import relay, schema_directive
 from strawberry.extensions.field_extension import (
     AsyncExtensionResolver,
@@ -39,7 +40,7 @@ from strawberry.schema_directive import Location
 from strawberry.type import StrawberryList, StrawberryOptional
 from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
-from typing_extensions import Literal, Self, assert_never
+from typing_extensions import Literal, assert_never
 
 from strawberry_django.auth.utils import get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
@@ -425,14 +426,14 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         *,
         info: Info,
         source: Any,
-    ): ...
+    ) -> AwaitableOrValue[Any]: ...
 
 
 class IsAuthenticated(DjangoPermissionExtension):
     """Mark a field as only resolvable by authenticated users."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User is not authenticated."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Can only be resolved by authenticated users.",
     )
 
@@ -455,7 +456,7 @@ class IsStaff(DjangoPermissionExtension):
     """Mark a field as only resolvable by staff users."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User is not a staff member."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Can only be resolved by staff users.",
     )
 
@@ -482,7 +483,7 @@ class IsSuperuser(DjangoPermissionExtension):
     """Mark a field as only resolvable by superuser users."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User is not a superuser."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Can only be resolved by superuser users.",
     )
 
@@ -548,7 +549,7 @@ class PermDefinition:
     def perm(self):
         return f"{self.app or ''}.{self.permission or ''}".strip(".")
 
-    def __eq__(self, other: Self):
+    def __eq__(self, other: object):
         if not isinstance(other, PermDefinition):
             return NotImplemented
 
@@ -630,7 +631,7 @@ class HasPerm(DjangoPermissionExtension):
     DEFAULT_ERROR_MESSAGE: ClassVar[
         str
     ] = "You don't have permission to access this app."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Will check if the user has any/all permissions to resolve this.",
     )
 
@@ -891,7 +892,7 @@ class HasSourcePerm(HasPerm):
     """
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.SOURCE
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Will check if the user has any/all permissions for the parent "
         "of this field to resolve this.",
     )
@@ -921,7 +922,7 @@ class HasRetvalPerm(HasPerm):
     """
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.RETVAL
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Will check if the user has any/all permissions for the resolved "
         "value of this field before returning it.",
     )

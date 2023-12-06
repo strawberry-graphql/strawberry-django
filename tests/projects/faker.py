@@ -1,4 +1,4 @@
-from typing import Generic, List, Type, TypeVar, cast
+from typing import Any, ClassVar, Generic, List, Type, TypeVar, cast
 
 import factory
 from django.contrib.auth import get_user_model
@@ -12,6 +12,8 @@ User = cast(Type[AbstractUser], get_user_model())
 
 
 class _BaseFactory(Generic[_T], factory.django.DjangoModelFactory):
+    Meta: ClassVar[Any]
+
     @classmethod
     def create(cls, **kwargs) -> _T:
         return super().create(**kwargs)

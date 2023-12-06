@@ -28,7 +28,6 @@ from strawberry.enum import EnumValueDefinition
 from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
-from typing_extensions import Self
 
 from strawberry_django import filters
 from strawberry_django.settings import strawberry_django_settings as django_settings
@@ -94,7 +93,7 @@ class ManyToManyInput:
 class NodeInput:
     id: relay.GlobalID  # noqa: A003
 
-    def __eq__(self, other: Self):
+    def __eq__(self, other: object):
         if not isinstance(other, NodeInput):
             return NotImplemented
 
@@ -108,10 +107,10 @@ class NodeInput:
     description="Input of an object that implements the `Node` interface.",
 )
 class NodeInputPartial(NodeInput):
-    # FIXME: Without this pyright will not let any class inheric from this and define
+    # FIXME: Without this pyright will not let any class inherit from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        id: Optional[relay.GlobalID]  # noqa: A003
+        id: Optional[relay.GlobalID]  # type: ignore  # noqa: A003
     else:
         id: Optional[relay.GlobalID] = UNSET  # noqa: A003
 
@@ -138,7 +137,7 @@ class ListInput(Generic[K]):
         add: Optional[List[K]] = UNSET
         remove: Optional[List[K]] = UNSET
 
-    def __eq__(self, other: Self):
+    def __eq__(self, other: object):
         if not isinstance(other, ListInput):
             return NotImplemented
 
@@ -183,7 +182,7 @@ class OperationMessage:
         default=None,
     )
 
-    def __eq__(self, other: Self):
+    def __eq__(self, other: object):
         if not isinstance(other, OperationMessage):
             return NotImplemented
 
@@ -206,7 +205,7 @@ class OperationInfo:
         description="List of messages returned by the operation.",
     )
 
-    def __eq__(self, other: Self):
+    def __eq__(self, other: object):
         if not isinstance(other, OperationInfo):
             return NotImplemented
 

@@ -88,6 +88,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         self,
         queryset: _QS,
         info: Info,
+        *,
         pagination: Optional[object] = None,
         **kwargs,
     ) -> _QS:
