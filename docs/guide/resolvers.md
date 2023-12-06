@@ -10,11 +10,12 @@ Sync resolvers can be used in both ASGI/WSGI and will be automatically wrapped
 in `sync_to_async` when running async.
 
 ```{.python title=types.py}
+import strawberry_django
 from strawberry import auto
 from typing import List
 from . import models
 
-@strawberry.django.type(models.Color)
+@strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
@@ -29,17 +30,18 @@ class Color:
 Async resolvers can be used when running using ASGI.
 
 ```{.python title=types.py}
+import strawberry_django
 from strawberry import auto
 from typing import List
 from . import models
 from asgiref.sync import sync_to_async
 
-@strawberry.django.type(models.Color)
+@strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
 
-    @strawberry.django.field
+    @strawberry_django.field
     async def fruits(self) -> List[Fruit]:
         return sync_to_async(list)(self.fruits.objects.filter(...))
 ```
@@ -61,23 +63,23 @@ however still add those by hand and resolve them:
 ```{.python title=types.py}
 import strawberry
 import strawberry_django
-from strawberry.django import auto
+from strawberry_django import auto
 from . import models
 
 
-@strawberry.django.filter(models.Fruit, lookups=True)
+@strawberry_django.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
 
 
-@strawberry.django.type(models.Fruit, order=FruitOrder)
+@strawberry_django.type(models.Fruit, order=FruitOrder)
 class Fruit:
     id: auto
     name: auto
 
 
-@strawberry.django.type(models.Fruit, is_interface=True)
+@strawberry_django.type(models.Fruit, is_interface=True)
 class Fruit:
     id: auto
     name: auto
@@ -85,7 +87,7 @@ class Fruit:
 
 @strawberry.type
 class Query:
-    @strawberry.django.field
+    @strawberry_django.field
     def fruits(
         self,
         filters: FruitFilter | None = strawberry.UNSET,
