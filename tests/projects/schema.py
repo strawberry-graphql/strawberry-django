@@ -385,6 +385,12 @@ class Query:
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
 
+    @strawberry_django.field(
+        extensions=[HasPerm(perms=["projects.view_issue"], with_superuser=True)]
+    )
+    async def async_user_resolve(self) -> bool:
+        return True
+
     @strawberry_django.field
     def me(self, info: Info) -> Optional[UserType]:
         user = get_current_user(info, strict=True)
