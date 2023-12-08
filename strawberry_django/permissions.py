@@ -42,7 +42,7 @@ from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
 from typing_extensions import Literal, assert_never
 
-from strawberry_django.auth.utils import get_current_user
+from strawberry_django.auth.utils import aget_current_user, get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
 from strawberry_django.resolvers import django_resolver
 
@@ -334,7 +334,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         info: Info,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        user = get_current_user(info)
+        user = await aget_current_user(info)
 
         try:
             from .integrations.guardian import get_user_or_anonymous

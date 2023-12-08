@@ -189,6 +189,11 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
 
     user = UserFactory.create()
     with gql_client.login(user):
+        res = gql_client.query(
+            query,
+            {"id": to_base64("IssueType", issue.pk)},
+            asserts_errors=False,
+        )
         assert res.data is None
         assert res.errors == [
             {
@@ -207,6 +212,43 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
                 "name": issue.name,
             },
         }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_user_resolve(db, gql_client: GraphQLTestClient):
+    query = """
+    query asyncUserResolve {
+        asyncUserResolve
+      }
+    """
+    if not gql_client.is_async:
+        pytest.skip("needs async client")
+    user = UserFactory.create()
+    with gql_client.login(user):
+        res = gql_client.query(
+            query,
+            asserts_errors=False,
+        )
+        assert res.data is None
+        assert res.errors == [
+            {
+                "message": "You don't have permission to access this app.",
+                "locations": [{"line": 3, "column": 9}],
+                "path": ["asyncUserResolve"],
+            },
+        ]
+
+    superuser = SuperuserUserFactory.create()
+    with gql_client.login(superuser):
+        res = gql_client.query(query)
+        assert res.data == {"asyncUserResolve": True}
+    user_with_perm = UserFactory.create()
+    user_with_perm.user_permissions.add(
+        Permission.objects.get(codename="view_issue"),
+    )
+    with gql_client.login(user_with_perm):
+        res = gql_client.query(query)
+        assert res.data == {"asyncUserResolve": True}
 
 
 @pytest.mark.django_db(transaction=True)
