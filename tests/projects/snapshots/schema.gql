@@ -682,6 +682,7 @@ type Query {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  asyncUserResolve: Boolean! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   me: UserType
   projectConnWithResolver(
     name: String!
