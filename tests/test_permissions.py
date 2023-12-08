@@ -222,7 +222,7 @@ def test_async_user_resolve(db, gql_client: GraphQLTestClient):
       }
     """
     if not gql_client.is_async:
-        return
+        pytest.skip("needs async client")
     user = UserFactory.create()
     with gql_client.login(user):
         res = gql_client.query(
