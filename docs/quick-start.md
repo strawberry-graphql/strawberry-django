@@ -45,13 +45,14 @@ The last step is to generate the `Query` type and the `Schema`, which we can do 
 
 ```{.python title=schema.py}
 import strawberry
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 from .types import Fruit
 
-@strawberry.type
+@strawberry_django.type
 class Query:
-    fruits: list[Fruit] = strawberry.django.field()
+    fruits: list[Fruit] = strawberry_django.field()
 
 schema = strawberry.Schema(
     query=Query,
@@ -65,7 +66,7 @@ Finally we add a `AsyncGraphQLView` view to our list of urls so that we can star
 
 ```{.python title=urls.py}
 from django.urls import include, path
-from strawberry.django.views import AsyncGraphQLView
+from strawberry_django.views import AsyncGraphQLView
 
 from .schema import schema
 
