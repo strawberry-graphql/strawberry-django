@@ -66,7 +66,7 @@ Finally we add a `AsyncGraphQLView` view to our list of urls so that we can star
 
 ```{.python title=urls.py}
 from django.urls import include, path
-from strawberry_django.views import AsyncGraphQLView
+from strawberry.django.views import AsyncGraphQLView
 
 from .schema import schema
 
