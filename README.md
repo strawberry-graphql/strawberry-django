@@ -103,7 +103,7 @@ schema = strawberry.Schema(
 # urls.py
 
 from django.urls import include, path
-from strawberry_django.views import AsyncGraphQLView
+from strawberry.django.views import AsyncGraphQLView
 
 from .schema import schema
 

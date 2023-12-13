@@ -4,15 +4,15 @@ It is possible to define filters for Django types, which will
 be converted into `.filter(...)` queries for the ORM:
 
 ```{.python title=types.py}
-import strawberry
+import strawberry_django
 from strawberry import auto
 
-@strawberry.django.filter(models.Fruit)
+@strawberry_django.filter(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
 
-@strawberry.django.type(models.Fruit, filters=FruitFilter)
+@strawberry_django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
 ```
@@ -42,7 +42,7 @@ Lookups can be added to all fields with `lookups=True`, which will
 add more options to resolve each type. For example:
 
 ```{.python title=types.py}
-@strawberry.django.filter(models.Fruit, lookups=True)
+@strawberry_django.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
@@ -137,9 +137,9 @@ input FruitFilter {
 Single-field lookup can be annotated with the `FilterLookup` generic type.
 
 ```{.python title=types.py}
-from strawberry.django.filters import FilterLookup
+from strawberry_django.filters import FilterLookup
 
-@strawberry.django.filter(models.Fruit)
+@strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: FilterLookup[str]
 ```
@@ -147,13 +147,13 @@ class FruitFilter:
 ## Filtering over relationships
 
 ```{.python title=types.py}
-@strawberry.django.filter(models.Fruit)
+@strawberry_django.filter(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
     color: "ColorFilter"
 
-@strawberry.django.filter(models.Color)
+@strawberry_django.filter(models.Color)
 class ColorFilter:
     id: auto
     name: auto
@@ -185,7 +185,7 @@ input FruitFilter {
 You can define custom filter methods and override default filter methods by defining your own resolver.
 
 ```{.python title=types.py}
-@strawberry.django.filter(models.Fruit)
+@strawberry_django.filter(models.Fruit)
 class FruitFilter:
     is_banana: bool | None
 
@@ -208,7 +208,7 @@ Note that this completely disables the default filtering, which means your custo
 method is responsible for handling _all_ filter-related operations.
 
 ```{.python title=types.py}
-@strawberry.django.filter(models.Fruit)
+@strawberry_django.filter(models.Fruit)
 class FruitFilter:
     is_apple: bool | None
 
@@ -224,13 +224,13 @@ All fields and CUD mutations inherit filters from the underlying type by default
 So, if you have a field like this:
 
 ```{.python title=types.py}
-@strawberry.django.type(models.Fruit, filters=FruitFilter)
+@strawberry_django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
 
-@strawberry.type
+@strawberry_django.type
 class Query:
-    fruits: list[Fruit] = strawberry.django.field()
+    fruits: list[Fruit] = strawberry_django.field()
 ```
 
 The `fruits` field will inherit the `filters` of the type in the same way as
@@ -241,7 +241,7 @@ if it was passed to the field.
 Filters added into a field override the default filters of this type.
 
 ```{.python title=schema.py}
-@strawberry.type
+@strawberry_django.type
 class Query:
-    fruits: list[Fruit] = strawberry.django.field(filters=FruitFilter)
+    fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
 ```

@@ -21,9 +21,9 @@ When defining a mutation you can pass `handle_django_errors=True` to make it han
 common django errors, such as `ValidationError`, `PermissionDenied` and `ObjectDoesNotExist`:
 
 ```{.python title=types.py}
-@strawberry.type
+@strawberry_django.type
 class Mutation:
-    @strawberry.django.mutation(handle_django_errors=True)
+    @strawberry_django.mutation(handle_django_errors=True)
     def create_fruit(self, name: str, color: str) -> Fruit:
         if not is_valid_color(color):
             raise ValidationError("The color is not valid")
@@ -106,7 +106,7 @@ The following CUD mutations are provided by this lib:
 A basic example would be:
 
 ```{.python title=types.py}
-import strawberry
+from strawberry import auto
 from strawberry_django import mutations, NodeInput
 from strawberry.relay import Node
 
@@ -114,18 +114,18 @@ from strawberry.relay import Node
 
 @strawberry_django.type(SomeModel)
 class SomeModelType(Node):
-    name: strawberry.auto
+    name: auto
 
 @strawberry_django.input(SomeModel)
 class SomeModelInput:
-    name: strawberry.auto
+    name: auto
 
 
 @strawberry_django.partial(SomeModel)
 class SomeModelInputPartial(NodeInput):
-    name: strawberry.auto
+    name: auto
 
-@strawberry.type
+@strawberry_django.type
 class Mutation:
     create_model: SomeModelType = mutations.create(SomeModelInput)
     update_model: SomeModelType = mutations.update(SomeModelInputPartial)
@@ -150,7 +150,7 @@ Some things to note here:
 class SomeModelInputPartial:
     unique_field: strawberry.auto
 
-@strawberry.type
+@strawberry_django.type
 class Mutation:
     update_model: SomeModelType = mutations.update(
         SomeModelInputPartial,
@@ -175,12 +175,12 @@ Filters can be added to update and delete mutations. More information in the
 [filtering](filters.md) section.
 
 ```{.python title=schema.py}
-from strawberry_django import mutations
+import strawberry_django
 
-@strawberry.type
+@strawberry_django.type
 class Mutation:
-    updateFruits: List[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
-    deleteFruits: List[Fruit] = mutations.delete(filters=FruitFilter)
+    updateFruits: List[Fruit] = strawberry_django.mutations.update(FruitPartialInput, filters=FruitFilter)
+    deleteFruits: List[Fruit] = strawberry_django.mutations.delete(filters=FruitFilter)
 
 schema = strawberry.Schema(mutation=Mutation)
 ```

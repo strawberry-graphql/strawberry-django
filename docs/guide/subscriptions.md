@@ -109,8 +109,9 @@ Go and edit your schema-file and add:
 ```python
 import asyncio
 import strawberry
+import strawberry_django
 
-@strawberry.type
+@strawberry_django.type
 class Subscription:
     @strawberry.subscription
     async def count(self, target: int = 100) -> int:

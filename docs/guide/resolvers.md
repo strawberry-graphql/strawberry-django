@@ -85,7 +85,7 @@ class Fruit:
     name: auto
 
 
-@strawberry.type
+@strawberry_django.type
 class Query:
     @strawberry_django.field
     def fruits(

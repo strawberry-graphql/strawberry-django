@@ -10,20 +10,22 @@
 Output types are generated from models. The `auto` type is used for field type auto resolution.
 Relational fields are described by referencing to other types generated from Django models.
 A many-to-many relation is described with the `typing.List` type annotation.
-`strawberry.django` will automatically generate resolvers for relational fields.
+`strawberry_django` will automatically generate resolvers for relational fields.
 More information about that can be read from [resolvers](resolvers.md) page.
 
 ```{.python title=types.py}
+import strawberry_django
+
 from strawberry import auto
 from typing import List
 
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
     color: "Color"
 
-@strawberry.django.type(models.Color)
+@strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
@@ -32,11 +34,11 @@ class Color:
 
 ## Input types
 
-Input types can be generated from Django models using the `strawberry.django.input` decorator.
+Input types can be generated from Django models using the `strawberry_django.input` decorator.
 The first parameter is the model which the type is derived from.
 
 ```{.python title=types.py}
-@strawberry.django.input(models.Fruit)
+@strawberry_django.input(models.Fruit)
 class FruitInput:
     id: auto
     name: auto
@@ -49,19 +51,19 @@ Partial input types can be generated from existing input types through class inh
 Non-`auto` type annotations will be respected—and therefore required—unless explicitly marked `Optional[]`.
 
 ```{.python title=types.py}
-@strawberry.django.input(models.Color, partial=True)
+@strawberry_django.input(models.Color, partial=True)
 class FruitPartialInput(FruitInput):
     color: List["ColorPartialInput"]
 
 # Auto fields are optional
-@strawberry.django.input(models.Color, partial=True)
+@strawberry_django.input(models.Color, partial=True)
 class ColorPartialInput:
     id: auto
     name: auto
     fruits: List[FruitPartialInput]
 
 # Alternate input; "name" field will be required
-@strawberry.django.input(models.Color, partial=True)
+@strawberry_django.input(models.Color, partial=True)
 class ColorNameRequiredPartialInput:
     id: auto
     name: str
@@ -73,9 +75,9 @@ class ColorNameRequiredPartialInput:
 Django models can be converted to `strawberry` Types with the `strawberry_django.type` decorator. Custom descriptions can be added using the `description` keyword argument (See: [`strawberry.type` decorator API](https://strawberry.rocks/docs/types/object-types#api)).
 
 ```{.python title=types.py}
-import strawberry
+import strawberry_django
 
-@strawberry.django.type(models.Fruit, description="A tasty snack")
+@strawberry_django.type(models.Fruit, description="A tasty snack")
 class Fruit:
     ...
 ```
@@ -98,7 +100,7 @@ You can implement a custom `get_queryset` classmethod to your type to do some ex
 like filtering it further.
 
 ```{.python title=types.py}
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Berry:
 
     @classmethod
@@ -115,7 +117,7 @@ limit access to results based on the current user in the request:
 ```{.python title=types.py}
 from stawberry_django.auth.utils import get_current_user
 
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Berry:
 
     @classmethod

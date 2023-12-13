@@ -33,7 +33,6 @@ graph TD
 ## Example
 
 ```{.python title=types.py}
-import strawberry
 import strawberry_django
 from strawberry_django.permissions import (
     IsAuthenticated,
@@ -42,7 +41,7 @@ from strawberry_django.permissions import (
 )
 
 
-@strawberry.type
+@strawberry_django.type
 class SomeType:
     login_required_field: RetType = strawberry_django.field(
         # will check if the user is authenticated
