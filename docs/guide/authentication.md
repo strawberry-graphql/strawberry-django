@@ -12,32 +12,33 @@
 The `auth.register` mutation performs password validation using Django's `validate_password` method.
 
 ```{.python title=types.py}
-import strawberry
+import strawberry_django
 from strawberry import auto
 from django.contrib.auth import get_user_model
 
-@strawberry.django.type(get_user_model())
+@strawberry_django.type(get_user_model())
 class User:
     username: auto
     email: auto
 
-@strawberry.django.input(get_user_model())
+@strawberry_django.input(get_user_model())
 class UserInput:
     username: auto
     password: auto
 ```
 
 ```{.python title=schema.py}
-from strawberry.django import auth
+import strawberry
+import strawberry_django
 from .types import User, UserInput
 
 @strawberry.type
 class Query:
-    me: User = auth.current_user()
+    me: User = strawberry_django.auth.current_user()
 
 @strawberry.type
 class Mutation:
-    login: User = auth.login()
-    logout = auth.logout()
-    register: User = auth.register(UserInput)
+    login: User = strawberry_django.auth.login()
+    logout = strawberry_django.auth.logout()
+    register: User = strawberry_django.auth.register(UserInput)
 ```

@@ -8,17 +8,17 @@
 Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box. If you use a library that defines a custom field you will need to define an equivalent type such as `str`, `float`, `bool`, `int` or `id`.
 
 ```{.python title=types.py}
-import strawberry
+import strawberry_django
 from strawberry import auto
 
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
 
 # equivalent type, inferred by `strawberry`
 
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Fruit2:
     id: strawberry.ID
     name: str
@@ -34,19 +34,19 @@ class Fruit2:
 ## Relationships
 
 All one-to-one, one-to-many, many-to-one and many-to-many relationship types are supported, and the many-to-many relation is described using the `typing.List` annotation.
-The default resolver of `strawberry.django.fields()` resolves the relationship based on given type information.
+The default resolver of `strawberry_django.fields()` resolves the relationship based on given type information.
 
 ```{.python title=types.py}
 from typing import List
 
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
     color: "Color"
 
 
-@strawberry.django.type(models.Color)
+@strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
@@ -61,13 +61,13 @@ situations.
 
 ## Field customization
 
-All Django types are encoded using the `strawberry.django.field()` field type by default. Fields can be customized with various parameters.
+All Django types are encoded using the `strawberry_django.field()` field type by default. Fields can be customized with various parameters.
 
 ```{.python title=types.py}
-@strawberry.django.type(models.Color)
+@strawberry_django.type(models.Color)
 class Color:
-    another_name: auto = strawberry.django.field(field_name='name')
-    internal_name: auto = strawberry.django.field(
+    another_name: auto = strawberry_django.field(field_name='name')
+    internal_name: auto = strawberry_django.field(
         name='fruits',
         field_name='fruit_set',
         filters=FruitFilter,
@@ -106,7 +106,7 @@ Slug = strawberry.scalar(
     parse_value=lambda v: v,
 )
 
-@strawberry.type
+@strawberry_django.type
 class MyCustomFileType:
     ...
 
@@ -122,7 +122,7 @@ strawberry_django.field_type_map.update({
 
     These new keywords should be used with caution, as they may inadvertently lead to exposure of unwanted data. Especially with `fields="__all__"` or `exclude`, sensitive model attributes may be included and made available in the schema without your awareness.
 
-`strawberry.django.type` includes two optional keyword fields to help you populate fields from the Django model, `fields` and `exclude`.
+`strawberry_django.type` includes two optional keyword fields to help you populate fields from the Django model, `fields` and `exclude`.
 
 Valid values for `fields` are:
 
@@ -130,19 +130,19 @@ Valid values for `fields` are:
 - `[<List of field names>]` to assign `strawberry.auto` as the field type for the enumerated fields. These can be combined with manual type annotations if needed.
 
 ```{.python title="All Fields"}
-@strawberry.django.type(models.Fruit, fields="__all__")
+@strawberry_django.type(models.Fruit, fields="__all__")
 class FruitType:
     pass
 ```
 
 ```{.python title="Enumerated Fields"}
-@strawberry.django.type(models.Fruit, fields=["name", "color"])
+@strawberry_django.type(models.Fruit, fields=["name", "color"])
 class FruitType:
     pass
 ```
 
 ```{.python title="Overriden Fields"}
-@strawberry.django.type(models.Fruit, fields=["color"])
+@strawberry_django.type(models.Fruit, fields=["color"])
 class FruitType:
     name: str
 ```
@@ -152,13 +152,13 @@ Valid values for `exclude` are:
 - `[<List of field names>]` to exclude from the fields list. All other Django model fields will included and have `strawberry.auto` as the field type. These can also be overriden if another field type should be assigned. An empty list is ignored.
 
 ```{.python title="Exclude Fields"}
-@strawberry.django.type(models.Fruit, exclude=["name"])
+@strawberry_django.type(models.Fruit, exclude=["name"])
 class FruitType:
     pass
 ```
 
 ```{.python title="Overriden Exclude Fields"}
-@strawberry.django.type(models.Fruit, exclude=["name"])
+@strawberry_django.type(models.Fruit, exclude=["name"])
 class FruitType:
     color: int
 ```
@@ -167,8 +167,8 @@ Note that `fields` has precedence over `exclude`, so if both are provided, then 
 
 ## Overriding the field class (advanced)
 
-If in your project, you want to change/add some of the standard `strawberry.django.field()` behaviour,
-it is possible to use your own custom field class when decorating a `strawberry.django.type` with the `field_cls` argument, e.g.
+If in your project, you want to change/add some of the standard `strawberry_django.field()` behaviour,
+it is possible to use your own custom field class when decorating a `strawberry_django.type` with the `field_cls` argument, e.g.
 
 ```{.python title=types.py}
 class CustomStrawberryDjangoField(StrawberryDjangoField):

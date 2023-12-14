@@ -60,19 +60,18 @@ class Color(models.Model):
 ```python
 # types.py
 
-import strawberry
-import strawberry.django
+import strawberry_django
 from strawberry import auto
 
 from . import models
 
-@strawberry.django.type(models.Fruit)
+@strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
     color: 'Color'
 
-@strawberry.django.type(models.Color)
+@strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
@@ -83,13 +82,14 @@ class Color:
 # schema.py
 
 import strawberry
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 from .types import Fruit
 
 @strawberry.type
 class Query:
-    fruits: list[Fruit] = strawberry.django.field()
+    fruits: list[Fruit] = strawberry_django.field()
 
 schema = strawberry.Schema(
     query=Query,

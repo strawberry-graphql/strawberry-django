@@ -23,7 +23,7 @@ common django errors, such as `ValidationError`, `PermissionDenied` and `ObjectD
 ```{.python title=types.py}
 @strawberry.type
 class Mutation:
-    @strawberry.django.mutation(handle_django_errors=True)
+    @strawberry_django.mutation(handle_django_errors=True)
     def create_fruit(self, name: str, color: str) -> Fruit:
         if not is_valid_color(color):
             raise ValidationError("The color is not valid")
@@ -106,7 +106,7 @@ The following CUD mutations are provided by this lib:
 A basic example would be:
 
 ```{.python title=types.py}
-import strawberry
+from strawberry import auto
 from strawberry_django import mutations, NodeInput
 from strawberry.relay import Node
 
@@ -114,16 +114,16 @@ from strawberry.relay import Node
 
 @strawberry_django.type(SomeModel)
 class SomeModelType(Node):
-    name: strawberry.auto
+    name: auto
 
 @strawberry_django.input(SomeModel)
 class SomeModelInput:
-    name: strawberry.auto
+    name: auto
 
 
 @strawberry_django.partial(SomeModel)
 class SomeModelInputPartial(NodeInput):
-    name: strawberry.auto
+    name: auto
 
 @strawberry.type
 class Mutation:
@@ -175,6 +175,7 @@ Filters can be added to update and delete mutations. More information in the
 [filtering](filters.md) section.
 
 ```{.python title=schema.py}
+import strawberry
 from strawberry_django import mutations
 
 @strawberry.type

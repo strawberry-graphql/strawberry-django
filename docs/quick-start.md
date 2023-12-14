@@ -45,13 +45,14 @@ The last step is to generate the `Query` type and the `Schema`, which we can do 
 
 ```{.python title=schema.py}
 import strawberry
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 from .types import Fruit
 
 @strawberry.type
 class Query:
-    fruits: list[Fruit] = strawberry.django.field()
+    fruits: list[Fruit] = strawberry_django.field()
 
 schema = strawberry.Schema(
     query=Query,

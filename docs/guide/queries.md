@@ -1,19 +1,20 @@
 # Queries
 
-Queries can be written using `strawberry.django.field()` to load the fields defined in the `types.py` file.
+Queries can be written using `strawberry_django.field()` to load the fields defined in the `types.py` file.
 
 ```python
 #schema.py
 
 import strawberry
+import strawberry_django
 
 from .types import Fruit
 
 @strawberry.type
 class Query:
 
-    fruit: Fruit = strawberry.django.field()
-    fruits: list[Fruit] = strawberry.django.field()
+    fruit: Fruit = strawberry_django.field()
+    fruits: list[Fruit] = strawberry_django.field()
 
 schema = strawberry.Schema(query=Query)
 ```

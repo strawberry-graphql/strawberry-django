@@ -59,17 +59,17 @@ class Song(models.Model):
 ```
 
 ```{.python title=types.py}
-import strawberry
-import strawberry.django
+from strawberry import auto
+import strawberry_django
 
-@strawberry.django.type(Artist)
+@strawberry_django.type(Artist)
 class ArtistType:
     name: auto
     albums: list["AlbumType"]
-    albums_count: int = strawberry.django.field(annotate=Count("albums"))
+    albums_count: int = strawberry_django.field(annotate=Count("albums"))
 
 
-@strawberry.django.type(Album)
+@strawberry_django.type(Album)
 class AlbumType:
     name: auto
     release_date: auto
@@ -77,7 +77,7 @@ class AlbumType:
     songs: list["SongType"]
 
 
-@strawberry.django.type(Song)
+@strawberry_django.type(Song)
 class SongType:
     name: auto
     duration: auto
@@ -86,8 +86,8 @@ class SongType:
 
 @strawberry.type
 class Query:
-    artist: Artist = strawberry.django.field()
-    songs: List[SongType] = strawberry.django.field()
+    artist: Artist = strawberry_django.field()
+    songs: List[SongType] = strawberry_django.field()
 ```
 
 Querying for `artist` and `songs` like this:
@@ -186,14 +186,14 @@ class OrderItem(models.Model):
 ```
 
 ```{.python title=types.py}
-import strawberry
-import strawberry.django
+from strawberry import auto
+import strawberry_django
 
-@strawberry.django.type(models.OrderItem)
+@strawberry_django.type(models.OrderItem)
 class OrderItem:
-    price: strawberry.auto
-    quantity: strawberry.auto
-    total: strawberry.auto
+    price: auto
+    quantity: auto
+    total: auto
 ```
 
 In this case, if only `total` is requested it would trigger an extra query for
@@ -204,14 +204,14 @@ by the optimizer.
 A solution in this case would be to "tell the optimizer" how to optimize that field:
 
 ```{.python title=types.py}
-import strawberry
-import strawberry.django
+from strawberry import auto
+import strawberry_django
 
-@strawberry.django.type(models.OrderItem)
+@strawberry_django.type(models.OrderItem)
 class OrderItem:
-    price: strawberry.auto
-    quantity: strawberry.auto
-    total: strawberry.auto = strawberry.django.field(
+    price: auto
+    quantity: auto
+    total: auto = strawberry_django.field(
         only=["price", "quantity"],
     )
 ```
@@ -221,15 +221,15 @@ Or if you are using a custom resolver:
 ```{.python title=types.py}
 import decimal
 
-import strawberry
-import strawberry.django
+from strawberry import auto
+import strawberry_django
 
-@strawberry.django.type(models.OrderItem)
+@strawberry_django.type(models.OrderItem)
 class OrderItem:
-    price: strawberry.auto
-    quantity: strawberry.auto
+    price: auto
+    quantity: auto
 
-    @strawberry.django.field(only=["price", "quantity"])
+    @strawberry_django.field(only=["price", "quantity"])
     def total(self, root: models.OrderItem) -> decimal.Decimal:
         return root.price * root.quantity  # or root.total directly
 ```
@@ -278,14 +278,14 @@ class OrderItem(models.Model):
 ```
 
 ```{.python title=types.py}
-import strawberry
-import strawberry.django
+from strawberry import auto
+import strawberry_django
 
-@strawberry.django.type(models.OrderItem)
+@strawberry_django.type(models.OrderItem)
 class OrderItem:
-    price: strawberry.auto
-    quantity: strawberry.auto
-    total: strawberry.auto
+    price: auto
+    quantity: auto
+    total: auto
 ```
 
 `total` now will be properly optimized since it points to a `@model_property`

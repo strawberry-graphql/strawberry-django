@@ -5,7 +5,7 @@
 An interface for limit/offset pagination can be use for basic pagination needs:
 
 ```{.python title=types.py}
-@strawberry.django.type(models.Fruit, pagination=True)
+@strawberry_django.type(models.Fruit, pagination=True)
 class Fruit:
     name: auto
 ```
