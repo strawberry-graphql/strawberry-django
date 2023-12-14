@@ -125,7 +125,7 @@ class SomeModelInput:
 class SomeModelInputPartial(NodeInput):
     name: auto
 
-@strawberry_django.type
+@strawberry.type
 class Mutation:
     create_model: SomeModelType = mutations.create(SomeModelInput)
     update_model: SomeModelType = mutations.update(SomeModelInputPartial)
@@ -150,7 +150,7 @@ Some things to note here:
 class SomeModelInputPartial:
     unique_field: strawberry.auto
 
-@strawberry_django.type
+@strawberry.type
 class Mutation:
     update_model: SomeModelType = mutations.update(
         SomeModelInputPartial,
