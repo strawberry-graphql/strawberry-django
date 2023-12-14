@@ -83,12 +83,11 @@ class Color:
 
 ```{.python title=schema.py}
 import strawberry
-import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 from .types import Fruit
 
-@strawberry_django.type
+@strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field()
 

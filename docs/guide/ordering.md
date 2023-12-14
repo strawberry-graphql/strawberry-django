@@ -52,7 +52,7 @@ if it was passed to the field.
 Orderings added into a field override the default filters of this type.
 
 ```{.python title=schema.py}
-@strawberry_django.type
+@strawberry.type
 class Query:
     fruit: Fruit = strawberry_django.field(order=FruitOrder)
 ```

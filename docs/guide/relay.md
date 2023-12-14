@@ -18,7 +18,7 @@ class FruitType(relay.Node):
     ...
 
 
-@strawberry_django.type
+@strawberry.type
 class Query:
     # Option 1: Default relay without totalCount
     # This is the default strawberry relay behaviour.

@@ -228,7 +228,7 @@ So, if you have a field like this:
 class Fruit:
     ...
 
-@strawberry_django.type
+@strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field()
 ```
@@ -241,7 +241,7 @@ if it was passed to the field.
 Filters added into a field override the default filters of this type.
 
 ```{.python title=schema.py}
-@strawberry_django.type
+@strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
 ```

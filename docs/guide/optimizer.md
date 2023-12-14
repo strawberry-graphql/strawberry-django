@@ -84,7 +84,7 @@ class SongType:
     album_type: AlbumType
 
 
-@strawberry_type
+@strawberry.type
 class Query:
     artist: Artist = strawberry_django.field()
     songs: List[SongType] = strawberry_django.field()

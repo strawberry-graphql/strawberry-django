@@ -28,14 +28,15 @@ class UserInput:
 ```
 
 ```{.python title=schema.py}
+import strawberry
 import strawberry_django
 from .types import User, UserInput
 
-@strawberry_django.type
+@strawberry.type
 class Query:
     me: User = strawberry_django.auth.current_user()
 
-@strawberry_django.type
+@strawberry.type
 class Mutation:
     login: User = strawberry_django.auth.login()
     logout = strawberry_django.auth.logout()

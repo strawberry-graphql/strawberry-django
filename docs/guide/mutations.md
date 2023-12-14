@@ -21,7 +21,7 @@ When defining a mutation you can pass `handle_django_errors=True` to make it han
 common django errors, such as `ValidationError`, `PermissionDenied` and `ObjectDoesNotExist`:
 
 ```{.python title=types.py}
-@strawberry_django.type
+@strawberry.type
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
     def create_fruit(self, name: str, color: str) -> Fruit:
@@ -175,12 +175,13 @@ Filters can be added to update and delete mutations. More information in the
 [filtering](filters.md) section.
 
 ```{.python title=schema.py}
-import strawberry_django
+import strawberry
+from strawberry_django import mutations
 
-@strawberry_django.type
+@strawberry.type
 class Mutation:
-    updateFruits: List[Fruit] = strawberry_django.mutations.update(FruitPartialInput, filters=FruitFilter)
-    deleteFruits: List[Fruit] = strawberry_django.mutations.delete(filters=FruitFilter)
+    updateFruits: List[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
+    deleteFruits: List[Fruit] = mutations.delete(filters=FruitFilter)
 
 schema = strawberry.Schema(mutation=Mutation)
 ```

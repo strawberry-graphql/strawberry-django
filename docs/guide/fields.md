@@ -181,7 +181,7 @@ class UserType:
     name: auto
 
 
-@strawberry_django.type
+@strawberry.type
 class UserQuery:
     # You can directly create your custom field class on a plain strawberry type
     user: UserType = CustomStrawberryDjangoField()
