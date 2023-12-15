@@ -97,8 +97,10 @@ its value in the map, like:
 ```python
 from typing import NewType
 
+from django.db import models
 import strawberry
 import strawberry_django
+from strawberry_django.fields.types import field_type_map
 
 Slug = strawberry.scalar(
     NewType("Slug", str),
@@ -110,7 +112,7 @@ Slug = strawberry.scalar(
 class MyCustomFileType:
     ...
 
-strawberry_django.field_type_map.update({
+field_type_map.update({
     models.SlugField: Slug,
     models.FileField: MyCustomFileType,
 })
