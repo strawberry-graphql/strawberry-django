@@ -628,9 +628,9 @@ class HasPerm(DjangoPermissionExtension):
     """
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.GLOBAL
-    DEFAULT_ERROR_MESSAGE: ClassVar[
-        str
-    ] = "You don't have permission to access this app."
+    DEFAULT_ERROR_MESSAGE: ClassVar[str] = (
+        "You don't have permission to access this app."
+    )
     SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
         "Will check if the user has any/all permissions to resolve this.",
     )

@@ -719,11 +719,11 @@ def optimize(
     return qs
 
 
-optimizer: contextvars.ContextVar[
-    DjangoOptimizerExtension | None
-] = contextvars.ContextVar(
-    "optimizer_ctx",
-    default=None,
+optimizer: contextvars.ContextVar[DjangoOptimizerExtension | None] = (
+    contextvars.ContextVar(
+        "optimizer_ctx",
+        default=None,
+    )
 )
 
 
