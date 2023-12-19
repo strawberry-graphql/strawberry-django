@@ -66,6 +66,37 @@ def test_update_m2m_with_validation_error(mutation, fruit):
     assert result.errors[0].message == "{'name': ['We do not allow rotten fruits.']}"
 
 
+def test_update_m2m_with_new_different_objects(mutation, fruit):
+    result = mutation(
+        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "strawberry"}]}) { id types { id name }}}'
+    )
+    assert not result.errors
+    assert result.data["fruits"][0]["types"] == [
+        {"id": "1", "name": "apple"},
+        {"id": "2", "name": "strawberry"},
+    ]
+
+    result = mutation(
+        '{ fruits: updateFruits(data: { types: [{id: "1", name: "apple updated"}, {name: "raspberry"}]}) { id types { id name }}}'
+    )
+
+    assert result.data["fruits"][0]["types"] == [
+        {"id": "1", "name": "apple updated"},
+        {"id": "3", "name": "raspberry"},
+    ]
+
+
+def test_update_m2m_with_duplicates(mutation, fruit):
+    result = mutation(
+        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "apple"}]}) { id types { id name }}}'
+    )
+    assert not result.errors
+    assert result.data["fruits"][0]["types"] == [
+        {"id": "1", "name": "apple"},
+        {"id": "2", "name": "apple"},
+    ]
+
+
 def test_update_lazy_object(mutation, fruit):
     result = mutation(
         '{ fruit: updateLazyFruit(data: { name: "orange" }) { id name } }',

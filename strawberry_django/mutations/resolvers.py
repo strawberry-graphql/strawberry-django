@@ -54,8 +54,7 @@ _M = TypeVar("_M", bound=Model)
 
 
 def _parse_pk(
-    value: ParsedObject | strawberry.ID | _M | None,
-    model: type[_M],
+    value: ParsedObject | strawberry.ID | _M | None, model: type[_M], key_attr: str
 ) -> tuple[_M | None, dict[str, Any] | None]:
     if value is None:
         return None, None
@@ -67,67 +66,71 @@ def _parse_pk(
         return value.parse(model)
 
     if isinstance(value, dict):
+        if key_attr in value:
+            obj_pk = value[key_attr]
+            if obj_pk != strawberry.UNSET:
+                if key_attr == "id":
+                    obj_pk = int(obj_pk)
+                return model._default_manager.get(pk=obj_pk), value
         return None, value
 
     return model._default_manager.get(pk=value), None
 
 
-def _parse_data(info: Info, model: type[_M], value: Any):
-    obj, data = _parse_pk(value, model)
-
+def _parse_data(info: Info, model: type[_M], value: Any, key_attr: str):
+    obj, data = _parse_pk(value, model, key_attr)
     parsed_data = {}
     if data:
         for k, v in data.items():
-            if v is UNSET:
+            if v is UNSET and k != key_attr:
                 continue
 
             if isinstance(v, ParsedObject):
                 if v.pk is None:
                     v = create(info, model, v.data or {})  # noqa: PLW2901
                 elif isinstance(v.pk, models.Model) and v.data:
-                    v = update(info, v.pk, v.data)  # noqa: PLW2901
+                    v = update(info, v.pk, v.data, key_attr=key_attr)  # noqa: PLW2901
                 else:
                     v = v.pk  # noqa: PLW2901
 
             if k == "through_defaults" or not obj or getattr(obj, k) != v:
                 parsed_data[k] = v
-
     return obj, parsed_data
 
 
 @overload
-def parse_input(info: Info, data: dict[str, _T]) -> dict[str, _T]: ...
+def parse_input(info: Info, data: dict[str, _T], key_attr: str) -> dict[str, _T]: ...
 
 
 @overload
-def parse_input(info: Info, data: list[_T]) -> list[_T]: ...
+def parse_input(info: Info, data: list[_T], key_attr: str) -> list[_T]: ...
 
 
 @overload
-def parse_input(info: Info, data: relay.GlobalID) -> relay.Node: ...
+def parse_input(info: Info, data: relay.GlobalID, key_attr: str) -> relay.Node: ...
 
 
 @overload
-def parse_input(info: Info, data: Any) -> Any: ...
+def parse_input(info: Info, data: Any, key_attr: str) -> Any: ...
 
 
-def parse_input(info: Info, data: Any):
+def parse_input(info: Info, data: Any, key_attr: str):
     if isinstance(data, dict):
-        return {k: parse_input(info, v) for k, v in data.items()}
+        return {k: parse_input(info, v, key_attr) for k, v in data.items()}
 
     if isinstance(data, list):
-        return [parse_input(info, v) for v in data]
+        return [parse_input(info, v, key_attr) for v in data]
 
     if isinstance(data, relay.GlobalID):
         return data.resolve_node_sync(info, required=True)
 
     if isinstance(data, NodeInput):
-        pk = cast(Any, parse_input(info, getattr(data, "id", UNSET)))
+        pk = cast(Any, parse_input(info, getattr(data, "id", UNSET), key_attr))
         parsed = {}
         for field in dataclasses.fields(data):
             if field.name == "id":
                 continue
-            parsed[field.name] = parse_input(info, getattr(data, field.name))
+            parsed[field.name] = parse_input(info, getattr(data, field.name), key_attr)
 
         return ParsedObject(
             pk=pk,
@@ -136,26 +139,26 @@ def parse_input(info: Info, data: Any):
 
     if isinstance(data, (OneToOneInput, OneToManyInput)):
         return ParsedObject(
-            pk=parse_input(info, data.set),
+            pk=parse_input(info, data.set, key_attr),
         )
 
     if isinstance(data, (ManyToOneInput, ManyToManyInput, ListInput)):
         d = getattr(data, "data", None)
         if dataclasses.is_dataclass(d):
             d = {
-                f.name: parse_input(info, getattr(data, f.name))
+                f.name: parse_input(info, getattr(data, f.name), key_attr)
                 for f in dataclasses.fields(d)
             }
 
         return ParsedObjectList(
-            add=cast(List[InputListTypes], parse_input(info, data.add)),
-            remove=cast(List[InputListTypes], parse_input(info, data.remove)),
-            set=cast(List[InputListTypes], parse_input(info, data.set)),
+            add=cast(List[InputListTypes], parse_input(info, data.add, key_attr)),
+            remove=cast(List[InputListTypes], parse_input(info, data.remove, key_attr)),
+            set=cast(List[InputListTypes], parse_input(info, data.set, key_attr)),
         )
 
     if dataclasses.is_dataclass(data):
         return {
-            f.name: parse_input(info, getattr(data, f.name))
+            f.name: parse_input(info, getattr(data, f.name), key_attr)
             for f in dataclasses.fields(data)
         }
 
@@ -167,6 +170,7 @@ def prepare_create_update(
     info: Info,
     instance: Model,
     data: dict[str, Any],
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
 ) -> tuple[
     Model,
@@ -226,9 +230,7 @@ def prepare_create_update(
             (ParsedObject, str),
         ):
             value, value_data = _parse_data(  # noqa: PLW2901
-                info,
-                field.related_model,
-                value,
+                info, field.related_model, value, key_attr
             )
             if value is None and not value_data:
                 value = None  # noqa: PLW2901
@@ -237,7 +239,9 @@ def prepare_create_update(
                     **value_data,
                 )
             else:
-                update(info, value, value_data, full_clean=full_clean)
+                update(
+                    info, value, value_data, full_clean=full_clean, key_attr=key_attr
+                )
 
         if direct_field_value:
             # We want to return the direct fields for processing
@@ -257,6 +261,7 @@ def create(
     model: type[_M],
     data: dict[str, Any],
     *,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> _M: ...
@@ -268,6 +273,7 @@ def create(
     model: type[_M],
     data: list[dict[str, Any]],
     *,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> list[_M]: ...
@@ -279,13 +285,17 @@ def create(
     model: type[_M],
     data: dict[str, Any] | list[dict[str, Any]],
     *,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ):
     # Before creating your instance, verify this is not a bulk create
     # if so, add them one by one. Otherwise, get to work.
     if isinstance(data, list):
-        return [create(info, model, d, full_clean=full_clean) for d in data]
+        return [
+            create(info, model, d, key_attr=key_attr, full_clean=full_clean)
+            for d in data
+        ]
 
     # Also, the approach below will use the manager to create the instance
     # rather than manually creating it.  If you have a pre_save_hook
@@ -295,6 +305,7 @@ def create(
             info,
             model(),
             data,
+            key_attr=key_attr,
             full_clean=full_clean,
             pre_save_hook=pre_save_hook,
         )
@@ -304,7 +315,11 @@ def create(
     # circumvent the manager create method.
     dummy_instance = model()
     _, create_kwargs, files, m2m = prepare_create_update(
-        info=info, instance=dummy_instance, data=data, full_clean=full_clean
+        info=info,
+        instance=dummy_instance,
+        data=data,
+        full_clean=full_clean,
+        key_attr=key_attr,
     )
 
     # Creating the instance directly via create() without full-clean will
@@ -324,7 +339,7 @@ def create(
         file_field.save_form_data(instance, value)
 
     for field, value in m2m:
-        update_m2m(info, instance, field, value)
+        update_m2m(info, instance, field, value, key_attr)
 
     return instance
 
@@ -335,6 +350,7 @@ def update(
     instance: _M,
     data: dict[str, Any],
     *,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> _M: ...
@@ -346,6 +362,7 @@ def update(
     instance: Iterable[_M],
     data: dict[str, Any],
     *,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> list[_M]: ...
@@ -357,6 +374,7 @@ def update(
     instance: _M | Iterable[_M],
     data: dict[str, Any],
     *,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> _M | list[_M]:
@@ -369,13 +387,22 @@ def update(
         instances = list(instance)
         return [
             update(
-                info, instance, data, full_clean=full_clean, pre_save_hook=pre_save_hook
+                info,
+                instance,
+                data,
+                key_attr=key_attr,
+                full_clean=full_clean,
+                pre_save_hook=pre_save_hook,
             )
             for instance in instances
         ]
 
     instance, _, files, m2m = prepare_create_update(
-        info=info, instance=instance, data=data, full_clean=full_clean
+        info=info,
+        instance=instance,
+        data=data,
+        key_attr=key_attr,
+        full_clean=full_clean,
     )
 
     for file_field, value in files:
@@ -391,7 +418,7 @@ def update(
     instance.save()
 
     for field, value in m2m:
-        update_m2m(info, instance, field, value, full_clean)
+        update_m2m(info, instance, field, value, key_attr, full_clean)
 
     instance.refresh_from_db()
 
@@ -464,6 +491,7 @@ def update_m2m(
     instance: Model,
     field: ManyToManyField | ForeignObjectRel,
     value: Any,
+    key_attr: str,
     full_clean: bool | FullCleanOptions = True,
 ):
     if value is UNSET:
@@ -474,7 +502,7 @@ def update_m2m(
     # so why are there checks for OneTOneRel?
     if isinstance(field, OneToOneRel):
         remote_field = field.remote_field
-        value, data = _parse_pk(value, remote_field.model)
+        value, data = _parse_pk(value, remote_field.model, key_attr)
         if value is None:
             value = getattr(instance, field.name)
         else:
@@ -516,9 +544,9 @@ def update_m2m(
         existing = set(manager.all())
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
-            obj, data = _parse_data(info, manager.model, v)
-
+            obj, data = _parse_data(info, manager.model, v, key_attr)
             if obj:
+                data.pop(key_attr, None)
                 through_defaults = data.pop("through_defaults", {})
                 if data:
                     for k, inner_value in data.items():
@@ -555,7 +583,12 @@ def update_m2m(
 
                 existing.discard(obj)
             else:
-                obj, _ = manager.get_or_create(**data)
+                if key_attr not in data:  # we have a Input Type
+                    obj, _ = manager.get_or_create(**data)
+                else:
+                    data.pop(key_attr)
+                    obj = manager.create(**data)
+
                 if full_clean:
                     obj.full_clean(**full_clean_options)
                 existing.discard(obj)
@@ -569,22 +602,29 @@ def update_m2m(
     else:
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
-            obj, data = _parse_data(info, manager.model, v)
+            obj, data = _parse_data(info, manager.model, v, key_attr)
             if obj and data:
+                data.pop(key_attr, None)
                 if full_clean:
                     obj.full_clean(**full_clean_options)
                 manager.add(obj, **data)
             elif obj:
                 # Do this later in a bulk
+                data.pop(key_attr, None)
                 to_add.append(obj)
             elif data:
-                manager.get_or_create(**data)
+                if key_attr not in data:
+                    manager.get_or_create(**data)
+                else:
+                    data.pop(key_attr)
+                    manager.create(**data)
             else:
                 raise AssertionError
 
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
-            obj, data = _parse_data(info, manager.model, v)
+            obj, data = _parse_data(info, manager.model, v, key_attr)
+            data.pop(key_attr, None)
             assert not data
             to_remove.append(obj)
 
