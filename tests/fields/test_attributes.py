@@ -42,7 +42,8 @@ def test_default_django_name():
 
 def test_field_permission_classes():
     class TestPermission(BasePermission):
-        pass
+        def has_permission(self, source, info, **kwargs):
+            return True
 
     @strawberry_django.type(FieldAttributeModel)
     class Type:
