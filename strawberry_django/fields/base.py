@@ -66,6 +66,16 @@ class StrawberryDjangoFieldBase(StrawberryField):
         return False
 
     @functools.cached_property
+    def is_async(self) -> bool:
+        # Our default resolver is sync by default but will return a coroutine
+        # when running ASGI. If we happen to have an extension that only supports
+        # async, make sure we mark the field as async as well to support resolving
+        # it properly.
+        return super().is_async or any(
+            e.supports_async and not e.supports_sync for e in self.extensions
+        )
+
+    @functools.cached_property
     def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
         origin = self.type
 
