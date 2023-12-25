@@ -36,10 +36,13 @@ from strawberry_django.utils.typing import (
 
 from .arguments import argument
 from .fields.base import StrawberryDjangoFieldBase
+from .settings import strawberry_django_settings as django_settings
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
 
+
+settings = django_settings()
 T = TypeVar("T")
 _T = TypeVar("_T", bound=type)
 _QS = TypeVar("_QS", bound="QuerySet")
@@ -49,7 +52,7 @@ FILTERS_ARG = "filters"
 
 @strawberry.input
 class DjangoModelFilterInput:
-    pk: strawberry.ID
+    pk: strawberry.ID  # TODO: How to override pk here with settings["DEFAULT_PK_FIELD_NAME"] ?
 
 
 _n_deprecation_reason = """\
@@ -275,7 +278,8 @@ def apply(
     pk: Optional[Any] = None,
 ) -> _QS:
     if pk not in (None, strawberry.UNSET):  # noqa: PLR6201
-        queryset = queryset.filter(pk=pk)
+        pk_field_name = settings["DEFAULT_PK_FIELD_NAME"]
+        queryset = queryset.filter(**{pk_field_name: pk})
 
     if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # noqa: PLR6201
         return queryset
@@ -346,7 +350,9 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                 and not self.is_list
                 and not self.is_connection
             ):
-                arguments.append(argument("pk", strawberry.ID))
+                arguments.append(
+                    argument(settings["DEFAULT_PK_FIELD_NAME"], strawberry.ID)
+                )
             elif filters is not None and self.is_list:
                 arguments.append(argument(FILTERS_ARG, filters, is_optional=True))
 

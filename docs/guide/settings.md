@@ -49,6 +49,11 @@ A dictionary with the following optional keys:
       instead of `strawberry.ID`. This is mostly useful if all your model types inherit
       from `relay.Node` and you want to work only with `GlobalID`.
 
+- **`DEFAULT_PK_FIELD_NAME`** (default: `"pk"`)
+
+      Change the [CRUD mutations'](mutations.md#cud-mutations) default
+      primary key field.
+
 These features can be enabled by adding this code to your `settings.py` file.
 
 ```{.python title=settings.py}
@@ -59,5 +64,6 @@ STRAWBERRY_DJANGO = {
     "MUTATIONS_DEFAULT_HANDLE_ERRORS": True,
     "GENERATE_ENUMS_FROM_CHOICES": False,
     "MAP_AUTO_ID_AS_GLOBAL_ID": True,
+    "DEFAULT_PK_FIELD_NAME": "id",
 }
 ```
