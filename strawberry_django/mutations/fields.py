@@ -175,11 +175,16 @@ class DjangoMutationCUD(DjangoMutationBase):
         input_type: type | None = None,
         full_clean: bool = True,
         argument_name: str | None = None,
-        key_attr: str | None = "pk",
+        key_attr: str | None = None,
         **kwargs,
     ):
         self.full_clean = full_clean
         self.input_type = input_type
+
+        if key_attr is None:
+            settings = strawberry_django_settings()
+            key_attr = settings["DEFAULT_PK_FIELD_NAME"]
+
         self.key_attr = key_attr
 
         if argument_name is None:
@@ -257,10 +262,13 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
             )
 
 
+settings = strawberry_django_settings()
+
+
 def get_pk(
     data: dict[str, Any],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = settings["DEFAULT_PK_FIELD_NAME"],
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
     pk = data.pop(key_attr, UNSET) if key_attr else UNSET
 

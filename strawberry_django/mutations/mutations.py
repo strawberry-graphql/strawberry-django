@@ -20,6 +20,8 @@ from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UNSET, UnsetType
 from typing_extensions import Literal
 
+from strawberry_django.settings import strawberry_django_settings
+
 from .fields import (
     DjangoCreateMutation,
     DjangoDeleteMutation,
@@ -28,6 +30,7 @@ from .fields import (
 )
 
 _T = TypeVar("_T")
+settings = strawberry_django_settings()
 
 
 @overload
@@ -319,7 +322,7 @@ def update(
     extensions: List[FieldExtension] = (),  # type: ignore
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    key_attr: Optional[str] = "pk",
+    key_attr: Optional[str] = settings["DEFAULT_PK_FIELD_NAME"],
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -378,7 +381,7 @@ def delete(
     graphql_type: Optional[Any] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    key_attr: Optional[str] = "pk",
+    key_attr: Optional[str] = settings["DEFAULT_PK_FIELD_NAME"],
 ) -> Any:
     return DjangoDeleteMutation(
         input_type=input_type,
