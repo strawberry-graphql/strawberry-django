@@ -83,7 +83,7 @@ def _parse_data(info: Info, model: type[_M], value: Any):
 
             if isinstance(v, ParsedObject):
                 if v.pk is None:
-                    v = cast(_M, create(info, model(), v.data or {}))  # noqa: PLW2901
+                    v = create(info, model, v.data or {})  # noqa: PLW2901
                 elif isinstance(v.pk, models.Model) and v.data:
                     v = update(info, v.pk, v.data)  # noqa: PLW2901
                 else:
