@@ -387,4 +387,3 @@ class DjangoDeleteMutation(
                 instance,
                 data=data,
             )
-
