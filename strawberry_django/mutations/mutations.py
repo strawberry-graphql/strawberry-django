@@ -20,8 +20,6 @@ from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.unset import UNSET, UnsetType
 from typing_extensions import Literal
 
-from strawberry_django.settings import strawberry_django_settings
-
 from .fields import (
     DjangoCreateMutation,
     DjangoDeleteMutation,
@@ -30,7 +28,6 @@ from .fields import (
 )
 
 _T = TypeVar("_T")
-settings = strawberry_django_settings()
 
 
 @overload
