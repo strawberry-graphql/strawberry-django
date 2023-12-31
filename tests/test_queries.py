@@ -107,8 +107,17 @@ async def test_required_pk_single(query, users):
     )
 
 
-async def test_required_id_as_pk_single(query_custom_pk, users):
-    result = await query_custom_pk("{ user { name } }")
+async def test_id_as_pk_single(query_id_as_pk, users):
+    # Users are created for each test, it's impossible to know what will be the id of users in the database.
+    user_id = users[0].id
+    result = await query_id_as_pk(f"{{ user(id: {user_id}) {{ name }} }}")
+
+    assert not result.errors
+    assert result.data["user"] == {"name": users[0].name}
+
+
+async def test_required_id_as_pk_single(query_id_as_pk, users):
+    result = await query_id_as_pk("{ user { name } }")
 
     assert bool(result.errors)
     assert len(result.errors) == 1

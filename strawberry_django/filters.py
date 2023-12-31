@@ -394,9 +394,10 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         info: Info,
         *,
         filters: Optional[WithStrawberryDjangoObjectDefinition] = None,
-        pk: Optional[Any] = None,
         **kwargs,
     ) -> _QS:
+        settings = django_settings()
+        pk = kwargs.get(settings["DEFAULT_PK_FIELD_NAME"], None)
         queryset = super().get_queryset(queryset, info, **kwargs)
         return self.apply_filters(queryset, filters, pk, info)
 
