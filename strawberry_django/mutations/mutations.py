@@ -322,7 +322,7 @@ def update(
     extensions: List[FieldExtension] = (),  # type: ignore
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    key_attr: Optional[str] = settings["DEFAULT_PK_FIELD_NAME"],
+    key_attr: Optional[str] = None,
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -381,7 +381,7 @@ def delete(
     graphql_type: Optional[Any] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    key_attr: Optional[str] = settings["DEFAULT_PK_FIELD_NAME"],
+    key_attr: Optional[str] = None,
 ) -> Any:
     return DjangoDeleteMutation(
         input_type=input_type,

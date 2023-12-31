@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from django.db.models import QuerySet
 
 
-settings = django_settings()
 T = TypeVar("T")
 _T = TypeVar("_T", bound=type)
 _QS = TypeVar("_QS", bound="QuerySet")
@@ -278,6 +277,7 @@ def apply(
     pk: Optional[Any] = None,
 ) -> _QS:
     if pk not in (None, strawberry.UNSET):  # noqa: PLR6201
+        settings = django_settings()
         pk_field_name = settings["DEFAULT_PK_FIELD_NAME"]
         queryset = queryset.filter(**{pk_field_name: pk})
 
@@ -350,6 +350,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                 and not self.is_list
                 and not self.is_connection
             ):
+                settings = django_settings()
                 arguments.append(
                     argument(settings["DEFAULT_PK_FIELD_NAME"], strawberry.ID)
                 )

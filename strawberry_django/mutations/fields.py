@@ -262,14 +262,13 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
             )
 
 
-settings = strawberry_django_settings()
-
-
 def get_pk(
     data: dict[str, Any],
     *,
-    key_attr: str | None = settings["DEFAULT_PK_FIELD_NAME"],
+    key_attr: str | None = None,
 ) -> strawberry.ID | relay.GlobalID | Literal[UNSET] | None:  # type: ignore
+    settings = strawberry_django_settings()
+
     pk = data.pop(key_attr, UNSET) if key_attr else UNSET
 
     if pk is UNSET:
@@ -388,3 +387,4 @@ class DjangoDeleteMutation(
                 instance,
                 data=data,
             )
+
