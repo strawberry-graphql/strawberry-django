@@ -229,11 +229,6 @@ If you define custom methods `filter_` and `q_` both
 
 only `filter_` works.
 
-!!! note
-
-    `filter_{field_name}` custom filter not works with `AND`, `OR`, `NOT` nested filters
-    but `q_{field_name}` filter are works
-
 ```{.python title=types.py}
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
@@ -247,6 +242,11 @@ class FruitFilter:
     def q_is_banana(self, queryset) -> Q:
         return Q(name="banana")
 ```
+
+!!! note
+
+    `filter_{field_name}` custom filter not works with `AND`, `OR`, `NOT` nested filters
+    but `q_{field_name}` filter are works
 
 ## Overriding the default `filter` method
 
