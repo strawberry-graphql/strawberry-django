@@ -201,6 +201,53 @@ class FruitFilter:
         return queryset
 ```
 
+## Custom filter expressions with Q
+
+You can also define complex custom expression and overriding default filter method with `q_{field_name}` resolver
+
+```{.python title=types.py}
+from django.db.models import Q
+
+@strawberry_django.filter(models.Fruit)
+class FruitFilter:
+    is_banana: bool | None
+
+    def q_is_banana(self, value: bool | None) -> Q:
+        result = Q()
+        if self.is_banana in (None, strawberry.UNSET):
+            return result
+
+        if self.is_banana:
+            result = Q(name="banana")
+        else:
+            result = ~Q(name="banana")
+
+        return result
+```
+
+If you define custom methods `filter_` and `q_` both
+
+only `filter_` works.
+
+!!! note
+
+    `filter_{field_name}` custom filter not works with `AND`, `OR`, `NOT` nested filters
+    but `q_{field_name}` filter are works
+
+```{.python title=types.py}
+@strawberry_django.filter(models.Fruit)
+class FruitFilter:
+    is_banana: bool | None
+
+    # WORK (O)
+    def filter_is_banana(self, queryset) -> QuerySet:
+        return queryset.filter(name="banana")
+
+    # NOT WORK (X)
+    def q_is_banana(self, queryset) -> Q:
+        return Q(name="banana")
+```
+
 ## Overriding the default `filter` method
 
 For overriding the default filter logic you can provide the filter method.
