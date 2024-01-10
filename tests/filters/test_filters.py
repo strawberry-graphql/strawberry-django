@@ -4,6 +4,7 @@ from typing import Generic, List, Optional, TypeVar, cast
 
 import pytest
 import strawberry
+from django.db.models import Q
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import ExecutionResult
@@ -89,6 +90,14 @@ class TypeFilter:
         return queryset.filter(name__icontains=self.name)
 
 
+@strawberry_django.filters.filter(models.Fruit)
+class QFilter:
+    search: Optional[str]
+
+    def q_search(self, value: str) -> Q:
+        return Q(name=value)
+
+
 @strawberry_django.type(models.Vegetable, filters=VegetableFilter)
 class Vegetable:
     id: auto
@@ -107,6 +116,7 @@ class Fruit:
 class Query:
     fruits: List[Fruit] = strawberry_django.field()
     field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
+    q_filter: List[Fruit] = strawberry_django.field(filters=QFilter)
     type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
     enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
     enum_lookup_filter: List[Fruit] = strawberry_django.field(filters=EnumLookupFilter)
@@ -240,6 +250,36 @@ def test_relationship(query, fruits):
 
 def test_field_filter_method(query, fruits):
     result = query('{ fruits: fieldFilter(filters: { search: "berry" }) { id name } }')
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+        {"id": "2", "name": "raspberry"},
+    ]
+
+
+def test_q_filter_method(query, fruits):
+    result = query('{ fruits: qFilter(filters: { search: "strawberry" }) { id name } }')
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_q_filter_method_with_nested_not_filter(query, fruits):
+    result = query(
+        '{ fruits: qFilter(filters: { NOT : { search: "strawberry" }}) { id name } }'
+    )
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "2", "name": "raspberry"},
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_q_filter_method_with_nested_or_filter(query, fruits):
+    result = query(
+        '{ fruits: qFilter(filters: { search: "strawberry", OR: { search: "raspberry" }}) { id name } }'
+    )
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},

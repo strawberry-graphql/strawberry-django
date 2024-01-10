@@ -217,6 +217,11 @@ def build_filter_kwargs(
             filter_methods.append(filter_method)
             continue
 
+        q_method = getattr(filters, f"q_{'n_' if negated else ''}{field_name}", None)
+        if q_method and (q_value := q_method(field_value)):
+            filter_kwargs &= q_value
+            continue
+
         if django_model:
             if field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
                 if has_object_definition(field_value):
