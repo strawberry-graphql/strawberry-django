@@ -246,7 +246,7 @@ class FruitFilter:
 !!! note
 
     `filter_{field_name}` custom filter not works with `AND`, `OR`, `NOT` nested filters
-    but `q_{field_name}` filter are works
+    but `q_{field_name}` filter is works
 
 ## Overriding the default `filter` method
 
