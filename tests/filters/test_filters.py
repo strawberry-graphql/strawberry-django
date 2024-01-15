@@ -177,8 +177,7 @@ def test_deprecated_not(query, fruits):
 
 
 def test_not(query, fruits):
-    result = query(
-        """{
+    result = query("""{
       fruits(
         filters: {
           NOT: {
@@ -189,8 +188,7 @@ def test_not(query, fruits):
         id
         name
       }
-    }"""
-    )
+    }""")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
@@ -284,8 +282,7 @@ def test_resolver_filter_with_inheritance(vegetables):
             )
 
     query = utils.generate_query(Query)
-    result = query(
-        """
+    result = query("""
       {
         vegetables(
           filters: {
@@ -304,8 +301,7 @@ def test_resolver_filter_with_inheritance(vegetables):
           name
         }
       }
-    """
-    )
+    """)
     assert isinstance(result, ExecutionResult)
     assert not result.errors
     assert result.data is not None
