@@ -40,4 +40,4 @@ class ParsedObject:
 class ParsedObjectList:
     add: list[InputListTypes] | None = None
     remove: list[InputListTypes] | None = None
-    set: list[InputListTypes] | None = None  # noqa: A003
+    set: list[InputListTypes] | None = None

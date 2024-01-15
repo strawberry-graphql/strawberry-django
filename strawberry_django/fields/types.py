@@ -65,33 +65,33 @@ class DjangoModelType:
 
 @strawberry.input
 class OneToOneInput:
-    set: Optional[strawberry.ID]  # noqa: A003
+    set: Optional[strawberry.ID]
 
 
 @strawberry.input
 class OneToManyInput:
-    set: Optional[strawberry.ID]  # noqa: A003
+    set: Optional[strawberry.ID]
 
 
 @strawberry.input
 class ManyToOneInput:
     add: Optional[List[strawberry.ID]] = UNSET
     remove: Optional[List[strawberry.ID]] = UNSET
-    set: Optional[List[strawberry.ID]] = UNSET  # noqa: A003
+    set: Optional[List[strawberry.ID]] = UNSET
 
 
 @strawberry.input
 class ManyToManyInput:
     add: Optional[List[strawberry.ID]] = UNSET
     remove: Optional[List[strawberry.ID]] = UNSET
-    set: Optional[List[strawberry.ID]] = UNSET  # noqa: A003
+    set: Optional[List[strawberry.ID]] = UNSET
 
 
 @strawberry.input(
     description="Input of an object that implements the `Node` interface.",
 )
 class NodeInput:
-    id: relay.GlobalID  # noqa: A003
+    id: relay.GlobalID
 
     def __eq__(self, other: object):
         if not isinstance(other, NodeInput):
@@ -110,9 +110,9 @@ class NodeInputPartial(NodeInput):
     # FIXME: Without this pyright will not let any class inherit from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        id: Optional[relay.GlobalID]  # type: ignore  # noqa: A003
+        id: Optional[relay.GlobalID]  # type: ignore
     else:
-        id: Optional[relay.GlobalID] = UNSET  # noqa: A003
+        id: Optional[relay.GlobalID] = UNSET
 
 
 @strawberry.input(description="Add/remove/set the selected nodes.")
@@ -129,11 +129,11 @@ class ListInput(Generic[K]):
     # FIXME: Without this pyright will not let any class inheric from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        set: Optional[List[K]]  # noqa: A003
+        set: Optional[List[K]]
         add: Optional[List[K]]
         remove: Optional[List[K]]
     else:
-        set: Optional[List[K]] = UNSET  # noqa: A003
+        set: Optional[List[K]] = UNSET
         add: Optional[List[K]] = UNSET
         remove: Optional[List[K]] = UNSET
 

@@ -189,14 +189,12 @@ def test_field_name():
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync(
-        """\
+    result = schema.execute_sync("""\
       query TestQuery {
         fruit {
           name
           colorId
         }
       }
-    """
-    )
+    """)
     assert result.data == {"fruit": {"colorId": 1, "name": "Banana"}}

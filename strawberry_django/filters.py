@@ -72,7 +72,7 @@ class FilterLookup(Generic[T]):
     i_starts_with: Optional[T] = UNSET
     ends_with: Optional[T] = UNSET
     i_ends_with: Optional[T] = UNSET
-    range: Optional[List[T]] = UNSET  # noqa: A003
+    range: Optional[List[T]] = UNSET
     is_null: Optional[bool] = UNSET
     regex: Optional[str] = UNSET
     i_regex: Optional[str] = UNSET
