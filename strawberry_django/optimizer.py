@@ -147,7 +147,9 @@ class OptimizerStore:
         return self
 
     def __or__(self, other: OptimizerStore):
-        return self.copy().__ior__(other)
+        new = self.copy()
+        new |= other
+        return new
 
     def copy(self):
         return self.__class__(

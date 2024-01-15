@@ -223,7 +223,10 @@ def build_filter_kwargs(
                     (
                         subfield_filter_kwargs,
                         subfield_filter_methods,
-                    ) = build_filter_kwargs(field_value, path)
+                    ) = build_filter_kwargs(
+                        cast(WithStrawberryObjectDefinition, field_value),
+                        path,
+                    )
                     if field_name == "AND":
                         filter_kwargs &= subfield_filter_kwargs
                     elif field_name == "OR":
@@ -243,7 +246,7 @@ def build_filter_kwargs(
 
         if has_object_definition(field_value):
             subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
-                field_value,
+                cast(WithStrawberryObjectDefinition, field_value),
                 f"{path}{field_name}__",
             )
             filter_kwargs &= subfield_filter_kwargs
@@ -292,7 +295,9 @@ def apply(
 
         return filter_method(queryset=queryset, **kwargs)
 
-    filter_kwargs, filter_methods = build_filter_kwargs(filters)
+    filter_kwargs, filter_methods = build_filter_kwargs(
+        cast(WithStrawberryObjectDefinition, filters)
+    )
     queryset = queryset.filter(filter_kwargs)
     for filter_method in filter_methods:
         kwargs = {}
