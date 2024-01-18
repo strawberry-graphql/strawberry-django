@@ -234,14 +234,15 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
             assert isinstance(data, list)
             return [
                 self.create(
-                    resolvers.parse_input(info, vars(d), self.key_attr), info=info
+                    resolvers.parse_input(info, vars(d), key_attr=self.key_attr),
+                    info=info,
                 )
                 for d in data
             ]
 
         assert not isinstance(data, list)
         return self.create(
-            resolvers.parse_input(info, vars(data), self.key_attr)
+            resolvers.parse_input(info, vars(data), key_attr=self.key_attr)
             if data is not None
             else {},
             info=info,
@@ -312,7 +313,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
             )
 
         return self.update(
-            info, instance, resolvers.parse_input(info, vdata, self.key_attr)
+            info, instance, resolvers.parse_input(info, vdata, key_attr=self.key_attr)
         )
 
     def update(
@@ -374,7 +375,7 @@ class DjangoDeleteMutation(
             )
 
         return self.delete(
-            info, instance, resolvers.parse_input(info, vdata, self.key_attr)
+            info, instance, resolvers.parse_input(info, vdata, key_attr=self.key_attr)
         )
 
     def delete(

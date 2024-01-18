@@ -83,7 +83,7 @@ def _parse_pk(
 def _parse_data(
     info: Info, model: type[_M], value: Any, *, key_attr: str | None = "pk"
 ):
-    obj, data = _parse_pk(value, model, key_attr)
+    obj, data = _parse_pk(value, model, key_attr=key_attr)
     parsed_data = {}
     if data:
         for k, v in data.items():
@@ -127,21 +127,23 @@ def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk") -> Any: .
 
 def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk"):
     if isinstance(data, dict):
-        return {k: parse_input(info, v, key_attr) for k, v in data.items()}
+        return {k: parse_input(info, v, key_attr=key_attr) for k, v in data.items()}
 
     if isinstance(data, list):
-        return [parse_input(info, v, key_attr) for v in data]
+        return [parse_input(info, v, key_attr=key_attr) for v in data]
 
     if isinstance(data, relay.GlobalID):
         return data.resolve_node_sync(info, required=True)
 
     if isinstance(data, NodeInput):
-        pk = cast(Any, parse_input(info, getattr(data, "id", UNSET), key_attr))
+        pk = cast(Any, parse_input(info, getattr(data, "id", UNSET), key_attr=key_attr))
         parsed = {}
         for field in dataclasses.fields(data):
             if field.name == "id":
                 continue
-            parsed[field.name] = parse_input(info, getattr(data, field.name), key_attr)
+            parsed[field.name] = parse_input(
+                info, getattr(data, field.name), key_attr=key_attr
+            )
 
         return ParsedObject(
             pk=pk,
@@ -150,26 +152,32 @@ def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk"):
 
     if isinstance(data, (OneToOneInput, OneToManyInput)):
         return ParsedObject(
-            pk=parse_input(info, data.set, key_attr),
+            pk=parse_input(info, data.set, key_attr=key_attr),
         )
 
     if isinstance(data, (ManyToOneInput, ManyToManyInput, ListInput)):
         d = getattr(data, "data", None)
         if dataclasses.is_dataclass(d):
             d = {
-                f.name: parse_input(info, getattr(data, f.name), key_attr)
+                f.name: parse_input(info, getattr(data, f.name), key_attr=key_attr)
                 for f in dataclasses.fields(d)
             }
 
         return ParsedObjectList(
-            add=cast(List[InputListTypes], parse_input(info, data.add, key_attr)),
-            remove=cast(List[InputListTypes], parse_input(info, data.remove, key_attr)),
-            set=cast(List[InputListTypes], parse_input(info, data.set, key_attr)),
+            add=cast(
+                List[InputListTypes], parse_input(info, data.add, key_attr=key_attr)
+            ),
+            remove=cast(
+                List[InputListTypes], parse_input(info, data.remove, key_attr=key_attr)
+            ),
+            set=cast(
+                List[InputListTypes], parse_input(info, data.set, key_attr=key_attr)
+            ),
         )
 
     if dataclasses.is_dataclass(data):
         return {
-            f.name: parse_input(info, getattr(data, f.name), key_attr)
+            f.name: parse_input(info, getattr(data, f.name), key_attr=key_attr)
             for f in dataclasses.fields(data)
         }
 
@@ -241,7 +249,7 @@ def prepare_create_update(
             (ParsedObject, str),
         ):
             value, value_data = _parse_data(  # noqa: PLW2901
-                info, field.related_model, value, key_attr
+                info, field.related_model, value, key_attr=key_attr
             )
             if value is None and not value_data:
                 value = None  # noqa: PLW2901
@@ -513,7 +521,7 @@ def update_m2m(
     # so why are there checks for OneTOneRel?
     if isinstance(field, OneToOneRel):
         remote_field = field.remote_field
-        value, data = _parse_pk(value, remote_field.model, key_attr)
+        value, data = _parse_pk(value, remote_field.model, key_attr=key_attr)
         if value is None:
             value = getattr(instance, field.name)
         else:
@@ -555,7 +563,7 @@ def update_m2m(
         existing = set(manager.all())
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
-            obj, data = _parse_data(info, manager.model, v, key_attr)
+            obj, data = _parse_data(info, manager.model, v, key_attr=key_attr)
             if obj:
                 data.pop(key_attr, None)
                 through_defaults = data.pop("through_defaults", {})
@@ -613,7 +621,7 @@ def update_m2m(
     else:
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
-            obj, data = _parse_data(info, manager.model, v, key_attr)
+            obj, data = _parse_data(info, manager.model, v, key_attr=key_attr)
             if obj and data:
                 data.pop(key_attr, None)
                 if full_clean:
@@ -634,7 +642,7 @@ def update_m2m(
 
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
-            obj, data = _parse_data(info, manager.model, v, key_attr)
+            obj, data = _parse_data(info, manager.model, v, key_attr=key_attr)
             data.pop(key_attr, None)
             assert not data
             to_remove.append(obj)
