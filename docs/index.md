@@ -1,3 +1,10 @@
+<style>
+  .md-typeset h1,
+  .md-content__button {
+    display: none;
+  }
+</style>
+
 ![Logo](./images/logo.png){ align=center }
 **Strawberry integration with Django**
 
@@ -5,9 +12,9 @@
 
 **WHAT:** A toolset for GraphQL schema generation from Django models.
 
-**WHY:** Make it easier to build better web apps more quickly and with less code.
+**WHY:** To build better web apps more quickly and with less code.
 
-**HOW:** Provides django-specific methods for using [strawberry](https://strawberry.rocks/).
+**HOW:** By providing django-specific methods for using the [strawberry GraphQL library](https://strawberry.rocks/).
 
 ---
 
@@ -28,129 +35,7 @@
 - [x] Debug Toolbar integration with graphiql to display metrics like SQL queries
 - [x] Unit test integration
 
-## Installation
+## Getting started
 
-```sh
-pip install strawberry-graphql-django
-```
-
-## Basic Usage
-
-```{.python title=models.py}
-from django.db import models
-from django_choices_field import TextChoicesField
-
-class FruitCategory(models.TextChoices):
-    CITRUS = "citrus", "Citrus"
-    BERRY = "berry", "Berry"
-
-class Fruit(models.Model):
-    """A tasty treat"""
-    name = models.CharField(
-        max_length=20,
-    )
-    category = TextChoicesField(
-        choices_enum=FruitCategory,
-    )
-    color = models.ForeignKey(
-        "Color",
-        on_delete=models.CASCADE,
-        related_name="fruits",
-        blank=True,
-        null=True,
-    )
-
-class Color(models.Model):
-    name = models.CharField(
-        max_length=20,
-        help_text="field description",
-    )
-```
-
-```{.python title=types.py}
-import strawberry_django
-from strawberry import auto
-
-from . import models
-
-@strawberry_django.type(models.Fruit)
-class Fruit:
-    id: auto
-    name: auto
-    category: auto
-    color: "Color"
-
-@strawberry_django.type(models.Color)
-class Color:
-    id: auto
-    name: auto
-    fruits: list[Fruit]
-```
-
-```{.python title=schema.py}
-import strawberry
-from strawberry_django.optimizer import DjangoOptimizerExtension
-
-from .types import Fruit
-
-@strawberry.type
-class Query:
-    fruits: list[Fruit] = strawberry_django.field()
-
-schema = strawberry.Schema(
-    query=Query,
-    extensions=[
-        DjangoOptimizerExtension,
-    ],
+Check out the [quick start](quick-start.md) for all the basics, then the [example app](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django) for a slightly more complete setup
 )
-```
-
-```{.python title=settings.py}
-STRAWBERRY_DJANGO = {
-    "FIELD_DESCRIPTION_FROM_HELP_TEXT": True,
-    "TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING": True,
-}
-```
-
-```{.python title=urls.py}
-from django.urls import include, path
-from strawberry.django.views import AsyncGraphQLView
-
-from .schema import schema
-
-urlpatterns = [
-    path('graphql', AsyncGraphQLView.as_view(schema=schema)),
-]
-```
-
-Code above generates following schema.
-
-```{.graphql title=schema.graphql}
-enum FruitCategory {
-  CITRUS
-  BERRY
-}
-
-"""
-A tasty treat
-"""
-type Fruit {
-  id: ID!
-  name: String!
-  category: FruitCategory!
-  color: Color
-}
-
-type Color {
-  id: ID!
-  """
-  field description
-  """
-  name: String!
-  fruits: [Fruit!]
-}
-
-type Query {
-  fruits: [Fruit!]!
-}
-```
