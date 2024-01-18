@@ -1,7 +1,13 @@
 ![Logo](./images/logo.png){ align=center }
-Strawberry integration with Django.
+**Strawberry integration with Django**
 
-> makes it easier to build better web apps more quickly and with less code.
+---
+
+**WHAT:** A toolset for GraphQL schema generation from Django models.
+
+**WHY:** Make it easier to build better web apps more quickly and with less code.
+
+**HOW:** Provides django-specific methods for using [strawberry](https://strawberry.rocks/).
 
 ---
 
