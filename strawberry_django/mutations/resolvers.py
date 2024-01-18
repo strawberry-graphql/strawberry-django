@@ -56,6 +56,7 @@ _M = TypeVar("_M", bound=Model)
 def _parse_pk(
     value: ParsedObject | strawberry.ID | _M | None,
     model: type[_M],
+    *,
     key_attr: str | None = "pk",
 ) -> tuple[_M | None, dict[str, Any] | None]:
     if value is None:
@@ -79,7 +80,9 @@ def _parse_pk(
     return model._default_manager.get(pk=value), None
 
 
-def _parse_data(info: Info, model: type[_M], value: Any, key_attr: str | None = "pk"):
+def _parse_data(
+    info: Info, model: type[_M], value: Any, *, key_attr: str | None = "pk"
+):
     obj, data = _parse_pk(value, model, key_attr)
     parsed_data = {}
     if data:
@@ -102,27 +105,27 @@ def _parse_data(info: Info, model: type[_M], value: Any, key_attr: str | None = 
 
 @overload
 def parse_input(
-    info: Info, data: dict[str, _T], key_attr: str | None = "pk"
+    info: Info, data: dict[str, _T], *, key_attr: str | None = "pk"
 ) -> dict[str, _T]: ...
 
 
 @overload
 def parse_input(
-    info: Info, data: list[_T], key_attr: str | None = "pk"
+    info: Info, data: list[_T], *, key_attr: str | None = "pk"
 ) -> list[_T]: ...
 
 
 @overload
 def parse_input(
-    info: Info, data: relay.GlobalID, key_attr: str | None = "pk"
+    info: Info, data: relay.GlobalID, *, key_attr: str | None = "pk"
 ) -> relay.Node: ...
 
 
 @overload
-def parse_input(info: Info, data: Any, key_attr: str | None = "pk") -> Any: ...
+def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk") -> Any: ...
 
 
-def parse_input(info: Info, data: Any, key_attr: str | None = "pk"):
+def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk"):
     if isinstance(data, dict):
         return {k: parse_input(info, v, key_attr) for k, v in data.items()}
 
