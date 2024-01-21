@@ -63,6 +63,7 @@ however still add those by hand and resolve them:
 ```{.python title=types.py}
 import strawberry
 from strawberry import auto
+from strawberry.types import Info
 import strawberry_django
 from . import models
 
@@ -92,6 +93,7 @@ class Query:
         self,
         filters: FruitFilter | None = strawberry.UNSET,
         order: FruitOrder | None = strawberry.UNSET,
+        info: Info
     ) -> list[Fruit]
         qs = models.fruit.objects.all()
 
