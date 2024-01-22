@@ -72,8 +72,6 @@ def _parse_pk(
         if key_attr in value:
             obj_pk = value[key_attr]
             if obj_pk != strawberry.UNSET:
-                if key_attr == "id":
-                    obj_pk = int(obj_pk)
                 return model._default_manager.get(pk=obj_pk), value
         return None, value
 
