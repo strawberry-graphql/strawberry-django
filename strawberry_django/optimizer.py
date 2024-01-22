@@ -67,8 +67,8 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "OptimizerConfig",
     "DjangoOptimizerExtension",
+    "OptimizerConfig",
     "OptimizerStore",
     "PrefetchType",
     "optimize",

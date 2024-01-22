@@ -1,4 +1,4 @@
-from functools import _make_key
+from functools import _make_key  # noqa: PLC2701
 from typing import Callable, Dict, Hashable, Optional, Tuple, cast
 
 from django.core.cache import caches
