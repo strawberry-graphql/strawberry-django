@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ModelProperty",
-    "model_property",
     "model_cached_property",
+    "model_property",
 ]
 
 _M = TypeVar("_M", bound=Model)
