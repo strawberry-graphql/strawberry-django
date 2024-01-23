@@ -449,8 +449,8 @@ def resolve_model_field_type(
         field_type = getattr(model_field, "_strawberry_enum", None)
         if field_type is None:
             meta = model_field.model._meta
-            field_type = strawberry.enum(
-                enum.Enum(
+            field_type = strawberry.enum(  # type: ignore
+                enum.Enum(  # type: ignore
                     "".join(
                         (
                             capitalize_first(to_camel_case(meta.app_label)),
