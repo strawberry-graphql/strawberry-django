@@ -233,13 +233,18 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         if self.is_list:
             assert isinstance(data, list)
             return [
-                self.create(resolvers.parse_input(info, vars(d)), info=info)
+                self.create(
+                    resolvers.parse_input(info, vars(d), key_attr=self.key_attr),
+                    info=info,
+                )
                 for d in data
             ]
 
         assert not isinstance(data, list)
         return self.create(
-            resolvers.parse_input(info, vars(data)) if data is not None else {},
+            resolvers.parse_input(info, vars(data), key_attr=self.key_attr)
+            if data is not None
+            else {},
             info=info,
         )
 
@@ -253,6 +258,7 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
                 info,
                 model,
                 data,
+                key_attr=self.key_attr,
                 full_clean=self.full_clean,
             )
 
@@ -306,7 +312,9 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
                 info,
             )
 
-        return self.update(info, instance, resolvers.parse_input(info, vdata))
+        return self.update(
+            info, instance, resolvers.parse_input(info, vdata, key_attr=self.key_attr)
+        )
 
     def update(
         self,
@@ -320,6 +328,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
                 info,
                 instance,
                 data,
+                key_attr=self.key_attr,
                 full_clean=self.full_clean,
             )
 
@@ -365,7 +374,9 @@ class DjangoDeleteMutation(
                 info,
             )
 
-        return self.delete(info, instance, resolvers.parse_input(info, vdata))
+        return self.delete(
+            info, instance, resolvers.parse_input(info, vdata, key_attr=self.key_attr)
+        )
 
     def delete(
         self,

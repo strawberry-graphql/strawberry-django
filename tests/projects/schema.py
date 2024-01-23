@@ -498,6 +498,7 @@ class Mutation:
                 Quiz,
                 {"title": title},
                 full_clean={"exclude": ["sequence"]} if full_clean_options else True,
+                key_attr="id",
             ),
         )
 

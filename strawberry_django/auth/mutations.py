@@ -89,6 +89,7 @@ class DjangoRegisterMutation(DjangoCreateMutation):
                 info,
                 model,
                 data,
+                key_attr=self.key_attr,
                 full_clean=self.full_clean,
                 pre_save_hook=lambda obj: obj.set_password(password),
             )
