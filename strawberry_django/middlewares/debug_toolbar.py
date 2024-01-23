@@ -9,7 +9,7 @@ import weakref
 from typing import Optional
 
 from asgiref.sync import sync_to_async
-from debug_toolbar.middleware import _HTML_TYPES, get_show_toolbar
+from debug_toolbar.middleware import _HTML_TYPES, get_show_toolbar  # noqa: PLC2701
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
