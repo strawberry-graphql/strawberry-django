@@ -169,8 +169,7 @@ def _resolve_global_id(value: Any):
 
 
 def build_filter_kwargs(
-    filters: WithStrawberryObjectDefinition,
-    path="",
+    filters: WithStrawberryObjectDefinition, path="", is_lookup=False
 ) -> Tuple[Q, List[Callable]]:
     filter_kwargs = Q()
     filter_methods = []
@@ -248,10 +247,12 @@ def build_filter_kwargs(
             subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
                 cast(WithStrawberryObjectDefinition, field_value),
                 f"{path}{field_name}__",
+                is_lookup=isinstance(field_value, FilterLookup),
             )
             filter_kwargs &= subfield_filter_kwargs
             filter_methods.extend(subfield_filter_methods)
-        else:
+        elif not is_lookup or (field_value is not UNSET and field_value is not None):
+            # cannot use in set because field_value can be a list which is unhashable
             filter_kwarg = Q(**{f"{path}{field_name}": field_value})
             if negated:
                 filter_kwarg = ~filter_kwarg
