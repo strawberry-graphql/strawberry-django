@@ -3,10 +3,12 @@ from typing import List, Optional, cast
 
 import pytest
 import strawberry
+from django.test import override_settings
 from graphql import GraphQLError
 from strawberry import auto
 
 import strawberry_django
+from strawberry_django.settings import StrawberryDjangoSettings
 
 from . import models, utils
 
@@ -71,6 +73,16 @@ def query(db):
     return utils.generate_query(Query)
 
 
+@pytest.fixture()
+def query_id_as_pk(db):
+    with override_settings(
+        STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+            DEFAULT_PK_FIELD_NAME="id",
+        ),
+    ):
+        yield utils.generate_query(Query)
+
+
 pytestmark = [
     pytest.mark.django_db(transaction=True),
 ]
@@ -91,6 +103,27 @@ async def test_required_pk_single(query, users):
     assert isinstance(result.errors[0], GraphQLError)
     assert (
         result.errors[0].message == "Field 'user' argument 'pk' of type 'ID!' is "
+        "required, but it was not provided."
+    )
+
+
+async def test_id_as_pk_single(query_id_as_pk, users):
+    # Users are created for each test, it's impossible to know what will be the id of users in the database.
+    user_id = users[0].id
+    result = await query_id_as_pk(f"{{ user(id: {user_id}) {{ name }} }}")
+
+    assert not result.errors
+    assert result.data["user"] == {"name": users[0].name}
+
+
+async def test_required_id_as_pk_single(query_id_as_pk, users):
+    result = await query_id_as_pk("{ user { name } }")
+
+    assert bool(result.errors)
+    assert len(result.errors) == 1
+    assert isinstance(result.errors[0], GraphQLError)
+    assert (
+        result.errors[0].message == "Field 'user' argument 'id' of type 'ID!' is "
         "required, but it was not provided."
     )
 
