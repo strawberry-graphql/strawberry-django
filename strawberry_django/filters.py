@@ -169,7 +169,7 @@ def _resolve_global_id(value: Any):
 
 
 def build_filter_kwargs(
-    filters: WithStrawberryObjectDefinition,
+    filters: Type[WithStrawberryObjectDefinition],
     path="",
 ) -> Tuple[Q, List[Callable]]:
     filter_kwargs = Q()
