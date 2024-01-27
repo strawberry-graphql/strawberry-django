@@ -352,8 +352,10 @@ def create(
 
     # Now that the instance has been created, go and assign
     # files and many2many fields.
-    for file_field, value in files:
-        file_field.save_form_data(instance, value)
+    if files:
+        for file_field, value in files:
+            file_field.save_form_data(instance, value)
+        instance.save()
 
     for field, value in m2m:
         update_m2m(info, instance, field, value, key_attr)

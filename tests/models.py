@@ -41,6 +41,12 @@ class Fruit(models.Model):
         default=5,
         help_text="Level of sweetness, from 1 to 10",
     )
+    picture = models.ImageField(
+        null=True,
+        blank=True,
+        default=None,
+        upload_to=".tmp_upload",
+    )
 
     def name_upper(self):
         return self.name.upper()
