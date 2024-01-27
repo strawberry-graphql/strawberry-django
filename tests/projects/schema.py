@@ -197,6 +197,14 @@ class IssueType(relay.Node):
         strawberry_django.connection()
     )
 
+    @strawberry_django.field(select_related="milestone", only="milestone__name")
+    def milestone_name(self) -> str:
+        return self.milestone.name
+
+    @strawberry_django.field(select_related="milestone")
+    def milestone_name_without_only_optimization(self) -> str:
+        return self.milestone.name
+
 
 @strawberry_django.type(Tag)
 class TagType(relay.Node):

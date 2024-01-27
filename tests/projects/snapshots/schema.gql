@@ -256,6 +256,8 @@ type IssueType implements Node {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): FavoriteTypeConnection!
+  milestoneName: String!
+  milestoneNameWithoutOnlyOptimization: String!
 }
 
 """A connection to a list of items."""

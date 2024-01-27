@@ -892,3 +892,53 @@ def test_user_query_with_prefetch():
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_select_related_with_only(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        issue (id: $id) {
+          id
+          milestoneName
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue = IssueFactory.create(milestone=milestone)
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 2):
+        res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+
+    assert res.data == {
+        "issue": {
+            "id": to_base64("IssueType", issue.id),
+            "milestoneName": milestone.name,
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        issue (id: $id) {
+          id
+          milestoneNameWithoutOnlyOptimization
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue = IssueFactory.create(milestone=milestone)
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 2):
+        res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+
+    assert res.data == {
+        "issue": {
+            "id": to_base64("IssueType", issue.id),
+            "milestoneNameWithoutOnlyOptimization": milestone.name,
+        },
+    }
