@@ -18,6 +18,7 @@ from typing import (
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.db.models.fields.files import FileDescriptor
 from django.db.models.fields.related import (
     ForwardManyToOneDescriptor,
     ReverseManyToOneDescriptor,
@@ -202,7 +203,14 @@ class StrawberryDjangoField(
                     # Reversed OneToOne will raise ObjectDoesNotExist when
                     # trying to access it if the relation doesn't exist.
                     except_as_none=(ObjectDoesNotExist,) if self.is_optional else None,
+                    empty_file_descriptor_as_null=True,
                 )
+            else:
+                # FileField/ImageField will always return a FileDescriptor, even when the
+                # field is "null". If it is falsy (i.e. doesn't have a file) we should
+                # return `None` instead.
+                if isinstance(attr, FileDescriptor) and not result:
+                    result = None
 
         if is_awaitable:
 

@@ -1,9 +1,13 @@
+import io
 import textwrap
 from typing import List, Optional, cast
 
 import pytest
 import strawberry
+from asgiref.sync import sync_to_async
+from django.core.files.uploadedfile import SimpleUploadedFile
 from graphql import GraphQLError
+from PIL import Image
 from strawberry import auto
 
 import strawberry_django
@@ -29,6 +33,13 @@ class Group:
     id: auto
     name: auto
     users: List[User]
+
+
+@strawberry_django.type(models.Fruit)
+class Fruit:
+    id: auto
+    name: auto
+    picture: auto
 
 
 @strawberry_django.type(models.Fruit)
@@ -62,6 +73,7 @@ class Query:
     users: List[User] = strawberry_django.field()
     group: Group = strawberry_django.field()
     groups: List[Group] = strawberry_django.field()
+    fruit: Fruit = strawberry_django.field()
     berries: List[BerryFruit] = strawberry_django.field()
     bananas: List[BananaFruit] = strawberry_django.field()
 
@@ -153,6 +165,67 @@ async def test_model_properties(query, fruits):
         {"nameUpper": "STRAWBERRY", "nameLower": "strawberry"},
         {"nameUpper": "RASPBERRY", "nameLower": "raspberry"},
     ]
+
+
+async def test_query_file_field(query):
+    img_f = io.BytesIO()
+    img = Image.new(mode="RGB", size=(1, 1), color="red")
+    img.save(img_f, format="jpeg")
+    upload = SimpleUploadedFile("strawberry-picture.png", img_f.getvalue())
+    fruit = await sync_to_async(models.Fruit.objects.create)(
+        name="Strawberry",
+        picture=upload,
+    )
+
+    result = await query(
+        """\
+        query Fruit ($pk: ID!) {
+         fruit (pk: $pk) {
+           id
+           name
+           picture {
+             name
+           }
+         }
+        }
+        """,
+        {"pk": fruit.pk},
+    )
+
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruit"] == {
+        "id": str(fruit.pk),
+        "name": "Strawberry",
+        "picture": {"name": ".tmp_upload/strawberry-picture.png"},
+    }
+
+
+async def test_query_file_field_when_null(query):
+    fruit = await sync_to_async(models.Fruit.objects.create)(name="Strawberry")
+
+    result = await query(
+        """\
+        query Fruit ($pk: ID!) {
+         fruit (pk: $pk) {
+           id
+           name
+           picture {
+             name
+           }
+         }
+        }
+        """,
+        {"pk": fruit.pk},
+    )
+
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruit"] == {
+        "id": str(fruit.pk),
+        "name": "Strawberry",
+        "picture": None,
+    }
 
 
 def test_field_name():
