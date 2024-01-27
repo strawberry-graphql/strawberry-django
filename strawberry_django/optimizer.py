@@ -283,11 +283,21 @@ class OptimizerStore:
             # "lookup was already seen with a different queryset" error
             qs = qs.prefetch_related(None).prefetch_related(*to_prefetch.values())
 
+        only_set = set(self.only)
+        select_related_only_set = set()
+
         if config.enable_select_related and self.select_related:
             qs = qs.select_related(*self.select_related)
 
-        if config.enable_only and self.only:
-            qs = qs.only(*self.only)
+            for select_related in self.select_related:
+                if select_related in only_set:
+                    continue
+
+                if not any(only.startswith(select_related) for only in only_set):
+                    select_related_only_set.add(select_related)
+
+        if config.enable_only and only_set:
+            qs = qs.only(*(only_set | select_related_only_set))
 
         if config.enable_annotate and self.annotate:
             to_annotate = {}
