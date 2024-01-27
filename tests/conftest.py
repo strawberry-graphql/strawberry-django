@@ -1,4 +1,6 @@
 import contextlib
+import pathlib
+import shutil
 from typing import Dict, List, Tuple, Type, Union, cast
 
 import pytest
@@ -14,6 +16,17 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from tests.utils import GraphQLTestClient
 
 from . import models, types, utils
+
+_TESTS_DIR = pathlib.Path(__file__).parent
+_ROOT_DIR = _TESTS_DIR.parent
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup(request):
+    def cleanup_function():
+        shutil.rmtree(_ROOT_DIR / ".tmp_upload", ignore_errors=True)
+
+    request.addfinalizer(cleanup_function)  # noqa: PT021
 
 
 @pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])

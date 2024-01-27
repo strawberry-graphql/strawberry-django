@@ -1,5 +1,9 @@
+import io
+
 import pytest
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
 
 from tests import models
 from tests.utils import deep_tuple_to_list
@@ -14,6 +18,35 @@ def test_create(mutation):
     assert list(models.Fruit.objects.values("id", "name")) == [
         {"id": 1, "name": "strawberry"},
     ]
+
+
+def test_create_with_file(mutation):
+    img_f = io.BytesIO()
+    img = Image.new(mode="RGB", size=(1, 1), color="red")
+    img.save(img_f, format="jpeg")
+    upload = SimpleUploadedFile("test-picture.png", img_f.getvalue())
+
+    result = mutation(
+        """\
+        CreateFruit($picture: Upload!) {
+          createFruit(data: { name: "strawberry", picture: $picture }) {
+            id
+            name
+            picture {
+              name
+            }
+          }
+        }
+        """,
+        variable_values={"picture": upload},
+    )
+
+    assert not result.errors
+    assert result.data["createFruit"] == {
+        "id": "1",
+        "name": "strawberry",
+        "picture": {"name": ".tmp_upload/test-picture.png"},
+    }
 
 
 @pytest.mark.asyncio()

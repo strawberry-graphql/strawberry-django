@@ -16,6 +16,7 @@ class Fruit:
     name: auto
     color: Color | None
     types: List[FruitType]  # noqa: UP006
+    picture: auto
 
 
 @strawberry_django.type(models.Color)
