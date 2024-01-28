@@ -150,7 +150,7 @@ def test_without_filtering_by_using_null(query, fruits):
 
 
 def test_using_exact_with_null_triggers_warning(query, fruits):
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(UserWarning):
         result = query(
             "{ fruits(filters: { name: { exact: null, contains: null } }) { id name } }"
         )

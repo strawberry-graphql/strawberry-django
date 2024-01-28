@@ -262,7 +262,7 @@ def build_filter_kwargs(
         elif is_lookup and field_name.endswith("exact"):
             warnings.warn(
                 "exact can't be used with null anymore, use isnull",
-                DeprecationWarning,
+                UserWarning,
                 stacklevel=1,
             )
 
