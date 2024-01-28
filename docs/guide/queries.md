@@ -8,13 +8,13 @@ Queries can be written using `strawberry_django.field()` to load the fields defi
 import strawberry
 import strawberry_django
 
-from .types import Fruit
+from .types import FruitType
 
 @strawberry.type
 class Query:
 
-    fruit: Fruit = strawberry_django.field()
-    fruits: list[Fruit] = strawberry_django.field()
+    fruit: FruitType = strawberry_django.field()
+    fruits: list[FruitType] = strawberry_django.field()
 
 schema = strawberry.Schema(query=Query)
 ```
@@ -23,4 +23,4 @@ schema = strawberry.Schema(query=Query)
 
     You must name your query class "Query" or decorate it with `@strawberry.type(name="Query")` for the single query default primary filter to work
 
-For the single queries (like `Fruit` above), Strawberry comes with a default primary key search filter in the GraphiQL interface. The query `Fruits` gets all the objects in the Fruits by default. To query specific sets of objects a filter need to be added in the `types.py` file.
+For the single queries (like `fruit` above), Strawberry comes with a default primary key search filter in the GraphiQL interface. The query `fruits` gets all the objects in the Fruits by default. To query specific sets of objects a filter need to be added in the `types.py` file.
