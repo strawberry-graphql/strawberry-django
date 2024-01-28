@@ -1,5 +1,6 @@
 import functools
 import inspect
+import warnings
 from enum import Enum
 from types import FunctionType
 from typing import (
@@ -251,12 +252,19 @@ def build_filter_kwargs(
             )
             filter_kwargs &= subfield_filter_kwargs
             filter_methods.extend(subfield_filter_methods)
-        elif not is_lookup or (field_value is not UNSET and field_value is not None):
+        elif not is_lookup or field_value is not None:
+            assert field_value is not UNSET, "UNSET should have been filtered before"
             # cannot use in set because field_value can be a list which is unhashable
             filter_kwarg = Q(**{f"{path}{field_name}": field_value})
             if negated:
                 filter_kwarg = ~filter_kwarg
             filter_kwargs &= filter_kwarg
+        elif is_lookup and field_name.endswith("exact"):
+            warnings.warn(
+                "exact can't be used with null anymore, use isnull",
+                DeprecationWarning,
+                stacklevel=1,
+            )
 
     return filter_kwargs, filter_methods
 
