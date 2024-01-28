@@ -101,9 +101,40 @@ Now you can run your test-server like as usual, but with ASGI support:
 ./manage.py runserver
 ```
 
-## Creating your first subscription
+## Subscribing to your models
 
-Once you've taken care of those 2 setup steps, your first subscription is a breeze.
+The library has out-of-the-box support for your django models. This library when installed in your settings.INSTALLED_APPS will monitor all post_save signals and push the changes to your frontend through subscriptions.
+
+To make this functionality work, you want to declare every subscription you wish to expose.
+
+```python
+from strawberry_django.subscriptions.subscribers import Subscription, AsyncGenerator, Info,\
+    model_subscriber, subscription
+
+class Subscription:
+    @subscription
+    async def company(self, info: Info, pk: str) -> AsyncGenerator[FruitType, None]:
+        async for i in model_subscriber(info=info, pk=pk, model=Fruit):
+            yield i
+```
+
+Don't forget to replace `MyModel` and `MyModelType` by your Model and strawberry ModelType.
+
+That's is.
+You can now use this in the frontend much like a query:
+
+```graphql
+subscription {
+  fruit(pk: "Q29tcGFueVR5cGU6MTM=") {
+    id
+    colour
+  }
+}
+```
+
+## Creating custom subscriptions
+
+Once you've taken care of the first 2 setup steps, your can also create custom subscriptions.
 Go and edit your schema-file and add:
 
 ```python
