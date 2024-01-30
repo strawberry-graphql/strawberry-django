@@ -33,8 +33,8 @@ class FruitType:
     fruits: List[Fruit]  # noqa: UP006
 
 
-@strawberry_django.type(models.FruitWithRequiredPicture, fields="__all__")
-class FruitWithRequiredPictureType:
+@strawberry_django.type(models.TomatoWithRequiredPicture, fields="__all__")
+class TomatoWithRequiredPictureType:
     pass
 
 
@@ -64,8 +64,8 @@ class FruitInput(Fruit):
     types: List[FruitTypeInput] | None  # type: ignore  # noqa: UP006
 
 
-@strawberry_django.input(models.FruitWithRequiredPicture)
-class FruitWithRequiredPictureInput:
+@strawberry_django.input(models.TomatoWithRequiredPicture)
+class TomatoWithRequiredPictureInput:
     id: auto
     name: auto
 
@@ -85,8 +85,8 @@ class FruitPartialInput(FruitInput):
     types: List[FruitTypePartialInput] | None  # type: ignore  # noqa: UP006
 
 
-@strawberry_django.partial(models.FruitWithRequiredPicture)
-class FruitWithRequiredPicturePartialInput(FruitWithRequiredPictureType):
+@strawberry_django.partial(models.TomatoWithRequiredPicture, fields="__all__")
+class TomatoWithRequiredPicturePartialInput(TomatoWithRequiredPictureType):
     pass
 
 

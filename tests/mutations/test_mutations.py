@@ -29,7 +29,7 @@ def test_create(mutation):
 
 
 def test_create_with_optional_file(mutation):
-    fname = "test_create_with_optional_file.png"
+    fname = "test_create_with_optional_fileb.png"
     upload = prep_image(fname)
     result = mutation(
         """\
@@ -60,8 +60,8 @@ def test_with_required_file_fails(mutation):
     # method on the create to trigger validation errors.
     result = mutation(
         """\
-        createFruitWithRequiredPicture {
-          createFruitWithRequiredPicture(data: {name: "strawberry"}) {
+        createTomatoWithRequiredPicture {
+          createTomatoWithRequiredPicture(data: {name: "strawberry"}) {
             id
             name
             picture {

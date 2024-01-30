@@ -20,9 +20,9 @@ from tests.types import (
     FruitType,
     FruitTypeInput,
     FruitTypePartialInput,
-    FruitWithRequiredPictureInput,
-    FruitWithRequiredPicturePartialInput,
-    FruitWithRequiredPictureType,
+    TomatoWithRequiredPictureInput,
+    TomatoWithRequiredPicturePartialInput,
+    TomatoWithRequiredPictureType,
 )
 
 
@@ -39,11 +39,11 @@ class Mutation:
     update_fruits: List[Fruit] = mutations.update(
         FruitPartialInput, filters=FruitFilter, key_attr="id"
     )
-    create_fruit_with_required_picture: FruitWithRequiredPictureType = mutations.create(
-        FruitWithRequiredPictureInput
+    create_tomato_with_required_picture: TomatoWithRequiredPictureType = (
+        mutations.create(TomatoWithRequiredPictureInput)
     )
-    update_fruit_with_required_picture: FruitWithRequiredPictureType = mutations.update(
-        FruitWithRequiredPicturePartialInput
+    update_tomato_with_required_picture: TomatoWithRequiredPictureType = (
+        mutations.update(TomatoWithRequiredPicturePartialInput)
     )
 
     @strawberry_django.mutation
