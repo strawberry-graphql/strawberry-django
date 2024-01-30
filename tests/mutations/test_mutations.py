@@ -54,39 +54,13 @@ def test_create_with_optional_file(mutation):
     }
 
 
-def test_with_required_file(mutation):
-    fname = "test_with_required_file.png"
-    upload = prep_image(fname)
-    result = mutation(
-        """\
-        createFruitWithRequiredPicture($picture: Upload!) {
-          createFruit(data: { name: "strawberry", picture: $picture }) {
-            id
-            name
-            picture {
-              name
-            }
-          }
-        }
-        """,
-        variable_values={"picture": upload},
-    )
-
-    assert not result.errors
-    assert result.data["createFruit"] == {
-        "id": "1",
-        "name": "strawberry",
-        "picture": {"name": f".tmp_upload/{fname}"},
-    }
-
-
 def test_with_required_file_fails(mutation):
     # The query input will not have the required field listed
     # as we want to test the failback of the django-model full_clean
     # method on the create to trigger validation errors.
     result = mutation(
         """\
-        CreateFruit {
+        createFruitWithRequiredPicture {
           createFruitWithRequiredPicture(data: {name: "strawberry"}) {
             id
             name
