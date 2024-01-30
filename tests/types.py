@@ -33,6 +33,11 @@ class FruitType:
     fruits: List[Fruit]  # noqa: UP006
 
 
+@strawberry_django.type(models.FruitWithRequiredPicture, fields="__all__")
+class FruitWithRequiredPictureType:
+    pass
+
+
 if settings.GEOS_IMPORTED:
 
     @strawberry_django.type(models.GeosFieldsModel)
@@ -59,6 +64,11 @@ class FruitInput(Fruit):
     types: List[FruitTypeInput] | None  # type: ignore  # noqa: UP006
 
 
+@strawberry_django.input(models.FruitWithRequiredPicture, fields="__all__")
+class FruitWithRequiredPictureInput(FruitWithRequiredPictureType):
+    pass
+
+
 @strawberry_django.input(models.Color)
 class ColorInput(Color):
     pass
@@ -72,6 +82,11 @@ class FruitTypeInput(FruitType):
 @strawberry_django.input(models.Fruit, partial=True)
 class FruitPartialInput(FruitInput):
     types: List[FruitTypePartialInput] | None  # type: ignore  # noqa: UP006
+
+
+@strawberry_django.partial(models.FruitWithRequiredPicture)
+class FruitWithRequiredPicturePartialInput(FruitWithRequiredPictureType):
+    pass
 
 
 @strawberry_django.input(models.Color, partial=True)

@@ -338,6 +338,11 @@ def create(
         full_clean=full_clean,
         key_attr=key_attr,
     )
+    # Don't forget to add the files to the dummy_instance
+    # without saving to ensure it will also trigger
+    # in the full_clean method
+    for file_field, value in files:
+        file_field.save_form_data(dummy_instance, value)
 
     # Creating the instance directly via create() without full-clean will
     # raise ugly error messages. To generate user-friendly ones, we want

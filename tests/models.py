@@ -26,7 +26,7 @@ class Vegetable(NameDescriptionMixin):
     world_production = models.FloatField()
 
 
-class Fruit(models.Model):
+class FruitAbstract(models.Model):
     name = models.CharField(max_length=20)
     color_id: Optional[int]
     color = models.ForeignKey(
@@ -58,6 +58,21 @@ class Fruit(models.Model):
     @model_property
     def name_length(self) -> int:
         return len(self.name)
+
+    class Meta:
+        abstract = True
+
+
+class Fruit(FruitAbstract):
+    pass
+
+
+class FruitWithRequiredPicture(models.Model):
+    picture = models.ImageField(
+        null=False,
+        blank=False,
+        upload_to=".tmp_upload",
+    )
 
 
 class Color(models.Model):
