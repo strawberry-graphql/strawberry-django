@@ -244,6 +244,15 @@ def build_filter_kwargs(
             ):
                 continue
 
+        if is_lookup and field_name.endswith("exact"):
+            warnings.warn(
+                "exact can't be used with null anymore (will be ignored), use isnull",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+            # a bit hacky but is just for a deprecation
+            is_lookup = False
+
         if has_object_definition(field_value):
             subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
                 cast(WithStrawberryObjectDefinition, field_value),
@@ -259,12 +268,6 @@ def build_filter_kwargs(
             if negated:
                 filter_kwarg = ~filter_kwarg
             filter_kwargs &= filter_kwarg
-        elif is_lookup and field_name.endswith("exact"):
-            warnings.warn(
-                "exact can't be used with null anymore, use isnull",
-                UserWarning,
-                stacklevel=1,
-            )
 
     return filter_kwargs, filter_methods
 
