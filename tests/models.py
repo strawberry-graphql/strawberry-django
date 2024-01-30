@@ -67,7 +67,7 @@ class Fruit(FruitAbstract):
     pass
 
 
-class FruitWithRequiredPicture(models.Model):
+class FruitWithRequiredPicture(FruitAbstract):
     picture = models.ImageField(
         null=False,
         blank=False,

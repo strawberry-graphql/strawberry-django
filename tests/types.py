@@ -64,9 +64,10 @@ class FruitInput(Fruit):
     types: List[FruitTypeInput] | None  # type: ignore  # noqa: UP006
 
 
-@strawberry_django.input(models.FruitWithRequiredPicture, fields="__all__")
-class FruitWithRequiredPictureInput(FruitWithRequiredPictureType):
-    pass
+@strawberry_django.input(models.FruitWithRequiredPicture)
+class FruitWithRequiredPictureInput:
+    id: auto
+    name: auto
 
 
 @strawberry_django.input(models.Color)

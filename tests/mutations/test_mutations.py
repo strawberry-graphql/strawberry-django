@@ -59,7 +59,7 @@ def test_with_required_file(mutation):
     upload = prep_image(fname)
     result = mutation(
         """\
-        CreateFruit($picture: Upload!) {
+        createFruitWithRequiredPicture($picture: Upload!) {
           createFruit(data: { name: "strawberry", picture: $picture }) {
             id
             name
@@ -81,10 +81,13 @@ def test_with_required_file(mutation):
 
 
 def test_with_required_file_fails(mutation):
+    # The query input will not have the required field listed
+    # as we want to test the failback of the django-model full_clean
+    # method on the create to trigger validation errors.
     result = mutation(
         """\
-        CreateFruit($picture: Upload!) {
-          createFruit(data: { name: "strawberry"}) {
+        CreateFruit {
+          createFruitWithRequiredPicture(data: {name: "strawberry"}) {
             id
             name
             picture {
@@ -97,6 +100,7 @@ def test_with_required_file_fails(mutation):
     )
 
     assert result.errors is not None
+    assert "'This field cannot be blank" in str(result.errors)
 
 
 @pytest.mark.asyncio()
