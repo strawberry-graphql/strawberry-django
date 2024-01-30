@@ -253,8 +253,8 @@ def build_filter_kwargs(
             filter_kwargs &= subfield_filter_kwargs
             filter_methods.extend(subfield_filter_methods)
         elif not is_lookup or field_value is not None:
-            assert field_value is not UNSET, "UNSET should have been filtered before"
             # cannot use in set because field_value can be a list which is unhashable
+            assert field_value is not UNSET, "UNSET should have been filtered before"
             filter_kwarg = Q(**{f"{path}{field_name}": field_value})
             if negated:
                 filter_kwarg = ~filter_kwarg
