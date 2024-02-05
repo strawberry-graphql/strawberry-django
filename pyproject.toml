@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
 packages = [{ include = "strawberry_django" }]
-version = "0.30.0"
+version = "0.28.4"
 description = "Strawberry GraphQL Django extension"
 authors = [
   "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
@@ -35,37 +35,35 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4.0"
-Django = ">=3.2"
-strawberry-graphql = ">=0.212.0"
-django-debug-toolbar = { version = ">=3.4", optional = true }
+django = ">=3.2"
 django-choices-field = { version = ">=2.2.2", optional = true }
+django-debug-toolbar = { version = ">=3.4", optional = true }
+strawberry-graphql = ">=0.212.0"
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^3.3.3"
-pytest = "^7.1.2"
-pytest-asyncio = "^0.23.2"
-pytest-django = "^4.1.0"
-pytest-pythonpath = "^0.7.3"
-pytest-watch = "^4.2.0"
-pytest-mock = "^3.5.1"
-pytest-snapshot = "^0.9.0"
-pytest-cov = "^4.0.0"
-django-debug-toolbar = "^4.2.0"
+Markdown = "^3.3.7"
+Pygments = "^2.15.1"
+channels = { version = ">=3.0.5" }
 django-choices-field = "^2.2.2"
+django-debug-toolbar = "^4.2.0"
+django-guardian = "^2.4.0"
+django-types = "^0.19.1"
+factory-boy = "^3.2.1"
 mkdocs = "^1.4.2"
 mkdocs-markdownextradata-plugin = "^0.2.5"
 mkdocs-material = "^9.4.0"
-mkdocs-minify-plugin = "^0.7.1"
-pymdown-extensions = "^10.0.1"
+mkdocs-minify-plugin = "^0.8.0"
 mkdocstrings = { version = "^0.24.0", extras = ["python"] }
-ruff = "^0.1.14"
-django-types = "^0.19.1"
-Markdown = "^3.3.7"
-Pygments = "^2.15.1"
-factory-boy = "^3.2.1"
-django-guardian = "^2.4.0"
-channels = { version = ">=3.0.5" }
 pillow = "^10.2.0"
+pymdown-extensions = "^10.0.1"
+pytest = "^7.1.2"
+pytest-asyncio = "^0.23.4"
+pytest-cov = "^4.0.0"
+pytest-django = "^4.1.0"
+pytest-mock = "^3.5.1"
+pytest-snapshot = "^0.9.0"
+pytest-watch = "^4.2.0"
+ruff = "^0.2.0"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]
@@ -78,7 +76,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 target-version = "py38"
 preview = true
-select = [
+
+[tool.ruff.lint]
+extend-select = [
   "A",
   "ASYNC100",
   "ASYNC101",
@@ -126,7 +126,7 @@ select = [
   "W",
   "YTT",
 ]
-ignore = [
+extend-ignore = [
   "D1",
   "D203",
   "D213",
@@ -154,7 +154,7 @@ ignore = [
   "W191",
 ]
 # FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
-unfixable = ["UP006"]
+extend-unfixable = ["UP006"]
 exclude = [
   ".eggs",
   ".git",
@@ -169,12 +169,15 @@ exclude = [
   "dist",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["A003", "PLW0603", "PLR2004"]
 "examples/*" = ["A003"]
 "**/migrations/*" = ["RUF012"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.pylint]
+max-nested-blocks = 7
+
+[tool.ruff.lint.isort]
 
 [tool.ruff.format]
 
