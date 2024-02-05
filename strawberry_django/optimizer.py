@@ -196,7 +196,7 @@ class OptimizerStore:
                 assert_type(p, PrefetchCallable)
                 p = p(info)  # noqa: PLW2901
 
-            if isinstance(p, Prefetch) and p.queryset is not None and p.to_attr is not None:
+            if isinstance(p, Prefetch) and p.to_attr is not None:
                 custom_prefetches.append(p)
         return custom_prefetches
 
@@ -630,9 +630,11 @@ def _get_model_hints(
 
                         if custom_prefetches:
                             for prefetch in custom_prefetches:
-                                f_qs = f_store.apply(
-                                    prefetch.queryset, info=info, config=config
-                                )
+                                if prefetch.queryset is not None:
+                                    p_qs = prefetch.queryset
+                                else:
+                                    p_qs = _get_prefetch_queryset(remote_model, field, config, info)
+                                f_qs = f_store.apply(p_qs, info=info, config=config)
                                 f_prefetch = Prefetch(prefetch.prefetch_through, f_qs, prefetch.to_attr)
                                 if prefix:
                                     f_prefetch.add_prefix(prefix)
