@@ -535,6 +535,51 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_with_to_attr(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        projectList {
+          id
+          nextMilestones {
+            id
+            name
+            project {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    expected = []
+    for p in ProjectFactory.create_batch(2):
+        p_res: dict[str, Any] = {
+            "id": to_base64("ProjectType", p.id),
+            "nextMilestones": [],
+        }
+        expected.append(p_res)
+        milestones = MilestoneFactory.create_batch(2, project=p)
+        milestones.sort(key=lambda ms: ms.due_date)
+        for m in milestones:
+            m_res: dict[str, Any] = {
+                "id": to_base64("MilestoneType", m.id),
+                "name": m.name,
+                "project": {
+                    "id": p_res["id"],
+                    "name": p.name,
+                },
+            }
+            p_res["nextMilestones"].append(m_res)
+
+    assert len(expected) == 2
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query)
+    assert res.data == {"projectList": expected}
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery {
