@@ -496,7 +496,7 @@ def _get_model_hints(
         if model_attr is not None and isinstance(model_attr, ModelProperty):
             attr_store = model_attr.store
             store |= attr_store.with_prefix(prefix, info=info) if prefix else attr_store
-            attr_store_prefetches = attr_store.get_custom_prefetches()
+            attr_store_prefetches = attr_store.get_custom_prefetches(info)
             if attr_store_prefetches:
                 custom_prefetches.extend(attr_store_prefetches)
 

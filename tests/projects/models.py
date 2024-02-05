@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Annotated
 
+import strawberry
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Count, QuerySet
+from django.db.models import Count, QuerySet, Prefetch
 from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
 
@@ -53,6 +54,22 @@ class Project(models.Model):
     @model_property(annotate={"_milestone_count": Count("milestone")})
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
+
+    @model_property(
+        prefetch_related=lambda _: Prefetch(
+            "milestones",
+            to_attr="next_milestones_prop_pf",
+            queryset=Milestone.objects.filter(due_date__isnull=False).order_by("due_date")
+        )
+    )
+    def next_milestones_property(self) -> list[Annotated['MilestoneType', strawberry.lazy('.schema')]]:
+        """
+        The milestones for the project ordered by their due date
+        """
+        if hasattr(self, 'next_milestones_prop_pf'):
+            return self.next_milestones_prop_pf
+        else:
+            return self.milestones.filter(due_date__isnull=False).order_by("due_date")
 
 
 class Milestone(models.Model):

@@ -103,6 +103,8 @@ class ProjectType(relay.Node):
     cost: strawberry.auto = strawberry_django.field(extensions=[IsAuthenticated()])
     is_small: strawberry.auto
 
+    next_milestones_property: strawberry.auto
+
     @strawberry_django.field(
         prefetch_related=lambda _: Prefetch(
             "milestones",
