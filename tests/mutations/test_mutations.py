@@ -9,6 +9,14 @@ from tests import models
 from tests.utils import deep_tuple_to_list
 
 
+def prep_image(fname):
+    """Return an SimpleUploadedFile."""
+    img_f = io.BytesIO()
+    img = Image.new(mode="RGB", size=(1, 1), color="red")
+    img.save(img_f, format="jpeg")
+    return SimpleUploadedFile(fname, img_f.getvalue())
+
+
 def test_create(mutation):
     result = mutation(
         '{ fruit: createFruit(data: { name: "strawberry" }) { id name } }',
@@ -20,12 +28,9 @@ def test_create(mutation):
     ]
 
 
-def test_create_with_file(mutation):
-    img_f = io.BytesIO()
-    img = Image.new(mode="RGB", size=(1, 1), color="red")
-    img.save(img_f, format="jpeg")
-    upload = SimpleUploadedFile("test-picture.png", img_f.getvalue())
-
+def test_create_with_optional_file(mutation):
+    fname = "test_create_with_optional_fileb.png"
+    upload = prep_image(fname)
     result = mutation(
         """\
         CreateFruit($picture: Upload!) {
@@ -45,8 +50,31 @@ def test_create_with_file(mutation):
     assert result.data["createFruit"] == {
         "id": "1",
         "name": "strawberry",
-        "picture": {"name": ".tmp_upload/test-picture.png"},
+        "picture": {"name": f".tmp_upload/{fname}"},
     }
+
+
+def test_with_required_file_fails(mutation):
+    # The query input will not have the required field listed
+    # as we want to test the failback of the django-model full_clean
+    # method on the create to trigger validation errors.
+    result = mutation(
+        """\
+        createTomatoWithRequiredPicture {
+          createTomatoWithRequiredPicture(data: {name: "strawberry"}) {
+            id
+            name
+            picture {
+              name
+            }
+          }
+        }
+        """,
+        variable_values={},
+    )
+
+    assert result.errors is not None
+    assert "'This field cannot be blank" in str(result.errors)
 
 
 @pytest.mark.asyncio()

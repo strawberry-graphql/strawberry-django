@@ -60,6 +60,15 @@ class Fruit(models.Model):
         return len(self.name)
 
 
+class TomatoWithRequiredPicture(models.Model):
+    name = models.CharField(max_length=20)
+    picture = models.ImageField(
+        null=False,
+        blank=False,
+        upload_to=".tmp_upload",
+    )
+
+
 class Color(models.Model):
     fruits: "RelatedManager[Fruit]"
     name = models.CharField(max_length=20)
