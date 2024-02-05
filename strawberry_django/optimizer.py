@@ -526,7 +526,9 @@ def _get_model_hints(
         if model_field is not None:
             path = f"{prefix}{model_fieldname}"
 
-            if not custom_prefetches and isinstance(model_field, (models.ForeignKey, OneToOneRel)):
+            if not custom_prefetches and isinstance(
+                model_field, (models.ForeignKey, OneToOneRel)
+            ):
                 # only select_related if there is no custom prefetch
                 store.only.append(path)
                 store.select_related.append(path)
@@ -554,7 +556,11 @@ def _get_model_hints(
                     if f_store is not None:
                         cache.setdefault(f_model, []).append((level, f_store))
                         store |= f_store.with_prefix(path, info=info)
-            elif not custom_prefetches and GenericForeignKey and isinstance(model_field, GenericForeignKey):
+            elif (
+                not custom_prefetches
+                and GenericForeignKey
+                and isinstance(model_field, GenericForeignKey)
+            ):
                 # There's not much we can do to optimize generic foreign keys regarding
                 # only/select_related because they can be anything.
                 # Just prefetch_related them
@@ -633,9 +639,13 @@ def _get_model_hints(
                                 if prefetch.queryset is not None:
                                     p_qs = prefetch.queryset
                                 else:
-                                    p_qs = _get_prefetch_queryset(remote_model, field, config, info)
+                                    p_qs = _get_prefetch_queryset(
+                                        remote_model, field, config, info
+                                    )
                                 f_qs = f_store.apply(p_qs, info=info, config=config)
-                                f_prefetch = Prefetch(prefetch.prefetch_through, f_qs, prefetch.to_attr)
+                                f_prefetch = Prefetch(
+                                    prefetch.prefetch_through, f_qs, prefetch.to_attr
+                                )
                                 if prefix:
                                     f_prefetch.add_prefix(prefix)
                                 f_prefetch._optimizer_sentinel = _sentinel  # type: ignore

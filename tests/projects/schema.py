@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import decimal
-from typing import Iterable, List, Optional, Type, cast, Union
+from typing import Iterable, List, Optional, Type, Union, cast
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -109,17 +109,17 @@ class ProjectType(relay.Node):
         prefetch_related=lambda _: Prefetch(
             "milestones",
             to_attr="next_milestones_pf",
-            queryset=Milestone.objects.filter(due_date__isnull=False).order_by("due_date")
+            queryset=Milestone.objects.filter(due_date__isnull=False).order_by(
+                "due_date"
+            ),
         )
     )
     def next_milestones(self) -> "list[MilestoneType]":
+        """The milestones for the project ordered by their due date
         """
-        The milestones for the project ordered by their due date
-        """
-        if hasattr(self, 'next_milestones_pf'):
+        if hasattr(self, "next_milestones_pf"):
             return self.next_milestones_pf
-        else:
-            return self.milestones.filter(due_date__isnull=False).order_by("due_date")
+        return self.milestones.filter(due_date__isnull=False).order_by("due_date")
 
 
 @strawberry_django.filter(Milestone, lookups=True)
@@ -314,7 +314,9 @@ class ProjectConnection(ListConnectionWithTotalCount[ProjectType]):
     """Project connection documentation."""
 
 
-ProjectFeedItem = Annotated[Union[IssueType, MilestoneType], strawberry.union('ProjectFeedItem')]
+ProjectFeedItem = Annotated[
+    Union[IssueType, MilestoneType], strawberry.union("ProjectFeedItem")
+]
 
 
 @strawberry.type
