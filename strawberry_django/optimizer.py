@@ -695,7 +695,9 @@ def optimize(
                 interface_definitions = []
                 for t in schema.schema_converter.type_map.values():
                     t_definition = t.definition
-                    if isinstance(t_definition, StrawberryObjectDefinition) and issubclass(t_definition.origin, object_definition.origin):
+                    if isinstance(
+                        t_definition, StrawberryObjectDefinition
+                    ) and issubclass(t_definition.origin, object_definition.origin):
                         interface_definitions.append(t_definition)
                 _interfaces[schema][object_definition] = interface_definitions
 
