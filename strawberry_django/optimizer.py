@@ -690,21 +690,20 @@ def optimize(
 
     for object_definition in get_possible_type_definitions(strawberry_type):
         if object_definition.is_interface:
-            object_definitions = _interfaces[schema].get(object_definition)
-            if object_definitions is None:
-                object_definitions = []
-
+            interface_definitions = _interfaces[schema].get(object_definition)
+            if interface_definitions is None:
+                interface_definitions = []
                 for t in schema.schema_converter.type_map.values():
                     t_definition = t.definition
-                    if not isinstance(t_definition, StrawberryObjectDefinition):
-                        continue
+                    if isinstance(t_definition, StrawberryObjectDefinition) and issubclass(t_definition.origin, object_definition.origin):
+                        interface_definitions.append(t_definition)
+                _interfaces[schema][object_definition] = interface_definitions
 
-                    if issubclass(t_definition.origin, object_definition.origin):
-                        dj_definition = get_django_definition(t_definition.origin)
-                        if dj_definition and issubclass(qs.model, dj_definition.model):
-                            object_definitions.append(t_definition)
-
-                _interfaces[schema][object_definition] = object_definitions
+            object_definitions = []
+            for interface_definition in interface_definitions:
+                dj_definition = get_django_definition(interface_definition.origin)
+                if dj_definition and issubclass(qs.model, dj_definition.model):
+                    object_definitions.append(interface_definition)
         else:
             object_definitions = [object_definition]
 
