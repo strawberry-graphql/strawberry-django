@@ -32,4 +32,4 @@ import strawberry.django
 
 ## Example project?
 
-See complete Django project from github repository folder [examples/django](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django).
+See complete Django project from github repository folder [examples/django](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/django).

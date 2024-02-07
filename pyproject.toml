@@ -8,8 +8,8 @@ authors = [
   "Thiago Bellini Ribeiro <thiago@bellini.dev>",
 ]
 maintainers = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
-repository = "https://github.com/strawberry-graphql/strawberry-graphql-django"
-documentation = "https://strawberry-graphql.github.io/strawberry-graphql-django"
+repository = "https://github.com/strawberry-graphql/strawberry-django"
+documentation = "https://strawberry-graphql.github.io/strawberry-django"
 license = "MIT"
 readme = "README.md"
 keywords = ["graphql", "api", "django", "strawberry-graphql"]
