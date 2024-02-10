@@ -1,4 +1,4 @@
-from . import auth, filters, mutations, ordering, relay
+from . import auth, filters, mutations, ordering, pagination, relay
 from .fields.field import connection, field, node
 from .fields.types import (
     DjangoFileType,
@@ -15,7 +15,6 @@ from .fields.types import (
 from .filters import filter
 from .mutations.mutations import input_mutation, mutation
 from .ordering import order
-from .pagination import OffsetPaginationInput, apply
 from .resolvers import django_resolver
 from .type import input, interface, partial, type
 
@@ -28,10 +27,8 @@ __all__ = [
     "ManyToOneInput",
     "NodeInput",
     "NodeInputPartial",
-    "OffsetPaginationInput",
     "OneToManyInput",
     "OneToOneInput",
-    "apply",
     "auth",
     "connection",
     "django_resolver",
@@ -46,6 +43,7 @@ __all__ = [
     "node",
     "order",
     "ordering",
+    "pagination",
     "partial",
     "relay",
     "type",
