@@ -1,12 +1,22 @@
 from typing import Optional
 
+import pytest
 import strawberry
 from strawberry import auto
 from strawberry.type import StrawberryOptional, get_object_definition
 
 import strawberry_django
 from strawberry_django.filters import DjangoModelFilterInput
+from strawberry_django.settings import strawberry_django_settings
 from tests import models
+
+
+@pytest.fixture(autouse=True)
+def _filter_order_settings(settings):
+    settings.STRAWBERRY_DJANGO = {
+        **strawberry_django_settings(),
+        "USE_DEPRECATED_FILTERS": True,
+    }
 
 
 def test_filter():
@@ -26,6 +36,7 @@ def test_filter():
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
         ("NOT", StrawberryOptional(Filter)),
+        ("DISTINCT", StrawberryOptional(bool)),
     ]
 
 
@@ -49,6 +60,7 @@ def test_lookups():
         ("AND", "Filter"),
         ("OR", "Filter"),
         ("NOT", "Filter"),
+        ("DISTINCT", "bool"),
     ]
 
 
@@ -73,6 +85,7 @@ def test_inherit(testtype):
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
         ("NOT", StrawberryOptional(Filter)),
+        ("DISTINCT", StrawberryOptional(bool)),
     ]
 
 
@@ -91,6 +104,7 @@ def test_relationship():
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
         ("NOT", StrawberryOptional(Filter)),
+        ("DISTINCT", StrawberryOptional(bool)),
     ]
 
 
@@ -113,4 +127,5 @@ def test_relationship_with_inheritance():
         ("AND", StrawberryOptional(Filter)),
         ("OR", StrawberryOptional(Filter)),
         ("NOT", StrawberryOptional(Filter)),
+        ("DISTINCT", StrawberryOptional(bool)),
     ]

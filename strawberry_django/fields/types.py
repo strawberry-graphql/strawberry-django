@@ -413,6 +413,8 @@ def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoDefinition",
 ):
+    from . import filter_types
+
     settings = django_settings()
 
     # Django choices field
@@ -509,12 +511,18 @@ def resolve_model_field_type(
         )
 
     # TODO: could this be moved into filters.py
+    using_old_filters = settings["USE_DEPRECATED_FILTERS"]
     if (
         django_type.is_filter == "lookups"
         and not model_field.is_relation
-        and field_type is not bool
+        and (field_type is not bool or not using_old_filters)
     ):
-        field_type = filters.FilterLookup[field_type]
+        if using_old_filters:
+            field_type = filters.FilterLookup[field_type]
+        else:
+            field_type = filter_types.type_filter_map.get(
+                field_type, filter_types.FilterLookup
+            )[field_type]
 
     return field_type
 
