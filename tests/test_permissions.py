@@ -768,6 +768,60 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                 ],
             }
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", perm_kinds)
+def test_list_obj_perm_required_paginated(db, gql_client: GraphQLTestClient, kind: PermKind):
+    query = """
+    query Issue {
+        issueListObjPermRequiredPaginated(pagination: {limit: 10, offset: 0}) {
+          id
+          name
+        }
+      }
+    """
+    IssueFactory.create()
+    issue_with_perm = IssueFactory.create()
+
+    user = UserFactory.create()
+
+    if kind == "user":
+        user_with_perm = UserFactory.create()
+        assign_perm("view_issue", user_with_perm, issue_with_perm)
+    elif kind == "group":
+        user_with_perm = UserFactory.create()
+        group = GroupFactory.create()
+        assign_perm("view_issue", group, issue_with_perm)
+        user_with_perm.groups.add(group)
+    elif kind == "superuser":
+        user_with_perm = SuperuserUserFactory.create()
+    else:  # pragma:nocover
+        raise AssertionError
+
+    res = gql_client.query(query)
+    assert res.data == {"issueListObjPermRequiredPaginated": []}
+
+    with gql_client.login(user):
+        res = gql_client.query(query)
+        assert res.data == {"issueListObjPermRequiredPaginated": []}
+
+    if kind == "superuser":
+        # Even though the user is a superuser, he doesn't have the permission
+        # assigned directly to him for the listing.
+        with gql_client.login(user_with_perm):
+            res = gql_client.query(query)
+            assert res.data == {"issueListObjPermRequiredPaginated": []}
+    else:
+        with gql_client.login(user_with_perm):
+            res = gql_client.query(query)
+            assert res.data == {
+                "issueListObjPermRequiredPaginated": [
+                    {
+                        "id": to_base64("IssueType", issue_with_perm.pk),
+                        "name": issue_with_perm.name,
+                    },
+                ],
+            }
+
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("kind", perm_kinds)
