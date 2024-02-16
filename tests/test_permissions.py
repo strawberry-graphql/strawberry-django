@@ -768,9 +768,12 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                 ],
             }
 
+
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("kind", perm_kinds)
-def test_list_obj_perm_required_paginated(db, gql_client: GraphQLTestClient, kind: PermKind):
+def test_list_obj_perm_required_paginated(
+    db, gql_client: GraphQLTestClient, kind: PermKind
+):
     query = """
     query Issue {
         issueListObjPermRequiredPaginated(pagination: {limit: 10, offset: 0}) {
