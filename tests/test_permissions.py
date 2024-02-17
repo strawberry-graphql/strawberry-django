@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth.models import Permission
 from guardian.shortcuts import assign_perm
 from strawberry.relay import to_base64
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import Literal, TypeAlias, assert_never
 
 from .projects.faker import (
     GroupFactory,
@@ -740,8 +740,8 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
         user_with_perm.groups.add(group)
     elif kind == "superuser":
         user_with_perm = SuperuserUserFactory.create()
-    else:  # pragma:nocover
-        raise AssertionError
+    else:
+        assert_never(kind)
 
     res = gql_client.query(query)
     assert res.data == {"issueListObjPermRequired": []}
@@ -767,6 +767,53 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                     },
                 ],
             }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_list_obj_perm_required_with_pagination(
+    db,
+    gql_client: GraphQLTestClient,
+):
+    query = """
+    query Issue ($pagination: OffsetPaginationInput) {
+        issueListObjPermRequired(pagination: $pagination) {
+          id
+          name
+        }
+      }
+    """
+    IssueFactory.create()
+    issues_with_perm = IssueFactory.create_batch(5)
+
+    user = UserFactory.create()
+    user_with_perm = UserFactory.create()
+    for issue in issues_with_perm:
+        assign_perm("view_issue", user_with_perm, issue)
+
+    res = gql_client.query(query, variables={"pagination": {"offset": 1, "limit": 2}})
+    assert res.data == {"issueListObjPermRequired": []}
+
+    with gql_client.login(user):
+        res = gql_client.query(
+            query,
+            variables={"pagination": {"offset": 1, "limit": 2}},
+        )
+        assert res.data == {"issueListObjPermRequired": []}
+
+    with gql_client.login(user_with_perm):
+        res = gql_client.query(
+            query,
+            variables={"pagination": {"offset": 1, "limit": 2}},
+        )
+        assert res.data == {
+            "issueListObjPermRequired": [
+                {
+                    "id": to_base64("IssueType", issue.pk),
+                    "name": issue.name,
+                }
+                for issue in issues_with_perm[1:3]
+            ],
+        }
 
 
 @pytest.mark.django_db(transaction=True)

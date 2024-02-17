@@ -221,7 +221,14 @@ def filter_for_user(
     with_groups: bool = True,
     with_superuser: bool = False,
 ):
-    return qs & qs.filter(
+    # Django won't allow a QuerySet to be filtered once a slice has been taken,
+    # but this will be called for extensions, which does run after our pagination
+    # has set its limits on it. To workaround that, we will store the
+    original_low_mark = qs.query.low_mark
+    original_high_mark = qs.query.high_mark
+    qs.query.clear_limits()
+
+    qs = qs.filter(
         filter_for_user_q(
             qs,
             user,
@@ -231,3 +238,8 @@ def filter_for_user(
             with_superuser=with_superuser,
         ),
     )
+
+    qs.query.low_mark = original_low_mark
+    qs.query.high_mark = original_high_mark
+
+    return qs

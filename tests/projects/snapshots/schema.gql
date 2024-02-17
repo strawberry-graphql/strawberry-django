@@ -670,7 +670,7 @@ type Query {
     """The ID of the object."""
     id: GlobalID!
   ): IssueType @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
-  issueListObjPermRequired: [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueListObjPermRequired(pagination: OffsetPaginationInput): [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueConnObjPermRequired(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
