@@ -2,7 +2,7 @@
 site_name: Strawberry Django
 site_description: Strawberry integration with Django.
 site_author: community
-repo_name: strawberry-graphql-django
+repo_name: strawberry-django
 repo_url: https://github.com/strawberry-graphql/strawberry-django
 edit_uri: edit/main/docs/
 dev_addr: 127.0.0.1:7000
