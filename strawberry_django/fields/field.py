@@ -279,9 +279,8 @@ class StrawberryDjangoField(
         if get_queryset:
             queryset = get_queryset(queryset, info, **kwargs)
 
-        queryset = filter_with_perms(
-            super().get_queryset(queryset, info, **kwargs),
-            info,
+        queryset = super().get_queryset(
+            filter_with_perms(queryset, info), info, **kwargs
         )
 
         # If optimizer extension is enabled, optimize this queryset
