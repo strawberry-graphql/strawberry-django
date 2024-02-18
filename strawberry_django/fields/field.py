@@ -191,7 +191,7 @@ class StrawberryDjangoField(
                         if len(selected_field.selections) == 1 and selected_field.selections[0].name == target_attname:
                             # If we are only retrieving the referenced `id` of a related foreignkey with no additional columns
                             # then we can optimize away this retrieval by reusing the existing value from the `source` object.
-                            value = source.__dict__[attr.field.get_attname()])
+                            value = source.__dict__[attr.field.get_attname()]
                             target_model = attr.field.target_field.model
                             result = target_model(pk=value)
                         else:
