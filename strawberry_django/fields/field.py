@@ -183,7 +183,19 @@ class StrawberryDjangoField(
                     result = getattr(source, attr.field.attname)
                 elif isinstance(attr, ForwardManyToOneDescriptor):
                     # This will raise KeyError if it is not cached
-                    result = attr.field.get_cached_value(source)  # type: ignore
+                    try:
+                        result = attr.field.get_cached_value(source)  # type: ignore
+                    except KeyError:
+                        selected_field = next(f for f in info.selected_fields if f.name == info.field_name)
+                        target_attname = attr.field.target_field.attname
+                        if len(selected_field.selections) == 1 and selected_field.selections[0].name == target_attname:
+                            # If we are only retrieving the referenced `id` of a related foreignkey with no additional columns
+                            # then we can optimize away this retrieval by reusing the existing value from the `source` object.
+                            value = source.__dict__[attr.field.get_attname()])
+                            target_model = attr.field.target_field.model
+                            result = target_model(pk=value)
+                        else:
+                            raise
                 elif isinstance(attr, ReverseOneToOneDescriptor):
                     # This will raise KeyError if it is not cached
                     result = attr.related.get_cached_value(source)

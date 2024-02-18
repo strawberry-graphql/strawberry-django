@@ -492,7 +492,6 @@ def _get_model_hints(
 
             if isinstance(model_field, (models.ForeignKey, OneToOneRel)):
                 store.only.append(path)
-                store.select_related.append(path)
 
                 # If adding a reverse relation, make sure to select its pointer to us,
                 # or else this might causa a refetch from the database
@@ -514,7 +513,8 @@ def _get_model_hints(
                         cache=cache,
                         level=level + 1,
                     )
-                    if f_store is not None:
+                    if f_store is not None and set(f_store.only) != {model_field.target_field.attname}:
+                        store.select_related.append(path)
                         cache.setdefault(f_model, []).append((level, f_store))
                         store |= f_store.with_prefix(path, info=info)
             elif GenericForeignKey and isinstance(model_field, GenericForeignKey):
