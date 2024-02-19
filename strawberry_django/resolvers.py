@@ -27,6 +27,9 @@ resolving_async: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 
 def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
+    # FIXME: We probably won't need this anymore when we can use graphql-core 3.3.0+
+    # as its `complete_list_value` gives a preference to async iteration it if is
+    # provided by the object.
     # This is what QuerySet does internally to fetch results.
     # After this, iterating over the queryset should be async safe
     if qs._result_cache is None:  # type: ignore
