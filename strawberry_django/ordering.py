@@ -22,6 +22,11 @@ from strawberry.unset import UnsetType
 from typing_extensions import Self, dataclass_transform
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
+from strawberry_django.fields.filter_order import (
+    WITH_NONE_META,
+    FilterOrderField,
+    FilterOrderFieldResolver,
+)
 from strawberry_django.utils.typing import is_auto
 
 from .arguments import argument
@@ -88,12 +93,6 @@ def process_order(
     prefix: str = "",
     skip_object_order_method: bool = False,
 ) -> tuple[QuerySet[Any], Collection[F]]:
-    from .fields.filter_order import (
-        WITH_NONE_META,
-        FilterOrderFieldResolver,
-        StrawberryDjangoFilterOrderField,
-    )
-
     get_graphql_name = info.schema.config.name_converter.get_graphql_name
     sequence = sequence or {}
     args = []
@@ -111,7 +110,7 @@ def process_order(
         if f_value is UNSET or (f_value is None and not f.metadata.get(WITH_NONE_META)):
             continue
 
-        if isinstance(f, StrawberryDjangoFilterOrderField) and f.base_resolver:
+        if isinstance(f, FilterOrderField) and f.base_resolver:
             res = f.base_resolver(
                 order,
                 info,

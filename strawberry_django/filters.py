@@ -27,6 +27,11 @@ from strawberry.type import WithStrawberryObjectDefinition, has_object_definitio
 from strawberry.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform
 
+from strawberry_django.fields.filter_order import (
+    WITH_NONE_META,
+    FilterOrderField,
+    FilterOrderFieldResolver,
+)
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
     has_django_definition,
@@ -134,12 +139,6 @@ def process_filters(
     prefix: str = "",
     skip_object_filter_method: bool = False,
 ) -> Tuple[QuerySet[Any], Q]:
-    from .fields.filter_order import (
-        WITH_NONE_META,
-        FilterOrderFieldResolver,
-        StrawberryDjangoFilterOrderField,
-    )
-
     using_old_filters = strawberry_django_settings()["USE_DEPRECATED_FILTERS"]
 
     q = Q()
@@ -183,7 +182,7 @@ def process_filters(
                 q &= ~sub_q
             else:
                 assert_never(field_name)
-        elif isinstance(f, StrawberryDjangoFilterOrderField) and f.base_resolver:
+        elif isinstance(f, FilterOrderField) and f.base_resolver:
             res = f.base_resolver(
                 filters, info, value=field_value, queryset=queryset, prefix=prefix
             )

@@ -16,8 +16,8 @@ from strawberry_django.exceptions import (
 from strawberry_django.fields import filter_types
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.fields.filter_order import (
+    FilterOrderField,
     FilterOrderFieldResolver,
-    StrawberryDjangoFilterOrderField,
 )
 from strawberry_django.filters import process_filters
 from tests import models, utils
@@ -244,13 +244,13 @@ def test_filter_type():
         ("sweetness", StrawberryDjangoField, "ComparisonFilterLookup", None),
         (
             "custom_filter",
-            StrawberryDjangoFilterOrderField,
+            FilterOrderField,
             "str",
             FilterOrderFieldResolver,
         ),
         (
             "custom_filter2",
-            StrawberryDjangoFilterOrderField,
+            FilterOrderField,
             "BaseFilterLookup",
             FilterOrderFieldResolver,
         ),

@@ -16,7 +16,6 @@ from .filter_order import filter_field
 
 T = TypeVar("T")
 
-FILTERS_ARG = "filters"
 _SKIP_MSG = ". Filter will be skipped on `null` value"
 
 

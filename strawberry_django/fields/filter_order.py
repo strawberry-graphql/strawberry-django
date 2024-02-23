@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Optional, Sequence, overl
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingArgumentsAnnotationsError
+from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import ReservedName, StrawberryResolver
 from typing_extensions import Self
 
@@ -15,11 +16,7 @@ from strawberry_django.exceptions import (
     ForbiddenFieldArgumentError,
     MissingFieldArgumentError,
 )
-from strawberry_django.utils.typing import (
-    is_auto,
-)
-
-from .field import StrawberryDjangoField, field
+from strawberry_django.utils.typing import is_auto
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -134,7 +131,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
         return super().__call__(*args, **kwargs)
 
 
-class StrawberryDjangoFilterOrderField(StrawberryDjangoField):
+class FilterOrderField(StrawberryField):
     def __call__(self, resolver: _RESOLVER_TYPE) -> Self:
         if not isinstance(resolver, StrawberryResolver):
             resolver = FilterOrderFieldResolver(
@@ -207,7 +204,7 @@ def filter_field(
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
     filter_none: bool = False,
-) -> StrawberryDjangoField: ...
+) -> StrawberryField: ...
 
 
 def filter_field(
@@ -223,6 +220,10 @@ def filter_field(
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
     filter_none: bool = False,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotates a method or property as a Django filter field.
 
@@ -246,10 +247,9 @@ def filter_field(
     if filter_none:
         metadata[WITH_NONE_META] = True
 
-    return field(
-        resolver,
-        field_cls=StrawberryDjangoFilterOrderField,
-        name=name,
+    field_ = FilterOrderField(
+        python_name=None,
+        graphql_name=name,
         is_subscription=is_subscription,
         description=description,
         deprecation_reason=deprecation_reason,
@@ -259,6 +259,11 @@ def filter_field(
         directives=directives,
         extensions=extensions,
     )
+
+    if resolver:
+        return field_(resolver)
+
+    return field_
 
 
 @overload
@@ -310,7 +315,7 @@ def order_field(
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
     order_none: bool = False,
-) -> StrawberryDjangoField: ...
+) -> StrawberryField: ...
 
 
 def order_field(
@@ -326,6 +331,10 @@ def order_field(
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
     order_none: bool = False,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init: Literal[True, False, None] = None,
 ) -> Any:
     """Annotates a method or property as a Django filter field.
 
@@ -349,10 +358,9 @@ def order_field(
     if order_none:
         metadata[WITH_NONE_META] = True
 
-    return field(
-        resolver,
-        field_cls=StrawberryDjangoFilterOrderField,
-        name=name,
+    field_ = FilterOrderField(
+        python_name=None,
+        graphql_name=name,
         is_subscription=is_subscription,
         description=description,
         deprecation_reason=deprecation_reason,
@@ -362,3 +370,8 @@ def order_field(
         directives=directives,
         extensions=extensions,
     )
+
+    if resolver:
+        return field_(resolver)
+
+    return field_

@@ -20,8 +20,8 @@ from strawberry_django.exceptions import (
 )
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.fields.filter_order import (
+    FilterOrderField,
     FilterOrderFieldResolver,
-    StrawberryDjangoFilterOrderField,
 )
 from strawberry_django.ordering import Ordering, OrderSequence, process_order
 from tests import models, utils
@@ -189,7 +189,7 @@ def test_order_type():
         ("sweetness", StrawberryField, annotated_type, None),
         (
             "custom_order",
-            StrawberryDjangoFilterOrderField,
+            FilterOrderField,
             annotated_type,
             FilterOrderFieldResolver,
         ),

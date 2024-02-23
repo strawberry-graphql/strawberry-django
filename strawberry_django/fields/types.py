@@ -30,6 +30,7 @@ from strawberry.scalars import JSON
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django import filters
+from strawberry_django.fields import filter_types
 from strawberry_django.settings import strawberry_django_settings as django_settings
 
 try:
@@ -413,8 +414,6 @@ def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoDefinition",
 ):
-    from . import filter_types
-
     settings = django_settings()
 
     # Django choices field
