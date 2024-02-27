@@ -251,10 +251,17 @@ def prepare_create_update(
             )
             if value is None and not value_data:
                 value = None  # noqa: PLW2901
+
+            # If foreign object is not found, then create it
             elif value is None:
                 value = field.related_model._default_manager.create(  # noqa: PLW2901
                     **value_data,
                 )
+
+            # If foreign object does not need updating, then skip it
+            elif isinstance(value_data, dict) and not value_data:
+                pass
+
             else:
                 update(
                     info, value, value_data, full_clean=full_clean, key_attr=key_attr
@@ -441,10 +448,10 @@ def update(
 
     instance.save()
 
-    for field, value in m2m:
-        update_m2m(info, instance, field, value, key_attr, full_clean)
-
-    instance.refresh_from_db()
+    if m2m:
+        for field, value in m2m:
+            update_m2m(info, instance, field, value, key_attr, full_clean)
+        instance.refresh_from_db()
 
     return instance
 
