@@ -120,8 +120,8 @@ def _function_allow_passing_info(filter_method: FunctionType) -> bool:
 
 
 def _process_deprecated_filter(
-    filter_method: FunctionType, info: Info, queryset: QuerySet
-) -> QuerySet:
+    filter_method: FunctionType, info: Info | None, queryset: _QS
+) -> _QS:
     kwargs = {}
     if _function_allow_passing_info(
         # Pass the original __func__ which is always the same
@@ -134,11 +134,11 @@ def _process_deprecated_filter(
 
 def process_filters(
     filters: WithStrawberryObjectDefinition,
-    queryset: QuerySet[Any],
-    info: Info[Any, Any],
+    queryset: _QS,
+    info: Info | None,
     prefix: str = "",
     skip_object_filter_method: bool = False,
-) -> Tuple[QuerySet[Any], Q]:
+) -> Tuple[_QS, Q]:
     using_old_filters = strawberry_django_settings()["USE_DEPRECATED_FILTERS"]
 
     q = Q()
@@ -154,9 +154,11 @@ def process_filters(
 
     # This loop relies on the filter field order that is not quaranteed for GQL input objects:
     #   "filter" has to be first since it overrides filtering for entire object
-    #   OR has to be last because it must be applied agains all other since default connector is AND
+    #   DISTINCT has to be last and OR has to be after because it must be
+    #       applied agains all other since default connector is AND
     for f in sorted(
-        filters.__strawberry_definition__.fields, key=lambda x: x.name == "OR"
+        filters.__strawberry_definition__.fields,
+        key=lambda x: len(x.name) if x.name in {"OR", "DISTINCT"} else 0,
     ):
         field_value = _resolve_value(getattr(filters, f.name))
         # None is still acceptable for v1 (backwards compatibility) and filters that support it via metadata
@@ -170,10 +172,15 @@ def process_filters(
         if field_name == "DISTINCT":
             if field_value:
                 queryset = queryset.distinct()
-        elif field_name in {"AND", "OR", "NOT"}:
+        elif field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
             assert has_object_definition(field_value)
 
-            queryset, sub_q = process_filters(field_value, queryset, info, prefix)
+            queryset, sub_q = process_filters(
+                cast(WithStrawberryObjectDefinition, field_value),
+                queryset,
+                info,
+                prefix,
+            )
             if field_name == "AND":
                 q &= sub_q
             elif field_name == "OR":
@@ -198,7 +205,10 @@ def process_filters(
             queryset = _process_deprecated_filter(filter_method, info, queryset)
         elif has_object_definition(field_value):
             queryset, sub_q = process_filters(
-                field_value, queryset, info, f"{prefix}{field_name}__"
+                cast(WithStrawberryObjectDefinition, field_value),
+                queryset,
+                info,
+                f"{prefix}{field_name}__",
             )
             q &= sub_q
         else:
@@ -219,8 +229,12 @@ def apply(
     if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # noqa: PLR6201
         return queryset
 
-    queryset, q = process_filters(filters, queryset, info)
-    return queryset.filter(q)
+    queryset, q = process_filters(
+        cast(WithStrawberryObjectDefinition, filters), queryset, info
+    )
+    if q:
+        queryset = queryset.filter(q)
+    return queryset
 
 
 class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):

@@ -28,10 +28,10 @@ class MissingFieldArgumentError(StrawberryException):
         super().__init__(self.message)
 
     @cached_property
-    def exception_source(self) -> ExceptionSource | None:
+    def exception_source(self) -> ExceptionSource | None:  # pragma: no cover
         source_finder = SourceFinder()
 
-        return source_finder.find_function_from_object(self.function)
+        return source_finder.find_function_from_object(self.function)  # type: ignore
 
 
 class ForbiddenFieldArgumentError(StrawberryException):
@@ -64,7 +64,10 @@ class ForbiddenFieldArgumentError(StrawberryException):
         return f'arguments "{head}" and "{arguments[-1]}"'
 
     @cached_property
-    def exception_source(self) -> ExceptionSource | None:
+    def exception_source(self) -> ExceptionSource | None:  # pragma: no cover
         source_finder = SourceFinder()
 
-        return source_finder.find_function_from_object(self.function)
+        return source_finder.find_argument_from_object(
+            self.function,  # type: ignore
+            self.argument_name,
+        )

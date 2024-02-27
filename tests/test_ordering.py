@@ -1,5 +1,5 @@
 # ruff: noqa: TRY002, B904, BLE001, F811, PT012
-from typing import List, Optional
+from typing import Any, List, Optional, cast
 
 import pytest
 import strawberry
@@ -10,6 +10,7 @@ from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.field import StrawberryField
 from strawberry.type import (
     StrawberryOptional,
+    WithStrawberryObjectDefinition,
     get_object_definition,
 )
 
@@ -31,7 +32,10 @@ from tests.types import Fruit
 @strawberry_django.ordering.order(models.Color)
 class ColorOrder:
     pk: auto
-    name: auto
+
+    @strawberry_django.order_field
+    def name(self, prefix, value: auto):
+        return [value.resolve(f"{prefix}name")]
 
 
 @strawberry_django.ordering.order(models.Fruit)
@@ -162,6 +166,19 @@ def test_arguments_order_respected(query, db):
     assert result.data["fruits"] == [{"id": str(f.pk)} for f in [f3, f2, f1]]
 
 
+def test_order_sequence():
+    f1 = StrawberryField(graphql_name="sOmEnAmE", python_name="some_name")
+    f2 = StrawberryField(python_name="some_name")
+
+    assert OrderSequence.get_graphql_name(None, f1) == "sOmEnAmE"
+    assert OrderSequence.get_graphql_name(None, f2) == "someName"
+
+    assert OrderSequence.sorted(None, None, fields=[f1, f2]) == [f1, f2]
+
+    sequence = {"someName": OrderSequence(0, None), "sOmEnAmE": OrderSequence(1, None)}
+    assert OrderSequence.sorted(None, sequence, fields=[f1, f2]) == [f1, f2]
+
+
 def test_order_type():
     @strawberry_django.ordering.order(models.Fruit)
     class FruitOrder:
@@ -173,7 +190,7 @@ def test_order_type():
         def custom_order(self, value: auto, prefix: str):
             pass
 
-    annotated_type = StrawberryOptional(Ordering._enum_definition)
+    annotated_type = StrawberryOptional(Ordering._enum_definition)  # type: ignore
 
     assert [
         (
@@ -228,7 +245,7 @@ def test_order_field_validation():
         def field_method(self, root, info, prefix, value: auto, sequence, queryset):
             pass
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")
+        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
     with pytest.raises(
         MissingArgumentsAnnotationsError,
@@ -270,7 +287,7 @@ def test_order_field_validation():
         def order(self, root, info, prefix, sequence, queryset):
             pass
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")
+        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
 
 def test_order_field_method():
@@ -287,11 +304,11 @@ def test_order_field_method():
             assert queryset == _queryset, "Unexpected queryset passed"
             raise Exception("WAS CALLED")
 
-    _order = Order(custom_order=Ordering.ASC)
+    _order = cast(WithStrawberryObjectDefinition, Order(custom_order=Ordering.ASC))  # type: ignore
     schema = strawberry.Schema(query=Query)
-    _info = type("FakeInfo", (), {"schema": schema})
-    _queryset = object()
-    _sequence_inner = object()
+    _info: Any = type("FakeInfo", (), {"schema": schema})
+    _queryset: Any = object()
+    _sequence_inner: Any = object()
     _sequence = {"customOrder": OrderSequence(0, children=_sequence_inner)}
 
     with pytest.raises(Exception, match="WAS CALLED"):
@@ -311,11 +328,11 @@ def test_order_object_method():
             assert queryset == _queryset, "Unexpected queryset passed"
             raise Exception("WAS CALLED")
 
-    _order = Order()
+    _order = cast(WithStrawberryObjectDefinition, Order())
     schema = strawberry.Schema(query=Query)
-    _info = type("FakeInfo", (), {"schema": schema})
-    _queryset = object()
-    _sequence = {"customOrder": OrderSequence(0, children=object())}
+    _info: Any = type("FakeInfo", (), {"schema": schema})
+    _queryset: Any = object()
+    _sequence: Any = {"customOrder": OrderSequence(0)}
 
     with pytest.raises(Exception, match="WAS CALLED"):
         process_order(_order, _info, _queryset, prefix="ROOT", sequence=_sequence)

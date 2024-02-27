@@ -519,7 +519,7 @@ def resolve_model_field_type(
         if using_old_filters:
             field_type = filters.FilterLookup[field_type]
         else:
-            field_type = filter_types.type_filter_map.get(
+            field_type = filter_types.type_filter_map.get(  # pyright: ignore [reportInvalidTypeArguments]
                 field_type, filter_types.FilterLookup
             )[field_type]
 

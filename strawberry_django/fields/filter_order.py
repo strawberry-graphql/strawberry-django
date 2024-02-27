@@ -19,7 +19,7 @@ from strawberry_django.exceptions import (
 from strawberry_django.utils.typing import is_auto
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, MutableMapping
 
     from strawberry.extensions.field_extension import FieldExtension
     from strawberry.field import _RESOLVER_TYPE, T
@@ -101,7 +101,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
     def __call__(
         self,
         source: Any,
-        info: Info[Any, Any],
+        info: Info | None,
         queryset=None,
         sequence=None,
         **kwargs: Any,
@@ -118,6 +118,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
             kwargs[root_parameter.name] = source
 
         if info_parameter := self.info_parameter:
+            assert info is not None
             kwargs[info_parameter.name] = info
 
         if info_parameter := self.reserved_parameters.get(QUERYSET_PARAMSPEC):
@@ -132,7 +133,9 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
 
 class FilterOrderField(StrawberryField):
-    def __call__(self, resolver: _RESOLVER_TYPE) -> Self:
+    base_resolver: FilterOrderFieldResolver | None
+
+    def __call__(self, resolver: _RESOLVER_TYPE) -> Self | FilterOrderFieldResolver:
         if not isinstance(resolver, StrawberryResolver):
             resolver = FilterOrderFieldResolver(
                 resolver, resolver_type=self.metadata["_FIELD_TYPE"]
@@ -166,9 +169,9 @@ def filter_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
 ) -> T: ...
 
@@ -183,9 +186,9 @@ def filter_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
 ) -> Any: ...
 
@@ -200,9 +203,9 @@ def filter_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
 ) -> StrawberryField: ...
 
@@ -216,9 +219,9 @@ def filter_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -257,7 +260,7 @@ def filter_field(
         default_factory=default_factory,
         metadata=metadata,
         directives=directives,
-        extensions=extensions,
+        extensions=extensions or [],
     )
 
     if resolver:
@@ -277,9 +280,9 @@ def order_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     order_none: bool = False,
 ) -> T: ...
 
@@ -294,9 +297,9 @@ def order_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     order_none: bool = False,
 ) -> Any: ...
 
@@ -311,9 +314,9 @@ def order_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     order_none: bool = False,
 ) -> StrawberryField: ...
 
@@ -327,9 +330,9 @@ def order_field(
     deprecation_reason: str | None = None,
     default: Any = UNSET,
     default_factory: Callable[..., object] | object = dataclasses.MISSING,
-    metadata: Mapping[Any, Any] | None = None,
-    directives: Sequence[object] | None = (),
-    extensions: Sequence[FieldExtension] = (),
+    metadata: MutableMapping[Any, Any] | None = None,
+    directives: Sequence[object] = (),
+    extensions: list[FieldExtension] | None = None,
     order_none: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -368,7 +371,7 @@ def order_field(
         default_factory=default_factory,
         metadata=metadata,
         directives=directives,
-        extensions=extensions,
+        extensions=extensions or [],
     )
 
     if resolver:

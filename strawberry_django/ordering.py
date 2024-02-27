@@ -4,21 +4,22 @@ import dataclasses
 import enum
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     Collection,
     Optional,
     Sequence,
     TypeVar,
+    cast,
 )
 
 import strawberry
-from django.db.models import F, QuerySet
+from django.db.models import F, OrderBy, QuerySet
 from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
 from strawberry.field import StrawberryField, field
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.unset import UnsetType
+from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Self, dataclass_transform
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
@@ -49,18 +50,29 @@ class OrderSequence:
     children: dict[str, OrderSequence] | None = None
 
     @classmethod
+    def get_graphql_name(cls, info: Info | None, field: StrawberryField) -> str:
+        if info is None:
+            if field.graphql_name:
+                return field.graphql_name
+
+            return to_camel_case(field.python_name)
+
+        return info.schema.config.name_converter.get_graphql_name(field)
+
+    @classmethod
     def sorted(
         cls,
-        info: Info,
+        info: Info | None,
         sequence: dict[str, OrderSequence] | None,
         fields: list[_SFT],
     ) -> list[_SFT]:
-        get_graphql_name = info.schema.config.name_converter.get_graphql_name
+        if info is None:
+            return fields
 
         sequence = sequence or {}
 
         def sort_key(f: _SFT) -> int:
-            if not (seq := sequence.get(get_graphql_name(f))):
+            if not (seq := sequence.get(cls.get_graphql_name(info, f))):
                 return 0
             return seq.seq
 
@@ -76,7 +88,7 @@ class Ordering(enum.Enum):
     DESC_NULLS_FIRST = "DESC_NULLS_FIRST"
     DESC_NULLS_LAST = "DESC_NULLS_LAST"
 
-    def resolve(self, value: str) -> F:
+    def resolve(self, value: str) -> OrderBy:
         nulls_first = True if "NULLS_FIRST" in self.name else None
         nulls_last = True if "NULLS_LAST" in self.name else None
         if "ASC" in self.name:
@@ -86,14 +98,13 @@ class Ordering(enum.Enum):
 
 def process_order(
     order: WithStrawberryObjectDefinition,
-    info: Info[Any, Any],
-    queryset: QuerySet[Any],
+    info: Info | None,
+    queryset: _QS,
     *,
     sequence: dict[str, OrderSequence] | None = None,
     prefix: str = "",
     skip_object_order_method: bool = False,
-) -> tuple[QuerySet[Any], Collection[F]]:
-    get_graphql_name = info.schema.config.name_converter.get_graphql_name
+) -> tuple[_QS, Collection[F | OrderBy | str]]:
     sequence = sequence or {}
     args = []
 
@@ -117,7 +128,10 @@ def process_order(
                 value=f_value,
                 queryset=queryset,
                 prefix=prefix,
-                sequence=(seq := sequence.get(get_graphql_name(f))) and seq.children,
+                sequence=(
+                    (seq := sequence.get(OrderSequence.get_graphql_name(info, f)))
+                    and seq.children
+                ),
             )
             if isinstance(res, tuple):
                 queryset, subargs = res
@@ -132,7 +146,10 @@ def process_order(
                 info,
                 queryset,
                 prefix=f"{prefix}{f.name}__",
-                sequence=(seq := sequence.get(get_graphql_name(f))) and seq.children,
+                sequence=(
+                    (seq := sequence.get(OrderSequence.get_graphql_name(info, f)))
+                    and seq.children
+                ),
             )
             args.extend(subargs)
 
@@ -140,11 +157,11 @@ def process_order(
 
 
 def apply(
-    order: WithStrawberryObjectDefinition | None,
+    order: object | None,
     queryset: _QS,
     info: Info | None = None,
 ) -> _QS:
-    if order in (None, strawberry.UNSET):  # noqa: PLR6201
+    if order in (None, strawberry.UNSET) or not has_object_definition(order):  # noqa: PLR6201
         return queryset
 
     sequence: dict[str, OrderSequence] = {}
@@ -166,7 +183,9 @@ def apply(
 
             parse_and_fill(arg.value, sequence)
 
-    queryset, args = process_order(order, info, queryset, sequence=sequence)
+    queryset, args = process_order(
+        cast(WithStrawberryObjectDefinition, order), info, queryset, sequence=sequence
+    )
     if not args:
         return queryset
     return queryset.order_by(*args)

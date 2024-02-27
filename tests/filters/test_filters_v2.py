@@ -1,12 +1,18 @@
-# ruff: noqa: TRY002, B904, BLE001, F811, PT012, A001
-from typing import List, Optional
+# ruff: noqa: TRY002, B904, BLE001, F811, PT012, A001, PLC2701
+from enum import Enum
+from typing import Any, List, Optional, cast
 
 import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
 from strawberry import auto
 from strawberry.exceptions import MissingArgumentsAnnotationsError
-from strawberry.type import get_object_definition
+from strawberry.relay import GlobalID
+from strawberry.type import (
+    StrawberryOptional,
+    WithStrawberryObjectDefinition,
+    get_object_definition,
+)
 
 import strawberry_django
 from strawberry_django.exceptions import (
@@ -19,15 +25,32 @@ from strawberry_django.fields.filter_order import (
     FilterOrderField,
     FilterOrderFieldResolver,
 )
-from strawberry_django.filters import process_filters
+from strawberry_django.filters import _resolve_value, process_filters
 from tests import models, utils
-from tests.types import Fruit
+from tests.types import Fruit, FruitType
+
+
+@strawberry.enum
+class Version(Enum):
+    ONE = "first"
+    TWO = "second"
+    THREE = "third"
 
 
 @strawberry_django.filter(models.Color, lookups=True)
 class ColorFilter:
     id: auto
     name: auto
+
+    @strawberry_django.filter_field
+    def name_simple(self, prefix: str, value: str):
+        return Q(**{f"{prefix}name": value})
+
+
+@strawberry_django.filter(models.FruitType, lookups=True)
+class FruitTypeFilter:
+    name: auto
+    fruits: Optional["FruitFilter"]
 
 
 @strawberry_django.filter(models.Fruit, lookups=True)
@@ -36,6 +59,7 @@ class FruitFilter:
     name: auto
     sweetness: auto
     color: Optional[ColorFilter]
+    types: Optional[FruitTypeFilter]
 
     @strawberry_django.filter_field
     def types_number(
@@ -46,7 +70,7 @@ class FruitFilter:
         value: filter_types.ComparisonFilterLookup[int],
     ):
         return process_filters(
-            value,
+            cast(WithStrawberryObjectDefinition, value),
             queryset.annotate(
                 count=Count(f"{prefix}types__id"),
                 count_nulls=Case(
@@ -59,9 +83,18 @@ class FruitFilter:
         )
 
     @strawberry_django.filter_field
+    def double(
+        self,
+        queryset: QuerySet,
+        prefix,
+        value: bool,
+    ):
+        return queryset.union(queryset, all=True), Q()
+
+    @strawberry_django.filter_field
     def filter(self, info, queryset: QuerySet, prefix):
         return process_filters(
-            self,
+            cast(WithStrawberryObjectDefinition, self),
             queryset.filter(~Q(**{f"{prefix}name": "DARK_BERRY"})),
             info,
             prefix,
@@ -71,12 +104,30 @@ class FruitFilter:
 
 @strawberry.type
 class Query:
+    types: List[FruitType] = strawberry_django.field(filters=FruitTypeFilter)
     fruits: List[Fruit] = strawberry_django.field(filters=FruitFilter)
 
 
 @pytest.fixture()
 def query():
     return utils.generate_query(Query)
+
+
+@pytest.mark.parametrize(
+    ("value", "resolved"),
+    [
+        (2, 2),
+        ("something", "something"),
+        (GlobalID("", "24"), "24"),
+        (Version.ONE, Version.ONE.value),
+        (
+            [1, "str", GlobalID("", "24"), Version.THREE],
+            [1, "str", "24", Version.THREE.value],
+        ),
+    ],
+)
+def test_resolve_value(value, resolved):
+    assert _resolve_value(value) == resolved
 
 
 def test_filter_field_validation():
@@ -111,7 +162,7 @@ def test_filter_field_validation():
         def field_method(self, root, info, prefix, value: str, queryset):
             pass
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")
+        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
     with pytest.raises(
         Exception,
@@ -164,7 +215,7 @@ def test_filter_field_validation():
         def filter(self, root, info, prefix, queryset):
             pass
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")
+        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
 
 def test_filter_field_method():
@@ -180,9 +231,9 @@ def test_filter_field_method():
             assert queryset == _queryset, "Unexpected queryset passed"
             raise Exception("WAS CALLED")
 
-    _filter = Filter(custom_filter="SOMETHING")
-    _info = object()
-    _queryset = object()
+    _filter: Any = Filter(custom_filter="SOMETHING")  # type: ignore
+    _info: Any = object()
+    _queryset: Any = object()
 
     with pytest.raises(Exception, match="WAS CALLED"):
         process_filters(_filter, _queryset, _info, prefix="ROOT")
@@ -204,9 +255,9 @@ def test_filter_object_method():
             assert queryset == _queryset, "Unexpected queryset passed"
             raise Exception("WAS CALLED")
 
-    _filter = Filter()
-    _info = object()
-    _queryset = object()
+    _filter: Any = Filter()
+    _info: Any = object()
+    _queryset: Any = object()
 
     with pytest.raises(Exception, match="WAS CALLED"):
         process_filters(_filter, _queryset, _info, prefix="ROOT")
@@ -233,7 +284,7 @@ def test_filter_type():
         (
             f.name,
             f.__class__,
-            f.type.of_type.__name__,
+            cast(StrawberryOptional, f.type).of_type.__name__,
             f.base_resolver.__class__ if f.base_resolver else None,
         )
         for f in get_object_definition(FruitOrder, strict=True).fields
@@ -271,6 +322,7 @@ def test_filter_methods(query, db, fruits):
     {
         fruits(filters: {
             typesNumber: { gt: 1 }
+            NOT: { color: { nameSimple: "sample" } }
             OR: {
                 typesNumber: { isNull: true }
             }
@@ -282,3 +334,35 @@ def test_filter_methods(query, db, fruits):
         {"id": str(f1.id)},
         {"id": str(f3.id)},
     ]
+
+
+def test_filter_distinct(query, db, fruits):
+    t1 = models.FruitType.objects.create(name="type_1")
+    t2 = models.FruitType.objects.create(name="type_2")
+
+    f1 = models.Fruit.objects.all()[0]
+
+    f1.types.add(t1, t2)
+
+    result = query("""
+    {
+        fruits(
+            filters: {types: { name: { iContains: "type" } } }
+        ) { id name }
+    }
+    """)
+    assert not result.errors
+    assert len(result.data["fruits"]) == 2
+
+    result = query("""
+    {
+        fruits(
+            filters: {
+                DISTINCT: true,
+                types: { name: { iContains: "type" } }
+            }
+        ) { id name }
+    }
+    """)
+    assert not result.errors
+    assert len(result.data["fruits"]) == 1
