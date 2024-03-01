@@ -114,6 +114,9 @@ class StrawberryDjangoField(
             prefetch_related=prefetch_related,
             annotate=annotate,
         )
+        # FIXME: Probably remove this when depending on graphql-core 3.3.0+
+        self.disable_fetch_list_results: bool = False
+
         super().__init__(*args, **kwargs)
 
     def __copy__(self) -> Self:
@@ -256,7 +259,9 @@ class StrawberryDjangoField(
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
                 qs = self.get_queryset(qs, info, **kwargs)
-                return default_qs_hook(qs)
+                if not self.disable_fetch_list_results:
+                    qs = default_qs_hook(qs)
+                return qs
 
         elif self.is_optional:
 
@@ -279,9 +284,8 @@ class StrawberryDjangoField(
         if get_queryset:
             queryset = get_queryset(queryset, info, **kwargs)
 
-        queryset = filter_with_perms(
-            super().get_queryset(queryset, info, **kwargs),
-            info,
+        queryset = super().get_queryset(
+            filter_with_perms(queryset, info), info, **kwargs
         )
 
         # If optimizer extension is enabled, optimize this queryset

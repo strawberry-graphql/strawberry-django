@@ -2,7 +2,7 @@
 
 ## v0.3+
 
-For newer versions, check the release notes at: https://github.com/strawberry-graphql/strawberry-graphql-django/releases
+For newer versions, check the release notes at: https://github.com/strawberry-graphql/strawberry-django/releases
 
 ## v0.3rc1
 

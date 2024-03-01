@@ -1,4 +1,4 @@
-from . import auth, filters, mutations, ordering, relay
+from . import auth, filters, mutations, ordering, pagination, relay
 from .fields.field import connection, field, node
 from .fields.types import (
     DjangoFileType,
@@ -43,6 +43,7 @@ __all__ = [
     "node",
     "order",
     "ordering",
+    "pagination",
     "partial",
     "relay",
     "type",

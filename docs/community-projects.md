@@ -9,4 +9,4 @@ Those are some community maintained projects worth mentioning:
 | [:material-github: strawberry-django-extras](https://github.com/m4riok/strawberry-django-extras) | :material-information: JWT Authentication, Input validation and permissions, mutation hooks and deeply nested CUD mutations |
 
 If you want your integration to be listed here, send us a
-[Pull Request](https://github.com/strawberry-graphql/strawberry-graphql-django/pulls)
+[Pull Request](https://github.com/strawberry-graphql/strawberry-django/pulls)

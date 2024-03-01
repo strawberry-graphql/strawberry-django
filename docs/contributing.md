@@ -4,8 +4,8 @@ We use [poetry](https://github.com/sdispater/poetry) to manage dependencies, to
 get started follow these steps:
 
 ```shell
-git clone https://github.com/strawberry-graphql/strawberry-graphql-django.git
-cd strawberry-graphql-django
+git clone https://github.com/strawberry-graphql/strawberry-django.git
+cd strawberry-django
 poetry install
 poetry run pytest
 ```

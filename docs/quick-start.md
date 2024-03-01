@@ -6,7 +6,7 @@ In this Quick-Start, we will:
 - Add them to a graphql schema and serve the graph API.
 - Query the graph API for model contents.
 
-For a more advanced example of a similar setup including a set of mutations and more queries, please check the [example app](https://github.com/strawberry-graphql/strawberry-graphql-django/tree/main/examples/django).
+For a more advanced example of a similar setup including a set of mutations and more queries, please check the [example app](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/django).
 
 ## Installation
 

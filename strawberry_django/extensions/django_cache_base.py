@@ -24,6 +24,7 @@ class DjangoCacheBase(SchemaExtension):
         Defaults to the same key generator as functools.lru_cache
         WARNING! The default function does NOT work with memcached
         and will generate warnings
+
     """
 
     def __init__(
