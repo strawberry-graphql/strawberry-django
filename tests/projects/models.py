@@ -72,7 +72,7 @@ class Project(models.Model):
     def next_milestones_property(
         self,
     ) -> List[Annotated["MilestoneType", strawberry.lazy(".schema")]]:
-        """The milestones for the project ordered by their due date"""
+        """Return the milestones for the project ordered by their due date."""
         if hasattr(self, "next_milestones_prop_pf"):
             return cast(List["MilestoneType"], self.next_milestones_prop_pf)
         return cast(

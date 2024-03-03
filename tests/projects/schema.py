@@ -115,7 +115,7 @@ class ProjectType(relay.Node):
         )
     )
     def next_milestones(self, root: Milestone) -> "List[MilestoneType]":
-        """The milestones for the project ordered by their due date"""
+        """Return the milestones for the project ordered by their due date."""
         if hasattr(root, "next_milestones_pf"):
             return cast(List[MilestoneType], root.next_milestones_pf)
         return root.milestones.filter(due_date__isnull=False).order_by("due_date")  # type: ignore
