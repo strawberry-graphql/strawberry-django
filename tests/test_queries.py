@@ -89,7 +89,16 @@ pytestmark = [
 
 
 async def test_single(query, users):
-    result = await query("{ user(pk: 1) { name } }")
+    result = await query(
+        """
+        query GetUser($pk: ID!) {
+          user(pk: $pk) {
+            name
+          }
+        }
+        """,
+        {"pk": users[0].pk},
+    )
 
     assert not result.errors
     assert result.data["user"] == {"name": users[0].name}

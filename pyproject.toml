@@ -56,14 +56,14 @@ mkdocs-minify-plugin = "^0.8.0"
 mkdocstrings = { version = "^0.24.0", extras = ["python"] }
 pillow = "^10.2.0"
 pymdown-extensions = "^10.0.1"
-pytest = "^7.1.2"
+pytest = "^8.0.2"
 pytest-asyncio = "^0.23.4"
 pytest-cov = "^4.0.0"
 pytest-django = "^4.1.0"
 pytest-mock = "^3.5.1"
 pytest-snapshot = "^0.9.0"
 pytest-watch = "^4.2.0"
-ruff = "^0.2.2"
+ruff = "^0.3.0"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]
