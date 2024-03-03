@@ -471,6 +471,8 @@ type ProjectType implements Node {
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
   isSmall: Boolean!
+  nextMilestonesProperty(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  nextMilestones: [MilestoneType!]!
 }
 
 """An edge in a connection."""

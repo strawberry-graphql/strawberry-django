@@ -104,7 +104,6 @@ class ProjectType(relay.Node):
     is_small: strawberry.auto
 
     next_milestones_property: strawberry.auto
-    next_milestones_pf: List[Milestone]
 
     @strawberry_django.field(
         prefetch_related=lambda _: Prefetch(
