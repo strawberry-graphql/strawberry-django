@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Annotated, Any, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
+from typing_extensions import Annotated
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ from strawberry_django.utils.typing import UserType
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
+    from .schema import MilestoneType
 
 User = get_user_model()
 
@@ -51,6 +53,8 @@ class Project(models.Model):
         default=None,
     )
 
+    next_milestones_prop_pf: List["Milestone"]
+
     @model_property(annotate={"_milestone_count": Count("milestone")})
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
@@ -66,12 +70,12 @@ class Project(models.Model):
     )
     def next_milestones_property(
         self,
-    ) -> list[Annotated["MilestoneType", strawberry.lazy(".schema")]]:
+    ) -> List[Annotated["MilestoneType", strawberry.lazy(".schema")]]:
         """The milestones for the project ordered by their due date
         """
         if hasattr(self, "next_milestones_prop_pf"):
-            return self.next_milestones_prop_pf
-        return self.milestones.filter(due_date__isnull=False).order_by("due_date")
+            return self.next_milestones_prop_pf  # type: ignore
+        return self.milestones.filter(due_date__isnull=False).order_by("due_date")  # type: ignore
 
 
 class Milestone(models.Model):

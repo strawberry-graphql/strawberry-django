@@ -15,6 +15,7 @@ from typing import (
     Type,
     TypeVar,
     cast,
+    Optional,
 )
 
 from django.db import models
@@ -196,7 +197,8 @@ class OptimizerStore:
                 assert_type(p, PrefetchCallable)
                 p = p(info)  # noqa: PLW2901
 
-            if isinstance(p, Prefetch) and p.to_attr is not None:
+            # to_attr is not typed in django stubs
+            if isinstance(p, Prefetch) and p.to_attr is not None:  # type: ignore
                 custom_prefetches.append(p)
         return custom_prefetches
 
@@ -469,7 +471,7 @@ def _get_model_hints(
             continue
 
         # Add annotations from the field if they exist
-        field_store = cast(OptimizerStore | None, getattr(field, "store", None))
+        field_store = cast(Optional[OptimizerStore], getattr(field, "store", None))
         custom_prefetches: list[Prefetch] = []
         if field_store is not None:
             if (
@@ -521,9 +523,10 @@ def _get_model_hints(
         # Lastly, from the django field itself
         if not model_fieldname:
             model_fieldname = getattr(field, "django_name", None) or field.python_name
-            model_field = model_fields.get(model_fieldname, None)
+            model_field = model_fields.get(model_fieldname, None) if model_fieldname else None
 
         if model_field is not None:
+            assert model_fieldname is not None  # if we have a model_field, then model_fieldname must also be set
             path = f"{prefix}{model_fieldname}"
 
             if not custom_prefetches and isinstance(
@@ -636,7 +639,8 @@ def _get_model_hints(
 
                         if custom_prefetches:
                             for prefetch in custom_prefetches:
-                                if prefetch.queryset is not None:
+                                # stubs incorrectly say that queryset is never None
+                                if prefetch.queryset is not None:  # type: ignore
                                     p_qs = prefetch.queryset
                                 else:
                                     p_qs = _get_prefetch_queryset(
@@ -644,7 +648,8 @@ def _get_model_hints(
                                     )
                                 f_qs = f_store.apply(p_qs, info=info, config=config)
                                 f_prefetch = Prefetch(
-                                    prefetch.prefetch_through, f_qs, prefetch.to_attr
+                                    # to_attr is not typed in django stubs
+                                    prefetch.prefetch_through, f_qs, prefetch.to_attr  # type: ignore
                                 )
                                 if prefix:
                                     f_prefetch.add_prefix(prefix)

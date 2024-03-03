@@ -560,7 +560,7 @@ def test_query_prefetch_with_to_attr(db, gql_client: GraphQLTestClient):
         }
         expected.append(p_res)
         milestones = MilestoneFactory.create_batch(2, project=p)
-        milestones.sort(key=lambda ms: ms.due_date)
+        milestones.sort(key=lambda ms: cast(datetime.datetime, ms.due_date))
         for m in milestones:
             m_res: dict[str, Any] = {
                 "id": to_base64("MilestoneType", m.id),
@@ -605,7 +605,7 @@ def test_query_prefetch_with_to_attr_model_property(db, gql_client: GraphQLTestC
         }
         expected.append(p_res)
         milestones = MilestoneFactory.create_batch(2, project=p)
-        milestones.sort(key=lambda ms: ms.due_date)
+        milestones.sort(key=lambda ms: cast(datetime.datetime, ms.due_date))
         for m in milestones:
             m_res: dict[str, Any] = {
                 "id": to_base64("MilestoneType", m.id),
