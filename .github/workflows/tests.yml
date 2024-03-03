@@ -1,5 +1,5 @@
 ---
-name: Run Tests
+name: Tests
 
 # yamllint disable-line rule:truthy
 on:
