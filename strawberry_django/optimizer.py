@@ -12,10 +12,10 @@ from typing import (
     Callable,
     ForwardRef,
     Generator,
+    Optional,
     Type,
     TypeVar,
     cast,
-    Optional,
 )
 
 from django.db import models
@@ -523,10 +523,14 @@ def _get_model_hints(
         # Lastly, from the django field itself
         if not model_fieldname:
             model_fieldname = getattr(field, "django_name", None) or field.python_name
-            model_field = model_fields.get(model_fieldname, None) if model_fieldname else None
+            model_field = (
+                model_fields.get(model_fieldname, None) if model_fieldname else None
+            )
 
         if model_field is not None:
-            assert model_fieldname is not None  # if we have a model_field, then model_fieldname must also be set
+            assert (
+                model_fieldname is not None
+            )  # if we have a model_field, then model_fieldname must also be set
             path = f"{prefix}{model_fieldname}"
 
             if not custom_prefetches and isinstance(
@@ -649,7 +653,9 @@ def _get_model_hints(
                                 f_qs = f_store.apply(p_qs, info=info, config=config)
                                 f_prefetch = Prefetch(
                                     # to_attr is not typed in django stubs
-                                    prefetch.prefetch_through, f_qs, prefetch.to_attr  # type: ignore
+                                    prefetch.prefetch_through,
+                                    f_qs,
+                                    prefetch.to_attr,  # type: ignore
                                 )
                                 if prefix:
                                     f_prefetch.add_prefix(prefix)

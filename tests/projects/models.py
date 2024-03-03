@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Any, List, Optional
-from typing_extensions import Annotated
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -7,12 +6,14 @@ from django.db import models
 from django.db.models import Count, Prefetch, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
+from typing_extensions import Annotated
 
 from strawberry_django.descriptors import model_property
 from strawberry_django.utils.typing import UserType
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
+
     from .schema import MilestoneType
 
 User = get_user_model()
@@ -71,8 +72,7 @@ class Project(models.Model):
     def next_milestones_property(
         self,
     ) -> List[Annotated["MilestoneType", strawberry.lazy(".schema")]]:
-        """The milestones for the project ordered by their due date
-        """
+        """The milestones for the project ordered by their due date"""
         if hasattr(self, "next_milestones_prop_pf"):
             return self.next_milestones_prop_pf  # type: ignore
         return self.milestones.filter(due_date__isnull=False).order_by("due_date")  # type: ignore
