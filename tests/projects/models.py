@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -74,8 +74,8 @@ class Project(models.Model):
     ) -> List[Annotated["MilestoneType", strawberry.lazy(".schema")]]:
         """The milestones for the project ordered by their due date"""
         if hasattr(self, "next_milestones_prop_pf"):
-            return self.next_milestones_prop_pf  # type: ignore
-        return self.milestones.filter(due_date__isnull=False).order_by("due_date")  # type: ignore
+            return cast(List["MilestoneType"], self.next_milestones_prop_pf)
+        return cast(List["MilestoneType"], self.milestones.filter(due_date__isnull=False).order_by("due_date"))
 
 
 class Milestone(models.Model):
@@ -100,6 +100,8 @@ class Milestone(models.Model):
         related_name="milestones",
         related_query_name="milestone",
     )
+
+    next_milestones_pf: List["Milestone"]
 
 
 class FavoriteQuerySet(QuerySet):
