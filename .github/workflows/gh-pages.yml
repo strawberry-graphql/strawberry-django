@@ -1,5 +1,5 @@
 ---
-name: docs deploy
+name: Deploy Docs
 
 # yamllint disable-line rule:truthy
 on:
@@ -19,4 +19,4 @@ jobs:
         with:
           cache: poetry
       - run: poetry install
-      - run: mkdocs gh-deploy --force
+      - run: poetry run mkdocs gh-deploy --force
