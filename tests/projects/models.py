@@ -75,7 +75,10 @@ class Project(models.Model):
         """The milestones for the project ordered by their due date"""
         if hasattr(self, "next_milestones_prop_pf"):
             return cast(List["MilestoneType"], self.next_milestones_prop_pf)
-        return cast(List["MilestoneType"], self.milestones.filter(due_date__isnull=False).order_by("due_date"))
+        return cast(
+            List["MilestoneType"],
+            self.milestones.filter(due_date__isnull=False).order_by("due_date"),
+        )
 
 
 class Milestone(models.Model):
