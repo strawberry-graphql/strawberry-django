@@ -15,7 +15,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
 )
 
 import django
@@ -445,7 +444,6 @@ def resolve_model_field_type(
             int,
         )  # Exclude IntegerChoices
     ):
-        choices = cast(List[Tuple[Any, str]], model_field.choices)
         field_type = getattr(model_field, "_strawberry_enum", None)
         if field_type is None:
             meta = model_field.model._meta
@@ -460,8 +458,9 @@ def resolve_model_field_type(
                         ),
                     ),
                     {
-                        c[0]: EnumValueDefinition(value=c[0], description=c[1])
-                        for c in choices
+                        # use str() to trigger eventual django's gettext_lazy string
+                        c[0]: EnumValueDefinition(value=c[0], description=str(c[1]))
+                        for c in model_field.choices
                     },
                 ),
                 description=(

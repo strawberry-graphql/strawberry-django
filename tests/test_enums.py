@@ -4,6 +4,7 @@ from typing import cast
 import strawberry
 from django.db import models
 from django.test import override_settings
+from django.utils.translation import gettext_lazy
 from django_choices_field import IntegerChoicesField, TextChoicesField
 from pytest_mock import MockerFixture
 
@@ -18,7 +19,7 @@ class Choice(models.TextChoices):
 
     A = "a", "A description"
     B = "b", "B description"
-    C = "c", "C description"
+    C = "c", gettext_lazy("C description")
 
 
 class IntegerChoice(models.IntegerChoices):
@@ -26,7 +27,7 @@ class IntegerChoice(models.IntegerChoices):
 
     X = 1, "1 description"
     Y = 2, "2 description"
-    Z = 3, "3 description"
+    Z = 3, gettext_lazy("3 description")
 
 
 class ChoicesModel(models.Model):
@@ -36,13 +37,13 @@ class ChoicesModel(models.Model):
         max_length=255,
         choices=[
             ("c", "C description"),
-            ("d", "D description"),
+            ("d", gettext_lazy("D description")),
         ],
     )
     attr4 = models.IntegerField(
         choices=[
             (4, "4 description"),
-            (5, "5 description"),
+            (5, gettext_lazy("5 description")),
         ],
     )
     attr5 = models.CharField(
@@ -61,13 +62,13 @@ class ChoicesWithExtraFieldsModel(models.Model):
         max_length=255,
         choices=[
             ("c", "C description"),
-            ("d", "D description"),
+            ("d", gettext_lazy("D description")),
         ],
     )
     attr4 = models.IntegerField(
         choices=[
             (4, "4 description"),
-            (5, "5 description"),
+            (5, gettext_lazy("5 description")),
         ],
     )
     attr5 = models.CharField(
