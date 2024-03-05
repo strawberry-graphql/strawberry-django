@@ -452,7 +452,7 @@ def resolve_model_field_type(
             enum_choices = {}
             for c in model_field.choices:
                 # replace chars not compatible with GraphQL naming convention
-                choice_name = re.sub(r"^[^a-zA-Z]|[^a-zA-Z0-9]", "_", c[0])
+                choice_name = re.sub(r"^[^_a-zA-Z]|[^_a-zA-Z0-9]", "_", c[0])
                 # use str() to trigger eventual django's gettext_lazy string
                 choice_value = EnumValueDefinition(value=c[0], description=str(c[1]))
                 enum_choices[choice_name] = choice_value
