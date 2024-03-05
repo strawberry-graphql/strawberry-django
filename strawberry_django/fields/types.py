@@ -455,6 +455,9 @@ def resolve_model_field_type(
                 choice_name = re.sub(r"^[^_a-zA-Z]|[^_a-zA-Z0-9]", "_", c[0])
                 # use str() to trigger eventual django's gettext_lazy string
                 choice_value = EnumValueDefinition(value=c[0], description=str(c[1]))
+
+                while choice_name in enum_choices:
+                    choice_name = choice_name + "_"
                 enum_choices[choice_name] = choice_value
 
             field_type = strawberry.enum(  # type: ignore

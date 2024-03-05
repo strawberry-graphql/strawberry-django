@@ -21,6 +21,7 @@ class Choice(models.TextChoices):
     B = "b", "B description"
     C = "c", gettext_lazy("C description")
     D = "12d-d'éléphant_🐘", "D description"
+    E = "_2d_d__l_phant__", "E description"
 
 
 class IntegerChoice(models.IntegerChoices):
@@ -115,6 +116,7 @@ def test_choices_field():
       B
       C
       D
+      E
     }
 
     type ChoicesType {
@@ -262,6 +264,7 @@ def test_generate_choices_from_enum():
       B
       C
       D
+      E
     }
 
     type ChoicesType {
@@ -303,6 +306,9 @@ def test_generate_choices_from_enum():
 
       """D description"""
       _2d_d__l_phant__
+
+      """E description"""
+      _2d_d__l_phant___
     }
     '''
 
@@ -367,6 +373,7 @@ def test_generate_choices_from_enum_with_extra_fields():
       B
       C
       D
+      E
     }
 
     type ChoicesWithExtraFieldsType {
@@ -410,6 +417,9 @@ def test_generate_choices_from_enum_with_extra_fields():
 
       """D description"""
       _2d_d__l_phant__
+
+      """E description"""
+      _2d_d__l_phant___
     }
 
 
