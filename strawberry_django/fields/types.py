@@ -2,6 +2,7 @@ import datetime
 import decimal
 import enum
 import inspect
+import re
 import uuid
 from typing import (
     TYPE_CHECKING,
@@ -447,6 +448,18 @@ def resolve_model_field_type(
         field_type = getattr(model_field, "_strawberry_enum", None)
         if field_type is None:
             meta = model_field.model._meta
+
+            enum_choices = {}
+            for c in model_field.choices:
+                # replace chars not compatible with GraphQL naming convention
+                choice_name = re.sub(r"^[^_a-zA-Z]|[^_a-zA-Z0-9]", "_", c[0])
+                # use str() to trigger eventual django's gettext_lazy string
+                choice_value = EnumValueDefinition(value=c[0], description=str(c[1]))
+
+                while choice_name in enum_choices:
+                    choice_name = choice_name + "_"
+                enum_choices[choice_name] = choice_value
+
             field_type = strawberry.enum(  # type: ignore
                 enum.Enum(  # type: ignore
                     "".join(
@@ -457,11 +470,7 @@ def resolve_model_field_type(
                             "Enum",
                         ),
                     ),
-                    {
-                        # use str() to trigger eventual django's gettext_lazy string
-                        c[0]: EnumValueDefinition(value=c[0], description=str(c[1]))
-                        for c in model_field.choices
-                    },
+                    enum_choices,
                 ),
                 description=(
                     f"{meta.verbose_name} | {model_field.verbose_name}"
