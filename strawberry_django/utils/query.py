@@ -1,5 +1,5 @@
 import functools
-from typing import TYPE_CHECKING, List, Optional, Set, Type, TypeVar, cast
+from typing import TYPE_CHECKING, List, Optional, Type, TypeVar, cast
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Exists, F, Model, Q, QuerySet
@@ -123,7 +123,6 @@ def filter_for_user_q(
             )
     elif len(app_labels) > 1:  # pragma:nocover
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
-
 
     # Small optimization if the user's permissions are cached
     perm_cache = getattr(user, "_perm_cache", None)
