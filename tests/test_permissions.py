@@ -286,6 +286,20 @@ def test_superuser_required_optional(db, gql_client: GraphQLTestClient):
 
 @pytest.mark.django_db(transaction=True)
 def test_perm_cached(db, gql_client: GraphQLTestClient):
+    """Validates that the permission caching mechanism correctly stores permissions as a set of strings.
+
+    The test targets the `_perm_cache` attribute used in `utils/query.py`. It verifies that
+    the attribute behaves as expected, holding a `Set[str]` that represents permission
+    codenames, rather than direct Permission objects.
+
+    This test addresses a regression captured by the following error:
+
+    ```
+    user_perms: Set[str] = {p.codename for p in perm_cache}
+                          ^^^^^^^^^^
+    AttributeError: 'str' object has no attribute 'codename'
+    ```
+    """
     query = """
     query Issue ($id: GlobalID!) {
         issuePermRequired (id: $id) {
