@@ -258,6 +258,7 @@ type IssueType implements Node {
   ): FavoriteTypeConnection!
   milestoneName: String!
   milestoneNameWithoutOnlyOptimization: String!
+  privateName: String
 }
 
 """A connection to a list of items."""
