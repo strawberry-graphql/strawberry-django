@@ -6,6 +6,8 @@ from guardian.shortcuts import assign_perm
 from strawberry.relay import to_base64
 from typing_extensions import Literal, TypeAlias
 
+from strawberry_django.optimizer import DjangoOptimizerExtension
+
 from .projects.faker import (
     GroupFactory,
     IssueFactory,
@@ -281,6 +283,29 @@ def test_superuser_required_optional(db, gql_client: GraphQLTestClient):
             },
         }
 
+@pytest.mark.django_db(transaction=True)
+def test_perm_cached(db, gql_client: GraphQLTestClient):
+    query = """
+    query Issue ($id: GlobalID!) {
+        issuePermRequired (id: $id) {
+          id
+          privateName
+        }
+    }
+    """
+    issue = IssueFactory.create(name="Test")
+
+    # User with permission
+    user_with_perm = UserFactory.create()
+    user_with_perm.user_permissions.add(
+        Permission.objects.get(codename="view_issue"),
+    )
+    assign_perm("view_issue", user_with_perm, issue)
+    with gql_client.login(user_with_perm):
+        if DjangoOptimizerExtension.enabled.get():
+          res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+          assert res.data["issuePermRequired"]["privateName"] == "Test"
+
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("kind", perm_kinds)
@@ -348,7 +373,6 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                 "name": issue.name,
             },
         }
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("kind", perm_kinds)

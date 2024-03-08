@@ -124,12 +124,12 @@ def filter_for_user_q(
     elif len(app_labels) > 1:  # pragma:nocover
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
 
+
     # Small optimization if the user's permissions are cached
     perm_cache = getattr(user, "_perm_cache", None)
-    if perm_cache is not None:  # pragma:nocover
+    if perm_cache is not None:
         f = any if any_perm else all
-        user_perms: Set[str] = {p.codename for p in perm_cache}
-        if f(p in user_perms for p in perms_list):
+        if f(p in perm_cache for p in perms_list):
             return qs
 
     q = Q()

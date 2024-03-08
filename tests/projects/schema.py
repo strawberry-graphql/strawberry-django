@@ -10,13 +10,16 @@ from django.core.exceptions import ValidationError
 from django.db.models import (
     BooleanField,
     Count,
+    CharField,
     Exists,
     ExpressionWrapper,
     OuterRef,
     Prefetch,
     Q,
+    Subquery,
+    Value
 )
-from django.db.models.functions import Now
+from django.db.models.functions import Now, Coalesce
 from django.db.models.query import QuerySet
 from strawberry import relay
 from strawberry.types.info import Info
@@ -29,6 +32,7 @@ from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartia
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.permissions import (
+    filter_for_user,
     HasPerm,
     HasRetvalPerm,
     IsAuthenticated,
@@ -205,6 +209,26 @@ class IssueType(relay.Node):
     def milestone_name_without_only_optimization(self) -> str:
         return self.milestone.name
 
+    @strawberry_django.field(
+        annotate={
+            "_private_name": lambda info: Coalesce(
+                Subquery(
+                    filter_for_user(
+                        Issue.objects.all(),
+                        info.context.request.user,
+                        ["projects.view_issue"],
+                    )
+                    .filter(id=OuterRef("pk"))
+                    .values("name")[:1],
+                    output_field=CharField(),
+                ),
+                Value(None),
+            )
+        },
+        extensions=[HasPerm(perms=["projects.view_issue"])]
+    )
+    def private_name(self, root: Issue) -> Optional[str]:
+        return root._private_name  # type: ignore
 
 @strawberry_django.type(Tag)
 class TagType(relay.Node):
