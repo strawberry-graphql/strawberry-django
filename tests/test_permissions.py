@@ -305,18 +305,12 @@ def test_perm_cached(db, gql_client: GraphQLTestClient):
     with gql_client.login(user_with_perm):
         if DjangoOptimizerExtension.enabled.get():
             res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
-
-            assert res.errors is None, f"GraphQL errors returned: {res.errors}"
-            assert res.data is not None, "Query did not return any data"
-
-            issue_data = res.data.get("issuePermRequired")
-            assert (
-                issue_data is not None
-            ), "No data for 'issuePermRequired' in the response"
-            private_name = issue_data.get("privateName")
-            assert (
-                private_name == "Test"
-            ), f"Expected privateName to be 'Test', got '{private_name}'"
+            assert res.data == {
+                "issuePermRequired": {
+                    "id": to_base64("IssueType", issue.pk),
+                    "privateName": issue.name,
+                },
+            }
 
 
 @pytest.mark.django_db(transaction=True)
