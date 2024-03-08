@@ -9,17 +9,17 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db.models import (
     BooleanField,
-    Count,
     CharField,
+    Count,
     Exists,
     ExpressionWrapper,
     OuterRef,
     Prefetch,
     Q,
     Subquery,
-    Value
+    Value,
 )
-from django.db.models.functions import Now, Coalesce
+from django.db.models.functions import Coalesce, Now
 from django.db.models.query import QuerySet
 from strawberry import relay
 from strawberry.types.info import Info
@@ -32,12 +32,12 @@ from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartia
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.permissions import (
-    filter_for_user,
     HasPerm,
     HasRetvalPerm,
     IsAuthenticated,
     IsStaff,
     IsSuperuser,
+    filter_for_user,
 )
 from strawberry_django.relay import ListConnectionWithTotalCount
 
@@ -225,10 +225,10 @@ class IssueType(relay.Node):
                 Value(None),
             )
         },
-        extensions=[HasPerm(perms=["projects.view_issue"])]
     )
     def private_name(self, root: Issue) -> Optional[str]:
         return root._private_name  # type: ignore
+
 
 @strawberry_django.type(Tag)
 class TagType(relay.Node):
