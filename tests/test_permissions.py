@@ -283,6 +283,7 @@ def test_superuser_required_optional(db, gql_client: GraphQLTestClient):
             },
         }
 
+
 @pytest.mark.django_db(transaction=True)
 def test_perm_cached(db, gql_client: GraphQLTestClient):
     query = """
@@ -303,8 +304,8 @@ def test_perm_cached(db, gql_client: GraphQLTestClient):
     assign_perm("view_issue", user_with_perm, issue)
     with gql_client.login(user_with_perm):
         if DjangoOptimizerExtension.enabled.get():
-          res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
-          assert res.data["issuePermRequired"]["privateName"] == "Test"
+            res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+            assert res.data["issuePermRequired"]["privateName"] == "Test"
 
 
 @pytest.mark.django_db(transaction=True)
@@ -373,6 +374,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
                 "name": issue.name,
             },
         }
+
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("kind", perm_kinds)
