@@ -9,7 +9,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db.models import (
     BooleanField,
-    CharField,
     Count,
     Exists,
     ExpressionWrapper,
@@ -17,9 +16,8 @@ from django.db.models import (
     Prefetch,
     Q,
     Subquery,
-    Value,
 )
-from django.db.models.functions import Coalesce, Now
+from django.db.models.functions import Now
 from django.db.models.query import QuerySet
 from strawberry import relay
 from strawberry.types.info import Info
@@ -211,19 +209,15 @@ class IssueType(relay.Node):
 
     @strawberry_django.field(
         annotate={
-            "_private_name": lambda info: Coalesce(
-                Subquery(
-                    filter_for_user(
-                        Issue.objects.all(),
-                        info.context.request.user,
-                        ["projects.view_issue"],
-                    )
-                    .filter(id=OuterRef("pk"))
-                    .values("name")[:1],
-                    output_field=CharField(),
-                ),
-                Value(None),
-            )
+            "_private_name": lambda info: Subquery(
+                filter_for_user(
+                    Issue.objects.all(),
+                    info.context.request.user,
+                    ["projects.view_issue"],
+                )
+                .filter(id=OuterRef("pk"))
+                .values("name")[:1],
+            ),
         },
     )
     def private_name(self, root: Issue) -> Optional[str]:
