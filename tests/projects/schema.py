@@ -15,6 +15,7 @@ from django.db.models import (
     OuterRef,
     Prefetch,
     Q,
+    Subquery,
 )
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
@@ -34,6 +35,7 @@ from strawberry_django.permissions import (
     IsAuthenticated,
     IsStaff,
     IsSuperuser,
+    filter_for_user,
 )
 from strawberry_django.relay import ListConnectionWithTotalCount
 
@@ -204,6 +206,22 @@ class IssueType(relay.Node):
     @strawberry_django.field(select_related="milestone")
     def milestone_name_without_only_optimization(self) -> str:
         return self.milestone.name
+
+    @strawberry_django.field(
+        annotate={
+            "_private_name": lambda info: Subquery(
+                filter_for_user(
+                    Issue.objects.all(),
+                    info.context.request.user,
+                    ["projects.view_issue"],
+                )
+                .filter(id=OuterRef("pk"))
+                .values("name")[:1],
+            ),
+        },
+    )
+    def private_name(self, root: Issue) -> Optional[str]:
+        return root._private_name  # type: ignore
 
 
 @strawberry_django.type(Tag)
