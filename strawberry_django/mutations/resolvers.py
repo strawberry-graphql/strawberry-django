@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -172,6 +173,9 @@ def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk"):
                 List[InputListTypes], parse_input(info, data.set, key_attr=key_attr)
             ),
         )
+
+    if isinstance(data, Enum):
+        return data.value
 
     if dataclasses.is_dataclass(data):
         return {
