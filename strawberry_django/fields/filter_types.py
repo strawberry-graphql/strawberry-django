@@ -16,37 +16,36 @@ from .filter_order import filter_field
 
 T = TypeVar("T")
 
-_SKIP_MSG = ". Filter will be skipped on `null` value"
+_SKIP_MSG = "Filter will be skipped on `null` value"
 
 
 @strawberry.input
 class BaseFilterLookup(Generic[T]):
-    exact: Optional[T] = filter_field(
-        filter_none=True,
-        description="Exact match. If `null` value is used filter is equivalent to `isNull=True`",
-    )
-    is_null: Optional[bool] = filter_field(description=f"Assignment test{_SKIP_MSG}")
+    exact: Optional[T] = filter_field(description=f"Exact match. {_SKIP_MSG}")
+    is_null: Optional[bool] = filter_field(description=f"Assignment test. {_SKIP_MSG}")
     in_list: Optional[List[T]] = filter_field(
-        description=f"Exact match of items in a given list{_SKIP_MSG}"
+        description=f"Exact match of items in a given list. {_SKIP_MSG}"
     )
 
 
 @strawberry.input
 class RangeLookup(Generic[T]):
-    left: Optional[T] = None
-    right: Optional[T] = None
+    start: Optional[T] = None
+    end: Optional[T] = None
 
     @filter_field
     def filter(self, queryset, prefix: str):
-        return queryset, Q(**{f"{prefix}range": [self.left, self.right]})
+        return queryset, Q(**{f"{prefix}range": [self.start, self.end]})
 
 
 @strawberry.input
 class ComparisonFilterLookup(BaseFilterLookup[T]):
-    gt: Optional[T] = filter_field(description=f"Greater than{_SKIP_MSG}")
-    gte: Optional[T] = filter_field(description=f"Greater than or equal to{_SKIP_MSG}")
-    lt: Optional[T] = filter_field(description=f"Less than{_SKIP_MSG}")
-    lte: Optional[T] = filter_field(description=f"Less than or equal to{_SKIP_MSG}")
+    gt: Optional[T] = filter_field(description=f"Greater than. {_SKIP_MSG}")
+    gte: Optional[T] = filter_field(
+        description=f"Greater than or equal to. {_SKIP_MSG}"
+    )
+    lt: Optional[T] = filter_field(description=f"Less than. {_SKIP_MSG}")
+    lte: Optional[T] = filter_field(description=f"Less than or equal to. {_SKIP_MSG}")
     range: Optional[RangeLookup[T]] = filter_field(
         description="Inclusive range test (between)"
     )
@@ -55,32 +54,31 @@ class ComparisonFilterLookup(BaseFilterLookup[T]):
 @strawberry.input
 class FilterLookup(BaseFilterLookup[T]):
     i_exact: Optional[T] = filter_field(
-        filter_none=True,
-        description="Case-insensitive exact match. If `null` value is used filter is equivalent to `isNull=True`",
+        description=f"Case-insensitive exact match. {_SKIP_MSG}"
     )
     contains: Optional[T] = filter_field(
-        description=f"Case-sensitive containment test{_SKIP_MSG}"
+        description=f"Case-sensitive containment test. {_SKIP_MSG}"
     )
     i_contains: Optional[T] = filter_field(
-        description=f"Case-insensitive containment test{_SKIP_MSG}"
+        description=f"Case-insensitive containment test. {_SKIP_MSG}"
     )
     starts_with: Optional[T] = filter_field(
-        description=f"Case-sensitive starts-with{_SKIP_MSG}"
+        description=f"Case-sensitive starts-with. {_SKIP_MSG}"
     )
     i_starts_with: Optional[T] = filter_field(
-        description=f"Case-insensitive starts-with{_SKIP_MSG}"
+        description=f"Case-insensitive starts-with. {_SKIP_MSG}"
     )
     ends_with: Optional[T] = filter_field(
-        description=f"Case-sensitive ends-with{_SKIP_MSG}"
+        description=f"Case-sensitive ends-with. {_SKIP_MSG}"
     )
     i_ends_with: Optional[T] = filter_field(
-        description=f"Case-insensitive ends-with{_SKIP_MSG}"
+        description=f"Case-insensitive ends-with. {_SKIP_MSG}"
     )
     regex: Optional[T] = filter_field(
-        description=f"Case-sensitive regular expression match{_SKIP_MSG}"
+        description=f"Case-sensitive regular expression match. {_SKIP_MSG}"
     )
     i_regex: Optional[T] = filter_field(
-        description=f"Case-insensitive regular expression match{_SKIP_MSG}"
+        description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
     )
 
 

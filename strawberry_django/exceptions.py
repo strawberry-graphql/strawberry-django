@@ -41,7 +41,7 @@ class ForbiddenFieldArgumentError(StrawberryException):
         self.argument_name = arguments[0]
 
         self.message = (
-            f"Found disallowed {self.extra_arguments_str} in" f'field "{resolver.name}"'
+            f'Found disallowed {self.extra_arguments_str} in field "{resolver.name}"'
         )
         self.rich_message = (
             f"Found disallowed {self.extra_arguments_str} in "

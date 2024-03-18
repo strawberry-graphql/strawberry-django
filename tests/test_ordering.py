@@ -213,7 +213,7 @@ def test_order_type():
     ]
 
 
-def test_order_field_validation():
+def test_order_field_missing_prefix():
     with pytest.raises(
         MissingFieldArgumentError, match=r".*\"prefix\".*\"field_method\".*"
     ):
@@ -222,6 +222,8 @@ def test_order_field_validation():
         def field_method():
             pass
 
+
+def test_order_field_missing_value():
     with pytest.raises(
         MissingFieldArgumentError, match=r".*\"value\".*\"field_method\".*"
     ):
@@ -230,6 +232,8 @@ def test_order_field_validation():
         def field_method(prefix):
             pass
 
+
+def test_order_field_missing_value_annotation():
     with pytest.raises(
         MissingArgumentsAnnotationsError,
         match=r"Missing annotation.*\"value\".*\"field_method\".*",
@@ -239,6 +243,8 @@ def test_order_field_validation():
         def field_method(prefix, value):
             pass
 
+
+def test_order_field():
     try:
 
         @strawberry_django.order_field
@@ -247,6 +253,8 @@ def test_order_field_validation():
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
+
+def test_order_field_forbidden_param_annotation():
     with pytest.raises(
         MissingArgumentsAnnotationsError,
         match=r".*\"forbidden_param\".*\"field_method\".*",
@@ -256,6 +264,8 @@ def test_order_field_validation():
         def field_method(prefix, value: auto, sequence, queryset, forbidden_param):
             pass
 
+
+def test_order_field_forbidden_param():
     with pytest.raises(
         ForbiddenFieldArgumentError,
         match=r".*\"forbidden_param\".*\"field_method\".*",
@@ -265,12 +275,16 @@ def test_order_field_validation():
         def field_method(prefix, value: auto, sequence, queryset, forbidden_param: str):
             pass
 
+
+def test_order_field_missing_queryset():
     with pytest.raises(MissingFieldArgumentError, match=r".*\"queryset\".*\"order\".*"):
 
         @strawberry_django.order_field
         def order(prefix):
             pass
 
+
+def test_order_field_value_forbidden_on_object():
     with pytest.raises(ForbiddenFieldArgumentError, match=r".*\"value\".*\"order\".*"):
 
         @strawberry_django.order_field
@@ -281,6 +295,8 @@ def test_order_field_validation():
         def order(prefix, queryset, value: auto):
             pass
 
+
+def test_order_field_on_object():
     try:
 
         @strawberry_django.order_field
@@ -326,7 +342,7 @@ def test_order_object_method():
             assert prefix == "ROOT", "Unexpected prefix passed"
             assert sequence == _sequence, "Unexpected sequence passed"
             assert queryset == _queryset, "Unexpected queryset passed"
-            raise Exception("WAS CALLED")
+            return queryset, ["name"]
 
     _order = cast(WithStrawberryObjectDefinition, Order())
     schema = strawberry.Schema(query=Query)
@@ -334,8 +350,10 @@ def test_order_object_method():
     _queryset: Any = object()
     _sequence: Any = {"customOrder": OrderSequence(0)}
 
-    with pytest.raises(Exception, match="WAS CALLED"):
-        process_order(_order, _info, _queryset, prefix="ROOT", sequence=_sequence)
+    order = process_order(_order, _info, _queryset, prefix="ROOT", sequence=_sequence)[
+        1
+    ]
+    assert "name" in order, "order was not called"
 
 
 def test_order_nulls(query, db, fruits):

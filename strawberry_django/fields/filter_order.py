@@ -98,7 +98,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
         return None
 
-    def __call__(
+    def __call__(  # type: ignore [reportIncompatibleMethodOverride]
         self,
         source: Any,
         info: Info | None,
@@ -133,9 +133,9 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
 
 class FilterOrderField(StrawberryField):
-    base_resolver: FilterOrderFieldResolver | None
+    base_resolver: FilterOrderFieldResolver | None  # type: ignore [reportIncompatibleMethodOverride]
 
-    def __call__(self, resolver: _RESOLVER_TYPE) -> Self | FilterOrderFieldResolver:
+    def __call__(self, resolver: _RESOLVER_TYPE) -> Self | FilterOrderFieldResolver:  # type: ignore [reportIncompatibleMethodOverride]
         if not isinstance(resolver, StrawberryResolver):
             resolver = FilterOrderFieldResolver(
                 resolver, resolver_type=self.metadata["_FIELD_TYPE"]

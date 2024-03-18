@@ -19,7 +19,8 @@ class Fruit:
 
 !!! tip
 
-    In most cases filter fields should have `Optional` annotations and default value `strawberry.UNSET`.
+    In most cases filter fields should have `Optional` annotations and default value `strawberry.UNSET` like so:
+    `foo: Optional[SomeType] = strawberry.UNSET`
     Above `auto` annotation is wrapped in `Optional` automatically.
     `UNSET` is automatically used for fields without `field` or with `strawberry_django.filter_field`.
 
@@ -211,6 +212,16 @@ class FruitFilter:
     As seen above `strawberry_django.process_filters` function is exposed and can be
     reused in custom methods. Above it's used to resolve fields lookups
 
+!!! tip
+
+    By default `null` value is ignored for all filters & lookups. This applies to custom
+    filter methods as well. Those won't even be called (you don't have to check for `None`).
+    This can be modified using
+    `strawberry_django.filter_field(filter_none=True)`
+
+    This also means that build in `exact` & `iExact` lookups cannot be used to filter for `None`
+    and `isNull` have to be used explicitly.
+
 The code above generates the following schema:
 
 ```{.graphql title=schema.graphql}
@@ -243,7 +254,7 @@ class ColorFilter:
         # prefix is "fruit_set__" if unused root object is filtered instead
         if value:
             return Q(name=value)
-        return []
+        return Q()
 ```
 
 ```graphql
@@ -302,7 +313,7 @@ class FruitFilter:
         info: Info,
         queryset: QuerySet,
         prefix: str,
-    ) -> tuple[QuerySet, list[str]]:
+    ) -> tuple[QuerySet, list[Q]]:
         queryset = queryset.filter(
             ... # Do some query modification
         )
@@ -354,30 +365,43 @@ class Query:
 
 There is 7 already defined Generic Lookup `strawberry.input` classes importable from `strawberry_django`
 
-- `BaseFilterLookup`
-  - contains `exact`, `isNull` & `inList`
-  - used for `ID` & `bool` fields
-- `RangeLookup`
-  - used for `range` or `BETWEEN` filtering
-- `ComparisonFilterLookup`
-  - inherits `BaseFilterLookup`
-  - additionaly contains `gt`, `gte`, `lt`, `lte`, & `range`
-  - used for Numberical fields
-- `FilterLookup`
-  - inherits `BaseFilterLookup`
-  - additionally contains `iExact`, `contains`, `iContains`, `startsWith`, `iStartsWith`, `endsWith`, `iEndsWith`, `regex` & `iRegex`
-  - used for string based fields and as default
-- `DateFilterLookup`
-  - inherits `ComparisonFilterLookup`
-  - additionally contains `year`,`month`,`day`,`weekDay`,`isoWeekDay`,`week`,`isoYear` & `quarter`
-  - used for date based fields
-- `TimeFilterLookup`
-  - inherits `ComparisonFilterLookup`
-  - additionally contains `hour`,`minute`,`second`,`date` & `time`
-  - used for time based fields
-- `DatetimeFilterLookup`
-  - inherits `DateFilterLookup` & `TimeFilterLookup`
-  - used for timedate based fields
+#### `BaseFilterLookup`
+
+- contains `exact`, `isNull` & `inList`
+- used for `ID` & `bool` fields
+
+#### `RangeLookup`
+
+- used for `range` or `BETWEEN` filtering
+
+#### `ComparisonFilterLookup`
+
+- inherits `BaseFilterLookup`
+- additionaly contains `gt`, `gte`, `lt`, `lte`, & `range`
+- used for Numberical fields
+
+#### `FilterLookup`
+
+- inherits `BaseFilterLookup`
+- additionally contains `iExact`, `contains`, `iContains`, `startsWith`, `iStartsWith`, `endsWith`, `iEndsWith`, `regex` & `iRegex`
+- used for string based fields and as default
+
+#### `DateFilterLookup`
+
+- inherits `ComparisonFilterLookup`
+- additionally contains `year`,`month`,`day`,`weekDay`,`isoWeekDay`,`week`,`isoYear` & `quarter`
+- used for date based fields
+
+#### `TimeFilterLookup`
+
+- inherits `ComparisonFilterLookup`
+- additionally contains `hour`,`minute`,`second`,`date` & `time`
+- used for time based fields
+
+#### `DatetimeFilterLookup`
+
+- inherits `DateFilterLookup` & `TimeFilterLookup`
+- used for timedate based fields
 
 ## Legacy filtering
 

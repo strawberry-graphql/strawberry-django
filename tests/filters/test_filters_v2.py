@@ -8,11 +8,7 @@ from django.db.models import Case, Count, Q, QuerySet, Value, When
 from strawberry import auto
 from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
-from strawberry.type import (
-    StrawberryOptional,
-    WithStrawberryObjectDefinition,
-    get_object_definition,
-)
+from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
 
 import strawberry_django
 from strawberry_django.exceptions import (
@@ -130,7 +126,7 @@ def test_resolve_value(value, resolved):
     assert _resolve_value(value) == resolved
 
 
-def test_filter_field_validation():
+def test_filter_field_missing_prefix():
     with pytest.raises(
         MissingFieldArgumentError, match=r".*\"prefix\".*\"field_method\".*"
     ):
@@ -139,6 +135,8 @@ def test_filter_field_validation():
         def field_method():
             pass
 
+
+def test_filter_field_missing_value():
     with pytest.raises(
         MissingFieldArgumentError, match=r".*\"value\".*\"field_method\".*"
     ):
@@ -147,6 +145,8 @@ def test_filter_field_validation():
         def field_method(prefix):
             pass
 
+
+def test_filter_field_missing_value_annotation():
     with pytest.raises(
         MissingArgumentsAnnotationsError,
         match=r"Missing annotation.*\"value\".*\"field_method\".*",
@@ -156,6 +156,8 @@ def test_filter_field_validation():
         def field_method(prefix, value):
             pass
 
+
+def test_filter_field():
     try:
 
         @strawberry_django.filter_field
@@ -164,8 +166,10 @@ def test_filter_field_validation():
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
+
+def test_filter_field_sequence():
     with pytest.raises(
-        Exception,
+        ForbiddenFieldArgumentError,
         match=r".*\"sequence\".*\"field_method\".*",
     ):
 
@@ -173,6 +177,8 @@ def test_filter_field_validation():
         def field_method(prefix, value: auto, sequence, queryset):
             pass
 
+
+def test_filter_field_forbidden_param_annotation():
     with pytest.raises(
         MissingArgumentsAnnotationsError,
         match=r".*\"forbidden_param\".*\"field_method\".*",
@@ -182,6 +188,8 @@ def test_filter_field_validation():
         def field_method(prefix, value: auto, queryset, forbidden_param):
             pass
 
+
+def test_filter_field_forbidden_param():
     with pytest.raises(
         ForbiddenFieldArgumentError,
         match=r".*\"forbidden_param\".*\"field_method\".*",
@@ -191,6 +199,8 @@ def test_filter_field_validation():
         def field_method(prefix, value: auto, queryset, forbidden_param: str):
             pass
 
+
+def test_filter_field_missing_queryset():
     with pytest.raises(
         MissingFieldArgumentError, match=r".*\"queryset\".*\"filter\".*"
     ):
@@ -199,6 +209,8 @@ def test_filter_field_validation():
         def filter(prefix):
             pass
 
+
+def test_filter_field_value_forbidden_on_object():
     with pytest.raises(ForbiddenFieldArgumentError, match=r".*\"value\".*\"filter\".*"):
 
         @strawberry_django.filter_field
@@ -209,6 +221,8 @@ def test_filter_field_validation():
         def filter(prefix, queryset, value: auto):
             pass
 
+
+def test_filter_field_on_object():
     try:
 
         @strawberry_django.filter_field
@@ -229,14 +243,14 @@ def test_filter_field_method():
             assert prefix == "ROOT", "Unexpected prefix passed"
             assert value == "SOMETHING", "Unexpected value passed"
             assert queryset == _queryset, "Unexpected queryset passed"
-            raise Exception("WAS CALLED")
+            return Q(name=1)
 
     _filter: Any = Filter(custom_filter="SOMETHING")  # type: ignore
     _info: Any = object()
     _queryset: Any = object()
 
-    with pytest.raises(Exception, match="WAS CALLED"):
-        process_filters(_filter, _queryset, _info, prefix="ROOT")
+    q_object = process_filters(_filter, _queryset, _info, prefix="ROOT")[1]
+    assert q_object, "Filter was not called"
 
 
 def test_filter_object_method():
@@ -253,14 +267,14 @@ def test_filter_object_method():
             assert info == _info, "Unexpected info passed"
             assert prefix == "ROOT", "Unexpected prefix passed"
             assert queryset == _queryset, "Unexpected queryset passed"
-            raise Exception("WAS CALLED")
+            return queryset, Q(name=1)
 
     _filter: Any = Filter()
     _info: Any = object()
     _queryset: Any = object()
 
-    with pytest.raises(Exception, match="WAS CALLED"):
-        process_filters(_filter, _queryset, _info, prefix="ROOT")
+    q_object = process_filters(_filter, _queryset, _info, prefix="ROOT")[1]
+    assert q_object, "Filter was not called"
 
 
 def test_filter_type():
@@ -284,8 +298,8 @@ def test_filter_type():
         (
             f.name,
             f.__class__,
-            cast(StrawberryOptional, f.type).of_type.__name__,
-            f.base_resolver.__class__ if f.base_resolver else None,
+            f.type.of_type.__name__,  # type: ignore
+            f.base_resolver.__class__ if f.base_resolver else None,  # type: ignore
         )
         for f in get_object_definition(FruitOrder, strict=True).fields
         if f.name not in {"NOT", "AND", "OR", "DISTINCT"}
