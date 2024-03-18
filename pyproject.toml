@@ -63,7 +63,7 @@ pytest-django = "^4.1.0"
 pytest-mock = "^3.5.1"
 pytest-snapshot = "^0.9.0"
 pytest-watch = "^4.2.0"
-ruff = "^0.3.0"
+ruff = "^0.3.3"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]
