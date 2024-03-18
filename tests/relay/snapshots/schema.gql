@@ -32,6 +32,7 @@ input FruitFilter {
   AND: FruitFilter
   OR: FruitFilter
   NOT: FruitFilter
+  DISTINCT: Boolean
 }
 
 input FruitOrder {
@@ -52,7 +53,11 @@ interface Node {
 
 enum Ordering {
   ASC
+  ASC_NULLS_FIRST
+  ASC_NULLS_LAST
   DESC
+  DESC_NULLS_FIRST
+  DESC_NULLS_LAST
 }
 
 """Information to aid in pagination."""
@@ -165,38 +170,49 @@ type Query {
 }
 
 input StrFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
   exact: String
-  iExact: String
-  contains: String
-  iContains: String
-  inList: [String!]
-  gt: String
-  gte: String
-  lt: String
-  lte: String
-  startsWith: String
-  iStartsWith: String
-  endsWith: String
-  iEndsWith: String
-  range: [String!]
+
+  """Assignment test. Filter will be skipped on `null` value"""
   isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [String!]
+
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
+  iExact: String
+
+  """
+  Case-sensitive containment test. Filter will be skipped on `null` value
+  """
+  contains: String
+
+  """
+  Case-insensitive containment test. Filter will be skipped on `null` value
+  """
+  iContains: String
+
+  """Case-sensitive starts-with. Filter will be skipped on `null` value"""
+  startsWith: String
+
+  """Case-insensitive starts-with. Filter will be skipped on `null` value"""
+  iStartsWith: String
+
+  """Case-sensitive ends-with. Filter will be skipped on `null` value"""
+  endsWith: String
+
+  """Case-insensitive ends-with. Filter will be skipped on `null` value"""
+  iEndsWith: String
+
+  """
+  Case-sensitive regular expression match. Filter will be skipped on `null` value
+  """
   regex: String
+
+  """
+  Case-insensitive regular expression match. Filter will be skipped on `null` value
+  """
   iRegex: String
-  nExact: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIExact: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nContains: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIContains: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nInList: [String!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nGt: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nGte: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nLt: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nLte: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nStartsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIStartsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nEndsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIEndsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nRange: [String!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIsNull: Boolean @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
 }

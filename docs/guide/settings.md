@@ -49,6 +49,10 @@ A dictionary with the following optional keys:
       instead of `strawberry.ID`. This is mostly useful if all your model types inherit
       from `relay.Node` and you want to work only with `GlobalID`.
 
+- **`USE_DEPRECATED_FILTERS`** (default: `False`)
+
+      If True, [legacy filters](filters.md#legacy-filtering) are enabled. This is usefull for migrating from previous version.
+
 These features can be enabled by adding this code to your `settings.py` file.
 
 ```{.python title=settings.py}

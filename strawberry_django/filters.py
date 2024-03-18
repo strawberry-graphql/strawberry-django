@@ -1,3 +1,6 @@
+# ruff: noqa: UP007, UP006
+from __future__ import annotations
+
 import functools
 import inspect
 from enum import Enum
@@ -11,24 +14,24 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
 )
 
 import strawberry
-from django.db import models
-from django.db.models import Q
-from django.db.models.sql.query import get_field_names_from_opts  # type: ignore
+from django.db.models import Q, QuerySet
 from strawberry import UNSET, relay
-from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField, field
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
-from strawberry.types import Info
 from strawberry.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform
 
+from strawberry_django.fields.filter_order import (
+    WITH_NONE_META,
+    FilterOrderField,
+    FilterOrderFieldResolver,
+)
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
     has_django_definition,
@@ -36,9 +39,15 @@ from strawberry_django.utils.typing import (
 
 from .arguments import argument
 from .fields.base import StrawberryDjangoFieldBase
+from .settings import strawberry_django_settings
 
 if TYPE_CHECKING:
-    from django.db.models import QuerySet
+    from types import FunctionType
+
+    from django.db.models import Model
+    from strawberry.arguments import StrawberryArgument
+    from strawberry.types import Info
+
 
 T = TypeVar("T")
 _T = TypeVar("_T", bound=type)
@@ -50,11 +59,6 @@ FILTERS_ARG = "filters"
 @strawberry.input
 class DjangoModelFilterInput:
     pk: strawberry.ID
-
-
-_n_deprecation_reason = """\
-The "n" prefix is deprecated and will be removed in the future, use `NOT` instead.
-"""
 
 
 @strawberry.input
@@ -76,74 +80,6 @@ class FilterLookup(Generic[T]):
     is_null: Optional[bool] = UNSET
     regex: Optional[str] = UNSET
     i_regex: Optional[str] = UNSET
-    n_exact: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_i_exact: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_contains: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_i_contains: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_in_list: Optional[List[T]] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_gt: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_gte: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_lt: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_lte: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_starts_with: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_i_starts_with: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_ends_with: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_i_ends_with: Optional[T] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_range: Optional[List[T]] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_is_null: Optional[bool] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_regex: Optional[str] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
-    n_i_regex: Optional[str] = strawberry.field(
-        default=UNSET,
-        deprecation_reason=_n_deprecation_reason,
-    )
 
 
 lookup_name_conversion_map = {
@@ -159,109 +95,21 @@ lookup_name_conversion_map = {
 }
 
 
-def _resolve_global_id(value: Any):
+def _resolve_value(value: Any) -> Any:
     if isinstance(value, list):
-        return [_resolve_global_id(v) for v in value]
+        return [_resolve_value(v) for v in value]
+
     if isinstance(value, relay.GlobalID):
         return value.node_id
+
+    if isinstance(value, Enum):
+        return value.value
 
     return value
 
 
-def build_filter_kwargs(
-    filters: WithStrawberryObjectDefinition,
-    path="",
-) -> Tuple[Q, List[Callable]]:
-    filter_kwargs = Q()
-    filter_methods = []
-    django_model = (
-        filters.__strawberry_django_definition__.model
-        if has_django_definition(filters)
-        else None
-    )
-
-    # This loop relies on the filter field order: AND, OR, and NOT fields are expected to be last. Since this is not
-    # true in case of filter inheritance, we need to explicitely sort them.
-    for f in sorted(
-        filters.__strawberry_definition__.fields,
-        key=lambda f: f.name in {"AND", "OR", "NOT"},
-    ):
-        field_name = f.name
-        field_value = _resolve_global_id(getattr(filters, field_name))
-
-        # Unset means we are not filtering this. None is still acceptable
-        if field_value is UNSET:
-            continue
-
-        if isinstance(field_value, Enum):
-            field_value = field_value.value
-        elif (
-            isinstance(field_value, list)
-            and len(field_value) > 0
-            and isinstance(field_value[0], Enum)
-        ):
-            field_value = [el.value for el in field_value]
-
-        negated = False
-        if field_name.startswith("n_"):
-            field_name = field_name[2:]
-            negated = True
-
-        field_name = lookup_name_conversion_map.get(field_name, field_name)
-        filter_method = getattr(
-            filters,
-            f"filter_{'n_' if negated else ''}{field_name}",
-            None,
-        )
-        if filter_method:
-            filter_methods.append(filter_method)
-            continue
-
-        if django_model:
-            if field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
-                if has_object_definition(field_value):
-                    (
-                        subfield_filter_kwargs,
-                        subfield_filter_methods,
-                    ) = build_filter_kwargs(
-                        cast(WithStrawberryObjectDefinition, field_value),
-                        path,
-                    )
-                    if field_name == "AND":
-                        filter_kwargs &= subfield_filter_kwargs
-                    elif field_name == "OR":
-                        filter_kwargs |= subfield_filter_kwargs
-                    elif field_name == "NOT":
-                        filter_kwargs &= ~subfield_filter_kwargs
-                    else:
-                        assert_never(field_name)
-
-                    filter_methods.extend(subfield_filter_methods)
-                continue
-
-            if field_name not in get_field_names_from_opts(
-                django_model._meta,
-            ):
-                continue
-
-        if has_object_definition(field_value):
-            subfield_filter_kwargs, subfield_filter_methods = build_filter_kwargs(
-                cast(WithStrawberryObjectDefinition, field_value),
-                f"{path}{field_name}__",
-            )
-            filter_kwargs &= subfield_filter_kwargs
-            filter_methods.extend(subfield_filter_methods)
-        else:
-            filter_kwarg = Q(**{f"{path}{field_name}": field_value})
-            if negated:
-                filter_kwarg = ~filter_kwarg
-            filter_kwargs &= filter_kwarg
-
-    return filter_kwargs, filter_methods
-
-
 @functools.lru_cache(maxsize=256)
-def function_allow_passing_info(filter_method: FunctionType) -> bool:
+def _function_allow_passing_info(filter_method: FunctionType) -> bool:
     argspec = inspect.getfullargspec(filter_method)
 
     return "info" in getattr(argspec, "args", []) or "info" in getattr(
@@ -271,11 +119,109 @@ def function_allow_passing_info(filter_method: FunctionType) -> bool:
     )
 
 
-def apply(
-    filters: Optional[object],
+def _process_deprecated_filter(
+    filter_method: FunctionType, info: Info | None, queryset: _QS
+) -> _QS:
+    kwargs = {}
+    if _function_allow_passing_info(
+        # Pass the original __func__ which is always the same
+        getattr(filter_method, "__func__", filter_method),
+    ):
+        kwargs["info"] = info
+
+    return filter_method(queryset=queryset, **kwargs)
+
+
+def process_filters(
+    filters: WithStrawberryObjectDefinition,
     queryset: _QS,
-    info: Optional[Info] = None,
-    pk: Optional[Any] = None,
+    info: Info | None,
+    prefix: str = "",
+    skip_object_filter_method: bool = False,
+) -> Tuple[_QS, Q]:
+    using_old_filters = strawberry_django_settings()["USE_DEPRECATED_FILTERS"]
+
+    q = Q()
+
+    if not skip_object_filter_method and (
+        filter_method := getattr(filters, "filter", None)
+    ):
+        # Dedicated function for object
+        if isinstance(filter_method, FilterOrderFieldResolver):
+            return filter_method(filters, info, queryset=queryset, prefix=prefix)
+        if using_old_filters:
+            return _process_deprecated_filter(filter_method, info, queryset), q
+
+    # This loop relies on the filter field order that is not quaranteed for GQL input objects:
+    #   "filter" has to be first since it overrides filtering for entire object
+    #   DISTINCT has to be last and OR has to be after because it must be
+    #       applied agains all other since default connector is AND
+    for f in sorted(
+        filters.__strawberry_definition__.fields,
+        key=lambda x: len(x.name) if x.name in {"OR", "DISTINCT"} else 0,
+    ):
+        field_value = _resolve_value(getattr(filters, f.name))
+        # None is still acceptable for v1 (backwards compatibility) and filters that support it via metadata
+        if field_value is UNSET or (
+            field_value is None
+            and not f.metadata.get(WITH_NONE_META, using_old_filters)
+        ):
+            continue
+
+        field_name = lookup_name_conversion_map.get(f.name, f.name)
+        if field_name == "DISTINCT":
+            if field_value:
+                queryset = queryset.distinct()
+        elif field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
+            assert has_object_definition(field_value)
+
+            queryset, sub_q = process_filters(
+                cast(WithStrawberryObjectDefinition, field_value),
+                queryset,
+                info,
+                prefix,
+            )
+            if field_name == "AND":
+                q &= sub_q
+            elif field_name == "OR":
+                q |= sub_q
+            elif field_name == "NOT":
+                q &= ~sub_q
+            else:
+                assert_never(field_name)
+        elif isinstance(f, FilterOrderField) and f.base_resolver:
+            res = f.base_resolver(
+                filters, info, value=field_value, queryset=queryset, prefix=prefix
+            )
+            if isinstance(res, tuple):
+                queryset, sub_q = res
+            else:
+                sub_q = res
+
+            q &= sub_q
+        elif using_old_filters and (
+            filter_method := getattr(filters, f"filter_{field_name}", None)
+        ):
+            queryset = _process_deprecated_filter(filter_method, info, queryset)
+        elif has_object_definition(field_value):
+            queryset, sub_q = process_filters(
+                cast(WithStrawberryObjectDefinition, field_value),
+                queryset,
+                info,
+                f"{prefix}{field_name}__",
+            )
+            q &= sub_q
+        else:
+            q &= Q(**{f"{prefix}{field_name}": field_value})
+
+    return queryset, q
+
+
+def apply(
+    filters: object | None,
+    queryset: _QS,
+    info: Info | None = None,
+    pk: Any | None = None,
 ) -> _QS:
     if pk not in (None, strawberry.UNSET):  # noqa: PLR6201
         queryset = queryset.filter(pk=pk)
@@ -283,32 +229,11 @@ def apply(
     if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # noqa: PLR6201
         return queryset
 
-    # Custom filter function in the filters object
-    filter_method = getattr(filters, "filter", None)
-    if filter_method:
-        kwargs = {}
-        if function_allow_passing_info(
-            # Pass the original __func__ which is always the same
-            getattr(filter_method, "__func__", filter_method),
-        ):
-            kwargs["info"] = info
-
-        return filter_method(queryset=queryset, **kwargs)
-
-    filter_kwargs, filter_methods = build_filter_kwargs(
-        cast(WithStrawberryObjectDefinition, filters)
+    queryset, q = process_filters(
+        cast(WithStrawberryObjectDefinition, filters), queryset, info
     )
-    queryset = queryset.filter(filter_kwargs)
-    for filter_method in filter_methods:
-        kwargs = {}
-        if function_allow_passing_info(
-            # Pass the original __func__ which is always the same
-            getattr(filter_method, "__func__", filter_method),
-        ):
-            kwargs["info"] = info
-
-        queryset = filter_method(queryset=queryset, **kwargs)
-
+    if q:
+        queryset = queryset.filter(q)
     return queryset
 
 
@@ -358,11 +283,11 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         return super().arguments + arguments
 
     @arguments.setter
-    def arguments(self, value: List[StrawberryArgument]):
+    def arguments(self, value: list[StrawberryArgument]):
         args_prop = super(StrawberryDjangoFieldFilters, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
 
-    def get_filters(self) -> Optional[Type[WithStrawberryObjectDefinition]]:
+    def get_filters(self) -> type[WithStrawberryObjectDefinition] | None:
         filters = self.filters
         if filters is None:
             return None
@@ -377,15 +302,6 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
 
         return filters if filters is not UNSET else None
 
-    def apply_filters(
-        self,
-        queryset: _QS,
-        filters: Optional[WithStrawberryDjangoObjectDefinition],
-        pk: Optional[Any],
-        info: Info,
-    ) -> _QS:
-        return apply(filters, queryset, info, pk)
-
     def get_queryset(
         self,
         queryset: _QS,
@@ -396,7 +312,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return self.apply_filters(queryset, filters, pk, info)
+        return apply(filters, queryset, info, pk)
 
 
 @dataclass_transform(
@@ -407,11 +323,11 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
     ),
 )
 def filter(  # noqa: A001
-    model: Type[models.Model],
+    model: type[Model],
     *,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    directives: Optional[Sequence[object]] = (),
+    name: str | None = None,
+    description: str | None = None,
+    directives: Sequence[object] | None = (),
     lookups: bool = False,
 ) -> Callable[[_T], _T]:
     from .type import input

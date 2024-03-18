@@ -5,7 +5,7 @@ get started follow these steps:
 
 ```shell
 git clone https://github.com/strawberry-graphql/strawberry-django.git
-cd strawberry-django
+cd strawberry_django
 poetry install
 poetry run pytest
 ```

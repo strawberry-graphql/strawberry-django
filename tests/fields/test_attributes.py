@@ -96,6 +96,7 @@ def test_auto_id():
       AND: MyTypeFilter
       OR: MyTypeFilter
       NOT: MyTypeFilter
+      DISTINCT: Boolean
     }
 
     type Query {
@@ -140,6 +141,7 @@ def test_auto_id_with_node():
       AND: MyTypeFilter
       OR: MyTypeFilter
       NOT: MyTypeFilter
+      DISTINCT: Boolean
     }}
 
     """An object with a Globally Unique ID"""
@@ -196,6 +198,7 @@ def test_auto_id_with_node_mapping_global_id():
       AND: MyTypeFilter
       OR: MyTypeFilter
       NOT: MyTypeFilter
+      DISTINCT: Boolean
     }}
 
     """An object with a Globally Unique ID"""

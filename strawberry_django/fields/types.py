@@ -30,6 +30,7 @@ from strawberry.scalars import JSON
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django import filters
+from strawberry_django.fields import filter_types
 from strawberry_django.settings import strawberry_django_settings as django_settings
 
 try:
@@ -509,12 +510,18 @@ def resolve_model_field_type(
         )
 
     # TODO: could this be moved into filters.py
+    using_old_filters = settings["USE_DEPRECATED_FILTERS"]
     if (
         django_type.is_filter == "lookups"
         and not model_field.is_relation
-        and field_type is not bool
+        and (field_type is not bool or not using_old_filters)
     ):
-        field_type = filters.FilterLookup[field_type]
+        if using_old_filters:
+            field_type = filters.FilterLookup[field_type]
+        else:
+            field_type = filter_types.type_filter_map.get(  # pyright: ignore [reportInvalidTypeArguments]
+                field_type, filter_types.FilterLookup
+            )[field_type]
 
     return field_type
 
