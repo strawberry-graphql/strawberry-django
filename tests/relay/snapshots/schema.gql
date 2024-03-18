@@ -170,9 +170,7 @@ type Query {
 }
 
 input StrFilterLookup {
-  """
-  Exact match. If `null` value is used filter is equivalent to `isNull=True`
-  """
+  """Exact match. Filter will be skipped on `null` value"""
   exact: String
 
   """Assignment test. Filter will be skipped on `null` value"""
@@ -183,9 +181,7 @@ input StrFilterLookup {
   """
   inList: [String!]
 
-  """
-  Case-insensitive exact match. If `null` value is used filter is equivalent to `isNull=True`
-  """
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
   iExact: String
 
   """

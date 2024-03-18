@@ -106,9 +106,7 @@ union CreateQuizPayload = QuizType | OperationInfo
 scalar Date
 
 input DateDateFilterLookup {
-  """
-  Exact match. If `null` value is used filter is equivalent to `isNull=True`
-  """
+  """Exact match. Filter will be skipped on `null` value"""
   exact: Date
 
   """Assignment test. Filter will be skipped on `null` value"""
@@ -144,8 +142,8 @@ input DateDateFilterLookup {
 }
 
 input DateRangeLookup {
-  left: Date = null
-  right: Date = null
+  start: Date = null
+  end: Date = null
 }
 
 """Date with time (isoformat)"""
@@ -197,9 +195,7 @@ The `ID` scalar type represents a unique identifier, often used to refetch an ob
 scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
 
 input IntComparisonFilterLookup {
-  """
-  Exact match. If `null` value is used filter is equivalent to `isNull=True`
-  """
+  """Exact match. Filter will be skipped on `null` value"""
   exact: Int
 
   """Assignment test. Filter will be skipped on `null` value"""
@@ -227,8 +223,8 @@ input IntComparisonFilterLookup {
 }
 
 input IntRangeLookup {
-  left: Int = null
-  right: Int = null
+  start: Int = null
+  end: Int = null
 }
 
 input IssueAssigneeInputPartial {
@@ -791,9 +787,7 @@ type StaffTypeEdge {
 }
 
 input StrFilterLookup {
-  """
-  Exact match. If `null` value is used filter is equivalent to `isNull=True`
-  """
+  """Exact match. Filter will be skipped on `null` value"""
   exact: String
 
   """Assignment test. Filter will be skipped on `null` value"""
@@ -804,9 +798,7 @@ input StrFilterLookup {
   """
   inList: [String!]
 
-  """
-  Case-insensitive exact match. If `null` value is used filter is equivalent to `isNull=True`
-  """
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
   iExact: String
 
   """
