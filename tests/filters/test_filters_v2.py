@@ -2,6 +2,7 @@
 from enum import Enum
 from typing import Any, List, Optional, cast
 
+import django
 import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
@@ -9,6 +10,7 @@ from strawberry import auto
 from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
 from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
+from strawberry.types import ExecutionResult
 
 import strawberry_django
 from strawberry_django.exceptions import (
@@ -380,3 +382,55 @@ def test_filter_distinct(query, db, fruits):
     """)
     assert not result.errors
     assert len(result.data["fruits"]) == 1
+
+
+def test_empty_resolver_filter():
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(self, filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.none()
+            _info: Any = object()
+            return cast(
+                List[Fruit], strawberry_django.filters.apply(filters, queryset, _info)
+            )
+
+    query = utils.generate_query(Query)
+    result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { name } }')
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruits"] == []
+
+
+@pytest.mark.asyncio()
+@pytest.mark.django_db(transaction=True)
+async def test_async_resolver_filter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        async def fruits(self, filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            _info: Any = object()
+            queryset = strawberry_django.filters.apply(filters, queryset, _info)
+            if django.VERSION < (4, 1):
+                from asgiref.sync import sync_to_async
+
+                @sync_to_async
+                def helper():
+                    return cast(List[Fruit], list(queryset))
+
+                return await helper()
+            # cast fixes funny typing issue between list and List
+            return cast(List[Fruit], [fruit async for fruit in queryset])
+
+    query = utils.generate_query(Query)
+    result = await query(  # type: ignore
+        '{ fruits(filters: { name: { exact: "strawberry" } }) { name } }'
+    )
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruits"] == [
+        {"name": "strawberry"},
+    ]
