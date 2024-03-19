@@ -396,7 +396,7 @@ def test_empty_resolver_filter(query):
             )
 
     query = utils.generate_query(Query)
-    result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
+    result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { name } }')
     assert isinstance(result, ExecutionResult)
     assert not result.errors
     assert result.data is not None
@@ -426,11 +426,11 @@ async def test_async_resolver_filter(fruits):
 
     query = utils.generate_query(Query)
     result = await query(  # type: ignore
-        '{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }'
+        '{ fruits(filters: { name: { exact: "strawberry" } }) { name } }'
     )
     assert isinstance(result, ExecutionResult)
     assert not result.errors
     assert result.data is not None
     assert result.data["fruits"] == [
-        {"id": "1", "name": "strawberry"},
+        {"name": "strawberry"},
     ]
