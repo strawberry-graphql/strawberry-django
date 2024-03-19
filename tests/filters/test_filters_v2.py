@@ -384,7 +384,7 @@ def test_filter_distinct(query, db, fruits):
     assert len(result.data["fruits"]) == 1
 
 
-def test_empty_resolver_filter(query):
+def test_empty_resolver_filter():
     @strawberry.type
     class Query:
         @strawberry.field

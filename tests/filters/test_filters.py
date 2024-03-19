@@ -257,7 +257,7 @@ def test_resolver_filter(fruits):
     ]
 
 
-def test_empty_resolver_filter(fruits):
+def test_empty_resolver_filter():
     @strawberry.type
     class Query:
         @strawberry.field
