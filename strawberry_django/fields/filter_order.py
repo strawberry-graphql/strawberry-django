@@ -122,7 +122,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
             kwargs[info_parameter.name] = info
 
         if info_parameter := self.reserved_parameters.get(QUERYSET_PARAMSPEC):
-            assert queryset
+            assert queryset is not None
             kwargs[info_parameter.name] = queryset
 
         if info_parameter := self.reserved_parameters.get(SEQUENCE_PARAMSPEC):
