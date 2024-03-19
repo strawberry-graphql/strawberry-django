@@ -256,6 +256,44 @@ def test_resolver_filter(fruits):
     ]
 
 
+def test_empty_resolver_filter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(self, filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.none()
+            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
+
+    query = utils.generate_query(Query)
+    result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruits"] == []
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_async_resolver_filter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        async def fruits(self, filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            queryset = strawberry_django.filters.apply(filters, queryset)
+            return [fruit async for fruit in queryset]
+
+    query = utils.generate_query(Query)
+    result = await query(
+        '{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }'
+    )
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
 def test_resolver_filter_with_inheritance(vegetables):
     @strawberry.type
     class Query:
