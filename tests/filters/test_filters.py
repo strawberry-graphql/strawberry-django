@@ -2,6 +2,7 @@ import textwrap
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar, cast
 
+import django
 import pytest
 import strawberry
 from django.test import override_settings
@@ -272,6 +273,7 @@ def test_empty_resolver_filter(fruits):
     assert result.data["fruits"] == []
 
 
+@pytest.mark.asyncio()
 @pytest.mark.django_db(transaction=True)
 async def test_async_resolver_filter(fruits):
     @strawberry.type
@@ -280,10 +282,19 @@ async def test_async_resolver_filter(fruits):
         async def fruits(self, filters: FruitFilter) -> List[Fruit]:
             queryset = models.Fruit.objects.all()
             queryset = strawberry_django.filters.apply(filters, queryset)
-            return [fruit async for fruit in queryset]
+            if django.VERSION < (4, 1):
+                from asgiref.sync import sync_to_async
+
+                @sync_to_async
+                def helper():
+                    return cast(List[Fruit], list(queryset))
+
+                return await helper()
+            # cast fixes funny typing issue between list and List
+            return cast(List[Fruit], [fruit async for fruit in queryset])
 
     query = utils.generate_query(Query)
-    result = await query(
+    result = await query(  # type: ignore
         '{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }'
     )
     assert isinstance(result, ExecutionResult)
