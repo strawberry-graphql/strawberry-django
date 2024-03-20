@@ -301,7 +301,7 @@ def test_filter_type():
             f.name,
             f.__class__,
             f.type.of_type.__name__,  # type: ignore
-            f.base_resolver.__class__ if f.base_resolver else None,  # type: ignore
+            f.base_resolver.__class__ if f.base_resolver else None,
         )
         for f in get_object_definition(FruitOrder, strict=True).fields
         if f.name not in {"NOT", "AND", "OR", "DISTINCT"}
