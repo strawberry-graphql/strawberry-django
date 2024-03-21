@@ -12,6 +12,7 @@ from typing import (
     Callable,
     ForwardRef,
     Generator,
+    Optional,
     Type,
     TypeVar,
     cast,
@@ -188,6 +189,18 @@ class OptimizerStore:
                 else dict(annotate or {})
             ),
         )
+
+    def get_custom_prefetches(self, info: GraphQLResolveInfo) -> list[Prefetch]:
+        custom_prefetches = []
+        for p in self.prefetch_related:
+            if isinstance(p, Callable):
+                assert_type(p, PrefetchCallable)
+                p = p(info)  # noqa: PLW2901
+
+            # to_attr is not typed in django stubs
+            if isinstance(p, Prefetch) and p.to_attr is not None:  # type: ignore
+                custom_prefetches.append(p)
+        return custom_prefetches
 
     def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
         prefetch_related = []
@@ -458,7 +471,8 @@ def _get_model_hints(
             continue
 
         # Add annotations from the field if they exist
-        field_store = getattr(field, "store", None)
+        field_store = cast(Optional[OptimizerStore], getattr(field, "store", None))
+        custom_prefetches: list[Prefetch] = []
         if field_store is not None:
             if (
                 len(field_store.annotate) == 1
@@ -477,20 +491,52 @@ def _get_model_hints(
             store |= (
                 field_store.with_prefix(prefix, info=info) if prefix else field_store
             )
+            custom_prefetches = field_store.get_custom_prefetches(info)
 
         # Then from the model property if one is defined
         model_attr = getattr(model, field.python_name, None)
         if model_attr is not None and isinstance(model_attr, ModelProperty):
             attr_store = model_attr.store
             store |= attr_store.with_prefix(prefix, info=info) if prefix else attr_store
+            attr_store_prefetches = attr_store.get_custom_prefetches(info)
+            if attr_store_prefetches:
+                custom_prefetches.extend(attr_store_prefetches)
+
+        model_fieldname: str | None = None
+        model_field = None
+        # try to find the model field name in any custom prefetches
+        if custom_prefetches:
+            for prefetch in custom_prefetches:
+                prefetch_field = model_fields.get(prefetch.prefetch_through, None)
+                if prefetch_field:
+                    if not model_field:
+                        model_field = prefetch_field
+                        model_fieldname = prefetch.prefetch_through
+                    elif model_field != prefetch_field:
+                        # we found more than one model field from the custom prefetches
+                        # not much we can do here
+                        model_field = None
+                        model_fieldname = None
+                        custom_prefetches = []
+                        break
 
         # Lastly, from the django field itself
-        model_fieldname: str = getattr(field, "django_name", None) or field.python_name
-        model_field = model_fields.get(model_fieldname, None)
+        if not model_fieldname:
+            model_fieldname = getattr(field, "django_name", None) or field.python_name
+            model_field = (
+                model_fields.get(model_fieldname, None) if model_fieldname else None
+            )
+
         if model_field is not None:
+            assert (
+                model_fieldname is not None
+            )  # if we have a model_field, then model_fieldname must also be set
             path = f"{prefix}{model_fieldname}"
 
-            if isinstance(model_field, (models.ForeignKey, OneToOneRel)):
+            if not custom_prefetches and isinstance(
+                model_field, (models.ForeignKey, OneToOneRel)
+            ):
+                # only select_related if there is no custom prefetch
                 store.only.append(path)
                 store.select_related.append(path)
 
@@ -517,7 +563,11 @@ def _get_model_hints(
                     if f_store is not None:
                         cache.setdefault(f_model, []).append((level, f_store))
                         store |= f_store.with_prefix(path, info=info)
-            elif GenericForeignKey and isinstance(model_field, GenericForeignKey):
+            elif (
+                not custom_prefetches
+                and GenericForeignKey
+                and isinstance(model_field, GenericForeignKey)
+            ):
                 # There's not much we can do to optimize generic foreign keys regarding
                 # only/select_related because they can be anything.
                 # Just prefetch_related them
@@ -530,7 +580,8 @@ def _get_model_hints(
                 if len(f_types) > 1:
                     # This might be a generic foreign key.
                     # In this case, just prefetch it
-                    store.prefetch_related.append(model_fieldname)
+                    if not custom_prefetches:
+                        store.prefetch_related.append(model_fieldname)
                 elif len(f_types) == 1:
                     remote_field = model_field.remote_field
                     remote_model = remote_field.model
@@ -590,24 +641,45 @@ def _get_model_hints(
 
                         cache.setdefault(remote_model, []).append((level, f_store))
 
-                        # If prefetch_custom_queryset is false, use _base_manager here
-                        # instead of _default_manager because we are getting related
-                        # objects, and not querying it directly. Else use the type's
-                        # get_queryset and model's custom QuerySet.
-                        base_qs = _get_prefetch_queryset(
-                            remote_model,
-                            field,
-                            config,
-                            info,
-                        )
-                        f_qs = f_store.apply(
-                            base_qs,
-                            info=info,
-                            config=config,
-                        )
-                        f_prefetch = Prefetch(path, queryset=f_qs)
-                        f_prefetch._optimizer_sentinel = _sentinel  # type: ignore
-                        store.prefetch_related.append(f_prefetch)
+                        if custom_prefetches:
+                            for prefetch in custom_prefetches:
+                                # stubs incorrectly say that queryset is never None
+                                if prefetch.queryset is not None:  # type: ignore
+                                    p_qs = prefetch.queryset
+                                else:
+                                    p_qs = _get_prefetch_queryset(
+                                        remote_model, field, config, info
+                                    )
+                                f_qs = f_store.apply(p_qs, info=info, config=config)
+                                f_prefetch = Prefetch(
+                                    # to_attr is not typed in django stubs
+                                    prefetch.prefetch_through,
+                                    f_qs,
+                                    prefetch.to_attr,  # type: ignore
+                                )
+                                if prefix:
+                                    f_prefetch.add_prefix(prefix)
+                                f_prefetch._optimizer_sentinel = _sentinel  # type: ignore
+                                store.prefetch_related.append(f_prefetch)
+                        else:
+                            # If prefetch_custom_queryset is false, use _base_manager here
+                            # instead of _default_manager because we are getting related
+                            # objects, and not querying it directly. Else use the type's
+                            # get_queryset and model's custom QuerySet.
+                            base_qs = _get_prefetch_queryset(
+                                remote_model,
+                                field,
+                                config,
+                                info,
+                            )
+                            f_qs = f_store.apply(
+                                base_qs,
+                                info=info,
+                                config=config,
+                            )
+                            f_prefetch = Prefetch(path, queryset=f_qs)
+                            f_prefetch._optimizer_sentinel = _sentinel  # type: ignore
+                            store.prefetch_related.append(f_prefetch)
             else:
                 store.only.append(path)
 

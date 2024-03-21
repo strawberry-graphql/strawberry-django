@@ -1,16 +1,20 @@
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
+import strawberry
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Prefetch, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
+from typing_extensions import Annotated
 
 from strawberry_django.descriptors import model_property
 from strawberry_django.utils.typing import UserType
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
+
+    from .schema import MilestoneType
 
 User = get_user_model()
 
@@ -50,9 +54,31 @@ class Project(models.Model):
         default=None,
     )
 
+    next_milestones_prop_pf: List["Milestone"]
+
     @model_property(annotate={"_milestone_count": Count("milestone")})
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
+
+    @model_property(
+        prefetch_related=lambda _: Prefetch(
+            "milestones",
+            to_attr="next_milestones_prop_pf",
+            queryset=Milestone.objects.filter(due_date__isnull=False).order_by(
+                "due_date"
+            ),
+        )
+    )
+    def next_milestones_property(
+        self,
+    ) -> List[Annotated["MilestoneType", strawberry.lazy(".schema")]]:
+        """Return the milestones for the project ordered by their due date."""
+        if hasattr(self, "next_milestones_prop_pf"):
+            return cast(List["MilestoneType"], self.next_milestones_prop_pf)
+        return cast(
+            List["MilestoneType"],
+            self.milestones.filter(due_date__isnull=False).order_by("due_date"),
+        )
 
 
 class Milestone(models.Model):
@@ -77,6 +103,8 @@ class Milestone(models.Model):
         related_name="milestones",
         related_query_name="milestone",
     )
+
+    next_milestones_pf: List["Milestone"]
 
 
 class FavoriteQuerySet(QuerySet):

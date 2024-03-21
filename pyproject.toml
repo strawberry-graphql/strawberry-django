@@ -175,7 +175,7 @@ exclude = [
 "**/migrations/*" = ["RUF012"]
 
 [tool.ruff.lint.pylint]
-max-nested-blocks = 7
+max-nested-blocks = 8
 
 [tool.ruff.lint.isort]
 
