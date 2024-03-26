@@ -28,6 +28,7 @@ from strawberry.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform
 
 from strawberry_django.fields.filter_order import (
+    RESOLVE_VALUE_META,
     WITH_NONE_META,
     FilterOrderField,
     FilterOrderFieldResolver,
@@ -160,13 +161,16 @@ def process_filters(
         filters.__strawberry_definition__.fields,
         key=lambda x: len(x.name) if x.name in {"OR", "DISTINCT"} else 0,
     ):
-        field_value = _resolve_value(getattr(filters, f.name))
+        field_value = getattr(filters, f.name)
         # None is still acceptable for v1 (backwards compatibility) and filters that support it via metadata
         if field_value is UNSET or (
             field_value is None
             and not f.metadata.get(WITH_NONE_META, using_old_filters)
         ):
             continue
+
+        if f.metadata.get(RESOLVE_VALUE_META, True):
+            field_value = _resolve_value(field_value)
 
         field_name = lookup_name_conversion_map.get(f.name, f.name)
         if field_name == "DISTINCT":
