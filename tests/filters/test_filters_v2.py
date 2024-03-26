@@ -256,13 +256,13 @@ def test_filter_field_method():
 
 
 def test_filter_object_method():
-    @strawberry_django.ordering.order(models.Fruit)
+    @strawberry_django.filters.filter(models.Fruit)
     class Filter:
-        @strawberry_django.order_field
+        @strawberry_django.filter_field
         def field_filter(self, value: str, prefix):
             raise AssertionError("Never called due to object filter override")
 
-        @strawberry_django.order_field
+        @strawberry_django.filter_field
         def filter(self, root, info, prefix, queryset):
             assert self == _filter, "Unexpected self passed"
             assert root == _filter, "Unexpected root passed"
@@ -277,6 +277,25 @@ def test_filter_object_method():
 
     q_object = process_filters(_filter, _queryset, _info, prefix="ROOT")[1]
     assert q_object, "Filter was not called"
+
+
+def test_filter_value_resolution():
+    @strawberry_django.filters.filter(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field
+        def field_filter_resolved(self, value: GlobalID, prefix):
+            assert isinstance(value, str)
+            return Q()
+
+        @strawberry_django.filter_field(resolve_value=False)
+        def field_filter_skip_resolved(self, value: GlobalID, prefix):
+            assert isinstance(value, GlobalID)
+            return Q()
+
+    gid = GlobalID("FruitNode", "125")
+    _filter: Any = Filter(field_filter_resolved=gid, field_filter_skip_resolved=gid)  # type: ignore
+    _object: Any = object()
+    process_filters(_filter, _object, _object)
 
 
 def test_filter_type():
