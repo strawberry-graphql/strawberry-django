@@ -19,6 +19,7 @@ from typing import (
 
 import strawberry
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import ForeignKey
 from django.db.models.base import Model
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from strawberry import UNSET, relay
@@ -322,6 +323,9 @@ def _process_type(
                 model_attr,
                 is_input=django_type.is_input,
                 is_filter=bool(django_type.is_filter),
+                is_fk_id=(
+                    f.python_name.endswith("_id") and isinstance(model_attr, ForeignKey)
+                ),
             )
 
             if description is None and description_from_doc:

@@ -1,4 +1,5 @@
-from typing import List, cast
+import textwrap
+from typing import List, Optional, cast
 
 import pytest
 import strawberry
@@ -43,6 +44,64 @@ def test_relational_field_name(user, group):
     assert not result.errors
     assert result.data is not None
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
+
+
+def test_foreign_key_id_with_auto(group, user):
+    @strawberry_django.type(models.User)
+    class MyUser:
+        group_id: strawberry.auto
+
+    @strawberry.type
+    class Query:
+        users: List[MyUser] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+
+    expected = """\
+    type MyUser {
+      groupId: ID
+    }
+
+    type Query {
+      users: [MyUser!]!
+    }
+    """
+    assert textwrap.dedent(str(schema)).strip() == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync("{ users { groupId } }")
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["users"] == [{"groupId": str(group.id)}]
+
+
+def test_foreign_key_id_with_explicit_type(group, user):
+    @strawberry_django.type(models.User)
+    class MyUser:
+        group_id: Optional[strawberry.ID]
+
+    @strawberry.type
+    class Query:
+        users: List[MyUser] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+
+    expected = """\
+    type MyUser {
+      groupId: ID
+    }
+
+    type Query {
+      users: [MyUser!]!
+    }
+    """
+    assert textwrap.dedent(str(schema)).strip() == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync("{ users { groupId } }")
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["users"] == [{"groupId": str(group.id)}]
 
 
 @pytest.mark.asyncio()

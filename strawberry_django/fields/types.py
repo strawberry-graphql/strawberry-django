@@ -528,13 +528,14 @@ def resolve_model_field_type(
 
 def resolve_model_field_name(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
-    is_input=False,
-    is_filter=False,
+    is_input: bool = False,
+    is_filter: bool = False,
+    is_fk_id: bool = False,
 ):
     if isinstance(model_field, reverse_related.ForeignObjectRel):
         return model_field.get_accessor_name()
 
-    if is_input and not is_filter:
+    if is_fk_id or (is_input and not is_filter):
         return model_field.attname
 
     return model_field.name
