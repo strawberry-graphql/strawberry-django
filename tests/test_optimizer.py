@@ -942,3 +942,39 @@ def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
             "milestoneNameWithoutOnlyOptimization": milestone.name,
         },
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          issuesWithFilters (filters: {search: "Foo"}) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue1 = IssueFactory.create(milestone=milestone, name="Foo")
+    issue2 = IssueFactory.create(milestone=milestone, name="Foo Bar")
+    issue3 = IssueFactory.create(milestone=milestone, name="Bar Foo")
+    IssueFactory.create(milestone=milestone, name="Bar Bin")
+
+    with assert_num_queries(5 if DjangoOptimizerExtension.enabled.get() else 2):
+        res = gql_client.query(query, {"id": to_base64("MilestoneType", milestone.pk)})
+
+    assert isinstance(res.data, dict)
+    result = res.data["milestone"]
+    assert isinstance(result, dict)
+
+    expected = {to_base64("IssueType", i.pk) for i in [issue1, issue2, issue3]}
+    assert {
+        edge["node"]["id"] for edge in result["issuesWithFilters"]["edges"]
+    } == expected

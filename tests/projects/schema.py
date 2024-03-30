@@ -128,6 +128,13 @@ class MilestoneOrder:
     project: Optional[ProjectOrder]
 
 
+@strawberry_django.filter(Issue)
+class IssueFilter:
+    @strawberry_django.filter_field()
+    def search(self, value: str, prefix: str) -> Q:
+        return Q(name__contains=value)
+
+
 @strawberry_django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
 class MilestoneType(relay.Node):
     name: strawberry.auto
@@ -153,6 +160,12 @@ class MilestoneType(relay.Node):
     )
     def my_issues(self) -> List["IssueType"]:
         return self._my_issues  # type: ignore
+
+    @strawberry_django.connection(
+        ListConnectionWithTotalCount["IssueType"], filters=IssueFilter
+    )
+    def issues_with_filters(self) -> List["IssueType"]:
+        return self.issues.all()  # type: ignore
 
     @strawberry_django.field(
         annotate={

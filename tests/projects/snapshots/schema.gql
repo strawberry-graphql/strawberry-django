@@ -240,6 +240,14 @@ input IssueAssigneeInputPartialListInput {
   remove: [IssueAssigneeInputPartial!]
 }
 
+input IssueFilter {
+  AND: IssueFilter
+  OR: IssueFilter
+  NOT: IssueFilter
+  DISTINCT: Boolean
+  search: String
+}
+
 input IssueInput {
   name: String!
   milestone: MilestoneInputPartial!
@@ -357,6 +365,21 @@ type MilestoneType implements Node {
   project: ProjectType!
   issues: [IssueType!]!
   myIssues: [IssueType!]!
+  issuesWithFilters(
+    filters: IssueFilter
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
   myBugsCount: Int!
   asyncField(value: String!): String!
 }
