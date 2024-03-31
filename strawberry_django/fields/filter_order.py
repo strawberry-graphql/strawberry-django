@@ -174,7 +174,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
-    resolve_value: bool = True,
+    resolve_value: bool = UNSET,
 ) -> T: ...
 
 
@@ -192,7 +192,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
-    resolve_value: bool = True,
+    resolve_value: bool = UNSET,
 ) -> Any: ...
 
 
@@ -210,7 +210,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
-    resolve_value: bool = True,
+    resolve_value: bool = UNSET,
 ) -> StrawberryField: ...
 
 
@@ -227,7 +227,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
-    resolve_value: bool = True,
+    resolve_value: bool = UNSET,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.

@@ -96,9 +96,9 @@ lookup_name_conversion_map = {
 }
 
 
-def _resolve_value(value: Any) -> Any:
+def resolve_value(value: Any) -> Any:
     if isinstance(value, list):
-        return [_resolve_value(v) for v in value]
+        return [resolve_value(v) for v in value]
 
     if isinstance(value, relay.GlobalID):
         return value.node_id
@@ -169,8 +169,7 @@ def process_filters(
         ):
             continue
 
-        if f.metadata.get(RESOLVE_VALUE_META, True):
-            field_value = _resolve_value(field_value)
+        should_resolve = f.metadata.get(RESOLVE_VALUE_META, UNSET)
 
         field_name = lookup_name_conversion_map.get(f.name, f.name)
         if field_name == "DISTINCT":
@@ -195,7 +194,11 @@ def process_filters(
                 assert_never(field_name)
         elif isinstance(f, FilterOrderField) and f.base_resolver:
             res = f.base_resolver(
-                filters, info, value=field_value, queryset=queryset, prefix=prefix
+                filters,
+                info,
+                value=(resolve_value(field_value) if should_resolve else field_value),
+                queryset=queryset,
+                prefix=prefix,
             )
             if isinstance(res, tuple):
                 queryset, sub_q = res
@@ -216,7 +219,13 @@ def process_filters(
             )
             q &= sub_q
         else:
-            q &= Q(**{f"{prefix}{field_name}": field_value})
+            q &= Q(**{
+                f"{prefix}{field_name}": (
+                    resolve_value(field_value)
+                    if should_resolve or should_resolve is UNSET
+                    else field_value
+                )
+            })
 
     return queryset, q
 

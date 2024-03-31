@@ -23,7 +23,7 @@ from strawberry_django.fields.filter_order import (
     FilterOrderField,
     FilterOrderFieldResolver,
 )
-from strawberry_django.filters import _resolve_value, process_filters
+from strawberry_django.filters import process_filters, resolve_value
 from tests import models, utils
 from tests.types import Fruit, FruitType
 
@@ -125,7 +125,7 @@ def query():
     ],
 )
 def test_resolve_value(value, resolved):
-    assert _resolve_value(value) == resolved
+    assert resolve_value(value) == resolved
 
 
 def test_filter_field_missing_prefix():
@@ -282,12 +282,28 @@ def test_filter_object_method():
 def test_filter_value_resolution():
     @strawberry_django.filters.filter(models.Fruit)
     class Filter:
-        @strawberry_django.filter_field
+        id: Optional[strawberry_django.ComparisonFilterLookup[GlobalID]]
+
+    gid = GlobalID("FruitNode", "125")
+    _filter: Any = Filter(
+        id=strawberry_django.ComparisonFilterLookup(
+            exact=gid, range=strawberry_django.RangeLookup(start=gid, end=gid)
+        )
+    )
+    _object: Any = object()
+    q = process_filters(_filter, _object, _object)[1]
+    assert q == Q(id__exact="125", id__range=["125", "125"])
+
+
+def test_filter_method_value_resolution():
+    @strawberry_django.filters.filter(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field(resolve_value=True)
         def field_filter_resolved(self, value: GlobalID, prefix):
             assert isinstance(value, str)
             return Q()
 
-        @strawberry_django.filter_field(resolve_value=False)
+        @strawberry_django.filter_field
         def field_filter_skip_resolved(self, value: GlobalID, prefix):
             assert isinstance(value, GlobalID)
             return Q()

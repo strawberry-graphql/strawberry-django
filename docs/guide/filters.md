@@ -225,10 +225,15 @@ class FruitFilter:
     and `isNull` have to be used explicitly.
 
     #### value resolution
+    - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute
+    - `value` parameter of type `Enum` is resolved to is's value
+    - above types are converted in `lists` as well
 
-    By default `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute & `Enum`
-    to is's value (also applied to elements in list). This behavior can be disabled using
-    `strawberry_django.filter_field(resolve_value=False)`
+    resolution can modified via `strawberry_django.filter_field(resolve_value=...)`
+
+    - True - always resolve
+    - False - never resolve
+    - UNSET (default) - resolves for filters without custom method only
 
 The code above generates the following schema:
 
