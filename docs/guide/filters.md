@@ -209,10 +209,12 @@ class FruitFilter:
 
 !!! tip
 
+    #### process_filters
+
     As seen above `strawberry_django.process_filters` function is exposed and can be
     reused in custom methods. Above it's used to resolve fields lookups
 
-!!! tip
+    #### null values
 
     By default `null` value is ignored for all filters & lookups. This applies to custom
     filter methods as well. Those won't even be called (you don't have to check for `None`).
@@ -221,6 +223,17 @@ class FruitFilter:
 
     This also means that build in `exact` & `iExact` lookups cannot be used to filter for `None`
     and `isNull` have to be used explicitly.
+
+    #### value resolution
+    - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute
+    - `value` parameter of type `Enum` is resolved to is's value
+    - above types are converted in `lists` as well
+
+    resolution can modified via `strawberry_django.filter_field(resolve_value=...)`
+
+    - True - always resolve
+    - False - never resolve
+    - UNSET (default) - resolves for filters without custom method only
 
 The code above generates the following schema:
 

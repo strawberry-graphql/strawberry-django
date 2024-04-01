@@ -12,6 +12,8 @@ import strawberry
 from django.db.models import Q
 from strawberry import UNSET
 
+from strawberry_django.filters import resolve_value
+
 from .filter_order import filter_field
 
 T = TypeVar("T")
@@ -35,7 +37,9 @@ class RangeLookup(Generic[T]):
 
     @filter_field
     def filter(self, queryset, prefix: str):
-        return queryset, Q(**{f"{prefix}range": [self.start, self.end]})
+        return queryset, Q(**{
+            prefix[:-2]: [resolve_value(self.start), resolve_value(self.end)]
+        })
 
 
 @strawberry.input

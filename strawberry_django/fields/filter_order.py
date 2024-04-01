@@ -34,6 +34,7 @@ VALUE_PARAM = ReservedName("value")
 OBJECT_FILTER_NAME: Final[str] = "filter"
 OBJECT_ORDER_NAME: Final[str] = "order"
 WITH_NONE_META: Final[str] = "WITH_NONE_META"
+RESOLVE_VALUE_META: Final[str] = "RESOLVE_VALUE_META"
 
 
 class FilterOrderFieldResolver(StrawberryResolver):
@@ -173,6 +174,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
+    resolve_value: bool = UNSET,
 ) -> T: ...
 
 
@@ -190,6 +192,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
+    resolve_value: bool = UNSET,
 ) -> Any: ...
 
 
@@ -207,6 +210,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
+    resolve_value: bool = UNSET,
 ) -> StrawberryField: ...
 
 
@@ -223,6 +227,7 @@ def filter_field(
     directives: Sequence[object] = (),
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
+    resolve_value: bool = UNSET,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -247,8 +252,8 @@ def filter_field(
     """
     metadata = metadata or {}
     metadata["_FIELD_TYPE"] = OBJECT_FILTER_NAME
-    if filter_none:
-        metadata[WITH_NONE_META] = True
+    metadata[RESOLVE_VALUE_META] = resolve_value
+    metadata[WITH_NONE_META] = filter_none
 
     field_ = FilterOrderField(
         python_name=None,
@@ -358,8 +363,7 @@ def order_field(
     """
     metadata = metadata or {}
     metadata["_FIELD_TYPE"] = OBJECT_ORDER_NAME
-    if order_none:
-        metadata[WITH_NONE_META] = True
+    metadata[WITH_NONE_META] = order_none
 
     field_ = FilterOrderField(
         python_name=None,
