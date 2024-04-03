@@ -77,7 +77,7 @@ class FruitOrder:
 
 !!! tip
 
-    `strawberry_django.Ordering` has convinient method `resolve` that can be used to
+    `strawberry_django.Ordering` has convenient method `resolve` that can be used to
     convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
     with `nulls_first` and `nulls_last` arguments.
 
