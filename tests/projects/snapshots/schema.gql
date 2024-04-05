@@ -889,6 +889,7 @@ type TagType implements Node {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection!
+  issuesWithSelectedRelatedMilestoneAndProject: [IssueType!]!
 }
 
 """A connection to a list of items."""

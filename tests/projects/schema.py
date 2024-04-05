@@ -242,6 +242,15 @@ class TagType(relay.Node):
     name: strawberry.auto
     issues: ListConnectionWithTotalCount[IssueType] = strawberry_django.connection()
 
+    @strawberry_django.field
+    def issues_with_selected_related_milestone_and_project(self) -> List[IssueType]:
+        # here, the `select_related` is on the queryset directly, and not on the field
+        return (
+            self.issues.all()  # type: ignore
+            .select_related("milestone", "milestone__project")
+            .order_by("id")
+        )
+
 
 @strawberry_django.type(Quiz)
 class QuizType(relay.Node):

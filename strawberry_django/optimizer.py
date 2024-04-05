@@ -285,18 +285,40 @@ class OptimizerStore:
 
         only_set = set(self.only)
         select_related_only_set = set()
+        select_related_set = set(self.select_related)
 
-        if config.enable_select_related and self.select_related:
-            qs = qs.select_related(*self.select_related)
+        # inspect the queryset to find any existing select_related fields
+        def get_related_fields_with_prefix(
+            queryset_select_related: dict[str, Any], prefix=""
+        ):
+            fields = []
+            for parent, nested in queryset_select_related.items():
+                current_path = f"{prefix}{parent}"
+                fields.append(current_path)
+                if nested:  # If there are nested relations, dive deeper
+                    fields.extend(
+                        get_related_fields_with_prefix(
+                            nested, prefix=current_path + "__"
+                        )
+                    )
+            return fields
 
-            for select_related in self.select_related:
+        if isinstance(qs.query.select_related, dict):
+            select_related_set.update(get_related_fields_with_prefix(
+                qs.query.select_related
+            ))
+
+        if config.enable_select_related and select_related_set:
+            qs = qs.select_related(*select_related_set)
+
+            for select_related in select_related_set:
                 if select_related in only_set:
                     continue
 
                 if not any(only.startswith(select_related) for only in only_set):
                     select_related_only_set.add(select_related)
 
-        if config.enable_only and only_set:
+        if config.enable_only and (only_set or select_related_only_set):
             qs = qs.only(*(only_set | select_related_only_set))
 
         if config.enable_annotate and self.annotate:
