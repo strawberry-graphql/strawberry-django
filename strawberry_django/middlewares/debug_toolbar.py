@@ -170,7 +170,19 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         if is_html or not is_graphiql or content_type != "application/json":
             return response
 
-        payload = _get_payload(request, response)
+        try:
+            operation_name = json.loads(request.body).get("operationName")
+        except Exception:  # noqa: BLE001
+            operation_name = None
+
+        # Do not return the payload for introspection queries, otherwise IDEs such as
+        # apollo sandbox that query the introspection all the time will remove older
+        # results from the history.
+        payload = (
+            _get_payload(request, response)
+            if operation_name != "IntrospectionQuery"
+            else None
+        )
         if payload is None:
             return response
 
