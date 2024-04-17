@@ -330,11 +330,11 @@ def test_inherit_type():
     @strawberry_django.type(FieldTypesModel)
     class Base:
         char: auto
-        one_to_one: "Type"  # type: ignore
+        one_to_one: "Type"
 
     @strawberry_django.type(FieldTypesModel)
     class Type(Base):  # type: ignore
-        many_to_many: List["Type"]  # type: ignore
+        many_to_many: List["Type"]
 
     object_definition = get_object_definition(Type, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
