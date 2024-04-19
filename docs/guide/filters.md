@@ -186,7 +186,7 @@ class FruitFilter:
         self,
         info: Info,
         queryset: QuerySet,
-        value: strawberry_django.FilterLookups[str],
+        value: strawberry_django.FilterLookup[str],
         prefix: str
     ) -> tuple[QuerySet, Q]:
         queryset = queryset.alias(
@@ -243,7 +243,7 @@ input FruitFilter {
   lastName: String
   simple: str
   fullName: str
-  fullNameLookups: StrFilterLookups
+  fullNameLookups: StrFilterLookup
 }
 ```
 
@@ -331,7 +331,7 @@ class FruitFilter:
             ... # Do some query modification
         )
 
-        return strawberry_django.proces_filters(
+        return strawberry_django.process_filters(
             self,
             info=info,
             queryset=queryset,
@@ -342,7 +342,7 @@ class FruitFilter:
 
 !!! tip
 
-    As seen above `strawberry_django.proces_filters` function is exposed and can be
+    As seen above `strawberry_django.process_filters` function is exposed and can be
     reused in custom methods.
     For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
 
