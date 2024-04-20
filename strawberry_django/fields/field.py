@@ -567,6 +567,7 @@ def field(
 
 def node(
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,
     field_name: str | None = None,
     is_subscription: bool = False,
@@ -612,7 +613,7 @@ def node(
 
     """
     extensions = [*extensions, relay.NodeExtension()]
-    return StrawberryDjangoField(
+    return field_cls(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -633,6 +634,7 @@ def node(
 def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,
     field_name: str | None = None,
     is_subscription: bool = False,
@@ -658,6 +660,7 @@ def connection(
 def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     resolver: _RESOLVER_TYPE[NodeIterableType[Any]] | None = None,
     name: str | None = None,
     field_name: str | None = None,
@@ -684,6 +687,7 @@ def connection(
 def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     resolver: _RESOLVER_TYPE[NodeIterableType[Any]] | None = None,
     name: str | None = None,
     field_name: str | None = None,
@@ -768,7 +772,7 @@ def connection(
 
     """
     extensions = [*extensions, StrawberryDjangoConnectionExtension()]
-    f = StrawberryDjangoField(
+    f = field_cls(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
