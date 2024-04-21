@@ -107,23 +107,16 @@ def _process_type(
         model_fields = [f for f in model_fields if f.name != "id"]
 
     existing_annotations = get_annotations(cls)
-    try:
-        cls.__annotations__  # noqa: B018
-    except AttributeError:
-        # Python 3.8 / 3.9 does not lazily create cls.__annotations__ if it
-        #   does not exist, so we create it here.
-        # Note that Python 3.10+ will lazily create cls.__annotations__,
-        #   so this code could be refactored / removed once versions before
-        #   3.10 are not supported.
-        cls.__annotations__ = {}
+    cls_annotations = cls.__dict__.get("__annotations__", {})
+    cls.__annotations__ = cls_annotations
 
     for f in model_fields:
         if existing_annotations.get(f.name):
             continue
-        cls.__annotations__[f.name] = strawberry.auto
+        cls_annotations[f.name] = strawberry.auto
 
     if is_filter:
-        cls.__annotations__.update(
+        cls_annotations.update(
             {
                 "AND": Optional[Self],  # type: ignore
                 "OR": Optional[Self],  # type: ignore
@@ -185,7 +178,7 @@ def _process_type(
                 else:
                     new_field = _field(default=UNSET)
 
-                cls.__annotations__[field_name] = field_annotation.raw_annotation
+                cls_annotations[field_name] = field_annotation.raw_annotation
                 new_field.default = UNSET
                 if isinstance(base_field, StrawberryField):
                     new_field.default_value = UNSET
