@@ -318,9 +318,9 @@ class PrefetchInspector:
                 "operations. Use only `only` or `deferred`, not both...",
             )
         if self.only is not None and other.only is not None:
-            self.only = self.only | other.only
+            self.only |= other.only
         elif self.defer is not None and other.defer is not None:
-            self.defer = self.defer | other.defer
+            self.defer |= other.defer
         else:
             # One has defer, the other only. In this case, defer nothing
             self.defer = frozenset()

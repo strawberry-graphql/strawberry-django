@@ -254,6 +254,7 @@ input IssueInput {
   priority: Int
   kind: String
   tags: [NodeInput!]
+  extra: Int
 }
 
 input IssueInputPartial {
@@ -263,6 +264,7 @@ input IssueInputPartial {
   priority: Int
   kind: String
   tags: TagInputPartialListInput
+  extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
 }
@@ -273,6 +275,7 @@ input IssueInputPartialWithoutId {
   priority: Int
   kind: String
   tags: TagInputPartialListInput
+  extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
 }

@@ -19,7 +19,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
-from strawberry import relay
+from strawberry import UNSET, relay
 from strawberry.types.info import Info
 from typing_extensions import Annotated
 
@@ -261,6 +261,7 @@ class IssueInput:
     priority: strawberry.auto
     kind: strawberry.auto
     tags: Optional[List[NodeInput]]
+    extra: Optional[str] = strawberry.field(default=UNSET, graphql_type=Optional[int])
 
 
 @strawberry_django.type(Assignee)
@@ -287,16 +288,16 @@ class AssigneeInputPartial(NodeInputPartial):
 
 @strawberry_django.partial(Issue)
 class IssueInputPartial(NodeInput, IssueInput):
-    tags: Optional[ListInput[TagInputPartial]]  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]]
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
+    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
+    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
 
 
 @strawberry_django.partial(Issue)
 class IssueInputPartialWithoutId(IssueInput):
-    tags: Optional[ListInput[TagInputPartial]]  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]]
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
+    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
+    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
 
 
 @strawberry_django.input(Issue)

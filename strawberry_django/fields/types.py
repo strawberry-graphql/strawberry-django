@@ -458,7 +458,7 @@ def resolve_model_field_type(
                 choice_value = EnumValueDefinition(value=c[0], description=str(c[1]))
 
                 while choice_name in enum_choices:
-                    choice_name = choice_name + "_"
+                    choice_name += "_"
                 enum_choices[choice_name] = choice_value
 
             field_type = strawberry.enum(  # type: ignore

@@ -1,0 +1,390 @@
+"""
+Can only be resolved by authenticated users.
+
+When the condition fails, the following can be returned (following this priority):
+1) `OperationInfo`/`OperationMessage` if those types are allowed at the return type
+2) `null` in case the field is not mandatory (e.g. `String` or `[String]`)
+3) An empty list in case the field is a list (e.g. `[String]!`)
+4) An empty `Connection` in case the return type is a relay connection
+2) Otherwise, an error will be raised
+"""
+directive @isAuthenticated repeatable on FIELD_DEFINITION
+
+type AssigneeType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  user: UserType!
+  owner: Boolean!
+}
+
+union CreateIssuePayload = IssueType | OperationInfo
+
+"""Date (isoformat)"""
+scalar Date
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+input DjangoModelFilterInput {
+  pk: ID!
+}
+
+type FavoriteType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  user: UserType!
+  issue: IssueType!
+}
+
+"""A connection to a list of items."""
+type FavoriteTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [FavoriteTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type FavoriteTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: FavoriteType!
+}
+
+"""
+The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+"""
+scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
+
+input IssueFilter {
+  AND: IssueFilter
+  OR: IssueFilter
+  NOT: IssueFilter
+  DISTINCT: Boolean
+  search: String
+}
+
+input IssueInputSubclass {
+  name: String!
+  milestone: MilestoneInputPartial!
+  priority: Int
+  kind: String
+  tags: [NodeInput!]
+  extra: Int
+}
+
+type IssueType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  milestone: MilestoneType!
+  priority: Int!
+  kind: String
+  nameWithPriority: String!
+  nameWithKind: String!
+  tags: [TagType!]!
+  issueAssignees: [AssigneeType!]!
+  favoriteSet(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): FavoriteTypeConnection!
+  milestoneName: String!
+  milestoneNameWithoutOnlyOptimization: String!
+  privateName: String
+}
+
+"""A connection to a list of items."""
+type IssueTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [IssueTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type IssueTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: IssueType!
+}
+
+input MilestoneFilter {
+  name: StrFilterLookup
+  project: DjangoModelFilterInput
+  search: String
+  AND: MilestoneFilter
+  OR: MilestoneFilter
+  NOT: MilestoneFilter
+  DISTINCT: Boolean
+}
+
+input MilestoneInputPartial {
+  id: GlobalID
+  name: String
+}
+
+input MilestoneOrder {
+  name: Ordering
+  project: ProjectOrder
+}
+
+type MilestoneType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  project: ProjectType!
+  issues: [IssueType!]!
+  myIssues: [IssueType!]!
+  issuesWithFilters(
+    filters: IssueFilter
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
+  myBugsCount: Int!
+  asyncField(value: String!): String!
+}
+
+type MilestoneTypeSubclass implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  project: ProjectType!
+  issues: [IssueType!]!
+  myIssues: [IssueType!]!
+  issuesWithFilters(
+    filters: IssueFilter
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
+  myBugsCount: Int!
+  asyncField(value: String!): String!
+}
+
+type Mutation {
+  createIssue(input: IssueInputSubclass!): CreateIssuePayload!
+}
+
+"""An object with a Globally Unique ID"""
+interface Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+}
+
+"""Input of an object that implements the `Node` interface."""
+input NodeInput {
+  id: GlobalID!
+}
+
+type OperationInfo {
+  """List of messages returned by the operation."""
+  messages: [OperationMessage!]!
+}
+
+type OperationMessage {
+  """The kind of this message."""
+  kind: OperationMessageKind!
+
+  """The error message."""
+  message: String!
+
+  """
+  The field that caused the error, or `null` if it isn't associated with any particular field.
+  """
+  field: String
+
+  """The error code, or `null` if no error code was set."""
+  code: String
+}
+
+enum OperationMessageKind {
+  INFO
+  WARNING
+  ERROR
+  PERMISSION
+  VALIDATION
+}
+
+enum Ordering {
+  ASC
+  ASC_NULLS_FIRST
+  ASC_NULLS_LAST
+  DESC
+  DESC_NULLS_FIRST
+  DESC_NULLS_LAST
+}
+
+"""Information to aid in pagination."""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+}
+
+input ProjectOrder {
+  id: Ordering
+  name: Ordering
+}
+
+type ProjectType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  milestonesCount: Int!
+  isDelayed: Boolean!
+  cost: Decimal @isAuthenticated
+  isSmall: Boolean!
+}
+
+type ProjectTypeSubclass implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  dueDate: Date
+  milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  milestonesCount: Int!
+  isDelayed: Boolean!
+  cost: Decimal @isAuthenticated
+  isSmall: Boolean!
+}
+
+type Query {
+  project(
+    """The ID of the object."""
+    id: GlobalID!
+  ): ProjectTypeSubclass
+  milestone(
+    """The ID of the object."""
+    id: GlobalID!
+  ): MilestoneTypeSubclass
+}
+
+input StrFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
+  exact: String
+
+  """Assignment test. Filter will be skipped on `null` value"""
+  isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [String!]
+
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
+  iExact: String
+
+  """
+  Case-sensitive containment test. Filter will be skipped on `null` value
+  """
+  contains: String
+
+  """
+  Case-insensitive containment test. Filter will be skipped on `null` value
+  """
+  iContains: String
+
+  """Case-sensitive starts-with. Filter will be skipped on `null` value"""
+  startsWith: String
+
+  """Case-insensitive starts-with. Filter will be skipped on `null` value"""
+  iStartsWith: String
+
+  """Case-sensitive ends-with. Filter will be skipped on `null` value"""
+  endsWith: String
+
+  """Case-insensitive ends-with. Filter will be skipped on `null` value"""
+  iEndsWith: String
+
+  """
+  Case-sensitive regular expression match. Filter will be skipped on `null` value
+  """
+  regex: String
+
+  """
+  Case-insensitive regular expression match. Filter will be skipped on `null` value
+  """
+  iRegex: String
+}
+
+type TagType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  issues(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
+}
+
+type UserType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  email: String!
+  isActive: Boolean!
+  isSuperuser: Boolean!
+  isStaff: Boolean!
+  fullName: String!
+}

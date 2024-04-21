@@ -160,7 +160,7 @@ def _process_type(
         if is_auto(annotation):
             auto_fields.add(field_name)
 
-        # FIXME: For input types it is imported to set the default value to UNSET
+        # FIXME: For input types it is important to set the default value to UNSET
         # Is there a better way of doing this?
         if is_input:
             # First check if the field is defined in the class. If it is,
@@ -182,22 +182,14 @@ def _process_type(
                 base_field = getattr(cls, "__dataclass_fields__", {}).get(field_name)
                 if base_field is not None and isinstance(base_field, StrawberryField):
                     new_field = copy.copy(base_field)
-                    for attr in [
-                        "_arguments",
-                        "permission_classes",
-                        "directives",
-                        "extensions",
-                    ]:
-                        old_attr = getattr(base_field, attr)
-                        if old_attr is not None:
-                            setattr(new_field, attr, old_attr[:])
                 else:
                     new_field = _field(default=UNSET)
 
-                new_field.type_annotation = field_annotation
+                cls.__annotations__[field_name] = field_annotation.raw_annotation
                 new_field.default = UNSET
                 if isinstance(base_field, StrawberryField):
                     new_field.default_value = UNSET
+
                 setattr(cls, field_name, new_field)
 
     # Make sure model is also considered a "virtual subclass" of cls
