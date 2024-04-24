@@ -492,7 +492,6 @@ def delete(info: Info, instance: _M | Iterable[_M], *, data=None) -> _M | list[_
         many = False
         instances = [instance]
 
-    assert len({obj.__class__ for obj in instances}) == 1
     for instance in instances:
         pk = instance.pk
         instance.delete()
