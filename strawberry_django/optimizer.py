@@ -304,9 +304,9 @@ class OptimizerStore:
             return fields
 
         if isinstance(qs.query.select_related, dict):
-            select_related_set.update(get_related_fields_with_prefix(
-                qs.query.select_related
-            ))
+            select_related_set.update(
+                get_related_fields_with_prefix(qs.query.select_related)
+            )
 
         if config.enable_select_related and select_related_set:
             qs = qs.select_related(*select_related_set)
