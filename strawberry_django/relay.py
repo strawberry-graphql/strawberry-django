@@ -298,7 +298,7 @@ def resolve_model_nodes(
 
         return async_resolver()
 
-    return map_results(cast(models.QuerySet[_M], retval))
+    return map_results(retval)
 
 
 @overload
