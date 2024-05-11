@@ -39,6 +39,7 @@ from strawberry_django.optimizer import OptimizerStore
 from strawberry_django.ordering import ORDER_ARG, StrawberryDjangoFieldOrdering
 from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.permissions import filter_with_perms
+from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.relay import resolve_model_nodes
 from strawberry_django.resolvers import (
     default_qs_hook,
@@ -278,12 +279,7 @@ class StrawberryDjangoField(
         return qs_hook
 
     def get_queryset(self, queryset, info, **kwargs):
-        type_ = self.django_type
-
-        get_queryset = getattr(type_, "get_queryset", None)
-        if get_queryset:
-            queryset = get_queryset(queryset, info, **kwargs)
-
+        queryset = run_type_get_queryset(queryset, self.django_type, info)
         queryset = super().get_queryset(
             filter_with_perms(queryset, info), info, **kwargs
         )

@@ -24,6 +24,7 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Literal, Self
 
+from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.resolvers import django_getattr, django_resolver
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
@@ -242,10 +243,7 @@ def resolve_model_nodes(
         source = cast(Type[_M], django_type.model)
 
     qs = cast(models.QuerySet[_M], source._default_manager.all())
-
-    get_queryset = getattr(origin, "get_queryset", None)
-    if get_queryset:
-        qs = get_queryset(qs, info)
+    qs = run_type_get_queryset(qs, origin, info)
 
     id_attr = cast(relay.Node, origin).resolve_id_attr()
     if node_ids is not None:
@@ -376,10 +374,7 @@ def resolve_model_node(
 
     id_attr = cast(relay.Node, origin).resolve_id_attr()
     qs = source._default_manager.all()
-
-    get_queryset = getattr(origin, "get_queryset", None)
-    if get_queryset:
-        qs = get_queryset(qs, info)
+    qs = run_type_get_queryset(qs, origin, info)
 
     qs = qs.filter(**{id_attr: node_id})
 

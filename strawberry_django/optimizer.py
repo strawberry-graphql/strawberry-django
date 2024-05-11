@@ -42,6 +42,7 @@ from strawberry.utils.typing import eval_type
 from typing_extensions import assert_never, assert_type, get_args
 
 from strawberry_django.fields.types import resolve_model_field_name
+from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
@@ -355,10 +356,12 @@ def _get_prefetch_queryset(
     else:
         remote_type = remote_type_defs[0]
 
-    if get_queryset := getattr(remote_type, "get_queryset", None):
-        return get_queryset(qs, info)
-
-    return qs
+    return run_type_get_queryset(
+        qs,
+        remote_type,
+        # FIXME: Find out if the fact that info can be a GraphQLResolveInfo is a problem
+        info=info,  # type: ignore
+    )
 
 
 def _get_model_hints(
@@ -693,7 +696,7 @@ def optimize(
 
     # Avoid optimizing twice and also modify an already resolved queryset
     if (
-        getattr(qs, "_gql_optimized", False) or qs._result_cache is not None  # type: ignore
+        get_queryset_config(qs).optimized or qs._result_cache is not None  # type: ignore
     ):
         return qs
 
@@ -749,7 +752,8 @@ def optimize(
 
     if store:
         qs = store.apply(qs, info=info, config=config)
-        qs._gql_optimized = True  # type: ignore
+        qs_config = get_queryset_config(qs)
+        qs_config.optimized = True
 
     return qs
 

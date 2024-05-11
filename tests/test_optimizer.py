@@ -5,11 +5,13 @@ import pytest
 import strawberry
 from django.db.models import Prefetch
 from django.utils import timezone
+from pytest_mock import MockerFixture
 from strawberry.relay import to_base64
 from strawberry.types import ExecutionResult
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from tests.projects.schema import StaffType
 
 from . import utils
 from .projects.faker import (
@@ -56,7 +58,14 @@ def test_user_query(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_staff_query(db, gql_client: GraphQLTestClient):
+def test_staff_query(db, gql_client: GraphQLTestClient, mocker: MockerFixture):
+    staff_type_get_queryset = StaffType.get_queryset
+    mock_staff_type_get_queryset = mocker.patch(
+        "tests.projects.schema.StaffType.get_queryset",
+        autospec=True,
+        side_effect=staff_type_get_queryset,
+    )
+
     query = """
       query TestQuery {
         staffConn {
@@ -81,6 +90,7 @@ def test_staff_query(db, gql_client: GraphQLTestClient):
             ],
         },
     }
+    mock_staff_type_get_queryset.assert_called_once()
 
 
 @pytest.mark.django_db(transaction=True)
