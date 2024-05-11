@@ -945,6 +945,43 @@ def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_handles_existing_select_related(db, gql_client: GraphQLTestClient):
+    """select_related should not cause errors, even if the field does not get queried."""
+    # We're *not* querying the issues' milestones, even though it's
+    # prefetched.
+    query = """
+      query TestQuery {
+        tagList {
+          issuesWithSelectedRelatedMilestoneAndProject {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    tag = TagFactory.create()
+
+    issues = IssueFactory.create_batch(3)
+    for issue in issues:
+        tag.issues.add(issue)
+
+    with assert_num_queries(2):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "tagList": [
+            {
+                "issuesWithSelectedRelatedMilestoneAndProject": [
+                    {"id": to_base64("IssueType", t.id), "name": t.name}
+                    for t in sorted(issues, key=lambda i: i.pk)
+                ],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery ($id: GlobalID!) {
