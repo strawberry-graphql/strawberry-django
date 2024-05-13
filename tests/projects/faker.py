@@ -11,7 +11,7 @@ _T = TypeVar("_T")
 User = cast(Type[AbstractUser], get_user_model())
 
 
-class _BaseFactory(Generic[_T], factory.django.DjangoModelFactory):
+class _BaseFactory(factory.django.DjangoModelFactory, Generic[_T]):
     Meta: ClassVar[Any]
 
     @classmethod
