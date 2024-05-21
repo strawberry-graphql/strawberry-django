@@ -221,7 +221,7 @@ class FruitFilter:
     This can be modified using
     `strawberry_django.filter_field(filter_none=True)`
 
-    This also means that build in `exact` & `iExact` lookups cannot be used to filter for `None`
+    This also means that built in `exact` & `iExact` lookups cannot be used to filter for `None`
     and `isNull` have to be used explicitly.
 
     #### value resolution
