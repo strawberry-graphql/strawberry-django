@@ -62,7 +62,7 @@ _DjangoModelFilterInput: Any = None
 
 
 def get_django_model_filter_input_type():
-    global _DjangoModelFilterInput
+    global _DjangoModelFilterInput  # noqa: PLW0603
 
     if _DjangoModelFilterInput is None:
         settings = strawberry_django_settings()
