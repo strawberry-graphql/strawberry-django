@@ -1,4 +1,4 @@
-from functools import _make_key
+from functools import _make_key  # noqa: PLC2701
 from typing import Callable, Dict, Hashable, Optional, Tuple, cast
 
 from django.core.cache import caches
@@ -24,6 +24,7 @@ class DjangoCacheBase(SchemaExtension):
         Defaults to the same key generator as functools.lru_cache
         WARNING! The default function does NOT work with memcached
         and will generate warnings
+
     """
 
     def __init__(

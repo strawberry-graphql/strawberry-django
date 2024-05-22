@@ -1,8 +1,20 @@
+import io
+
 import pytest
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
 
 from tests import models
 from tests.utils import deep_tuple_to_list
+
+
+def prep_image(fname):
+    """Return an SimpleUploadedFile."""
+    img_f = io.BytesIO()
+    img = Image.new(mode="RGB", size=(1, 1), color="red")
+    img.save(img_f, format="jpeg")
+    return SimpleUploadedFile(fname, img_f.getvalue())
 
 
 def test_create(mutation):
@@ -14,6 +26,55 @@ def test_create(mutation):
     assert list(models.Fruit.objects.values("id", "name")) == [
         {"id": 1, "name": "strawberry"},
     ]
+
+
+def test_create_with_optional_file(mutation):
+    fname = "test_create_with_optional_fileb.png"
+    upload = prep_image(fname)
+    result = mutation(
+        """\
+        CreateFruit($picture: Upload!) {
+          createFruit(data: { name: "strawberry", picture: $picture }) {
+            id
+            name
+            picture {
+              name
+            }
+          }
+        }
+        """,
+        variable_values={"picture": upload},
+    )
+
+    assert not result.errors
+    assert result.data["createFruit"] == {
+        "id": "1",
+        "name": "strawberry",
+        "picture": {"name": f".tmp_upload/{fname}"},
+    }
+
+
+def test_with_required_file_fails(mutation):
+    # The query input will not have the required field listed
+    # as we want to test the failback of the django-model full_clean
+    # method on the create to trigger validation errors.
+    result = mutation(
+        """\
+        createTomatoWithRequiredPicture {
+          createTomatoWithRequiredPicture(data: {name: "strawberry"}) {
+            id
+            name
+            picture {
+              name
+            }
+          }
+        }
+        """,
+        variable_values={},
+    )
+
+    assert result.errors is not None
+    assert "'This field cannot be blank" in str(result.errors)
 
 
 @pytest.mark.asyncio()
@@ -64,6 +125,37 @@ def test_update_m2m_with_validation_error(mutation, fruit):
     )
     assert result.errors
     assert result.errors[0].message == "{'name': ['We do not allow rotten fruits.']}"
+
+
+def test_update_m2m_with_new_different_objects(mutation, fruit):
+    result = mutation(
+        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "strawberry"}]}) { id types { id name }}}'
+    )
+    assert not result.errors
+    assert result.data["fruits"][0]["types"] == [
+        {"id": "1", "name": "apple"},
+        {"id": "2", "name": "strawberry"},
+    ]
+
+    result = mutation(
+        '{ fruits: updateFruits(data: { types: [{id: "1", name: "apple updated"}, {name: "raspberry"}]}) { id types { id name }}}'
+    )
+
+    assert result.data["fruits"][0]["types"] == [
+        {"id": "1", "name": "apple updated"},
+        {"id": "3", "name": "raspberry"},
+    ]
+
+
+def test_update_m2m_with_duplicates(mutation, fruit):
+    result = mutation(
+        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "apple"}]}) { id types { id name }}}'
+    )
+    assert not result.errors
+    assert result.data["fruits"][0]["types"] == [
+        {"id": "1", "name": "apple"},
+        {"id": "2", "name": "apple"},
+    ]
 
 
 def test_update_lazy_object(mutation, fruit):

@@ -5,11 +5,13 @@ import pytest
 import strawberry
 from django.db.models import Prefetch
 from django.utils import timezone
+from pytest_mock import MockerFixture
 from strawberry.relay import to_base64
 from strawberry.types import ExecutionResult
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from tests.projects.schema import StaffType
 
 from . import utils
 from .projects.faker import (
@@ -56,7 +58,14 @@ def test_user_query(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_staff_query(db, gql_client: GraphQLTestClient):
+def test_staff_query(db, gql_client: GraphQLTestClient, mocker: MockerFixture):
+    staff_type_get_queryset = StaffType.get_queryset
+    mock_staff_type_get_queryset = mocker.patch(
+        "tests.projects.schema.StaffType.get_queryset",
+        autospec=True,
+        side_effect=staff_type_get_queryset,
+    )
+
     query = """
       query TestQuery {
         staffConn {
@@ -81,6 +90,7 @@ def test_staff_query(db, gql_client: GraphQLTestClient):
             ],
         },
     }
+    mock_staff_type_get_queryset.assert_called_once()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -892,3 +902,126 @@ def test_user_query_with_prefetch():
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_select_related_with_only(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        issue (id: $id) {
+          id
+          milestoneName
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue = IssueFactory.create(milestone=milestone)
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 2):
+        res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+
+    assert res.data == {
+        "issue": {
+            "id": to_base64("IssueType", issue.id),
+            "milestoneName": milestone.name,
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        issue (id: $id) {
+          id
+          milestoneNameWithoutOnlyOptimization
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue = IssueFactory.create(milestone=milestone)
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 2):
+        res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+
+    assert res.data == {
+        "issue": {
+            "id": to_base64("IssueType", issue.id),
+            "milestoneNameWithoutOnlyOptimization": milestone.name,
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_handles_existing_select_related(db, gql_client: GraphQLTestClient):
+    """select_related should not cause errors, even if the field does not get queried."""
+    # We're *not* querying the issues' milestones, even though it's
+    # prefetched.
+    query = """
+      query TestQuery {
+        tagList {
+          issuesWithSelectedRelatedMilestoneAndProject {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    tag = TagFactory.create()
+
+    issues = IssueFactory.create_batch(3)
+    for issue in issues:
+        tag.issues.add(issue)
+
+    with assert_num_queries(2):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "tagList": [
+            {
+                "issuesWithSelectedRelatedMilestoneAndProject": [
+                    {"id": to_base64("IssueType", t.id), "name": t.name}
+                    for t in sorted(issues, key=lambda i: i.pk)
+                ],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          issuesWithFilters (filters: {search: "Foo"}) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue1 = IssueFactory.create(milestone=milestone, name="Foo")
+    issue2 = IssueFactory.create(milestone=milestone, name="Foo Bar")
+    issue3 = IssueFactory.create(milestone=milestone, name="Bar Foo")
+    IssueFactory.create(milestone=milestone, name="Bar Bin")
+
+    with assert_num_queries(5 if DjangoOptimizerExtension.enabled.get() else 2):
+        res = gql_client.query(query, {"id": to_base64("MilestoneType", milestone.pk)})
+
+    assert isinstance(res.data, dict)
+    result = res.data["milestone"]
+    assert isinstance(result, dict)
+
+    expected = {to_base64("IssueType", i.pk) for i in [issue1, issue2, issue3]}
+    assert {
+        edge["node"]["id"] for edge in result["issuesWithFilters"]["edges"]
+    } == expected

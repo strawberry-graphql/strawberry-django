@@ -6,6 +6,8 @@ from guardian.shortcuts import assign_perm
 from strawberry.relay import to_base64
 from typing_extensions import Literal, TypeAlias
 
+from strawberry_django.optimizer import DjangoOptimizerExtension
+
 from .projects.faker import (
     GroupFactory,
     IssueFactory,
@@ -280,6 +282,49 @@ def test_superuser_required_optional(db, gql_client: GraphQLTestClient):
                 "name": issue.name,
             },
         }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_perm_cached(db, gql_client: GraphQLTestClient):
+    """Validates that the permission caching mechanism correctly stores permissions as a set of strings.
+
+    The test targets the `_perm_cache` attribute used in `utils/query.py`. It verifies that
+    the attribute behaves as expected, holding a `Set[str]` that represents permission
+    codenames, rather than direct Permission objects.
+
+    This test addresses a regression captured by the following error:
+
+    ```
+    user_perms: Set[str] = {p.codename for p in perm_cache}
+                          ^^^^^^^^^^
+    AttributeError: 'str' object has no attribute 'codename'
+    ```
+    """
+    query = """
+    query Issue ($id: GlobalID!) {
+        issuePermRequired (id: $id) {
+          id
+          privateName
+        }
+    }
+    """
+    issue = IssueFactory.create(name="Test")
+
+    # User with permission
+    user_with_perm = UserFactory.create()
+    user_with_perm.user_permissions.add(
+        Permission.objects.get(codename="view_issue"),
+    )
+    assign_perm("view_issue", user_with_perm, issue)
+    with gql_client.login(user_with_perm):
+        if DjangoOptimizerExtension.enabled.get():
+            res = gql_client.query(query, {"id": to_base64("IssueType", issue.pk)})
+            assert res.data == {
+                "issuePermRequired": {
+                    "id": to_base64("IssueType", issue.pk),
+                    "privateName": issue.name,
+                },
+            }
 
 
 @pytest.mark.django_db(transaction=True)
@@ -761,6 +806,63 @@ def test_list_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
             res = gql_client.query(query)
             assert res.data == {
                 "issueListObjPermRequired": [
+                    {
+                        "id": to_base64("IssueType", issue_with_perm.pk),
+                        "name": issue_with_perm.name,
+                    },
+                ],
+            }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", perm_kinds)
+def test_list_obj_perm_required_paginated(
+    db, gql_client: GraphQLTestClient, kind: PermKind
+):
+    query = """
+    query Issue {
+        issueListObjPermRequiredPaginated(pagination: {limit: 10, offset: 0}) {
+          id
+          name
+        }
+      }
+    """
+    IssueFactory.create()
+    issue_with_perm = IssueFactory.create()
+
+    user = UserFactory.create()
+
+    if kind == "user":
+        user_with_perm = UserFactory.create()
+        assign_perm("view_issue", user_with_perm, issue_with_perm)
+    elif kind == "group":
+        user_with_perm = UserFactory.create()
+        group = GroupFactory.create()
+        assign_perm("view_issue", group, issue_with_perm)
+        user_with_perm.groups.add(group)
+    elif kind == "superuser":
+        user_with_perm = SuperuserUserFactory.create()
+    else:  # pragma:nocover
+        raise AssertionError
+
+    res = gql_client.query(query)
+    assert res.data == {"issueListObjPermRequiredPaginated": []}
+
+    with gql_client.login(user):
+        res = gql_client.query(query)
+        assert res.data == {"issueListObjPermRequiredPaginated": []}
+
+    if kind == "superuser":
+        # Even though the user is a superuser, he doesn't have the permission
+        # assigned directly to him for the listing.
+        with gql_client.login(user_with_perm):
+            res = gql_client.query(query)
+            assert res.data == {"issueListObjPermRequiredPaginated": []}
+    else:
+        with gql_client.login(user_with_perm):
+            res = gql_client.query(query)
+            assert res.data == {
+                "issueListObjPermRequiredPaginated": [
                     {
                         "id": to_base64("IssueType", issue_with_perm.pk),
                         "name": issue_with_perm.name,

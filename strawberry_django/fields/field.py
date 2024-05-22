@@ -18,6 +18,7 @@ from typing import (
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.db.models.fields.files import FileDescriptor
 from django.db.models.fields.related import (
     ForwardManyToOneDescriptor,
     ReverseManyToOneDescriptor,
@@ -38,6 +39,7 @@ from strawberry_django.optimizer import OptimizerStore
 from strawberry_django.ordering import ORDER_ARG, StrawberryDjangoFieldOrdering
 from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.permissions import filter_with_perms
+from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.relay import resolve_model_nodes
 from strawberry_django.resolvers import (
     default_qs_hook,
@@ -113,6 +115,9 @@ class StrawberryDjangoField(
             prefetch_related=prefetch_related,
             annotate=annotate,
         )
+        # FIXME: Probably remove this when depending on graphql-core 3.3.0+
+        self.disable_fetch_list_results: bool = False
+
         super().__init__(*args, **kwargs)
 
     def __copy__(self) -> Self:
@@ -202,7 +207,14 @@ class StrawberryDjangoField(
                     # Reversed OneToOne will raise ObjectDoesNotExist when
                     # trying to access it if the relation doesn't exist.
                     except_as_none=(ObjectDoesNotExist,) if self.is_optional else None,
+                    empty_file_descriptor_as_null=True,
                 )
+            else:
+                # FileField/ImageField will always return a FileDescriptor, even when the
+                # field is "null". If it is falsy (i.e. doesn't have a file) we should
+                # return `None` instead.
+                if isinstance(attr, FileDescriptor) and not result:
+                    result = None
 
         if is_awaitable:
 
@@ -248,7 +260,9 @@ class StrawberryDjangoField(
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
                 qs = self.get_queryset(qs, info, **kwargs)
-                return default_qs_hook(qs)
+                if not self.disable_fetch_list_results:
+                    qs = default_qs_hook(qs)
+                return qs
 
         elif self.is_optional:
 
@@ -265,15 +279,9 @@ class StrawberryDjangoField(
         return qs_hook
 
     def get_queryset(self, queryset, info, **kwargs):
-        type_ = self.django_type
-
-        get_queryset = getattr(type_, "get_queryset", None)
-        if get_queryset:
-            queryset = get_queryset(queryset, info, **kwargs)
-
-        queryset = filter_with_perms(
-            super().get_queryset(queryset, info, **kwargs),
-            info,
+        queryset = run_type_get_queryset(queryset, self.django_type, info)
+        queryset = super().get_queryset(
+            filter_with_perms(queryset, info), info, **kwargs
         )
 
         # If optimizer extension is enabled, optimize this queryset
@@ -555,6 +563,7 @@ def field(
 
 def node(
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,
     field_name: str | None = None,
     is_subscription: bool = False,
@@ -600,7 +609,7 @@ def node(
 
     """
     extensions = [*extensions, relay.NodeExtension()]
-    return StrawberryDjangoField(
+    return field_cls(
         python_name=None,
         django_name=field_name,
         graphql_name=name,
@@ -621,6 +630,7 @@ def node(
 def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     name: str | None = None,
     field_name: str | None = None,
     is_subscription: bool = False,
@@ -646,6 +656,7 @@ def connection(
 def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     resolver: _RESOLVER_TYPE[NodeIterableType[Any]] | None = None,
     name: str | None = None,
     field_name: str | None = None,
@@ -672,6 +683,7 @@ def connection(
 def connection(
     graphql_type: type[relay.Connection[relay.NodeType]] | None = None,
     *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     resolver: _RESOLVER_TYPE[NodeIterableType[Any]] | None = None,
     name: str | None = None,
     field_name: str | None = None,
@@ -756,7 +768,7 @@ def connection(
 
     """
     extensions = [*extensions, StrawberryDjangoConnectionExtension()]
-    f = StrawberryDjangoField(
+    f = field_cls(
         python_name=None,
         django_name=field_name,
         graphql_name=name,

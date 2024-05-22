@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
+from django.db.models import ForeignKey
 from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
@@ -181,7 +182,14 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 self.django_name or self.python_name or self.name,
             )
             resolved_type = resolve_model_field_type(
-                model_field,
+                (
+                    model_field.target_field
+                    if (
+                        self.python_name.endswith("_id")
+                        and isinstance(model_field, ForeignKey)
+                    )
+                    else model_field
+                ),
                 self.origin_django_type,
             )
             if is_optional(

@@ -7,7 +7,7 @@ from strawberry.utils.importer import import_module_symbol
 
 
 class Command(BaseCommand):
-    help = "Export the graphql schema"  # noqa: A003
+    help = "Export the graphql schema"
 
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs=1, type=str, help="The schema location")
@@ -33,6 +33,6 @@ class Command(BaseCommand):
         schema_output = print_schema(schema_symbol)
         path = options.get("path")
         if path:
-            pathlib.Path(path).write_text(schema_output)
+            pathlib.Path(path).write_text(schema_output, encoding="utf-8")
         else:
             self.stdout.write(schema_output)

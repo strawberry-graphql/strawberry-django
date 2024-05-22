@@ -17,6 +17,13 @@ class Fruit:
     ...
 ```
 
+!!! tip
+
+    In most cases filter fields should have `Optional` annotations and default value `strawberry.UNSET` like so:
+    `foo: Optional[SomeType] = strawberry.UNSET`
+    Above `auto` annotation is wrapped in `Optional` automatically.
+    `UNSET` is automatically used for fields without `field` or with `strawberry_django.filter_field`.
+
 The code above would generate following schema:
 
 ```{.graphql title=schema.graphql}
@@ -26,6 +33,7 @@ input FruitFilter {
   AND: FruitFilter
   OR: FruitFilter
   NOT: FruitFilter
+  DISTINCT: Boolean
 }
 ```
 
@@ -35,6 +43,23 @@ input FruitFilter {
     from `relay.Node` and `GlobalID` for identifying objects, you might want to set
     `MAP_AUTO_ID_AS_GLOBAL_ID=True` in your [strawberry django settings](../settings)
     to make sure `auto` fields gets mapped to `GlobalID` on types and filters.
+
+## AND, OR, NOT, DISTINCT ...
+
+To every filter `AND`, `OR`, `NOT` & `DISTINCT` fields are added to allow more complex filtering
+
+```graphql
+{
+  fruits(
+    filters: {
+      name: "kebab"
+      OR: {
+        name: "raspberry"
+      }
+    }
+  ) { ... }
+}
+```
 
 ## Lookups
 
@@ -51,78 +76,25 @@ class FruitFilter:
 The code above would generate the following schema:
 
 ```{.graphql title=schema.graphql}
-input StrFilterLookup {
-  exact: String
-  iExact: String
-  contains: String
-  iContains: String
-  inList: [String!]
-  gt: String
-  gte: String
-  lt: String
-  lte: String
-  startsWith: String
-  iStartsWith: String
-  endsWith: String
-  iEndsWith: String
-  range: [String!]
+input IDBaseFilterLookup {
+  exact: ID
   isNull: Boolean
-  regex: String
-  iRegex: String
-  nExact: String
-  nIExact: String
-  nContains: String
-  nIContains: String
-  nInList: [String!]
-  nGt: String
-  nGte: String
-  nLt: String
-  nLte: String
-  nStartsWith: String
-  nIStartsWith: String
-  nEndsWith: String
-  nIEndsWith: String
-  nRange: [String!]
-  nIsNull: Boolean
-  nRegex: String
-  nIRegex: String
+  inList: [String!]
 }
 
-input IDFilterLookup {
-  exact: String
+input StrFilterLookup {
+  exact: ID
+  isNull: Boolean
+  inList: [String!]
   iExact: String
   contains: String
   iContains: String
-  inList: [String!]
-  gt: String
-  gte: String
-  lt: String
-  lte: String
   startsWith: String
   iStartsWith: String
   endsWith: String
   iEndsWith: String
-  range: [String!]
-  isNull: Boolean
   regex: String
   iRegex: String
-  nExact: String
-  nIExact: String
-  nContains: String
-  nIContains: String
-  nInList: [String!]
-  nGt: String
-  nGte: String
-  nLt: String
-  nLte: String
-  nStartsWith: String
-  nIStartsWith: String
-  nEndsWith: String
-  nIEndsWith: String
-  nRange: [String!]
-  nIsNull: Boolean
-  nRegex: String
-  nIRegex: String
 }
 
 input FruitFilter {
@@ -131,13 +103,14 @@ input FruitFilter {
   AND: FruitFilter
   OR: FruitFilter
   NOT: FruitFilter
+  DISTINCT: Boolean
 }
 ```
 
 Single-field lookup can be annotated with the `FilterLookup` generic type.
 
 ```{.python title=types.py}
-from strawberry_django.filters import FilterLookup
+from strawberry_django import FilterLookup
 
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
@@ -147,16 +120,16 @@ class FruitFilter:
 ## Filtering over relationships
 
 ```{.python title=types.py}
-@strawberry_django.filter(models.Fruit)
-class FruitFilter:
-    id: auto
-    name: auto
-    color: "ColorFilter"
-
 @strawberry_django.filter(models.Color)
 class ColorFilter:
     id: auto
     name: auto
+
+@strawberry_django.filter(models.Fruit)
+class FruitFilter:
+    id: auto
+    name: auto
+    color: ColorFilter | None
 ```
 
 The code above would generate following schema:
@@ -180,43 +153,198 @@ input FruitFilter {
 }
 ```
 
-## Custom filters and overriding default filtering methods
+## Custom filter methods
 
-You can define custom filter methods and override default filter methods by defining your own resolver.
+You can define custom filter method by defining your own resolver.
 
 ```{.python title=types.py}
+@strawberry_django.filter(models.User)
+class FruitFilter:
+    name: auto
+    last_name: auto
+
+    @strawberry_django.filter_field
+    def simple(self, value: str, prefix) -> Q:
+        return Q(**{f"{prefix}name": value})
+
+    @strawberry_django.filter_field
+    def full_name(
+        self,
+        queryset: QuerySet,
+        value: str,
+        prefix: str
+    ) -> tuple[QuerySet, Q]:
+        queryset = queryset.alias(
+            _fullname=Concat(
+                f"{prefix}name", Value(" "), f"{prefix}last_name"
+            )
+        )
+        return queryset, Q(**{"_fullname": value})
+
+    @strawberry_django.filter_field
+    def full_name_lookups(
+        self,
+        info: Info,
+        queryset: QuerySet,
+        value: strawberry_django.FilterLookup[str],
+        prefix: str
+    ) -> tuple[QuerySet, Q]:
+        queryset = queryset.alias(
+            _fullname=Concat(
+                f"{prefix}name", Value(" "), f"{prefix}last_name"
+            )
+        )
+        return strawberry_django.process_filters(
+            filters=value,
+            queryset=queryset,
+            info=info,
+            prefix=f"{prefix}_fullname"
+        )
+```
+
+!!! warning
+
+    It is discouraged to use `queryset.filter()` directly. When using more
+    complex filtering via `NOT`, `OR` & `AND` this might lead to undesired behaviour.
+
+!!! tip
+
+    #### process_filters
+
+    As seen above `strawberry_django.process_filters` function is exposed and can be
+    reused in custom methods. Above it's used to resolve fields lookups
+
+    #### null values
+
+    By default `null` value is ignored for all filters & lookups. This applies to custom
+    filter methods as well. Those won't even be called (you don't have to check for `None`).
+    This can be modified using
+    `strawberry_django.filter_field(filter_none=True)`
+
+    This also means that built in `exact` & `iExact` lookups cannot be used to filter for `None`
+    and `isNull` have to be used explicitly.
+
+    #### value resolution
+    - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute
+    - `value` parameter of type `Enum` is resolved to is's value
+    - above types are converted in `lists` as well
+
+    resolution can modified via `strawberry_django.filter_field(resolve_value=...)`
+
+    - True - always resolve
+    - False - never resolve
+    - UNSET (default) - resolves for filters without custom method only
+
+The code above generates the following schema:
+
+```{.graphql title=schema.graphql}
+input FruitFilter {
+  name: String
+  lastName: String
+  simple: str
+  fullName: str
+  fullNameLookups: StrFilterLookup
+}
+```
+
+#### Resolver arguments
+
+- `prefix` - represents the current path or position
+  - **Required**
+  - Important for nested filtering
+  - In code bellow custom filter `name` ends up filtering `Fruit` instead of `Color` without applying `prefix`
+
+```{.python title="Why prefix?"}
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
-    is_banana: bool | None
+    name: auto
+    color: ColorFilter | None
 
-    def filter_is_banana(self, queryset):
-        if self.is_banana in (None, strawberry.UNSET):
-            return queryset
-
-        if self.is_banana:
-            queryset = queryset.filter(name='banana')
-        else:
-            queryset = queryset.exclude(name='banana')
-
-        return queryset
+@strawberry_django.filter(models.Color)
+class ColorFilter:
+    @strawberry_django.filter_field
+    def name(self, value: str, prefix: str):
+        # prefix is "fruit_set__" if unused root object is filtered instead
+        if value:
+            return Q(name=value)
+        return Q()
 ```
+
+```graphql
+{
+  fruits( filters: {color: name: "blue"} ) { ... }
+}
+```
+
+- `value` - represents graphql field type
+  - **Required**, but forbidden for default `filter` method
+  - _must_ be annotated
+  - used instead of field's return type
+- `queryset` - can be used for more complex filtering
+  - Optional, but **Required** for default `filter` method
+  - usually used to `annotate` `QuerySet`
+
+#### Resolver return
+
+For custom field methods two return values are supported
+
+- django's `Q` object
+- tuple with `QuerySet` and django's `Q` object -> `tuple[QuerySet, Q]`
+
+For default `filter` method only second variant is supported.
+
+### What about nulls?
+
+By default `null` values are ignored. This can be toggled as such `@strawberry_django.filter_field(filter_none=True)`
 
 ## Overriding the default `filter` method
 
-For overriding the default filter logic you can provide the filter method.
-Note that this completely disables the default filtering, which means your custom
-method is responsible for handling _all_ filter-related operations.
+Works similar to field filter method, but:
+
+- is responsible for resolution of filtering for entire object
+- _must_ be named `filter`
+- argument `queryset` is **Required**
+- argument `value` is **Forbidden**
 
 ```{.python title=types.py}
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
-    is_apple: bool | None
+    def ordered(
+        self,
+        value: int,
+        prefix: str,
+        queryset: QuerySet,
+    ):
+        queryset = queryset.alias(
+          _ordered_num=Count(f"{prefix}orders__id")
+        )
+        return queryset, Q(**{f"{prefix}_ordered_num": value})
 
-    def filter(self, queryset):
-        if self.is_apple:
-            return queryset.filter(name='apple')
-        return queryset.exclude(name='apple')
+    @strawberry_django.order_field
+    def filter(
+        self,
+        info: Info,
+        queryset: QuerySet,
+        prefix: str,
+    ) -> tuple[QuerySet, list[Q]]:
+        queryset = queryset.filter(
+            ... # Do some query modification
+        )
+
+        return strawberry_django.process_filters(
+            self,
+            info=info,
+            queryset=queryset,
+            prefix=prefix,
+            skip_object_order_method=True
+        )
 ```
+
+!!! tip
+
+    As seen above `strawberry_django.process_filters` function is exposed and can be
+    reused in custom methods.
+    For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
 
 ## Adding filters to types
 
@@ -245,3 +373,70 @@ Filters added into a field override the default filters of this type.
 class Query:
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
 ```
+
+## Generic Lookup reference
+
+There is 7 already defined Generic Lookup `strawberry.input` classes importable from `strawberry_django`
+
+#### `BaseFilterLookup`
+
+- contains `exact`, `isNull` & `inList`
+- used for `ID` & `bool` fields
+
+#### `RangeLookup`
+
+- used for `range` or `BETWEEN` filtering
+
+#### `ComparisonFilterLookup`
+
+- inherits `BaseFilterLookup`
+- additionaly contains `gt`, `gte`, `lt`, `lte`, & `range`
+- used for Numberical fields
+
+#### `FilterLookup`
+
+- inherits `BaseFilterLookup`
+- additionally contains `iExact`, `contains`, `iContains`, `startsWith`, `iStartsWith`, `endsWith`, `iEndsWith`, `regex` & `iRegex`
+- used for string based fields and as default
+
+#### `DateFilterLookup`
+
+- inherits `ComparisonFilterLookup`
+- additionally contains `year`,`month`,`day`,`weekDay`,`isoWeekDay`,`week`,`isoYear` & `quarter`
+- used for date based fields
+
+#### `TimeFilterLookup`
+
+- inherits `ComparisonFilterLookup`
+- additionally contains `hour`,`minute`,`second`,`date` & `time`
+- used for time based fields
+
+#### `DatetimeFilterLookup`
+
+- inherits `DateFilterLookup` & `TimeFilterLookup`
+- used for timedate based fields
+
+## Legacy filtering
+
+The previous version of filters can be enabled via [**USE_DEPRECATED_FILTERS**](settings.md#strawberry_django)
+
+!!! warning
+
+    If **USE_DEPRECATED_FILTERS** is not set to `True` legacy custom filtering
+    methods will be _not_ be called.
+
+When using legacy filters it is important to use legacy
+`strawberry_django.filters.FilterLookup` lookups as well.
+The correct version is applied for `auto`
+annotated filter field (given `lookups=True` being set). Mixing old and new lookups
+might lead to error `DuplicatedTypeName: Type StrFilterLookup is defined multiple times in the schema`.
+
+While legacy filtering is enabled new filtering custom methods are
+fully functional including default `filter` method.
+
+Migration process could be composed of these steps:
+
+- enable **USE_DEPRECATED_FILTERS**
+- gradually transform custom filter field methods to new version (do not forget to use old FilterLookup if applicable)
+- gradually transform default `filter` methods
+- disable **USE_DEPRECATED_FILTERS** - **_This is breaking change_**

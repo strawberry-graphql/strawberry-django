@@ -2,8 +2,8 @@
 site_name: Strawberry Django
 site_description: Strawberry integration with Django.
 site_author: community
-repo_name: strawberry-graphql-django
-repo_url: https://github.com/strawberry-graphql/strawberry-graphql-django
+repo_name: strawberry-django
+repo_url: https://github.com/strawberry-graphql/strawberry-django
 edit_uri: edit/main/docs/
 dev_addr: 127.0.0.1:7000
 
@@ -35,8 +35,8 @@ markdown_extensions:
   - codehilite
   - attr_list
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       use_pygments: true

@@ -29,6 +29,7 @@ def test_non_defaults():
             MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
             MAP_AUTO_ID_AS_GLOBAL_ID=True,
             DEFAULT_PK_FIELD_NAME="id",
+            USE_DEPRECATED_FILTERS=True,
         ),
     ):
         assert (
@@ -41,5 +42,6 @@ def test_non_defaults():
                 MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
                 MAP_AUTO_ID_AS_GLOBAL_ID=True,
                 DEFAULT_PK_FIELD_NAME="id",
+                USE_DEPRECATED_FILTERS=True,
             )
         )

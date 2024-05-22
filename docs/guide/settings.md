@@ -54,6 +54,10 @@ A dictionary with the following optional keys:
       Change the [CRUD mutations'](mutations.md#cud-mutations) default
       primary key field.
 
+- **`USE_DEPRECATED_FILTERS`** (default: `False`)
+
+      If True, [legacy filters](filters.md#legacy-filtering) are enabled. This is usefull for migrating from previous version.
+
 These features can be enabled by adding this code to your `settings.py` file.
 
 ```{.python title=settings.py}

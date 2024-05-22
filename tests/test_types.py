@@ -222,25 +222,35 @@ def test_all_fields_works():
         fruit: FruitType
 
     schema = strawberry.Schema(query=Query)
-    expected = """\
+    expected = '''\
+      type DjangoImageType {
+        name: String!
+        path: String!
+        size: Int!
+        url: String!
+        width: Int!
+        height: Int!
+      }
+
       type DjangoModelType {
         pk: ID!
       }
 
-      \"\"\"Fruit(id, name, color, sweetness)\"\"\"
+      """Fruit(id, name, color, sweetness, picture)"""
       type FruitType {
         id: ID!
         name: String!
         color: DjangoModelType
 
-        \"\"\"Level of sweetness, from 1 to 10\"\"\"
+        """Level of sweetness, from 1 to 10"""
         sweetness: Int!
+        picture: DjangoImageType
       }
 
       type Query {
         fruit: FruitType!
       }
-    """
+    '''
 
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
@@ -256,6 +266,15 @@ def test_can_override_type_when_fields_all():
 
     schema = strawberry.Schema(query=Query)
     expected = """\
+      type DjangoImageType {
+        name: String!
+        path: String!
+        size: Int!
+        url: String!
+        width: Int!
+        height: Int!
+      }
+
       type DjangoModelType {
         pk: ID!
       }
@@ -265,6 +284,7 @@ def test_can_override_type_when_fields_all():
         id: ID!
         color: DjangoModelType
         sweetness: Int!
+        picture: DjangoImageType
       }
 
       type Query {
@@ -388,6 +408,15 @@ def test_exclude_includes_non_enumerated_fields():
 
     schema = strawberry.Schema(query=Query)
     expected = """\
+      type DjangoImageType {
+        name: String!
+        path: String!
+        size: Int!
+        url: String!
+        width: Int!
+        height: Int!
+      }
+
       type DjangoModelType {
         pk: ID!
       }
@@ -396,6 +425,7 @@ def test_exclude_includes_non_enumerated_fields():
         id: ID!
         color: DjangoModelType
         sweetness: Int!
+        picture: DjangoImageType
       }
 
       type Query {
@@ -417,6 +447,15 @@ def test_non_existent_fields_exclude_ignored():
 
     schema = strawberry.Schema(query=Query)
     expected = """\
+      type DjangoImageType {
+        name: String!
+        path: String!
+        size: Int!
+        url: String!
+        width: Int!
+        height: Int!
+      }
+
       type DjangoModelType {
         pk: ID!
       }
@@ -426,6 +465,7 @@ def test_non_existent_fields_exclude_ignored():
         name: String!
         color: DjangoModelType
         sweetness: Int!
+        picture: DjangoImageType
       }
 
       type Query {
@@ -447,6 +487,15 @@ def test_can_override_type_with_exclude():
 
     schema = strawberry.Schema(query=Query)
     expected = """\
+      type DjangoImageType {
+        name: String!
+        path: String!
+        size: Int!
+        url: String!
+        width: Int!
+        height: Int!
+      }
+
       type DjangoModelType {
         pk: ID!
       }
@@ -455,6 +504,7 @@ def test_can_override_type_with_exclude():
         sweetness: String!
         id: ID!
         color: DjangoModelType
+        picture: DjangoImageType
       }
 
       type Query {
@@ -476,6 +526,15 @@ def test_can_override_fields_with_exclude():
 
     schema = strawberry.Schema(query=Query)
     expected = """\
+      type DjangoImageType {
+        name: String!
+        path: String!
+        size: Int!
+        url: String!
+        width: Int!
+        height: Int!
+      }
+
       type DjangoModelType {
         pk: ID!
       }
@@ -485,6 +544,7 @@ def test_can_override_fields_with_exclude():
         id: ID!
         color: DjangoModelType
         sweetness: Int!
+        picture: DjangoImageType
       }
 
       type Query {

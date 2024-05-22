@@ -702,7 +702,7 @@ class HasPerm(DjangoPermissionExtension):
                     description="Required perms to access this resource.",
                     default_factory=list,
                 )
-                any: bool = strawberry.field(  # noqa: A003
+                any: bool = strawberry.field(
                     description="If any or all perms listed are required.",
                     default=True,
                 )
@@ -723,7 +723,7 @@ class HasPerm(DjangoPermissionExtension):
         info: Info,
         source: Any,
     ):
-        if user is None or self.with_anonymous and user.is_anonymous:
+        if user is None or (self.with_anonymous and user.is_anonymous):
             raise DjangoNoPermission
 
         if (

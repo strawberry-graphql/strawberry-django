@@ -15,10 +15,11 @@ from django.db.models import (
     OuterRef,
     Prefetch,
     Q,
+    Subquery,
 )
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
-from strawberry import relay
+from strawberry import UNSET, relay
 from strawberry.types.info import Info
 from typing_extensions import Annotated
 
@@ -34,6 +35,7 @@ from strawberry_django.permissions import (
     IsAuthenticated,
     IsStaff,
     IsSuperuser,
+    filter_for_user,
 )
 from strawberry_django.relay import ListConnectionWithTotalCount
 
@@ -126,6 +128,13 @@ class MilestoneOrder:
     project: Optional[ProjectOrder]
 
 
+@strawberry_django.filter(Issue)
+class IssueFilter:
+    @strawberry_django.filter_field()
+    def search(self, value: str, prefix: str) -> Q:
+        return Q(name__contains=value)
+
+
 @strawberry_django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
 class MilestoneType(relay.Node):
     name: strawberry.auto
@@ -151,6 +160,12 @@ class MilestoneType(relay.Node):
     )
     def my_issues(self) -> List["IssueType"]:
         return self._my_issues  # type: ignore
+
+    @strawberry_django.connection(
+        ListConnectionWithTotalCount["IssueType"], filters=IssueFilter
+    )
+    def issues_with_filters(self) -> List["IssueType"]:
+        return self.issues.all()  # type: ignore
 
     @strawberry_django.field(
         annotate={
@@ -197,11 +212,44 @@ class IssueType(relay.Node):
         strawberry_django.connection()
     )
 
+    @strawberry_django.field(select_related="milestone", only="milestone__name")
+    def milestone_name(self) -> str:
+        return self.milestone.name
+
+    @strawberry_django.field(select_related="milestone")
+    def milestone_name_without_only_optimization(self) -> str:
+        return self.milestone.name
+
+    @strawberry_django.field(
+        annotate={
+            "_private_name": lambda info: Subquery(
+                filter_for_user(
+                    Issue.objects.all(),
+                    info.context.request.user,
+                    ["projects.view_issue"],
+                )
+                .filter(id=OuterRef("pk"))
+                .values("name")[:1],
+            ),
+        },
+    )
+    def private_name(self, root: Issue) -> Optional[str]:
+        return root._private_name  # type: ignore
+
 
 @strawberry_django.type(Tag)
 class TagType(relay.Node):
     name: strawberry.auto
     issues: ListConnectionWithTotalCount[IssueType] = strawberry_django.connection()
+
+    @strawberry_django.field
+    def issues_with_selected_related_milestone_and_project(self) -> List[IssueType]:
+        # here, the `select_related` is on the queryset directly, and not on the field
+        return (
+            self.issues.all()  # type: ignore
+            .select_related("milestone", "milestone__project")
+            .order_by("id")
+        )
 
 
 @strawberry_django.type(Quiz)
@@ -222,6 +270,7 @@ class IssueInput:
     priority: strawberry.auto
     kind: strawberry.auto
     tags: Optional[List[NodeInput]]
+    extra: Optional[str] = strawberry.field(default=UNSET, graphql_type=Optional[int])
 
 
 @strawberry_django.type(Assignee)
@@ -248,16 +297,16 @@ class AssigneeInputPartial(NodeInputPartial):
 
 @strawberry_django.partial(Issue)
 class IssueInputPartial(NodeInput, IssueInput):
-    tags: Optional[ListInput[TagInputPartial]]  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]]
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
+    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
+    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
 
 
 @strawberry_django.partial(Issue)
 class IssueInputPartialWithoutId(IssueInput):
-    tags: Optional[ListInput[TagInputPartial]]  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]]
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]]
+    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
+    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
 
 
 @strawberry_django.input(Issue)
@@ -379,6 +428,9 @@ class Query:
     issue_list_obj_perm_required: List[IssueType] = strawberry_django.field(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
+    issue_list_obj_perm_required_paginated: List[IssueType] = strawberry_django.field(
+        extensions=[HasRetvalPerm(perms=["projects.view_issue"])], pagination=True
+    )
     issue_conn_obj_perm_required: ListConnectionWithTotalCount[IssueType] = (
         strawberry_django.connection(
             extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
@@ -498,6 +550,7 @@ class Mutation:
                 Quiz,
                 {"title": title},
                 full_clean={"exclude": ["sequence"]} if full_clean_options else True,
+                key_attr="id",
             ),
         )
 

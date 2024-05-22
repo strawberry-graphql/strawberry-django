@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from asgiref.sync import sync_to_async
 from django.db import models
+from django.db.models.fields.files import FileDescriptor
 from django.db.models.manager import BaseManager
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import ParamSpec
@@ -26,6 +27,9 @@ resolving_async: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 
 def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
+    # FIXME: We probably won't need this anymore when we can use graphql-core 3.3.0+
+    # as its `complete_list_value` gives a preference to async iteration it if is
+    # provided by the object.
     # This is what QuerySet does internally to fetch results.
     # After this, iterating over the queryset should be async safe
     if qs._result_cache is None:  # type: ignore
@@ -127,6 +131,7 @@ def django_getattr(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
+    empty_file_descriptor_as_null: bool = False,
 ) -> AwaitableOrValue[Any]: ...
 
 
@@ -138,6 +143,7 @@ def django_getattr(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
+    empty_file_descriptor_as_null: bool = False,
 ) -> AwaitableOrValue[Any]: ...
 
 
@@ -148,10 +154,29 @@ def django_getattr(
     *,
     qs_hook: Callable[[models.QuerySet[_M]], Any] = default_qs_hook,
     except_as_none: tuple[type[Exception], ...] | None = None,
+    empty_file_descriptor_as_null: bool = False,
 ):
-    args = (default,) if default is not _SENTINEL else ()
-    return django_resolver(getattr, qs_hook=qs_hook, except_as_none=except_as_none)(
+    return django_resolver(
+        _django_getattr,
+        qs_hook=qs_hook,
+        except_as_none=except_as_none,
+    )(
         obj,
         name,
-        *args,
+        default,
+        empty_file_descriptor_as_null=empty_file_descriptor_as_null,
     )
+
+
+def _django_getattr(
+    obj: Any,
+    name: str,
+    default: Any = _SENTINEL,
+    *,
+    empty_file_descriptor_as_null: bool = False,
+):
+    args = (default,) if default is not _SENTINEL else ()
+    result = getattr(obj, name, *args)
+    if empty_file_descriptor_as_null and isinstance(result, FileDescriptor):
+        result = None
+    return result

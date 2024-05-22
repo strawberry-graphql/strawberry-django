@@ -380,7 +380,7 @@ def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_update_mutation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateIssue ($input: IssueInputPartial!) {
+    mutation UpdateIssue ($input: IssueInputPartial!) {
       updateIssue (input: $input) {
         __typename
         ... on OperationInfo {
@@ -473,7 +473,7 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_nested_update_mutation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateIssue ($input: IssueInputPartial!) {
+    mutation UpdateIssue ($input: IssueInputPartial!) {
       updateIssue (input: $input) {
         __typename
         ... on OperationInfo {
@@ -576,7 +576,7 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
 @pytest.mark.django_db(transaction=True)
 def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateIssue ($input: IssueInputPartial!) {
+    mutation UpdateIssue ($input: IssueInputPartial!) {
       updateIssue (input: $input) {
         __typename
         ... on OperationInfo {
@@ -701,7 +701,7 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateIssue ($input: IssueInputPartial!) {
+    mutation UpdateIssue ($input: IssueInputPartial!) {
       updateIssue (input: $input) {
         __typename
         ... on OperationInfo {

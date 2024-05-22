@@ -1,4 +1,5 @@
 import pytest
+from pytest_django import DjangoAssertNumQueries
 from strawberry.relay.utils import to_base64
 
 from .schema import FruitModel, schema
@@ -1131,4 +1132,46 @@ def test_query_connection_custom_resolver_filtering_last_with_before(query_attr:
                 "endCursor": to_base64("arrayconnection", "2"),
             },
         },
+    }
+
+
+fruits_query_total_count = """
+query TestQuery (
+    $first: Int = null
+    $last: Int = null
+    $before: String = null,
+    $after: String = null,
+) {{
+    {} (
+        first: $first
+        last: $last
+        before: $before
+        after: $after
+    ) {{
+        totalCount
+    }}
+}}
+"""
+
+attrs = [
+    "fruits",
+    "fruitsLazy",
+    "fruitsWithFiltersAndOrder",
+    "fruitsCustomResolver",
+    "fruitsCustomResolverWithFiltersAndOrder",
+]
+
+
+@pytest.mark.parametrize("query_attr", custom_attrs)
+def test_query_connection_total_count_sql_queries(
+    django_assert_num_queries: DjangoAssertNumQueries, query_attr: str
+):
+    with django_assert_num_queries(1):
+        result = schema.execute_sync(
+            fruits_query_total_count.format(query_attr),
+            variable_values={},
+        )
+    assert result.errors is None
+    assert result.data == {
+        query_attr: {"totalCount": 5},
     }

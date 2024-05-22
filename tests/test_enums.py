@@ -1,13 +1,16 @@
 import textwrap
 from typing import cast
 
+import pytest
 import strawberry
 from django.db import models
 from django.test import override_settings
+from django.utils.translation import gettext_lazy
 from django_choices_field import IntegerChoicesField, TextChoicesField
 from pytest_mock import MockerFixture
 
 import strawberry_django
+from strawberry_django import mutations
 from strawberry_django.fields import types
 from strawberry_django.fields.types import field_type_map
 from strawberry_django.settings import strawberry_django_settings
@@ -18,7 +21,9 @@ class Choice(models.TextChoices):
 
     A = "a", "A description"
     B = "b", "B description"
-    C = "c", "C description"
+    C = "c", gettext_lazy("C description")
+    D = "12d-d'éléphant_🐘", "D description"
+    E = "_2d_d__l_phant__", "E description"
 
 
 class IntegerChoice(models.IntegerChoices):
@@ -26,7 +31,7 @@ class IntegerChoice(models.IntegerChoices):
 
     X = 1, "1 description"
     Y = 2, "2 description"
-    Z = 3, "3 description"
+    Z = 3, gettext_lazy("3 description")
 
 
 class ChoicesModel(models.Model):
@@ -36,13 +41,13 @@ class ChoicesModel(models.Model):
         max_length=255,
         choices=[
             ("c", "C description"),
-            ("d", "D description"),
+            ("d", gettext_lazy("D description")),
         ],
     )
     attr4 = models.IntegerField(
         choices=[
             (4, "4 description"),
-            (5, "5 description"),
+            (5, gettext_lazy("5 description")),
         ],
     )
     attr5 = models.CharField(
@@ -61,13 +66,13 @@ class ChoicesWithExtraFieldsModel(models.Model):
         max_length=255,
         choices=[
             ("c", "C description"),
-            ("d", "D description"),
+            ("d", gettext_lazy("D description")),
         ],
     )
     attr4 = models.IntegerField(
         choices=[
             (4, "4 description"),
-            (5, "5 description"),
+            (5, gettext_lazy("5 description")),
         ],
     )
     attr5 = models.CharField(
@@ -112,6 +117,8 @@ def test_choices_field():
       A
       B
       C
+      D
+      E
     }
 
     type ChoicesType {
@@ -258,6 +265,8 @@ def test_generate_choices_from_enum():
       A
       B
       C
+      D
+      E
     }
 
     type ChoicesType {
@@ -296,6 +305,12 @@ def test_generate_choices_from_enum():
 
       """C description"""
       c
+
+      """D description"""
+      _2d_d__l_phant__
+
+      """E description"""
+      _2d_d__l_phant___
     }
     '''
 
@@ -359,6 +374,8 @@ def test_generate_choices_from_enum_with_extra_fields():
       A
       B
       C
+      D
+      E
     }
 
     type ChoicesWithExtraFieldsType {
@@ -399,6 +416,12 @@ def test_generate_choices_from_enum_with_extra_fields():
 
       """C description"""
       c
+
+      """D description"""
+      _2d_d__l_phant__
+
+      """E description"""
+      _2d_d__l_phant___
     }
 
 
@@ -423,3 +446,73 @@ def test_generate_choices_from_enum_with_extra_fields():
             "extra2": 99,
         },
     }
+
+
+@override_settings(
+    STRAWBERRY_DJANGO={
+        **strawberry_django_settings(),
+        "GENERATE_ENUMS_FROM_CHOICES": True,
+    },
+)
+@pytest.mark.django_db(transaction=True)
+def test_create_mutation_with_generated_enum_input(db):
+    @strawberry_django.type(ChoicesModel)
+    class ChoicesType:
+        attr1: strawberry.auto
+        attr2: strawberry.auto
+        attr3: strawberry.auto
+        attr4: strawberry.auto
+        attr5: strawberry.auto
+        attr6: strawberry.auto
+
+    @strawberry_django.input(ChoicesModel)
+    class ChoicesInput:
+        attr1: strawberry.auto
+        attr2: strawberry.auto
+        attr3: strawberry.auto
+        attr4: strawberry.auto
+        attr5: strawberry.auto
+        attr6: strawberry.auto
+
+    @strawberry.type
+    class Query:
+        choice: ChoicesType = strawberry_django.field()
+
+    @strawberry.type
+    class Mutation:
+        create_choice: ChoicesType = mutations.create(
+            ChoicesInput, handle_django_errors=True, argument_name="input"
+        )
+
+    schema = strawberry.Schema(query=Query, mutation=Mutation)
+
+    variables = {
+        "input": {
+            "attr1": "A",
+            "attr2": "X",
+            "attr3": Choice.C,
+            "attr4": 4,
+            "attr5": "a",
+            "attr6": 1,
+        }
+    }
+    result = schema.execute_sync(
+        """
+        mutation CreateChoice($input: ChoicesInput!) {
+            createChoice(input: $input) {
+                ... on OperationInfo {
+                    messages {
+                        kind
+                        field
+                        message
+                    }
+                }
+                ... on ChoicesType {
+                    attr3
+                }
+            }
+        }
+        """,
+        variables,
+    )
+    assert result.data == {"createChoice": {"attr3": "c"}}

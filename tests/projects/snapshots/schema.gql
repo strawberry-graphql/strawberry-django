@@ -105,41 +105,45 @@ union CreateQuizPayload = QuizType | OperationInfo
 """Date (isoformat)"""
 scalar Date
 
-input DateFilterLookup {
+input DateDateFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
   exact: Date
-  iExact: Date
-  contains: Date
-  iContains: Date
-  inList: [Date!]
-  gt: Date
-  gte: Date
-  lt: Date
-  lte: Date
-  startsWith: Date
-  iStartsWith: Date
-  endsWith: Date
-  iEndsWith: Date
-  range: [Date!]
+
+  """Assignment test. Filter will be skipped on `null` value"""
   isNull: Boolean
-  regex: String
-  iRegex: String
-  nExact: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIExact: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nContains: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIContains: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nInList: [Date!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nGt: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nGte: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nLt: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nLte: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nStartsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIStartsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nEndsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIEndsWith: Date @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nRange: [Date!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIsNull: Boolean @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [Date!]
+
+  """Greater than. Filter will be skipped on `null` value"""
+  gt: Date
+
+  """Greater than or equal to. Filter will be skipped on `null` value"""
+  gte: Date
+
+  """Less than. Filter will be skipped on `null` value"""
+  lt: Date
+
+  """Less than or equal to. Filter will be skipped on `null` value"""
+  lte: Date
+
+  """Inclusive range test (between)"""
+  range: DateRangeLookup
+  year: IntComparisonFilterLookup
+  month: IntComparisonFilterLookup
+  day: IntComparisonFilterLookup
+  weekDay: IntComparisonFilterLookup
+  isoWeekDay: IntComparisonFilterLookup
+  week: IntComparisonFilterLookup
+  isoYear: IntComparisonFilterLookup
+  quarter: IntComparisonFilterLookup
+}
+
+input DateRangeLookup {
+  start: Date = null
+  end: Date = null
 }
 
 """Date with time (isoformat)"""
@@ -190,6 +194,39 @@ The `ID` scalar type represents a unique identifier, often used to refetch an ob
 """
 scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
 
+input IntComparisonFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
+  exact: Int
+
+  """Assignment test. Filter will be skipped on `null` value"""
+  isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [Int!]
+
+  """Greater than. Filter will be skipped on `null` value"""
+  gt: Int
+
+  """Greater than or equal to. Filter will be skipped on `null` value"""
+  gte: Int
+
+  """Less than. Filter will be skipped on `null` value"""
+  lt: Int
+
+  """Less than or equal to. Filter will be skipped on `null` value"""
+  lte: Int
+
+  """Inclusive range test (between)"""
+  range: IntRangeLookup
+}
+
+input IntRangeLookup {
+  start: Int = null
+  end: Int = null
+}
+
 input IssueAssigneeInputPartial {
   id: GlobalID
   user: NodeInputPartial
@@ -203,12 +240,21 @@ input IssueAssigneeInputPartialListInput {
   remove: [IssueAssigneeInputPartial!]
 }
 
+input IssueFilter {
+  AND: IssueFilter
+  OR: IssueFilter
+  NOT: IssueFilter
+  DISTINCT: Boolean
+  search: String
+}
+
 input IssueInput {
   name: String!
   milestone: MilestoneInputPartial!
   priority: Int
   kind: String
   tags: [NodeInput!]
+  extra: Int
 }
 
 input IssueInputPartial {
@@ -218,6 +264,7 @@ input IssueInputPartial {
   priority: Int
   kind: String
   tags: TagInputPartialListInput
+  extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
 }
@@ -228,6 +275,7 @@ input IssueInputPartialWithoutId {
   priority: Int
   kind: String
   tags: TagInputPartialListInput
+  extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
 }
@@ -256,6 +304,9 @@ type IssueType implements Node {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): FavoriteTypeConnection!
+  milestoneName: String!
+  milestoneNameWithoutOnlyOptimization: String!
+  privateName: String
 }
 
 """A connection to a list of items."""
@@ -286,6 +337,7 @@ input MilestoneFilter {
   AND: MilestoneFilter
   OR: MilestoneFilter
   NOT: MilestoneFilter
+  DISTINCT: Boolean
 }
 
 input MilestoneInput {
@@ -316,6 +368,21 @@ type MilestoneType implements Node {
   project: ProjectType!
   issues: [IssueType!]!
   myIssues: [IssueType!]!
+  issuesWithFilters(
+    filters: IssueFilter
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): IssueTypeConnection!
   myBugsCount: Int!
   asyncField(value: String!): String!
 }
@@ -411,7 +478,11 @@ enum OperationMessageKind {
 
 enum Ordering {
   ASC
+  ASC_NULLS_FIRST
+  ASC_NULLS_LAST
   DESC
+  DESC_NULLS_FIRST
+  DESC_NULLS_LAST
 }
 
 """Information to aid in pagination."""
@@ -442,10 +513,11 @@ type ProjectConnection {
 
 input ProjectFilter {
   name: StrFilterLookup
-  dueDate: DateFilterLookup
+  dueDate: DateDateFilterLookup
   AND: ProjectFilter
   OR: ProjectFilter
   NOT: ProjectFilter
+  DISTINCT: Boolean
 }
 
 input ProjectInputPartial {
@@ -669,6 +741,7 @@ type Query {
     id: GlobalID!
   ): IssueType @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListObjPermRequired: [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issueListObjPermRequiredPaginated(pagination: OffsetPaginationInput): [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueConnObjPermRequired(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -740,40 +813,51 @@ type StaffTypeEdge {
 }
 
 input StrFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
   exact: String
-  iExact: String
-  contains: String
-  iContains: String
-  inList: [String!]
-  gt: String
-  gte: String
-  lt: String
-  lte: String
-  startsWith: String
-  iStartsWith: String
-  endsWith: String
-  iEndsWith: String
-  range: [String!]
+
+  """Assignment test. Filter will be skipped on `null` value"""
   isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [String!]
+
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
+  iExact: String
+
+  """
+  Case-sensitive containment test. Filter will be skipped on `null` value
+  """
+  contains: String
+
+  """
+  Case-insensitive containment test. Filter will be skipped on `null` value
+  """
+  iContains: String
+
+  """Case-sensitive starts-with. Filter will be skipped on `null` value"""
+  startsWith: String
+
+  """Case-insensitive starts-with. Filter will be skipped on `null` value"""
+  iStartsWith: String
+
+  """Case-sensitive ends-with. Filter will be skipped on `null` value"""
+  endsWith: String
+
+  """Case-insensitive ends-with. Filter will be skipped on `null` value"""
+  iEndsWith: String
+
+  """
+  Case-sensitive regular expression match. Filter will be skipped on `null` value
+  """
   regex: String
+
+  """
+  Case-insensitive regular expression match. Filter will be skipped on `null` value
+  """
   iRegex: String
-  nExact: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIExact: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nContains: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIContains: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nInList: [String!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nGt: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nGte: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nLt: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nLte: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nStartsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIStartsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nEndsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIEndsWith: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nRange: [String!] @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIsNull: Boolean @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
-  nIRegex: String @deprecated(reason: "The \"n\" prefix is deprecated and will be removed in the future, use `NOT` instead.\n")
 }
 
 input TagInputPartial {
@@ -805,6 +889,7 @@ type TagType implements Node {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection!
+  issuesWithSelectedRelatedMilestoneAndProject: [IssueType!]!
 }
 
 """A connection to a list of items."""

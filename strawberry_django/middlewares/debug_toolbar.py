@@ -3,13 +3,12 @@
 import asyncio
 import collections
 import contextlib
-import inspect
 import json
 import weakref
 from typing import Optional
 
-from asgiref.sync import sync_to_async
-from debug_toolbar.middleware import _HTML_TYPES, get_show_toolbar
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
+from debug_toolbar.middleware import _HTML_TYPES, get_show_toolbar  # noqa: PLC2701
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
@@ -105,8 +104,8 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
     def __init__(self, get_response):
         self._original_get_response = get_response
 
-        if inspect.iscoroutinefunction(get_response):
-            self._is_coroutine = asyncio.coroutines._is_coroutine  # type: ignore
+        if iscoroutinefunction(get_response):
+            markcoroutinefunction(self)
 
             def _get_response(request):
                 toolbar = _debug_toolbar_map.pop(request, None)
@@ -129,13 +128,11 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
                 return asyncio.run(_inner_get_response())
 
             get_response = _get_response
-        else:
-            self._is_coroutine = None
 
         super().__init__(get_response)
 
     def __call__(self, request: HttpRequest):
-        if self._is_coroutine:
+        if iscoroutinefunction(self):
             return self.__acall__(request)
 
         if _is_websocket(request):
@@ -173,7 +170,19 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         if is_html or not is_graphiql or content_type != "application/json":
             return response
 
-        payload = _get_payload(request, response)
+        try:
+            operation_name = json.loads(request.body).get("operationName")
+        except Exception:  # noqa: BLE001
+            operation_name = None
+
+        # Do not return the payload for introspection queries, otherwise IDEs such as
+        # apollo sandbox that query the introspection all the time will remove older
+        # results from the history.
+        payload = (
+            _get_payload(request, response)
+            if operation_name != "IntrospectionQuery"
+            else None
+        )
         if payload is None:
             return response
 

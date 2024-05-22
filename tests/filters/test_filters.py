@@ -2,8 +2,10 @@ import textwrap
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar, cast
 
+import django
 import pytest
 import strawberry
+from django.test import override_settings
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import ExecutionResult
@@ -11,105 +13,101 @@ from strawberry.types import ExecutionResult
 import strawberry_django
 from tests import models, utils
 
+with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
 
-@strawberry_django.filter(models.NameDescriptionMixin)
-class NameDescriptionFilter:
-    name: auto
-    description: auto
+    @strawberry_django.filter(models.NameDescriptionMixin)
+    class NameDescriptionFilter:
+        name: auto
+        description: auto
+
+    @strawberry_django.filter(models.Vegetable, lookups=True)
+    class VegetableFilter(NameDescriptionFilter):
+        id: auto
+        world_production: auto
+
+    @strawberry_django.filters.filter(models.Color, lookups=True)
+    class ColorFilter:
+        id: auto
+        name: auto
+
+    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    class FruitFilter:
+        id: auto
+        name: auto
+        color: Optional[ColorFilter]
+
+    @strawberry.enum
+    class FruitEnum(Enum):
+        strawberry = "strawberry"
+        banana = "banana"
+
+    @strawberry_django.filters.filter(models.Fruit)
+    class EnumFilter:
+        name: Optional[FruitEnum] = strawberry.UNSET
+
+    _T = TypeVar("_T")
+
+    @strawberry.input
+    class FilterInLookup(Generic[_T]):
+        exact: Optional[_T] = strawberry.UNSET
+        in_list: Optional[List[_T]] = strawberry.UNSET
+
+    @strawberry_django.filters.filter(models.Fruit)
+    class EnumLookupFilter:
+        name: Optional[FilterInLookup[FruitEnum]] = strawberry.UNSET
+
+    @strawberry.input
+    class NonFilter:
+        name: FruitEnum
+
+        def filter(self, queryset):
+            raise NotImplementedError
+
+    @strawberry_django.filters.filter(models.Fruit)
+    class FieldFilter:
+        search: str
+
+        def filter_search(self, queryset):
+            return queryset.filter(name__icontains=self.search)
+
+    @strawberry_django.filters.filter(models.Fruit)
+    class TypeFilter:
+        name: auto
+
+        def filter(self, queryset):
+            if not self.name:
+                return queryset
+
+            return queryset.filter(name__icontains=self.name)
+
+    @strawberry_django.type(models.Vegetable, filters=VegetableFilter)
+    class Vegetable:
+        id: auto
+        name: auto
+        description: auto
+        world_production: auto
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class Fruit:
+        id: auto
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: List[Fruit] = strawberry_django.field()
+        field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
+        type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
+        enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
+        enum_lookup_filter: List[Fruit] = strawberry_django.field(
+            filters=EnumLookupFilter
+        )
+
+    _ = strawberry.Schema(query=Query)
 
 
-@strawberry_django.filter(models.Vegetable, lookups=True)
-class VegetableFilter(NameDescriptionFilter):
-    id: auto
-    world_production: auto
-
-
-@strawberry_django.filters.filter(models.Color, lookups=True)
-class ColorFilter:
-    id: auto
-    name: auto
-
-
-@strawberry_django.filters.filter(models.Fruit, lookups=True)
-class FruitFilter:
-    id: auto
-    name: auto
-    color: Optional[ColorFilter]
-
-
-@strawberry.enum
-class FruitEnum(Enum):
-    strawberry = "strawberry"
-    banana = "banana"
-
-
-@strawberry_django.filters.filter(models.Fruit)
-class EnumFilter:
-    name: Optional[FruitEnum] = strawberry.UNSET
-
-
-_T = TypeVar("_T")
-
-
-@strawberry.input
-class FilterInLookup(Generic[_T]):
-    exact: Optional[_T] = strawberry.UNSET
-    in_list: Optional[List[_T]] = strawberry.UNSET
-
-
-@strawberry_django.filters.filter(models.Fruit)
-class EnumLookupFilter:
-    name: Optional[FilterInLookup[FruitEnum]] = strawberry.UNSET
-
-
-@strawberry.input
-class NonFilter:
-    name: FruitEnum
-
-    def filter(self, queryset):
-        raise NotImplementedError
-
-
-@strawberry_django.filters.filter(models.Fruit)
-class FieldFilter:
-    search: str
-
-    def filter_search(self, queryset):
-        return queryset.filter(name__icontains=self.search)
-
-
-@strawberry_django.filters.filter(models.Fruit)
-class TypeFilter:
-    name: auto
-
-    def filter(self, queryset):
-        if not self.name:
-            return queryset
-
-        return queryset.filter(name__icontains=self.name)
-
-
-@strawberry_django.type(models.Vegetable, filters=VegetableFilter)
-class Vegetable:
-    id: auto
-    name: auto
-    description: auto
-    world_production: auto
-
-
-@strawberry_django.type(models.Fruit, filters=FruitFilter)
-class Fruit:
-    id: auto
-    name: auto
-
-
-@strawberry.type
-class Query:
-    fruits: List[Fruit] = strawberry_django.field()
-    field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
-    type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
-    enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
-    enum_lookup_filter: List[Fruit] = strawberry_django.field(filters=EnumLookupFilter)
+@pytest.fixture(autouse=True)
+def _autouse_old_filters(settings):
+    settings.STRAWBERRY_DJANGO = {"USE_DEPRECATED_FILTERS": True}
 
 
 @pytest.fixture()
@@ -164,33 +162,19 @@ def test_in_list(query, fruits):
     ]
 
 
-def test_deprecated_not(query, fruits):
-    result = query(
-        """{ fruits(filters: {
-                   name: { nEndsWith: "berry" }
-                   }) { id name } }""",
-    )
-    assert not result.errors
-    assert result.data["fruits"] == [
-        {"id": "3", "name": "banana"},
-    ]
-
-
 def test_not(query, fruits):
-    result = query(
-        """{
-      fruits(
+    result = query("""{
+    fruits(
         filters: {
-          NOT: {
+        NOT: {
             name: { endsWith: "berry" }
-          }
         }
-      ) {
+        }
+    ) {
         id
         name
-      }
-    }"""
-    )
+    }
+    }""")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
@@ -273,6 +257,54 @@ def test_resolver_filter(fruits):
     ]
 
 
+def test_empty_resolver_filter():
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(self, filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.none()
+            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
+
+    query = utils.generate_query(Query)
+    result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruits"] == []
+
+
+@pytest.mark.asyncio()
+@pytest.mark.django_db(transaction=True)
+async def test_async_resolver_filter(fruits):
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        async def fruits(self, filters: FruitFilter) -> List[Fruit]:
+            queryset = models.Fruit.objects.all()
+            queryset = strawberry_django.filters.apply(filters, queryset)
+            if django.VERSION < (4, 1):
+                from asgiref.sync import sync_to_async
+
+                @sync_to_async
+                def helper():
+                    return cast(List[Fruit], list(queryset))
+
+                return await helper()
+            # cast fixes funny typing issue between list and List
+            return cast(List[Fruit], [fruit async for fruit in queryset])
+
+    query = utils.generate_query(Query)
+    result = await query(  # type: ignore
+        '{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }'
+    )
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruits"] == [
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
 def test_resolver_filter_with_inheritance(vegetables):
     @strawberry.type
     class Query:
@@ -284,28 +316,26 @@ def test_resolver_filter_with_inheritance(vegetables):
             )
 
     query = utils.generate_query(Query)
-    result = query(
-        """
-      {
+    result = query("""
+    {
         vegetables(
-          filters: {
+        filters: {
             worldProduction: {
-              gt: 100e6
+            gt: 100e6
             }
             OR: {
-              name: {
+            name: {
                 exact: "cucumber"
-              }
             }
-          }
+            }
+        }
         )
         {
-          id
-          name
+        id
+        name
         }
-      }
-    """
-    )
+    }
+    """)
     assert isinstance(result, ExecutionResult)
     assert not result.errors
     assert result.data is not None

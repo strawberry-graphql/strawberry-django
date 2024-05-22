@@ -1,10 +1,14 @@
+import io
 import textwrap
 from typing import List, Optional, cast
 
 import pytest
 import strawberry
+from asgiref.sync import sync_to_async
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from graphql import GraphQLError
+from PIL import Image
 from strawberry import auto
 
 import strawberry_django
@@ -31,6 +35,13 @@ class Group:
     id: auto
     name: auto
     users: List[User]
+
+
+@strawberry_django.type(models.Fruit)
+class Fruit:
+    id: auto
+    name: auto
+    picture: auto
 
 
 @strawberry_django.type(models.Fruit)
@@ -64,6 +75,7 @@ class Query:
     users: List[User] = strawberry_django.field()
     group: Group = strawberry_django.field()
     groups: List[Group] = strawberry_django.field()
+    fruit: Fruit = strawberry_django.field()
     berries: List[BerryFruit] = strawberry_django.field()
     bananas: List[BananaFruit] = strawberry_django.field()
 
@@ -89,7 +101,16 @@ pytestmark = [
 
 
 async def test_single(query, users):
-    result = await query("{ user(pk: 1) { name } }")
+    result = await query(
+        """
+        query GetUser($pk: ID!) {
+          user(pk: $pk) {
+            name
+          }
+        }
+        """,
+        {"pk": users[0].pk},
+    )
 
     assert not result.errors
     assert result.data["user"] == {"name": users[0].name}
@@ -188,6 +209,67 @@ async def test_model_properties(query, fruits):
     ]
 
 
+async def test_query_file_field(query):
+    img_f = io.BytesIO()
+    img = Image.new(mode="RGB", size=(1, 1), color="red")
+    img.save(img_f, format="jpeg")
+    upload = SimpleUploadedFile("strawberry-picture.png", img_f.getvalue())
+    fruit = await sync_to_async(models.Fruit.objects.create)(
+        name="Strawberry",
+        picture=upload,
+    )
+
+    result = await query(
+        """\
+        query Fruit ($pk: ID!) {
+         fruit (pk: $pk) {
+           id
+           name
+           picture {
+             name
+           }
+         }
+        }
+        """,
+        {"pk": fruit.pk},
+    )
+
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruit"] == {
+        "id": str(fruit.pk),
+        "name": "Strawberry",
+        "picture": {"name": ".tmp_upload/strawberry-picture.png"},
+    }
+
+
+async def test_query_file_field_when_null(query):
+    fruit = await sync_to_async(models.Fruit.objects.create)(name="Strawberry")
+
+    result = await query(
+        """\
+        query Fruit ($pk: ID!) {
+         fruit (pk: $pk) {
+           id
+           name
+           picture {
+             name
+           }
+         }
+        }
+        """,
+        {"pk": fruit.pk},
+    )
+
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["fruit"] == {
+        "id": str(fruit.pk),
+        "name": "Strawberry",
+        "picture": None,
+    }
+
+
 def test_field_name():
     """Make sure that field_name overriding is not ignored."""
 
@@ -222,14 +304,12 @@ def test_field_name():
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
-    result = schema.execute_sync(
-        """\
+    result = schema.execute_sync("""\
       query TestQuery {
         fruit {
           name
           colorId
         }
       }
-    """
-    )
+    """)
     assert result.data == {"fruit": {"colorId": 1, "name": "Banana"}}
