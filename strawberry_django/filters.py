@@ -51,7 +51,6 @@ if TYPE_CHECKING:
     from strawberry.types import Info
 
 
-
 T = TypeVar("T")
 _T = TypeVar("_T", bound=type)
 _QS = TypeVar("_QS", bound="QuerySet")
@@ -59,19 +58,28 @@ _QS = TypeVar("_QS", bound="QuerySet")
 FILTERS_ARG = "filters"
 
 
-def _create_django_filter_input():
-    settings = strawberry_django_settings()
-
-    def _get_id(root) -> str:
-        return root.pk
-
-    id_field_name = settings["DEFAULT_PK_FIELD_NAME"]
-    id_field = field(name=id_field_name, graphql_type=strawberry.ID, resolver=_get_id)
-
-    return create_type("DjangoModelFilterInput", [id_field], is_input=True)
+_DjangoModelFilterInput: Any = None
 
 
-DjangoModelFilterInput = _create_django_filter_input()
+def get_django_model_filter_input_type():
+    global _DjangoModelFilterInput
+
+    if _DjangoModelFilterInput is None:
+        settings = strawberry_django_settings()
+
+        def _get_id(root) -> str:
+            return root.pk
+
+        id_field_name = settings["DEFAULT_PK_FIELD_NAME"]
+        id_field = field(
+            name=id_field_name, graphql_type=strawberry.ID, resolver=_get_id
+        )
+
+        _DjangoModelFilterInput = create_type(
+            "DjangoModelFilterInput", [id_field], is_input=True
+        )
+
+    return _DjangoModelFilterInput
 
 
 @strawberry.input

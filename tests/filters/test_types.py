@@ -6,9 +6,11 @@ from strawberry import auto
 from strawberry.type import StrawberryOptional, get_object_definition
 
 import strawberry_django
-from strawberry_django.filters import DjangoModelFilterInput
+from strawberry_django.filters import get_django_model_filter_input_type
 from strawberry_django.settings import strawberry_django_settings
 from tests import models
+
+DjangoModelFilterInput = get_django_model_filter_input_type()
 
 
 @pytest.fixture(autouse=True)

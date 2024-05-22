@@ -488,7 +488,9 @@ def resolve_model_field_type(
 
         if django_type.is_filter and model_field.is_relation:
             field_type = (
-                NodeInput if force_global_id else filters.DjangoModelFilterInput
+                NodeInput
+                if force_global_id
+                else filters.get_django_model_filter_input_type()
             )
         elif django_type.is_input:
             input_type_map = input_field_type_map
