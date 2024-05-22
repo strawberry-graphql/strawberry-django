@@ -468,6 +468,59 @@ def test_enum_lookup_in(query, fruits):
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("use_pk", [True, False])
+def test_adds_id_filter(use_pk: bool):
+    with override_settings(
+        STRAWBERRY_DJANGO={"DEFAULT_PK_FIELD_NAME": "pk" if use_pk else "id"},
+    ):
+        field_name = "pk" if use_pk else "id"
+
+        @strawberry_django.type(models.User)
+        class UserType:
+            name: strawberry.auto
+
+        @strawberry.type
+        class Query:
+            user: UserType = strawberry_django.field()
+
+        schema = strawberry.Schema(query=Query)
+
+        assert (
+            textwrap.dedent(str(schema))
+            == textwrap.dedent(
+                f"""\
+          type Query {{
+            user({field_name}: ID!): UserType!
+          }}
+
+          type UserType {{
+            name: String!
+          }}
+        """,
+            ).strip()
+        )
+
+        user = models.User.objects.create(name="Some User")
+
+        res = schema.execute_sync(
+            f"""\
+          query GetUser ($id: ID!) {{
+            user({field_name}: $id) {{
+              name
+            }}
+          }}
+        """,
+            variable_values={"id": user.pk},
+        )
+        assert res.errors is None
+        assert res.data == {
+            "user": {
+                "name": "Some User",
+            },
+        }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_pk_inserted_for_root_field_only():
     @strawberry_django.filters.filter(models.Group)
     class GroupFilter:
