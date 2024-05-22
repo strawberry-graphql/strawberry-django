@@ -76,7 +76,9 @@ def get_django_model_filter_input_type():
         )
 
         _DjangoModelFilterInput = create_type(
-            "DjangoModelFilterInput", [id_field], is_input=True
+            "DjangoModelFilterInput",
+            [id_field],  # type: ignore
+            is_input=True,
         )
 
     return _DjangoModelFilterInput
