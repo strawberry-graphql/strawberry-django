@@ -88,7 +88,7 @@ def query(db):
 @pytest.fixture()
 def query_id_as_pk(db):
     with override_settings(
-        STRAWBERRY_DJANGO=StrawberryDjangoSettings(
+        STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
             DEFAULT_PK_FIELD_NAME="id",
         ),
     ):
