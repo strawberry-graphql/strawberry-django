@@ -23,6 +23,7 @@ import strawberry
 from django.db.models import Q, QuerySet
 from strawberry import UNSET, relay
 from strawberry.field import StrawberryField, field
+from strawberry.tools import create_type
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform
@@ -58,9 +59,19 @@ _QS = TypeVar("_QS", bound="QuerySet")
 FILTERS_ARG = "filters"
 
 
-@strawberry.input
-class DjangoModelFilterInput:
-    pk: strawberry.ID  # TODO: How to override pk here with settings["DEFAULT_PK_FIELD_NAME"] ?
+def _create_django_filter_input():
+    settings = strawberry_django_settings()
+
+    def _get_id(root) -> str:
+        return root.pk
+
+    id_field_name = settings["DEFAULT_PK_FIELD_NAME"]
+    id_field = field(name=id_field_name, graphql_type=strawberry.ID, resolver=_get_id)
+
+    return create_type("DjangoModelFilterInput", [id_field], is_input=True)
+
+
+DjangoModelFilterInput = _create_django_filter_input()
 
 
 @strawberry.input
