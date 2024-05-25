@@ -34,6 +34,7 @@ from strawberry_django.fields.types import (
     OneToManyInput,
     OneToOneInput,
 )
+from strawberry_django.settings import strawberry_django_settings
 from strawberry_django.utils.inspect import get_model_fields
 
 from .types import (
@@ -58,7 +59,7 @@ def _parse_pk(
     value: ParsedObject | strawberry.ID | _M | None,
     model: type[_M],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
 ) -> tuple[_M | None, dict[str, Any] | None]:
     if value is None:
         return None, None
@@ -70,17 +71,26 @@ def _parse_pk(
         return value.parse(model)
 
     if isinstance(value, dict):
+        if key_attr is None:
+            settings = strawberry_django_settings()
+            key_attr = settings["DEFAULT_PK_FIELD_NAME"]
+
         if key_attr in value:
             obj_pk = value[key_attr]
-            if obj_pk != strawberry.UNSET:
+            if obj_pk is not strawberry.UNSET:
                 return model._default_manager.get(pk=obj_pk), value
+
         return None, value
 
     return model._default_manager.get(pk=value), None
 
 
 def _parse_data(
-    info: Info, model: type[_M], value: Any, *, key_attr: str | None = "pk"
+    info: Info,
+    model: type[_M],
+    value: Any,
+    *,
+    key_attr: str | None = None,
 ):
     obj, data = _parse_pk(value, model, key_attr=key_attr)
     parsed_data = {}
@@ -104,27 +114,46 @@ def _parse_data(
 
 @overload
 def parse_input(
-    info: Info, data: dict[str, _T], *, key_attr: str | None = "pk"
+    info: Info,
+    data: dict[str, _T],
+    *,
+    key_attr: str | None = None,
 ) -> dict[str, _T]: ...
 
 
 @overload
 def parse_input(
-    info: Info, data: list[_T], *, key_attr: str | None = "pk"
+    info: Info,
+    data: list[_T],
+    *,
+    key_attr: str | None = None,
 ) -> list[_T]: ...
 
 
 @overload
 def parse_input(
-    info: Info, data: relay.GlobalID, *, key_attr: str | None = "pk"
+    info: Info,
+    data: relay.GlobalID,
+    *,
+    key_attr: str | None = None,
 ) -> relay.Node: ...
 
 
 @overload
-def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk") -> Any: ...
+def parse_input(
+    info: Info,
+    data: Any,
+    *,
+    key_attr: str | None = None,
+) -> Any: ...
 
 
-def parse_input(info: Info, data: Any, *, key_attr: str | None = "pk"):
+def parse_input(
+    info: Info,
+    data: Any,
+    *,
+    key_attr: str | None = None,
+):
     if isinstance(data, dict):
         return {k: parse_input(info, v, key_attr=key_attr) for k, v in data.items()}
 
@@ -191,7 +220,7 @@ def prepare_create_update(
     info: Info,
     instance: Model,
     data: dict[str, Any],
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
 ) -> tuple[
     Model,
@@ -289,7 +318,7 @@ def create(
     model: type[_M],
     data: dict[str, Any],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> _M: ...
@@ -301,7 +330,7 @@ def create(
     model: type[_M],
     data: list[dict[str, Any]],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> list[_M]: ...
@@ -313,7 +342,7 @@ def create(
     model: type[_M],
     data: dict[str, Any] | list[dict[str, Any]],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ):
@@ -385,7 +414,7 @@ def update(
     instance: _M,
     data: dict[str, Any],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> _M: ...
@@ -397,7 +426,7 @@ def update(
     instance: Iterable[_M],
     data: dict[str, Any],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> list[_M]: ...
@@ -409,7 +438,7 @@ def update(
     instance: _M | Iterable[_M],
     data: dict[str, Any],
     *,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
 ) -> _M | list[_M]:
@@ -525,7 +554,7 @@ def update_m2m(
     instance: Model,
     field: ManyToManyField | ForeignObjectRel,
     value: Any,
-    key_attr: str | None = "pk",
+    key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
 ):
     if value is UNSET:
