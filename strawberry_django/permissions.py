@@ -108,6 +108,10 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
     if not context.checkers or context.is_safe:
         return qs
 
+    if isinstance(qs, list):
+        # return sliced queryset as-is
+        return qs
+
     # Do not do anything is results are cached
     if qs._result_cache is not None:  # type: ignore
         set_perm_safe(False)

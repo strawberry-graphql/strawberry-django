@@ -27,6 +27,10 @@ resolving_async: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 
 def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
+    if isinstance(qs, list):
+        # return sliced queryset as-is
+        return qs
+
     # FIXME: We probably won't need this anymore when we can use graphql-core 3.3.0+
     # as its `complete_list_value` gives a preference to async iteration it if is
     # provided by the object.
