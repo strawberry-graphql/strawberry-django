@@ -1092,4 +1092,15 @@ def test_query_with_optimizer_paginated_prefetch():
     result2 = query2(query_str)
 
     assert isinstance(result2, ExecutionResult)
-    assert result2.errors[0].message == "'list' object has no attribute '_result_cache'"
+    assert result2.data == {
+        "projects": [
+            {
+                "name": project.name,
+                "milestones": [
+                    {
+                        "name": milestone1.name,
+                    },
+                ],
+            },
+        ],
+    }
