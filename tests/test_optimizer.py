@@ -1025,3 +1025,82 @@ def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
     assert {
         edge["node"]["id"] for edge in result["issuesWithFilters"]["edges"]
     } == expected
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_with_optimizer_paginated_prefetch():
+    @strawberry_django.type(Milestone, pagination=True)
+    class MilestoneTypeWithNestedPrefetch:
+        @strawberry_django.field()
+        def name(self, info) -> str:
+            return self.name
+
+    @strawberry_django.type(
+        Project,
+    )
+    class ProjectTypeWithPrefetch:
+        @strawberry_django.field()
+        def name(self, info) -> str:
+            return self.name
+
+        milestones: List[MilestoneTypeWithNestedPrefetch]
+
+    milestone1 = MilestoneFactory.create()
+    project = milestone1.project
+    MilestoneFactory.create(project=project)
+
+    @strawberry.type
+    class Query:
+        projects: List[ProjectTypeWithPrefetch] = strawberry_django.field()
+
+    query1 = utils.generate_query(Query, enable_optimizer=False)
+    query_str = """
+      query TestQuery {
+        projects {
+            name
+            milestones (pagination: {limit: 1}) {
+              name
+            }
+        }
+      }
+    """
+
+    # NOTE: The following assertion doesn't work because the
+    # DjangoOptimizerExtension instance is not the one within the
+    # generate_query wrapper
+    """
+    assert DjangoOptimizerExtension.enabled.get()
+    """
+    result1 = query1(query_str)
+
+    assert isinstance(result1, ExecutionResult)
+    assert not result1.errors
+    assert result1.data == {
+        "projects": [
+            {
+                "name": project.name,
+                "milestones": [
+                    {
+                        "name": milestone1.name,
+                    },
+                ],
+            },
+        ],
+    }
+
+    query2 = utils.generate_query(Query, enable_optimizer=True)
+    result2 = query2(query_str)
+
+    assert isinstance(result2, ExecutionResult)
+    assert result2.data == {
+        "projects": [
+            {
+                "name": project.name,
+                "milestones": [
+                    {
+                        "name": milestone1.name,
+                    },
+                ],
+            },
+        ],
+    }

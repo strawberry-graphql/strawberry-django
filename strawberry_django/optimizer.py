@@ -694,6 +694,10 @@ def optimize(
     if isinstance(qs, BaseManager):
         qs = cast(QuerySet[_M], qs.all())
 
+    if isinstance(qs, list):
+        # return sliced queryset as-is
+        return qs
+
     # Avoid optimizing twice and also modify an already resolved queryset
     if (
         get_queryset_config(qs).optimized or qs._result_cache is not None  # type: ignore
