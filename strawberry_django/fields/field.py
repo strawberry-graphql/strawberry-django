@@ -29,6 +29,7 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.fields.resolver import StrawberryResolver
+from strawberry.types.info import Info  # noqa: TCH002
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument
@@ -57,7 +58,6 @@ if TYPE_CHECKING:
     )
     from strawberry.field import _RESOLVER_TYPE, StrawberryField
     from strawberry.relay.types import NodeIterableType
-    from strawberry.types.info import Info
     from strawberry.unset import UnsetType
     from typing_extensions import Literal, Self
 
