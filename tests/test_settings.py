@@ -28,6 +28,7 @@ def test_non_defaults():
             MUTATIONS_DEFAULT_ARGUMENT_NAME="id",
             MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
             MAP_AUTO_ID_AS_GLOBAL_ID=True,
+            DEFAULT_PK_FIELD_NAME="id",
             USE_DEPRECATED_FILTERS=True,
         ),
     ):
@@ -40,6 +41,7 @@ def test_non_defaults():
                 MUTATIONS_DEFAULT_ARGUMENT_NAME="id",
                 MUTATIONS_DEFAULT_HANDLE_ERRORS=True,
                 MAP_AUTO_ID_AS_GLOBAL_ID=True,
+                DEFAULT_PK_FIELD_NAME="id",
                 USE_DEPRECATED_FILTERS=True,
             )
         )

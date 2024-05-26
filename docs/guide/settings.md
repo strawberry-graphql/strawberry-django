@@ -49,6 +49,11 @@ A dictionary with the following optional keys:
       instead of `strawberry.ID`. This is mostly useful if all your model types inherit
       from `relay.Node` and you want to work only with `GlobalID`.
 
+- **`DEFAULT_PK_FIELD_NAME`** (default: `"pk"`)
+
+      Change the [CRUD mutations'](mutations.md#cud-mutations) default
+      primary key field.
+
 - **`USE_DEPRECATED_FILTERS`** (default: `False`)
 
       If True, [legacy filters](filters.md#legacy-filtering) are enabled. This is usefull for migrating from previous version.
@@ -63,5 +68,6 @@ STRAWBERRY_DJANGO = {
     "MUTATIONS_DEFAULT_HANDLE_ERRORS": True,
     "GENERATE_ENUMS_FROM_CHOICES": False,
     "MAP_AUTO_ID_AS_GLOBAL_ID": True,
+    "DEFAULT_PK_FIELD_NAME": "id",
 }
 ```

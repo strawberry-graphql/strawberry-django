@@ -23,6 +23,7 @@ import strawberry
 from django.db.models import Q, QuerySet
 from strawberry import UNSET, relay
 from strawberry.field import StrawberryField, field
+from strawberry.tools import create_type
 from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
 from strawberry.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform
@@ -57,9 +58,30 @@ _QS = TypeVar("_QS", bound="QuerySet")
 FILTERS_ARG = "filters"
 
 
-@strawberry.input
-class DjangoModelFilterInput:
-    pk: strawberry.ID
+_DjangoModelFilterInput: Any = None
+
+
+def get_django_model_filter_input_type():
+    global _DjangoModelFilterInput  # noqa: PLW0603
+
+    if _DjangoModelFilterInput is None:
+        settings = strawberry_django_settings()
+
+        def _get_id(root) -> str:
+            return root.pk
+
+        id_field_name = settings["DEFAULT_PK_FIELD_NAME"]
+        id_field = field(
+            name=id_field_name, graphql_type=strawberry.ID, resolver=_get_id
+        )
+
+        _DjangoModelFilterInput = create_type(
+            "DjangoModelFilterInput",
+            [id_field],  # type: ignore
+            is_input=True,
+        )
+
+    return _DjangoModelFilterInput
 
 
 @strawberry.input
@@ -237,7 +259,9 @@ def apply(
     pk: Any | None = None,
 ) -> _QS:
     if pk not in (None, strawberry.UNSET):  # noqa: PLR6201
-        queryset = queryset.filter(pk=pk)
+        settings = strawberry_django_settings()
+        pk_field_name = settings["DEFAULT_PK_FIELD_NAME"]
+        queryset = queryset.filter(**{pk_field_name: pk})
 
     if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # noqa: PLR6201
         return queryset
@@ -289,7 +313,10 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                 and not self.is_list
                 and not self.is_connection
             ):
-                arguments.append(argument("pk", strawberry.ID))
+                settings = strawberry_django_settings()
+                arguments.append(
+                    argument(settings["DEFAULT_PK_FIELD_NAME"], strawberry.ID)
+                )
             elif filters is not None and self.is_list:
                 arguments.append(argument(FILTERS_ARG, filters, is_optional=True))
 
@@ -321,9 +348,10 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         info: Info,
         *,
         filters: Optional[WithStrawberryDjangoObjectDefinition] = None,
-        pk: Optional[Any] = None,
         **kwargs,
     ) -> _QS:
+        settings = strawberry_django_settings()
+        pk = kwargs.get(settings["DEFAULT_PK_FIELD_NAME"], None)
         queryset = super().get_queryset(queryset, info, **kwargs)
         return apply(filters, queryset, info, pk)
 
