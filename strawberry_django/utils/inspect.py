@@ -27,12 +27,6 @@ from strawberry.type import (
     StrawberryTypeVar,
     has_object_definition,
 )
-from strawberry.types.nodes import (
-    FragmentSpread,
-    InlineFragment,
-    SelectedField,
-    Selection,
-)
 from strawberry.types.types import StrawberryObjectDefinition
 from strawberry.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
@@ -131,95 +125,6 @@ def get_possible_type_definitions(
             yield t
         elif has_object_definition(t):
             yield t.__strawberry_definition__
-
-
-def get_selections(
-    selection: Selection,
-    *,
-    typename: Optional[str] = None,
-) -> Dict[str, SelectedField]:
-    """Resolve subselections considering fragments.
-
-    Args:
-    ----
-        selection:
-            The selection to retrieve subselections from
-        typename:
-            Only resolve fragments for that typename
-
-    Yields:
-    ------
-        All possibilities for the type
-
-    """
-    # Because of the way graphql spreads fragments,
-    # later selections should replace previous ones
-    ret: Dict[str, SelectedField] = {}
-
-    def merge_selections(f1: SelectedField, f2: SelectedField) -> SelectedField:
-        if not f1.selections:
-            return f2
-        if not f2.selections:
-            return f1
-
-        f1_selections = {
-            s.name: s for s in f1.selections if isinstance(s, SelectedField)
-        }
-        f2_selections = {
-            s.name: s for s in f2.selections if isinstance(s, SelectedField)
-        }
-
-        selections: dict[str, SelectedField] = {}
-        for f_name in set(f1_selections) - set(f2_selections):
-            selections[f_name] = f1_selections[f_name]
-        for f_name in set(f2_selections) - set(f1_selections):
-            selections[f_name] = f2_selections[f_name]
-        for f_name in set(f2_selections) & set(f1_selections):
-            selections[f_name] = f1_selections[f_name]
-            selections[f_name] = merge_selections(
-                f1_selections[f_name],
-                f2_selections[f_name],
-            )
-
-        f1.selections = list(selections.values()) + [
-            s
-            for s in (f1.selections + f2.selections)
-            if isinstance(s, (FragmentSpread, InlineFragment))
-        ]
-        return f1
-
-    for s in selection.selections:
-        if isinstance(s, SelectedField):
-            # @include(if: <bool>)
-            include = s.directives.get("include")
-            if include and not include["if"]:
-                continue
-
-            # @skip(if: <bool>)
-            skip = s.directives.get("skip")
-            if skip and skip["if"]:
-                continue
-
-            f_name = s.alias or s.name
-            existing = ret.get(f_name)
-            if existing is not None:
-                ret[f_name] = merge_selections(existing, s)
-            else:
-                ret[f_name] = s
-        elif isinstance(s, (FragmentSpread, InlineFragment)):
-            if typename is not None and s.type_condition != typename:
-                continue
-
-            for f_name, f in get_selections(s, typename=typename).items():
-                existing = ret.get(f_name)
-                if existing is not None:
-                    ret[f_name] = merge_selections(existing, f)
-                else:
-                    ret[f_name] = f
-        else:  # pragma:nocover
-            raise TypeError(s)
-
-    return ret
 
 
 @dataclasses.dataclass(eq=True)
