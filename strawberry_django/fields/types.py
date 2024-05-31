@@ -18,7 +18,6 @@ from typing import (
     Union,
 )
 
-import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
@@ -239,6 +238,7 @@ field_type_map: Dict[
     fields.IntegerField: int,
     fields.PositiveIntegerField: int,
     fields.PositiveSmallIntegerField: int,
+    fields.PositiveBigIntegerField: int,
     fields.SlugField: str,
     fields.SmallAutoField: strawberry.ID,
     fields.SmallIntegerField: int,
@@ -246,6 +246,7 @@ field_type_map: Dict[
     fields.TimeField: datetime.time,
     fields.URLField: str,
     fields.UUIDField: uuid.UUID,
+    json.JSONField: JSON,
     files.FileField: DjangoFileType,
     files.ImageField: DjangoImageType,
     related.ForeignKey: DjangoModelType,
@@ -255,18 +256,6 @@ field_type_map: Dict[
     reverse_related.ManyToOneRel: List[DjangoModelType],
     reverse_related.OneToOneRel: DjangoModelType,
 }
-
-if hasattr(fields, "NullBooleanField"):
-    # NullBooleanField was deprecated and will soon be removed
-    field_type_map[fields.NullBooleanField] = Optional[bool]  # type: ignore
-
-if django.VERSION >= (3, 1):
-    field_type_map.update(
-        {
-            json.JSONField: JSON,
-            fields.PositiveBigIntegerField: int,
-        },
-    )
 
 try:
     from django.contrib.gis import geos

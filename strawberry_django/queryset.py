@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import dataclasses
-from typing import Any, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from django.db.models import Model
 from django.db.models.query import QuerySet
-from strawberry import Info
+
+if TYPE_CHECKING:
+    from strawberry import Info
 
 _M = TypeVar("_M", bound=Model)
 
@@ -23,7 +27,7 @@ def get_queryset_config(queryset: QuerySet) -> StrawberryDjangoQuerySetConfig:
 def run_type_get_queryset(
     qs: QuerySet[_M],
     origin: Any,
-    info: Optional[Info] = None,
+    info: Info | None = None,
 ) -> QuerySet[_M]:
     config = get_queryset_config(qs)
     get_queryset = getattr(origin, "get_queryset", None)

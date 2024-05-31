@@ -128,11 +128,18 @@ class MilestoneOrder:
     project: Optional[ProjectOrder]
 
 
-@strawberry_django.filter(Issue)
+@strawberry_django.filter(Issue, lookups=True)
 class IssueFilter:
+    name: strawberry.auto
+
     @strawberry_django.filter_field()
     def search(self, value: str, prefix: str) -> Q:
         return Q(name__contains=value)
+
+
+@strawberry_django.order(Issue)
+class IssueOrder:
+    name: strawberry.auto
 
 
 @strawberry_django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
@@ -140,7 +147,11 @@ class MilestoneType(relay.Node):
     name: strawberry.auto
     due_date: strawberry.auto
     project: ProjectType
-    issues: List["IssueType"]
+    issues: List["IssueType"] = strawberry_django.field(
+        filters=IssueFilter,
+        order=IssueOrder,
+        pagination=True,
+    )
 
     @strawberry_django.field(
         prefetch_related=[
@@ -162,7 +173,9 @@ class MilestoneType(relay.Node):
         return self._my_issues  # type: ignore
 
     @strawberry_django.connection(
-        ListConnectionWithTotalCount["IssueType"], filters=IssueFilter
+        ListConnectionWithTotalCount["IssueType"],
+        field_name="issues",
+        filters=IssueFilter,
     )
     def issues_with_filters(self) -> List["IssueType"]:
         return self.issues.all()  # type: ignore

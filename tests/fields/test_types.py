@@ -36,12 +36,6 @@ class FieldTypesModel(models.Model):
     generic_ip_address = models.GenericIPAddressField()
     integer = models.IntegerField()
     image = models.ImageField()
-    # NullBooleanField was deprecated and will soon be removed
-    null_boolean = (
-        models.NullBooleanField()  # type: ignore
-        if hasattr(models, "NullBooleanField")
-        else models.BooleanField(null=True)
-    )
     positive_big_integer = models.PositiveBigIntegerField()
     positive_integer = models.PositiveIntegerField()
     positive_small_integer = models.PositiveSmallIntegerField()
@@ -86,7 +80,6 @@ def test_field_types():
         generic_ip_address: auto
         integer: auto
         image: auto
-        null_boolean: auto
         positive_big_integer: auto
         positive_integer: auto
         positive_small_integer: auto
@@ -113,7 +106,6 @@ def test_field_types():
         ("generic_ip_address", str),
         ("integer", int),
         ("image", strawberry_django.DjangoImageType),
-        ("null_boolean", StrawberryOptional(bool)),
         ("positive_big_integer", int),
         ("positive_integer", int),
         ("positive_small_integer", int),
