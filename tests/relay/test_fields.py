@@ -1179,7 +1179,9 @@ def test_query_connection_total_count_sql_queries(
     }
 
 
-@pytest.mark.skip(reason="TODO: Fix issue => https://github.com/strawberry-graphql/strawberry-django/issues/535")
+@pytest.mark.skip(
+    reason="TODO: Fix issue => https://github.com/strawberry-graphql/strawberry-django/issues/535"
+)
 def test_query_lazy_connection_with_filters(db):
     color = Color.objects.create(name="Magenta")
     Fruit.objects.create(name="Apple", color=color)

@@ -49,17 +49,18 @@ class FruitWithFiltersAndOrdering(Fruit):
     pass
 
 
-FruitConnectionWithTotalCount = ListConnectionWithTotalCount[FruitWithFiltersAndOrdering]
+FruitConnectionWithTotalCount = ListConnectionWithTotalCount[
+    FruitWithFiltersAndOrdering
+]
 
 
 @strawberry_django.type(Color)
 class ColorWithLazyFruitsType:
     id: auto
     name: auto
-    fruits: ListConnectionWithTotalCount[Annotated[
-        "FruitWithFiltersAndOrdering", strawberry.lazy("tests.relay.schema")]] = (
-        strawberry_django.connection()
-    )
+    fruits: ListConnectionWithTotalCount[
+        Annotated["FruitWithFiltersAndOrdering", strawberry.lazy("tests.relay.schema")]
+    ] = strawberry_django.connection()
 
 
 class DummyPermission(BasePermission):
