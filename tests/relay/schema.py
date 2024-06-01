@@ -8,13 +8,14 @@ from typing import (
 
 import strawberry
 from django.db import models
-from strawberry import relay
+from strawberry import auto, relay
 from strawberry.permission import BasePermission
 from strawberry.types import Info
 from typing_extensions import Annotated
 
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount
+from tests.models import Color
 
 
 class FruitModel(models.Model):
@@ -41,6 +42,24 @@ class FruitOrder:
 class Fruit(relay.Node):
     name: strawberry.auto
     color: strawberry.auto
+
+
+@strawberry_django.type(FruitModel, filters=FruitFilter, order=FruitOrder)
+class FruitWithFiltersAndOrdering(Fruit):
+    pass
+
+
+FruitConnectionWithTotalCount = ListConnectionWithTotalCount[FruitWithFiltersAndOrdering]
+
+
+@strawberry_django.type(Color)
+class ColorWithLazyFruitsType:
+    id: auto
+    name: auto
+    fruits: ListConnectionWithTotalCount[Annotated[
+        "FruitWithFiltersAndOrdering", strawberry.lazy("tests.relay.schema")]] = (
+        strawberry_django.connection()
+    )
 
 
 class DummyPermission(BasePermission):
@@ -84,6 +103,13 @@ class Query:
         info: Info,
     ) -> Iterable[FruitModel]:
         return FruitModel.objects.all()
+
+    @strawberry_django.field(ColorWithLazyFruitsType)
+    def color_with_lazy_fruits(
+        self,
+        info: Info,
+    ) -> ColorWithLazyFruitsType:
+        return Color.objects.first()
 
 
 schema = strawberry.Schema(query=Query)

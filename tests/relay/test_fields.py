@@ -2,6 +2,8 @@ import pytest
 from pytest_django import DjangoAssertNumQueries
 from strawberry.relay.utils import to_base64
 
+from tests.models import Color, Fruit
+
 from .schema import FruitModel, schema
 
 
@@ -1175,3 +1177,22 @@ def test_query_connection_total_count_sql_queries(
     assert result.data == {
         query_attr: {"totalCount": 5},
     }
+
+
+@pytest.mark.skip(reason="TODO: Fix issue => https://github.com/strawberry-graphql/strawberry-django/issues/535")
+def test_query_lazy_connection_with_filters(db):
+    color = Color.objects.create(name="Magenta")
+    Fruit.objects.create(name="Apple", color=color)
+    query = """
+    query TestQuery {
+        colorWithLazyFruits(filters: {}) {
+            id
+            name
+            fruits {
+                totalCount
+            }
+        }
+    }
+    """
+    result = schema.execute_sync(query=query)
+    assert result.errors is None
