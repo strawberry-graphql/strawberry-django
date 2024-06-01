@@ -109,7 +109,7 @@ class Query:
     def color_with_lazy_fruits(
         self,
         info: Info,
-    ) -> ColorWithLazyFruitsType:
+    ) -> ColorWithLazyFruitsType | None:
         return Color.objects.first()
 
 
