@@ -1,13 +1,5 @@
-<style>
-  .md-typeset h1,
-  .md-content__button {
-    display: none;
-  }
-</style>
-
-![Logo](./images/logo.png){ align=center }
-**Strawberry integration with Django**
-
+---
+title: Strawberry Django
 ---
 
 **WHAT:** A toolset for GraphQL schema generation from Django models.
@@ -15,8 +7,6 @@
 **WHY:** To build better web apps more quickly and with less code.
 
 **HOW:** By providing django-specific methods for using the [strawberry GraphQL library](https://strawberry.rocks/).
-
----
 
 [![CI](https://github.com/strawberry-graphql/strawberry-django/actions/workflows/main.yml/badge.svg)](https://github.com/strawberry-graphql/strawberry-django/actions/workflows/main.yml)
 [![PyPI](https://img.shields.io/pypi/v/strawberry-graphql-django)](https://pypi.org/project/strawberry-graphql-django/)
