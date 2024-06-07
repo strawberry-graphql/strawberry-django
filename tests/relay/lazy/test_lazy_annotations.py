@@ -12,7 +12,7 @@ from .b import BookConnection, BookType
 SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 
 
-def test_schema(snapshot: Snapshot):
+def test_lazy_type_annotations_in_schema(snapshot: Snapshot):
     @strawberry.type
     class Query:
         books_conn: BookConnection = strawberry_django.connection()
