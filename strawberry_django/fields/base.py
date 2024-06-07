@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
 from django.db.models import ForeignKey
 from strawberry import LazyType, relay
@@ -17,6 +17,7 @@ from strawberry.type import (
     get_object_definition,
 )
 from strawberry.union import StrawberryUnion
+from strawberry.utils.inspect import get_specialized_type_var_map
 
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import (
@@ -80,16 +81,24 @@ class StrawberryDjangoFieldBase(StrawberryField):
     def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
         origin = self.type
 
+        if isinstance(origin, LazyType):
+            origin = origin.resolve_type()
+
         object_definition = get_object_definition(origin)
 
         if object_definition and issubclass(object_definition.origin, relay.Connection):
-            origin = object_definition.type_var_map.get("NodeType")
+            origin_specialized_type_var_map = (
+                get_specialized_type_var_map(cast(type, origin)) or {}
+            )
+            origin = origin_specialized_type_var_map.get("NodeType")
+
+            if origin is None:
+                origin = object_definition.type_var_map.get("NodeType")
 
             if origin is None:
                 specialized_type_var_map = (
                     object_definition.specialized_type_var_map or {}
                 )
-
                 origin = specialized_type_var_map["NodeType"]
 
             if isinstance(origin, LazyType):

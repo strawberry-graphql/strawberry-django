@@ -1,0 +1,169 @@
+type AuthorType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  books(
+    filters: BookFilter
+    order: BookOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): BookTypeConnection!
+}
+
+"""A connection to a list of items."""
+type AuthorTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [AuthorTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type AuthorTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: AuthorType!
+}
+
+input BookFilter {
+  name: String!
+  AND: BookFilter
+  OR: BookFilter
+  NOT: BookFilter
+  DISTINCT: Boolean
+}
+
+input BookOrder {
+  name: String
+}
+
+type BookType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
+  author: AuthorType!
+}
+
+"""A connection to a list of items."""
+type BookTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [BookTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type BookTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: BookType!
+}
+
+"""
+The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+"""
+scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
+
+"""An object with a Globally Unique ID"""
+interface Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+}
+
+"""Information to aid in pagination."""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+}
+
+type Query {
+  booksConn(
+    filters: BookFilter
+    order: BookOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): BookTypeConnection!
+  booksConn2(
+    filters: BookFilter
+    order: BookOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): BookTypeConnection!
+  authorsConn(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): AuthorTypeConnection!
+  authorsConn2(
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): AuthorTypeConnection!
+}
