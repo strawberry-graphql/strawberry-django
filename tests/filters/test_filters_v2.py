@@ -2,7 +2,6 @@
 from enum import Enum
 from typing import Any, List, Optional, cast
 
-import django
 import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
@@ -448,14 +447,6 @@ async def test_async_resolver_filter(fruits):
             queryset = models.Fruit.objects.all()
             _info: Any = object()
             queryset = strawberry_django.filters.apply(filters, queryset, _info)
-            if django.VERSION < (4, 1):
-                from asgiref.sync import sync_to_async
-
-                @sync_to_async
-                def helper():
-                    return cast(List[Fruit], list(queryset))
-
-                return await helper()
             # cast fixes funny typing issue between list and List
             return cast(List[Fruit], [fruit async for fruit in queryset])
 

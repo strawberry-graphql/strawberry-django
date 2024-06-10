@@ -64,6 +64,7 @@ The `ID` scalar type represents a unique identifier, often used to refetch an ob
 scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
 
 input IssueFilter {
+  name: StrFilterLookup
   AND: IssueFilter
   OR: IssueFilter
   NOT: IssueFilter
@@ -78,6 +79,10 @@ input IssueInputSubclass {
   kind: String
   tags: [NodeInput!]
   extra: Int
+}
+
+input IssueOrder {
+  name: Ordering
 }
 
 type IssueType implements Node {
@@ -156,7 +161,7 @@ type MilestoneType implements Node {
   name: String!
   dueDate: Date
   project: ProjectType!
-  issues: [IssueType!]!
+  issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   myIssues: [IssueType!]!
   issuesWithFilters(
     filters: IssueFilter
@@ -183,7 +188,7 @@ type MilestoneTypeSubclass implements Node {
   name: String!
   dueDate: Date
   project: ProjectType!
-  issues: [IssueType!]!
+  issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   myIssues: [IssueType!]!
   issuesWithFilters(
     filters: IssueFilter
@@ -217,6 +222,11 @@ interface Node {
 """Input of an object that implements the `Node` interface."""
 input NodeInput {
   id: GlobalID!
+}
+
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
 }
 
 type OperationInfo {

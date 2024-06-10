@@ -241,6 +241,7 @@ input IssueAssigneeInputPartialListInput {
 }
 
 input IssueFilter {
+  name: StrFilterLookup
   AND: IssueFilter
   OR: IssueFilter
   NOT: IssueFilter
@@ -278,6 +279,10 @@ input IssueInputPartialWithoutId {
   extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
+}
+
+input IssueOrder {
+  name: Ordering
 }
 
 type IssueType implements Node {
@@ -366,7 +371,7 @@ type MilestoneType implements Node {
   name: String!
   dueDate: Date
   project: ProjectType!
-  issues: [IssueType!]!
+  issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   myIssues: [IssueType!]!
   issuesWithFilters(
     filters: IssueFilter

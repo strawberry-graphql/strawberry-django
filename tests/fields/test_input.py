@@ -11,12 +11,6 @@ class InputFieldsModel(models.Model):
     default = models.IntegerField(default=1)
     blank = models.IntegerField(blank=True)
     null = models.IntegerField(null=True)
-    # NullBoleanField is deprecated and will be removed in Django 5.0
-    null_boolean = (
-        models.NullBooleanField()  # type: ignore
-        if hasattr(models, "NullBooleanField")
-        else models.BooleanField(null=True)
-    )
 
 
 def test_input_type():
@@ -27,7 +21,6 @@ def test_input_type():
         default: auto
         blank: auto
         null: auto
-        null_boolean: auto
 
     assert [
         (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
@@ -37,7 +30,6 @@ def test_input_type():
         ("default", StrawberryOptional(int)),
         ("blank", StrawberryOptional(int)),
         ("null", StrawberryOptional(int)),
-        ("null_boolean", StrawberryOptional(bool)),
     ]
 
 
@@ -49,7 +41,6 @@ def test_input_type_for_partial_update():
         default: auto
         blank: auto
         null: auto
-        null_boolean: auto
 
     assert [
         (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
@@ -59,7 +50,6 @@ def test_input_type_for_partial_update():
         ("default", StrawberryOptional(int)),
         ("blank", StrawberryOptional(int)),
         ("null", StrawberryOptional(int)),
-        ("null_boolean", StrawberryOptional(bool)),
     ]
 
 
