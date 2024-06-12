@@ -85,7 +85,7 @@ input IssueOrder {
   name: Ordering
 }
 
-type IssueType implements Node {
+type IssueType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -155,7 +155,7 @@ input MilestoneOrder {
   project: ProjectOrder
 }
 
-type MilestoneType implements Node {
+type MilestoneType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -182,7 +182,7 @@ type MilestoneType implements Node {
   asyncField(value: String!): String!
 }
 
-type MilestoneTypeSubclass implements Node {
+type MilestoneTypeSubclass implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -211,6 +211,10 @@ type MilestoneTypeSubclass implements Node {
 
 type Mutation {
   createIssue(input: IssueInputSubclass!): CreateIssuePayload!
+}
+
+interface Named {
+  name: String!
 }
 
 """An object with a Globally Unique ID"""
@@ -287,7 +291,7 @@ input ProjectOrder {
   name: Ordering
 }
 
-type ProjectType implements Node {
+type ProjectType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -299,7 +303,7 @@ type ProjectType implements Node {
   isSmall: Boolean!
 }
 
-type ProjectTypeSubclass implements Node {
+type ProjectTypeSubclass implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -370,7 +374,7 @@ input StrFilterLookup {
   iRegex: String
 }
 
-type TagType implements Node {
+type TagType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!

@@ -15,7 +15,16 @@ if TYPE_CHECKING:
 User = get_user_model()
 
 
-class Project(models.Model):
+class NamedModel(models.Model):
+    class Meta:  # type: ignore
+        abstract = True
+
+    name = models.CharField(
+        max_length=255,
+    )
+
+
+class Project(NamedModel):
     class Status(models.TextChoices):
         """Project status options."""
 
@@ -32,10 +41,6 @@ class Project(models.Model):
         help_text=_("This project's status"),
         choices_enum=Status,
         default=Status.ACTIVE,
-    )
-    name = models.CharField(
-        help_text="The name of the project",
-        max_length=255,
     )
     due_date = models.DateField(
         null=True,
@@ -55,15 +60,12 @@ class Project(models.Model):
         return self._milestone_count < 3  # type: ignore
 
 
-class Milestone(models.Model):
+class Milestone(NamedModel):
     issues: "RelatedManager[Issue]"
 
     id = models.BigAutoField(
         verbose_name="ID",
         primary_key=True,
-    )
-    name = models.CharField(
-        max_length=255,
     )
     due_date = models.DateField(
         null=True,
@@ -112,7 +114,7 @@ class Favorite(models.Model):
     objects = FavoriteQuerySet.as_manager()
 
 
-class Issue(models.Model):
+class Issue(NamedModel):
     comments: "RelatedManager[Issue]"
     issue_assignees: "RelatedManager[Assignee]"
 
@@ -125,9 +127,6 @@ class Issue(models.Model):
     id = models.BigAutoField(
         verbose_name="ID",
         primary_key=True,
-    )
-    name = models.CharField(
-        max_length=255,
     )
     kind = models.CharField(
         verbose_name="kind",
@@ -203,15 +202,12 @@ class Assignee(models.Model):
     )
 
 
-class Tag(models.Model):
+class Tag(NamedModel):
     issues: "RelatedManager[Issue]"
 
     id = models.BigAutoField(
         verbose_name="ID",
         primary_key=True,
-    )
-    name = models.CharField(
-        max_length=255,
     )
 
 
