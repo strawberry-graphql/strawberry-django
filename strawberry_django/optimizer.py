@@ -794,6 +794,13 @@ def _get_model_hints(
     return store
 
 
+def _get_gql_definition(schema: Schema, definition: StrawberryObjectDefinition):
+    if definition.is_interface:
+        return schema.schema_converter.from_interface(definition)
+
+    return schema.schema_converter.from_object(definition)
+
+
 def _get_model_hints_from_connection(
     model: type[models.Model],
     schema: Schema,
@@ -828,7 +835,8 @@ def _get_model_hints_from_connection(
         e_type = e_definition.resolve_generic(
             relay.Edge[cast(Type[relay.Node], n_type)],
         )
-        e_gql_definition = schema.schema_converter.from_object(
+        e_gql_definition = _get_gql_definition(
+            schema,
             get_object_definition(e_type, strict=True),
         )
         e_info = _generate_selection_resolve_info(
@@ -842,7 +850,7 @@ def _get_model_hints_from_connection(
             if node.name.value != "node":
                 continue
 
-            n_gql_definition = schema.schema_converter.from_object(n_definition)
+            n_gql_definition = _get_gql_definition(schema, n_definition)
             n_info = _generate_selection_resolve_info(
                 info,
                 nodes,
@@ -913,9 +921,7 @@ def optimize(
         return qs
 
     # Avoid optimizing twice and also modify an already resolved queryset
-    if (
-        is_optimized(qs) or qs._result_cache is not None  # type: ignore
-    ):
+    if is_optimized(qs) or qs._result_cache is not None:  # type: ignore
         return qs
 
     if isinstance(info, Info):
@@ -952,7 +958,7 @@ def optimize(
             object_definitions = [object_definition]
 
         for inner_object_definition in object_definitions:
-            parent_type = schema.schema_converter.from_object(inner_object_definition)
+            parent_type = _get_gql_definition(schema, inner_object_definition)
             new_store = _get_model_hints(
                 qs.model,
                 schema,
@@ -980,9 +986,11 @@ def mark_optimized_by_prefetching(qs: QuerySet[_M]) -> QuerySet[_M]:
     # This is a bit of a hack, but there is no easy way to mark a related manager
     # as optimized at this phase, so we just add a mark to the queryset that
     # we can check leater on using is_optimized_by_prefetching
-    return qs.annotate(**{
-        NESTED_PREFETCH_MARK: models.Value(True),
-    })
+    return qs.annotate(
+        **{
+            NESTED_PREFETCH_MARK: models.Value(True),
+        }
+    )
 
 
 def is_optimized_by_prefetching(qs: QuerySet) -> bool:
