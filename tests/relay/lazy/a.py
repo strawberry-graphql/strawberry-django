@@ -19,6 +19,7 @@ class AuthorType(relay.Node):
     books: Annotated["BookConnection", strawberry.lazy("tests.relay.lazy.b")] = (
         strawberry_django.connection()
     )
+    children: 'AuthorConnection' = strawberry_django.connection()
 
 
 AuthorConnection: TypeAlias = ListConnectionWithTotalCount[AuthorType]

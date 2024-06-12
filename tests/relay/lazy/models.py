@@ -1,8 +1,18 @@
 from django.db import models
+from mptt.fields import TreeForeignKey
+from mptt.models import MPTTModel
 
 
-class RelayAuthor(models.Model):
+class RelayAuthor(MPTTModel):
     name = models.CharField(max_length=100)
+
+    parent = TreeForeignKey(
+        to="self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
 
 
 class RelayBook(models.Model):
