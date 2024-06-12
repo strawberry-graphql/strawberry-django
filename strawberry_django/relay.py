@@ -102,7 +102,7 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
 
         if isinstance(nodes, models.QuerySet) and is_optimized_by_prefetching(nodes):
             try:
-                return cls.resolve_connection_from_cache(
+                conn = cls.resolve_connection_from_cache(
                     nodes,
                     info=info,
                     before=before,
@@ -120,6 +120,10 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
                     RuntimeWarning,
                     stacklevel=2,
                 )
+            else:
+                conn = cast(Self, conn)
+                conn.nodes = nodes
+                return conn
 
         conn = super().resolve_connection(
             nodes,
