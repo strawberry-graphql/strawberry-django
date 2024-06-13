@@ -158,7 +158,7 @@ input FruitFilter {
 You can define custom filter method by defining your own resolver.
 
 ```{.python title=types.py}
-@strawberry_django.filter(models.User)
+@strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: auto
     last_name: auto
