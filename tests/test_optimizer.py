@@ -216,6 +216,68 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_forward_with_interfaces(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($isAsync: Boolean!) {
+        issueConn {
+          totalCount
+          edges {
+            node {
+              id
+              ... on Named {
+                name
+              }
+              milestone {
+                id
+                ... on Named {
+                  name
+                }
+                asyncField(value: "foo") @include (if: $isAsync)
+                project {
+                  id
+                  ... on Named {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    """
+
+    expected = []
+    for p in ProjectFactory.create_batch(2):
+        for m in MilestoneFactory.create_batch(2, project=p):
+            for i in IssueFactory.create_batch(2, milestone=m):
+                r: dict[str, Any] = {
+                    "id": to_base64("IssueType", i.id),
+                    "name": i.name,
+                    "milestone": {
+                        "id": to_base64("MilestoneType", m.id),
+                        "name": m.name,
+                        "project": {
+                            "id": to_base64("ProjectType", p.id),
+                            "name": p.name,
+                        },
+                    },
+                }
+                if gql_client.is_async:
+                    r["milestone"]["asyncField"] = "value: foo"
+                expected.append(r)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 18):
+        res = gql_client.query(query, {"isAsync": gql_client.is_async})
+
+    assert res.data == {
+        "issueConn": {
+            "totalCount": 8,
+            "edges": [{"node": r} for r in expected],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
     query = """
       fragment issueFrag on IssueType {

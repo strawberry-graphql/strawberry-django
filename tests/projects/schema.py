@@ -45,12 +45,18 @@ from .models import (
     FavoriteQuerySet,
     Issue,
     Milestone,
+    NamedModel,
     Project,
     Quiz,
     Tag,
 )
 
 UserModel = cast(Type[AbstractUser], get_user_model())
+
+
+@strawberry_django.interface(NamedModel)
+class Named:
+    name: strawberry.auto
 
 
 @strawberry_django.type(UserModel)
@@ -91,8 +97,7 @@ class ProjectFilter:
 
 
 @strawberry_django.type(Project, filters=ProjectFilter)
-class ProjectType(relay.Node):
-    name: strawberry.auto
+class ProjectType(relay.Node, Named):
     due_date: strawberry.auto
     milestones: List["MilestoneType"]
     milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
@@ -143,8 +148,7 @@ class IssueOrder:
 
 
 @strawberry_django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
-class MilestoneType(relay.Node):
-    name: strawberry.auto
+class MilestoneType(relay.Node, Named):
     due_date: strawberry.auto
     project: ProjectType
     issues: List["IssueType"] = strawberry_django.field(
@@ -212,8 +216,7 @@ class FavoriteType(relay.Node):
 
 
 @strawberry_django.type(Issue)
-class IssueType(relay.Node):
-    name: strawberry.auto
+class IssueType(relay.Node, Named):
     milestone: MilestoneType
     priority: strawberry.auto
     kind: strawberry.auto
@@ -251,8 +254,7 @@ class IssueType(relay.Node):
 
 
 @strawberry_django.type(Tag)
-class TagType(relay.Node):
-    name: strawberry.auto
+class TagType(relay.Node, Named):
     issues: ListConnectionWithTotalCount[IssueType] = strawberry_django.connection()
 
     @strawberry_django.field

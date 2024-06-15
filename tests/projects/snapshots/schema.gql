@@ -285,7 +285,7 @@ input IssueOrder {
   name: Ordering
 }
 
-type IssueType implements Node {
+type IssueType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -365,7 +365,7 @@ input MilestoneOrder {
   project: ProjectOrder
 }
 
-type MilestoneType implements Node {
+type MilestoneType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -429,6 +429,10 @@ type Mutation {
     """Input data for `createQuiz` mutation"""
     input: CreateQuizInput!
   ): CreateQuizPayload!
+}
+
+interface Named {
+  name: String!
 }
 
 """An object with a Globally Unique ID"""
@@ -536,7 +540,7 @@ input ProjectOrder {
   name: Ordering
 }
 
-type ProjectType implements Node {
+type ProjectType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -877,7 +881,7 @@ input TagInputPartialListInput {
   remove: [TagInputPartial!]
 }
 
-type TagType implements Node {
+type TagType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
