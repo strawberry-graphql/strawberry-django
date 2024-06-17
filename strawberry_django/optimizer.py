@@ -30,6 +30,7 @@ from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from graphql import (
     FieldNode,
+    GraphQLInterfaceType,
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLWrappingType,
@@ -354,7 +355,7 @@ def _get_prefetch_queryset(
     remote_model: type[models.Model],
     schema: Schema,
     field: StrawberryField,
-    parent_type: GraphQLObjectType,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
     field_node: FieldNode,
     *,
     config: OptimizerConfig | None,
@@ -402,7 +403,7 @@ def _optimize_prefetch_queryset(
     qs: QuerySet[_M],
     schema: Schema,
     field: StrawberryField,
-    parent_type: GraphQLObjectType,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
     field_node: FieldNode,
     *,
     config: OptimizerConfig | None,
@@ -499,13 +500,13 @@ def _optimize_prefetch_queryset(
 
 def _get_selections(
     info: GraphQLResolveInfo,
-    parent_type: GraphQLObjectType,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ) -> dict[str, list[FieldNode]]:
     return collect_sub_fields(
         info.schema,
         info.fragments,
         info.variable_values,
-        parent_type,
+        cast(GraphQLObjectType, parent_type),
         info.field_nodes,
     )
 
@@ -514,14 +515,14 @@ def _generate_selection_resolve_info(
     info: GraphQLResolveInfo,
     field_nodes: list[FieldNode],
     return_type: GraphQLOutputType,
-    parent_type: GraphQLObjectType,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ):
     field_node = field_nodes[0]
     return GraphQLResolveInfo(
         field_name=field_node.name.value,
         field_nodes=field_nodes,
         return_type=return_type,
-        parent_type=parent_type,
+        parent_type=cast(GraphQLObjectType, parent_type),
         path=info.path.add_key(0).add_key(field_node.name.value, parent_type.name),
         schema=info.schema,
         fragments=info.fragments,
@@ -538,7 +539,7 @@ def _get_model_hints(
     schema: Schema,
     object_definition: StrawberryObjectDefinition,
     *,
-    parent_type: GraphQLObjectType,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
     info: GraphQLResolveInfo,
     config: OptimizerConfig | None = None,
     prefix: str = "",
@@ -794,12 +795,22 @@ def _get_model_hints(
     return store
 
 
+def _get_gql_definition(
+    schema: Schema,
+    definition: StrawberryObjectDefinition,
+) -> GraphQLInterfaceType | GraphQLObjectType:
+    if definition.is_interface:
+        return schema.schema_converter.from_interface(definition)
+
+    return schema.schema_converter.from_object(definition)
+
+
 def _get_model_hints_from_connection(
     model: type[models.Model],
     schema: Schema,
     object_definition: StrawberryObjectDefinition,
     *,
-    parent_type: GraphQLObjectType,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
     info: GraphQLResolveInfo,
     config: OptimizerConfig | None = None,
     prefix: str = "",
@@ -828,9 +839,11 @@ def _get_model_hints_from_connection(
         e_type = e_definition.resolve_generic(
             relay.Edge[cast(Type[relay.Node], n_type)],
         )
-        e_gql_definition = schema.schema_converter.from_object(
+        e_gql_definition = _get_gql_definition(
+            schema,
             get_object_definition(e_type, strict=True),
         )
+        assert isinstance(e_gql_definition, GraphQLObjectType)
         e_info = _generate_selection_resolve_info(
             info,
             edges,
@@ -842,7 +855,8 @@ def _get_model_hints_from_connection(
             if node.name.value != "node":
                 continue
 
-            n_gql_definition = schema.schema_converter.from_object(n_definition)
+            n_gql_definition = _get_gql_definition(schema, n_definition)
+            assert isinstance(n_gql_definition, GraphQLObjectType)
             n_info = _generate_selection_resolve_info(
                 info,
                 nodes,
@@ -913,9 +927,7 @@ def optimize(
         return qs
 
     # Avoid optimizing twice and also modify an already resolved queryset
-    if (
-        is_optimized(qs) or qs._result_cache is not None  # type: ignore
-    ):
+    if is_optimized(qs) or qs._result_cache is not None:  # type: ignore
         return qs
 
     if isinstance(info, Info):
@@ -952,7 +964,7 @@ def optimize(
             object_definitions = [object_definition]
 
         for inner_object_definition in object_definitions:
-            parent_type = schema.schema_converter.from_object(inner_object_definition)
+            parent_type = _get_gql_definition(schema, inner_object_definition)
             new_store = _get_model_hints(
                 qs.model,
                 schema,

@@ -113,5 +113,6 @@ INSTALLED_APPS.extend(
     [
         "tests",
         "tests.projects",
+        "tests.polymorphism",
     ],
 )
