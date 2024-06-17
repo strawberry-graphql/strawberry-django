@@ -794,7 +794,7 @@ def _get_model_hints(
     return store
 
 
-def _get_gql_definition(schema: Schema, definition: StrawberryObjectDefinition):
+def _get_gql_definition(schema: Schema, definition: StrawberryObjectDefinition) -> Any:
     if definition.is_interface:
         return schema.schema_converter.from_interface(definition)
 
@@ -986,9 +986,11 @@ def mark_optimized_by_prefetching(qs: QuerySet[_M]) -> QuerySet[_M]:
     # This is a bit of a hack, but there is no easy way to mark a related manager
     # as optimized at this phase, so we just add a mark to the queryset that
     # we can check leater on using is_optimized_by_prefetching
-    return qs.annotate(**{
-        NESTED_PREFETCH_MARK: models.Value(True),
-    })
+    return qs.annotate(
+        **{
+            NESTED_PREFETCH_MARK: models.Value(True),
+        }
+    )
 
 
 def is_optimized_by_prefetching(qs: QuerySet) -> bool:
