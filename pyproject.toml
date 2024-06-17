@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
 packages = [{ include = "strawberry_django" }]
-version = "0.44.0"
+version = "0.44.1"
 description = "Strawberry GraphQL Django extension"
 authors = [
   "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
@@ -45,6 +45,7 @@ channels = { version = ">=3.0.5" }
 django-choices-field = "^2.2.2"
 django-debug-toolbar = "^4.2.0"
 django-guardian = "^2.4.0"
+django-mptt = "^0.14.0"
 django-types = "^0.19.1"
 factory-boy = "^3.2.1"
 mkdocs = "^1.4.2"
