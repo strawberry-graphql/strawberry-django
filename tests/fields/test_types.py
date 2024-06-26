@@ -21,6 +21,7 @@ from strawberry.type import (
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.type import _process_type
 
 
 class FieldTypesModel(models.Model):
@@ -46,6 +47,24 @@ class FieldTypesModel(models.Model):
     url = models.URLField()
     uuid = models.UUIDField()
     json = models.JSONField()
+    generated_decimal = (
+        models.GeneratedField(
+            expression=models.F("decimal") * 2,
+            db_persist=True,
+            output_field=models.DecimalField(),
+        )
+        if hasattr(models, "GeneratedField")
+        else None
+    )
+    generated_nullable_decimal = (
+        models.GeneratedField(
+            expression=models.F("decimal") * 2,
+            db_persist=True,
+            output_field=models.DecimalField(null=True, blank=True),
+        )
+        if hasattr(models, "GeneratedField")
+        else None
+    )
     foreign_key = models.ForeignKey(
         "FieldTypesModel",
         blank=True,
@@ -91,8 +110,7 @@ def test_field_types():
         uuid: auto
         json: auto
 
-    object_definition = get_object_definition(Type, strict=True)
-    assert [(f.name, f.type) for f in object_definition.fields] == [
+    expected_types = [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("char", str),
@@ -117,6 +135,17 @@ def test_field_types():
         ("uuid", uuid.UUID),
         ("json", JSON),
     ]
+
+    if hasattr(models, "GeneratedField"):
+        Type.__annotations__["generated_decimal"] = auto
+        expected_types.append(("generated_decimal", decimal.Decimal))
+
+        Type.__annotations__["generated_nullable_decimal"] = auto
+        expected_types.append(("generated_nullable_decimal", decimal.Decimal | None))
+
+    type_to_test = _process_type(Type, model=FieldTypesModel)
+    object_definition = get_object_definition(type_to_test, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == expected_types
 
 
 def test_subset_of_fields():
