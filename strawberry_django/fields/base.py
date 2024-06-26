@@ -37,6 +37,11 @@ if TYPE_CHECKING:
 
 _QS = TypeVar("_QS", bound="models.QuerySet")
 
+try:
+    from django.db.models.fields.generated import GeneratedField
+except ImportError:
+    GeneratedField = None
+
 
 class StrawberryDjangoFieldBase(StrawberryField):
     def __init__(
@@ -202,7 +207,10 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 self.origin_django_type,
             )
             if is_optional(
-                model_field,
+                model_field.output_field
+                if GeneratedField is not None
+                and isinstance(model_field, GeneratedField)
+                else model_field,
                 self.origin_django_type.is_input,
                 self.origin_django_type.is_partial,
             ):
