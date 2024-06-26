@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import pytest
 import strawberry
@@ -22,6 +22,11 @@ from strawberry.type import (
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.type import _process_type
+
+try:
+    from django.db.models import GeneratedField  # type: ignore
+except ImportError:
+    GeneratedField = None
 
 
 class FieldTypesModel(models.Model):
@@ -48,21 +53,21 @@ class FieldTypesModel(models.Model):
     uuid = models.UUIDField()
     json = models.JSONField()
     generated_decimal = (
-        models.GeneratedField(
+        GeneratedField(
             expression=models.F("decimal") * 2,
             db_persist=True,
             output_field=models.DecimalField(),
         )
-        if hasattr(models, "GeneratedField")
+        if GeneratedField is not None
         else None
     )
     generated_nullable_decimal = (
-        models.GeneratedField(
+        GeneratedField(
             expression=models.F("decimal") * 2,
             db_persist=True,
             output_field=models.DecimalField(null=True, blank=True),
         )
-        if hasattr(models, "GeneratedField")
+        if GeneratedField is not None
         else None
     )
     foreign_key = models.ForeignKey(
@@ -110,7 +115,7 @@ def test_field_types():
         uuid: auto
         json: auto
 
-    expected_types = [
+    expected_types: list[tuple[str, Any]] = [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("char", str),

@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 _QS = TypeVar("_QS", bound="models.QuerySet")
 
 try:
-    from django.db.models.fields.generated import GeneratedField
+    from django.db.models import GeneratedField  # type: ignore
 except ImportError:
     GeneratedField = None
 
@@ -207,7 +207,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 self.origin_django_type,
             )
             if is_optional(
-                model_field.output_field
+                model_field.output_field  # type: ignore
                 if GeneratedField is not None
                 and isinstance(model_field, GeneratedField)
                 else model_field,
