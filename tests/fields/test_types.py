@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import cast, Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Optional, Tuple, Union, cast
 
 import pytest
 import strawberry
