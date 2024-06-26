@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import Dict, List, Tuple, Union, cast
+from typing import cast, Dict, List, Tuple, Union, Optional
 
 import pytest
 import strawberry
@@ -141,7 +141,7 @@ def test_field_types():
         expected_types.append(("generated_decimal", decimal.Decimal))
 
         Type.__annotations__["generated_nullable_decimal"] = auto
-        expected_types.append(("generated_nullable_decimal", decimal.Decimal | None))
+        expected_types.append(("generated_nullable_decimal", Optional[decimal.Decimal]))
 
     type_to_test = _process_type(Type, model=FieldTypesModel)
     object_definition = get_object_definition(type_to_test, strict=True)
