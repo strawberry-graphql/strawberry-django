@@ -21,7 +21,7 @@ from strawberry.type import (
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
-from strawberry_django.type import _process_type
+from strawberry_django.type import _process_type  # noqa: PLC2701
 
 try:
     from django.db.models import GeneratedField  # type: ignore
