@@ -24,9 +24,9 @@ import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.type import _process_type  # noqa: PLC2701
 
-try:
+if django.VERSION >= (5, 0):
     from django.db.models import GeneratedField  # type: ignore
-except ImportError:
+else:
     GeneratedField = None
 
 

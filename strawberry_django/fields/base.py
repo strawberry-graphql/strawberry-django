@@ -37,9 +37,9 @@ if TYPE_CHECKING:
 
 _QS = TypeVar("_QS", bound="models.QuerySet")
 
-try:
+if django.VERSION >= (5, 0):
     from django.db.models import GeneratedField  # type: ignore
-except ImportError:
+else:
     GeneratedField = None
 
 
