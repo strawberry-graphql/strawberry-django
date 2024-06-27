@@ -206,11 +206,15 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 ),
                 self.origin_django_type,
             )
+
+            is_generated_field = GeneratedField is not None and isinstance(
+                model_field, GeneratedField
+            )
+            field_to_check = (
+                model_field.output_field if is_generated_field else model_field
+            )
             if is_optional(
-                model_field.output_field  # type: ignore
-                if GeneratedField is not None
-                and isinstance(model_field, GeneratedField)
-                else model_field,
+                field_to_check,
                 self.origin_django_type.is_input,
                 self.origin_django_type.is_partial,
             ):

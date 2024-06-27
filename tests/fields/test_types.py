@@ -4,6 +4,7 @@ import enum
 import uuid
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+import django
 import pytest
 import strawberry
 from django.conf import settings
@@ -141,7 +142,7 @@ def test_field_types():
         ("json", JSON),
     ]
 
-    if hasattr(models, "GeneratedField"):
+    if django.VERSION >= (5, 0):
         Type.__annotations__["generated_decimal"] = auto
         expected_types.append(("generated_decimal", decimal.Decimal))
 

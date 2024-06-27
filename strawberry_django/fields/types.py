@@ -18,6 +18,7 @@ from typing import (
     Union,
 )
 
+import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
@@ -38,10 +39,11 @@ except ImportError:  # pragma: no cover
     IntegerChoicesField = None
     TextChoicesField = None
 
-try:
-    from django.db.models import GeneratedField  # type: ignore
-except ImportError:
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField
+else:
     GeneratedField = None
+
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
