@@ -36,7 +36,7 @@ django = ">=3.2"
 asgiref = ">=3.8"
 django-choices-field = { version = ">=2.2.2", optional = true }
 django-debug-toolbar = { version = ">=3.4", optional = true }
-strawberry-graphql = ">=0.234.2"
+strawberry-graphql = ">=0.235.1"
 
 [tool.poetry.group.dev.dependencies]
 Markdown = "^3.3.7"
