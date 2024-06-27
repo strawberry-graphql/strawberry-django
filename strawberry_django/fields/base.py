@@ -211,7 +211,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 model_field, GeneratedField
             )
             field_to_check = (
-                model_field.output_field if is_generated_field else model_field
+                model_field.output_field if is_generated_field else model_field  # type: ignore
             )
             if is_optional(
                 field_to_check,

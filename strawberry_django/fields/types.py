@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover
     TextChoicesField = None
 
 if django.VERSION >= (5, 0):
-    from django.db.models import GeneratedField
+    from django.db.models import GeneratedField  # type: ignore
 else:
     GeneratedField = None
 
