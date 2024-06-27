@@ -18,6 +18,7 @@ from typing import (
     Union,
 )
 
+import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
@@ -37,6 +38,12 @@ try:
 except ImportError:  # pragma: no cover
     IntegerChoicesField = None
     TextChoicesField = None
+
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField  # type: ignore
+else:
+    GeneratedField = None
+
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
@@ -469,6 +476,10 @@ def resolve_model_field_type(
                 ),
             )
             model_field._strawberry_enum = field_type  # type: ignore
+    # Generated fields
+    elif GeneratedField is not None and isinstance(model_field, GeneratedField):
+        model_field_type = type(model_field.output_field)  # type: ignore
+        field_type = field_type_map.get(model_field_type, NotImplemented)
     # Every other Field possibility
     else:
         force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]

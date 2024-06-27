@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
+import django
 from django.db.models import ForeignKey
 from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
@@ -36,6 +37,11 @@ if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
 
 _QS = TypeVar("_QS", bound="models.QuerySet")
+
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField  # type: ignore
+else:
+    GeneratedField = None
 
 
 class StrawberryDjangoFieldBase(StrawberryField):
@@ -201,8 +207,15 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 ),
                 self.origin_django_type,
             )
+
+            is_generated_field = GeneratedField is not None and isinstance(
+                model_field, GeneratedField
+            )
+            field_to_check = (
+                model_field.output_field if is_generated_field else model_field  # type: ignore
+            )
             if is_optional(
-                model_field,
+                field_to_check,
                 self.origin_django_type.is_input,
                 self.origin_django_type.is_partial,
             ):

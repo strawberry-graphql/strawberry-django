@@ -2,8 +2,9 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+import django
 import pytest
 import strawberry
 from django.conf import settings
@@ -21,6 +22,12 @@ from strawberry.type import (
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.type import _process_type  # noqa: PLC2701
+
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField  # type: ignore
+else:
+    GeneratedField = None
 
 
 class FieldTypesModel(models.Model):
@@ -46,6 +53,24 @@ class FieldTypesModel(models.Model):
     url = models.URLField()
     uuid = models.UUIDField()
     json = models.JSONField()
+    generated_decimal = (
+        GeneratedField(
+            expression=models.F("decimal") * 2,
+            db_persist=True,
+            output_field=models.DecimalField(),
+        )
+        if GeneratedField is not None
+        else None
+    )
+    generated_nullable_decimal = (
+        GeneratedField(
+            expression=models.F("decimal") * 2,
+            db_persist=True,
+            output_field=models.DecimalField(null=True, blank=True),
+        )
+        if GeneratedField is not None
+        else None
+    )
     foreign_key = models.ForeignKey(
         "FieldTypesModel",
         blank=True,
@@ -91,8 +116,7 @@ def test_field_types():
         uuid: auto
         json: auto
 
-    object_definition = get_object_definition(Type, strict=True)
-    assert [(f.name, f.type) for f in object_definition.fields] == [
+    expected_types: list[tuple[str, Any]] = [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("char", str),
@@ -117,6 +141,17 @@ def test_field_types():
         ("uuid", uuid.UUID),
         ("json", JSON),
     ]
+
+    if django.VERSION >= (5, 0):
+        Type.__annotations__["generated_decimal"] = auto
+        expected_types.append(("generated_decimal", decimal.Decimal))
+
+        Type.__annotations__["generated_nullable_decimal"] = auto
+        expected_types.append(("generated_nullable_decimal", Optional[decimal.Decimal]))
+
+    type_to_test = _process_type(Type, model=FieldTypesModel)
+    object_definition = get_object_definition(type_to_test, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == expected_types
 
 
 def test_subset_of_fields():
