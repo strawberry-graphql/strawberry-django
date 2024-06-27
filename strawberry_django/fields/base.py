@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
+import django
 from django.db.models import ForeignKey
 from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
