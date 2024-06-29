@@ -856,7 +856,9 @@ def _get_model_hints_from_connection(
                 continue
 
             n_gql_definition = _get_gql_definition(schema, n_definition)
-            assert isinstance(n_gql_definition, GraphQLObjectType | GraphQLInterfaceType)
+            assert isinstance(
+                n_gql_definition, GraphQLObjectType | GraphQLInterfaceType
+            )
             n_info = _generate_selection_resolve_info(
                 info,
                 nodes,

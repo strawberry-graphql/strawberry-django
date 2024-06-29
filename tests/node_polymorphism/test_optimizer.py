@@ -31,22 +31,22 @@ def test_polymorphic_interface_query():
     result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
-        'projects': {
-            'edges': [
+        "projects": {
+            "edges": [
                 {
-                    'node': {
-                        '__typename': 'ArtProjectType',
-                        'topic': ap.topic,
-                        'artist': ap.artist
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
                     }
                 },
                 {
-                    'node': {
-                        '__typename': 'ResearchProjectType',
-                        'topic': rp.topic,
-                        'supervisor': rp.supervisor
+                    "node": {
+                        "__typename": "ResearchProjectType",
+                        "topic": rp.topic,
+                        "supervisor": rp.supervisor,
                     }
-                }
+                },
             ]
         }
     }
