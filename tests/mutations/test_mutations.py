@@ -29,7 +29,7 @@ def test_create(mutation):
 
 
 def test_create_with_optional_file(mutation):
-    fname = "test_create_with_optional_fileb.png"
+    fname = "test_create_with_optional_file.png"
     upload = prep_image(fname)
     result = mutation(
         """\
@@ -52,6 +52,39 @@ def test_create_with_optional_file(mutation):
         "name": "strawberry",
         "picture": {"name": f".tmp_upload/{fname}"},
     }
+
+
+def test_update_with_optional_file_when_unsetting_it(mutation):
+    fname = "test_update_with_optional_file.png"
+    upload = prep_image(fname)
+    fruit = models.Fruit.objects.create(name="strawberry", picture=upload)
+
+    result = mutation(
+        """\
+        UpdateFruit($id: ID! $picture: Upload) {
+          updateFruits(
+            filters: { id: { exact: $id } }
+            data: { picture: $picture }
+          ) {
+            id
+            name
+            picture {
+              name
+            }
+          }
+        }
+        """,
+        variable_values={"id": fruit.pk, "picture": None},
+    )
+
+    assert not result.errors
+    assert result.data["updateFruits"] == [
+        {
+            "id": str(fruit.pk),
+            "name": "strawberry",
+            "picture": None,
+        }
+    ]
 
 
 def test_with_required_file_fails(mutation):

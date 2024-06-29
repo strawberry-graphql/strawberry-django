@@ -46,9 +46,7 @@ from .types import (
 
 if TYPE_CHECKING:
     from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
-    from strawberry.file_uploads.scalars import Upload
     from strawberry.types.info import Info
-    from typing_extensions import Literal
 
 
 _T = TypeVar("_T")
@@ -225,12 +223,6 @@ def prepare_create_update(
 ) -> tuple[
     Model,
     dict[str, object],
-    list[
-        tuple[
-            models.FileField,
-            Upload | Literal[False],
-        ]
-    ],
     list[tuple[ManyToManyField | ForeignObjectRel, Any]],
 ]:
     """Prepare data for updates and creates.
@@ -241,12 +233,6 @@ def prepare_create_update(
     """
     model = instance.__class__
     fields = get_model_fields(model)
-    files: list[
-        tuple[
-            models.FileField,
-            Upload | Literal[False],
-        ]
-    ] = []
     m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
     direct_field_values: dict[str, object] = {}
 
@@ -266,10 +252,6 @@ def prepare_create_update(
                 # input, but `FileField.save_form_data` ignores None values. In that
                 # case we manually pass False which clears the file.
                 value = False  # noqa: PLW2901
-
-            # set FileFields at the same time so their hooks can use other set values
-            files.append((field, value))
-            direct_field_value = False
         elif isinstance(field, (ManyToManyField, ForeignObjectRel)):
             # m2m will be processed later
             m2m.append((field, value))
@@ -309,7 +291,7 @@ def prepare_create_update(
             # to your update_field function. This will not work.
             update_field(info, instance, field, value)  # type: ignore
 
-    return instance, direct_field_values, files, m2m
+    return instance, direct_field_values, m2m
 
 
 @overload
@@ -371,18 +353,13 @@ def create(
     # However, this instance should not be saved as it will
     # circumvent the manager create method.
     dummy_instance = model()
-    _, create_kwargs, files, m2m = prepare_create_update(
+    _, create_kwargs, m2m = prepare_create_update(
         info=info,
         instance=dummy_instance,
         data=data,
         full_clean=full_clean,
         key_attr=key_attr,
     )
-    # Don't forget to add the files to the dummy_instance
-    # without saving to ensure it will also trigger
-    # in the full_clean method
-    for file_field, value in files:
-        file_field.save_form_data(dummy_instance, value)
 
     # Creating the instance directly via create() without full-clean will
     # raise ugly error messages. To generate user-friendly ones, we want
@@ -394,13 +371,6 @@ def create(
     # Create the instance using the manager create method to respect
     # manager create overrides. This also ensures support for proxy-models.
     instance = model._default_manager.create(**create_kwargs)
-
-    # Now that the instance has been created, go and assign
-    # files and many2many fields.
-    if files:
-        for file_field, value in files:
-            file_field.save_form_data(instance, value)
-        instance.save()
 
     for field, value in m2m:
         update_m2m(info, instance, field, value, key_attr)
@@ -461,16 +431,13 @@ def update(
             for instance in instances
         ]
 
-    instance, _, files, m2m = prepare_create_update(
+    instance, _, m2m = prepare_create_update(
         info=info,
         instance=instance,
         data=data,
         key_attr=key_attr,
         full_clean=full_clean,
     )
-
-    for file_field, value in files:
-        file_field.save_form_data(instance, value)
 
     if pre_save_hook is not None:
         pre_save_hook(instance)
