@@ -296,6 +296,7 @@ type IssueType implements Node & Named {
   nameWithKind: String!
   tags: [TagType!]!
   issueAssignees: [AssigneeType!]!
+  staffAssignees: [StaffType!]!
   favoriteSet(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null

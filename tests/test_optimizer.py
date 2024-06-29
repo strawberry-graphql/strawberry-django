@@ -1325,3 +1325,43 @@ def test_nested_prefetch_with_multiple_levels(db, gql_client: GraphQLTestClient)
             "issues": expected_issues,
         },
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_prefetch_with_get_queryset(
+    db,
+    gql_client: GraphQLTestClient,
+    mocker: MockerFixture,
+):
+    mock_get_queryset = mocker.spy(StaffType, "get_queryset")
+
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        issue(id: $id) {
+          id
+          staffAssignees {
+            id
+          }
+        }
+      }
+    """
+
+    issue = IssueFactory.create()
+    user = UserFactory.create()
+    staff = StaffUserFactory.create()
+    for u in [user, staff]:
+        Assignee.objects.create(user=u, issue=issue)
+
+    res = gql_client.query(
+        query,
+        {"id": to_base64("IssueType", issue.pk)},
+    )
+
+    assert isinstance(res.data, dict)
+    assert res.data == {
+        "issue": {
+            "id": to_base64("IssueType", issue.pk),
+            "staffAssignees": [{"id": to_base64("StaffType", staff.username)}],
+        },
+    }
+    mock_get_queryset.assert_called_once()
