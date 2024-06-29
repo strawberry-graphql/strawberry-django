@@ -65,6 +65,8 @@ pytest-watch = "^4.2.0"
 ruff = "^0.4.1"
 django-polymorphic = "^3.1.0"
 setuptools = "^70.0.0"
+psycopg2 = "^2.9.9"
+psycopg2-binary = "^2.9.9"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]

@@ -39,6 +39,12 @@ except ImportError:  # pragma: no cover
     IntegerChoicesField = None
     TextChoicesField = None
 
+try:
+    from django.contrib.postgres.fields import ArrayField
+except (ImportError, ModuleNotFoundError):  # pragma: no cover
+    # ArrayField will not be importable if psycopg2 is not installed
+    ArrayField = None
+
 if django.VERSION >= (5, 0):
     from django.db.models import GeneratedField  # type: ignore
 else:
@@ -406,6 +412,20 @@ relay_input_field_type_map: Dict[
 }
 
 
+def _resolve_array_field_type(model_field: Field):
+    assert ArrayField is not None
+    if isinstance(model_field, ArrayField):
+        return List[_resolve_array_field_type(model_field.base_field)]
+
+    base_field = field_type_map.get(type(model_field), NotImplemented)
+    if base_field is NotImplemented:
+        raise NotImplementedError(
+            f"GraphQL type for model field '{model_field}' has not been implemented",
+        )
+
+    return base_field
+
+
 def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoDefinition",
@@ -480,6 +500,8 @@ def resolve_model_field_type(
     elif GeneratedField is not None and isinstance(model_field, GeneratedField):
         model_field_type = type(model_field.output_field)  # type: ignore
         field_type = field_type_map.get(model_field_type, NotImplemented)
+    elif ArrayField is not None and isinstance(model_field, ArrayField):
+        field_type = _resolve_array_field_type(model_field)
     # Every other Field possibility
     else:
         force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]
