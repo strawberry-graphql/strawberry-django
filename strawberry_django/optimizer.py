@@ -1055,7 +1055,7 @@ class DjangoOptimizerExtension(SchemaExtension):
     def __init__(
         self,
         *,
-        enable_only_optimization: bool = True,
+        enable_only_optimization: bool = False,
         enable_select_related_optimization: bool = True,
         enable_prefetch_related_optimization: bool = True,
         enable_annotate_optimization: bool = True,

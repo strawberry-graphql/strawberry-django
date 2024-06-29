@@ -8,6 +8,7 @@ from strawberry.types import ExecutionResult
 import strawberry_django
 from strawberry_django.pagination import OffsetPaginationInput, apply
 from tests import models, utils
+from tests.projects.faker import MilestoneFactory, ProjectFactory
 
 
 @strawberry_django.type(models.Fruit, pagination=True)
@@ -50,6 +51,27 @@ def test_pagination_of_filtered_query(query, fruits):
     assert result.data["berries"] == [
         {"name": "raspberry"},
     ]
+
+
+def test_nested_pagination(fruits, gql_client: utils.GraphQLTestClient):
+    # Test nested pagination with optimizer enabled
+    # Test query color and nested fruits, paginating the nested fruits
+    # Enable optimizer
+    query = """
+          query testNestedPagination {
+            projectList {
+              milestones(pagination: { limit: 1 }) {
+                name
+              }
+            }
+          }
+          """
+    p = ProjectFactory.create()
+    MilestoneFactory.create_batch(2, project=p)
+    result = gql_client.query(query)
+    assert not result.errors
+    for project in result.data["projectList"]:
+        assert len(project["milestones"]) == 1
 
 
 def test_resolver_pagination(fruits):

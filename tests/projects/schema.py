@@ -96,10 +96,10 @@ class ProjectFilter:
     due_date: strawberry.auto
 
 
-@strawberry_django.type(Project, filters=ProjectFilter)
+@strawberry_django.type(Project, filters=ProjectFilter, pagination=True)
 class ProjectType(relay.Node, Named):
     due_date: strawberry.auto
-    milestones: List["MilestoneType"]
+    milestones: List["MilestoneType"] = strawberry_django.field(pagination=True)
     milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
     is_delayed: bool = strawberry_django.field(
         annotate=ExpressionWrapper(
@@ -147,7 +147,9 @@ class IssueOrder:
     name: strawberry.auto
 
 
-@strawberry_django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
+@strawberry_django.type(
+    Milestone, filters=MilestoneFilter, order=MilestoneOrder, pagination=True
+)
 class MilestoneType(relay.Node, Named):
     due_date: strawberry.auto
     project: ProjectType
