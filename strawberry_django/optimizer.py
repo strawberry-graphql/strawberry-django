@@ -10,7 +10,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    ForwardRef,
     Generator,
     Type,
     TypeVar,
@@ -46,10 +45,9 @@ from strawberry.object_type import StrawberryObjectDefinition
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
-from strawberry.type import get_object_definition
+from strawberry.type import StrawberryContainer, get_object_definition
 from strawberry.types.info import Info
-from strawberry.utils.typing import eval_type
-from typing_extensions import assert_never, assert_type, get_args
+from typing_extensions import assert_never, assert_type
 
 from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import apply_window_pagination
@@ -71,6 +69,7 @@ from .utils.typing import (
     TypeOrMapping,
     TypeOrSequence,
     get_django_definition,
+    has_django_definition,
 )
 
 if TYPE_CHECKING:
@@ -362,25 +361,28 @@ def _get_prefetch_queryset(
     info: GraphQLResolveInfo,
     related_field_id: str | None = None,
 ) -> QuerySet:
-    qs = remote_model._base_manager.all()  # type: ignore
+    # We usually want to use the `_base_manager` for prefetching, as it is what django
+    # itself states we should be using:
+    # https://docs.djangoproject.com/en/5.0/topics/db/managers/#base-managers
+    # But in case prefetch_custom_queryset is enabled, we use the custom queryset
+    # from _default_manager instead.
+    if config and config.prefetch_custom_queryset:
+        qs = remote_model._default_manager.all()
+    else:
+        qs = remote_model._base_manager.all()  # type: ignore
 
-    if config and config.prefetch_custom_queryset and field.type_annotation is not None:
-        remote_type_defs = get_args(field.type_annotation.annotation)
-        if len(remote_type_defs) != 1:
-            raise TypeError(f"Expected exactly one remote type: {remote_type_defs}")
+    f_type = field.type
+    if isinstance(f_type, LazyType):
+        f_type = f_type.resolve_type()
+    while isinstance(f_type, StrawberryContainer):
+        f_type = f_type.of_type
+    if isinstance(f_type, LazyType):
+        f_type = f_type.resolve_type()
 
-        if type(remote_type_defs[0]) is ForwardRef:
-            remote_type = eval_type(
-                remote_type_defs[0],
-                field.type_annotation.namespace,
-                None,
-            )
-        else:
-            remote_type = remote_type_defs[0]
-
+    if has_django_definition(f_type):
         qs = run_type_get_queryset(
             qs,
-            remote_type,
+            f_type,
             info=Info(
                 _raw_info=info,
                 _field=field,

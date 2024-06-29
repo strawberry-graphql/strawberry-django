@@ -224,6 +224,7 @@ class IssueType(relay.Node, Named):
     name_with_kind: str = strawberry_django.field(only=["kind", "name"])
     tags: List["TagType"]
     issue_assignees: List["AssigneeType"]
+    staff_assignees: List["StaffType"] = strawberry_django.field(field_name="assignees")
     favorite_set: ListConnectionWithTotalCount["FavoriteType"] = (
         strawberry_django.connection()
     )
