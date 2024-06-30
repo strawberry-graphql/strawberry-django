@@ -843,7 +843,7 @@ def _get_model_hints_from_connection(
             schema,
             get_object_definition(e_type, strict=True),
         )
-        assert isinstance(e_gql_definition, GraphQLObjectType | GraphQLInterfaceType)
+        assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
         e_info = _generate_selection_resolve_info(
             info,
             edges,
@@ -857,7 +857,8 @@ def _get_model_hints_from_connection(
 
             n_gql_definition = _get_gql_definition(schema, n_definition)
             assert isinstance(
-                n_gql_definition, GraphQLObjectType | GraphQLInterfaceType
+                n_gql_definition,
+                (GraphQLObjectType, GraphQLInterfaceType),
             )
             n_info = _generate_selection_resolve_info(
                 info,
