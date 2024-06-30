@@ -719,7 +719,10 @@ def _get_model_hints(
                     )
 
                     if f_store is not None:
-                        related_field_id = None
+                        related_field_id = getattr(
+                            remote_field, "attname", None
+                        ) or getattr(remote_field, "name", None)
+
                         if (
                             (config is None or config.enable_only)
                             and f_store.only
@@ -734,10 +737,7 @@ def _get_model_hints(
                             ):
                                 f_store.only.append(model_field.object_id_field_name)
                                 f_store.only.append(model_field.content_type_field_name)
-                            else:
-                                related_field_id = (
-                                    remote_field.attname or remote_field.name
-                                )
+                            elif related_field_id is not None:
                                 f_store.only.append(related_field_id)
 
                         path_lookup = f"{path}{LOOKUP_SEP}"
