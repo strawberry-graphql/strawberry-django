@@ -1,4 +1,3 @@
-
 import strawberry
 from strawberry.relay import ListConnection
 
