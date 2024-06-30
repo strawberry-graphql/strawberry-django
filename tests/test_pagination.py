@@ -53,25 +53,31 @@ def test_pagination_of_filtered_query(query, fruits):
     ]
 
 
+@pytest.mark.django_db(transaction=True)
 def test_nested_pagination(fruits, gql_client: utils.GraphQLTestClient):
     # Test nested pagination with optimizer enabled
     # Test query color and nested fruits, paginating the nested fruits
     # Enable optimizer
     query = """
-          query testNestedPagination {
-            projectList {
-              milestones(pagination: { limit: 1 }) {
-                name
-              }
-            }
+      query testNestedPagination {
+        projectList {
+          milestones(pagination: { limit: 1 }) {
+            name
           }
-          """
+        }
+      }
+    """
     p = ProjectFactory.create()
     MilestoneFactory.create_batch(2, project=p)
+
     result = gql_client.query(query)
+
     assert not result.errors
-    for project in result.data["projectList"]:
-        assert len(project["milestones"]) == 1
+    assert isinstance(result.data, dict)
+    project_list = result.data["projectList"]
+    assert isinstance(project_list, list)
+    assert len(project_list) == 1
+    assert len(project_list[0]["milestones"]) == 1
 
 
 def test_resolver_pagination(fruits):

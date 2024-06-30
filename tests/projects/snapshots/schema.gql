@@ -546,7 +546,7 @@ type ProjectType implements Node & Named {
   id: GlobalID!
   name: String!
   dueDate: Date
-  milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   milestonesCount: Int!
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
