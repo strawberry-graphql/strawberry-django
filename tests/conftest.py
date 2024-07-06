@@ -50,13 +50,13 @@ def gql_client(request):
         yield c
 
 
-@pytest.fixture()
+@pytest.fixture
 def fruits(db):
     fruit_names = ["strawberry", "raspberry", "banana"]
     return [models.Fruit.objects.create(name=name) for name in fruit_names]
 
 
-@pytest.fixture()
+@pytest.fixture
 def vegetables(db):
     vegetable_names = ["carrot", "cucumber", "onion"]
     vegetable_world_production = [40.0e6, 75.2e6, 102.2e6]  # in tons
@@ -66,24 +66,24 @@ def vegetables(db):
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def tag(db):
     return models.Tag.objects.create(name="tag")
 
 
-@pytest.fixture()
+@pytest.fixture
 def group(db, tag):
     group = models.Group.objects.create(name="group")
     group.tags.add(tag)
     return group
 
 
-@pytest.fixture()
+@pytest.fixture
 def user(db, group, tag):
     return models.User.objects.create(name="user", group=group, tag=tag)
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(db):
     return [
         models.User.objects.create(name="user1"),
@@ -92,7 +92,7 @@ def users(db):
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def groups(db):
     return [
         models.Group.objects.create(name="group1"),
@@ -103,7 +103,7 @@ def groups(db):
 
 if settings.GEOS_IMPORTED:
 
-    @pytest.fixture()
+    @pytest.fixture
     def geofields(db):
         from django.contrib.gis.geos import (
             LineString,

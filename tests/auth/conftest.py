@@ -4,7 +4,7 @@ from django.contrib import auth as django_auth
 UserModel = django_auth.get_user_model()
 
 
-@pytest.fixture()
+@pytest.fixture
 def context(mocker):
     class Session(dict):
         def cycle_key(self):
@@ -19,7 +19,7 @@ def context(mocker):
     return context
 
 
-@pytest.fixture()
+@pytest.fixture
 def user(db, group, tag):
     return UserModel.objects.create_user(  # type: ignore
         username="user",

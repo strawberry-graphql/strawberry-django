@@ -84,7 +84,7 @@ class PermContext:
 
 perm_context: contextvars.ContextVar[PermContext] = contextvars.ContextVar(
     "perm-safe",
-    default=PermContext(),
+    default=PermContext(),  # noqa: B039
 )
 
 

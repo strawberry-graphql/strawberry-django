@@ -9,12 +9,12 @@ import pytest
 from tests import models
 
 
-@pytest.fixture()
+@pytest.fixture
 def color(db):
     return models.Color.objects.create(name="red")
 
 
-@pytest.fixture()
+@pytest.fixture
 def fruit_type(db):
     return models.FruitType.objects.create(name="Berries")
 

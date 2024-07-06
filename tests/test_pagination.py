@@ -32,7 +32,7 @@ class Query:
     berries: List[BerryFruit] = strawberry_django.field()
 
 
-@pytest.fixture()
+@pytest.fixture
 def query():
     return utils.generate_query(Query)
 

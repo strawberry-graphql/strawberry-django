@@ -105,7 +105,7 @@ class Query:
     fruits: List[Fruit] = strawberry_django.field(filters=FruitFilter)
 
 
-@pytest.fixture()
+@pytest.fixture
 def query():
     return utils.generate_query(Query)
 
@@ -437,7 +437,7 @@ def test_empty_resolver_filter():
     assert result.data["fruits"] == []
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_async_resolver_filter(fruits):
     @strawberry.type

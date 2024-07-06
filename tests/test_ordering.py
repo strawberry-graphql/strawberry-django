@@ -67,7 +67,7 @@ class Query:
     fruits: List[Fruit] = strawberry_django.field(order=FruitOrder)
 
 
-@pytest.fixture()
+@pytest.fixture
 def query():
     return utils.generate_query(Query)
 

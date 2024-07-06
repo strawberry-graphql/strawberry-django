@@ -109,7 +109,7 @@ def _autouse_old_filters(settings):
     settings.STRAWBERRY_DJANGO = {"USE_DEPRECATED_FILTERS": True}
 
 
-@pytest.fixture()
+@pytest.fixture
 def query():
     return utils.generate_query(Query)
 
@@ -272,7 +272,7 @@ def test_empty_resolver_filter():
     assert result.data["fruits"] == []
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_async_resolver_filter(fruits):
     @strawberry.type

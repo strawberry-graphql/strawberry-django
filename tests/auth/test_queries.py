@@ -16,7 +16,7 @@ class Query:
     current_user: Optional[User] = auth.current_user()  # type: ignore
 
 
-@pytest.fixture()
+@pytest.fixture
 def query(db):
     return utils.generate_query(Query)
 

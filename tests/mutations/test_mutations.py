@@ -110,7 +110,7 @@ def test_with_required_file_fails(mutation):
     assert "'This field cannot be blank" in str(result.errors)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_create_async(mutation):
     result = await mutation(

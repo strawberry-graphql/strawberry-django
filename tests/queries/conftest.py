@@ -1,7 +1,7 @@
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def query(schema):
     def query(query):
         return schema.execute_sync(query)
