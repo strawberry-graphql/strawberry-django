@@ -288,17 +288,18 @@ class OptimizerStore:
         if not config.enable_prefetch_related or not self.prefetch_related:
             return qs
 
-        # Add all str at the same time to make it easier to handle Prefetch below
-        to_prefetch: dict[str, str | Prefetch] = {
-            p: p for p in self.prefetch_related if isinstance(p, str)
-        }
-
         abort_only = set()
-        # Merge already existing prefetches together
-        for p in itertools.chain(
+        prefetch_lists = [
             qs._prefetch_related_lookups,  # type: ignore
             self.prefetch_related,
-        ):
+        ]
+        # Add all str at the same time to make it easier to handle Prefetch below
+        to_prefetch: dict[str, str | Prefetch] = {
+            p: p for p in itertools.chain(*prefetch_lists) if isinstance(p, str)
+        }
+
+        # Merge already existing prefetches together
+        for p in itertools.chain(*prefetch_lists):
             # Already added above
             if isinstance(p, str):
                 continue
@@ -307,7 +308,7 @@ class OptimizerStore:
                 assert_type(p, PrefetchCallable)
                 p = p(info)  # noqa: PLW2901
 
-            path = cast(str, p.prefetch_to)  # type: ignore
+            path = p.prefetch_to
             existing = to_prefetch.get(path)
             # The simplest case. The prefetch doesn't exist or is a string.
             # In this case, just replace it.
