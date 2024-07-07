@@ -45,6 +45,9 @@ jobs:
         django-version:
           - 4.2.*
           - 5.0.*
+        graphql-core-version:
+          - 3.3.0a5
+          - 3.2.3
         python-version:
           - '3.8'
           - '3.9'
@@ -80,6 +83,8 @@ jobs:
         run: poetry install
       - name: Install Django ${{ matrix.django-version }}
         run: poetry run pip install "django==${{ matrix.django-version }}"
+      - name: Install graphql-core ${{ matrix.graphql-core-version }}
+        run: poetry run pip install "graphql-core==${{ matrix.graphql-core-version }}"
       - name: Test with pytest
         run: poetry run pytest --showlocals -vvv --cov-report=xml
       - name: Upload coverage to Codecov
