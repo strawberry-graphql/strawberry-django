@@ -58,7 +58,7 @@ from strawberry_django.resolvers import django_fetch
 from .descriptors import ModelProperty
 from .utils.inspect import (
     PrefetchInspector,
-    get_model_fields,
+    get_model_field,
     get_possible_type_definitions,
 )
 from .utils.typing import (
@@ -73,9 +73,10 @@ from .utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from strawberry.field import StrawberryField
+    from strawberry.field import StrawberryField  # noqa: I001
     from strawberry.types.execution import ExecutionContext
     from strawberry.utils.await_maybe import AwaitableOrValue
+    from django.contrib.contenttypes.fields import GenericRelation
 
 
 __all__ = [
@@ -335,7 +336,7 @@ class OptimizerStore:
                 True,
             )
 
-        # First prefetch_related(None) to clear all existing prefetches, and them
+        # First prefetch_related(None) to clear all existing prefetches, and then
         # add ours, which also contains them. This is to avoid the
         # "lookup was already seen with a different queryset" error
         return qs.prefetch_related(None).prefetch_related(*to_prefetch.values())
@@ -606,16 +607,240 @@ def _generate_selection_resolve_info(
     )
 
 
-def _get_model_hints(
-    model: type[models.Model],
-    schema: Schema,
+def _get_field_data(
+    selections: list[FieldNode],
     object_definition: StrawberryObjectDefinition,
+    schema: Schema,
     *,
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
     info: GraphQLResolveInfo,
-    config: OptimizerConfig | None = None,
+) -> tuple[StrawberryField, GraphQLObjectType, FieldNode, GraphQLResolveInfo] | None:
+    selection = selections[0]
+    field_name = selection.name.value
+    for field in object_definition.fields:
+        if schema.config.name_converter.get_graphql_name(field) == field_name:
+            break
+    else:
+        return None
+
+    # Do not optimize the field if the user asked not to
+    if getattr(field, "disable_optimization", False):
+        return None
+
+    definition = parent_type.fields[selection.name.value].type
+    while isinstance(definition, GraphQLWrappingType):
+        definition = definition.of_type
+
+    field_info = _generate_selection_resolve_info(
+        info,
+        selections,
+        definition,
+        parent_type,
+    )
+
+    return field, definition, selection, field_info
+
+
+def _get_hints_from_field(
+    field: StrawberryField,
+    *,
+    f_info: GraphQLResolveInfo,
     prefix: str = "",
-    cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]] | None = None,
+) -> OptimizerStore | None:
+    if not (field_store := getattr(field, "store", None)):
+        return None
+
+    if len(field_store.annotate) == 1 and _annotate_placeholder in field_store.annotate:
+        # This is a special case where we need to update the field name,
+        # because when field_store was created on __init__,
+        # the field name wasn't available.
+        # This allows for annotate expressions to be declared as:
+        #   total: int = gql.django.field(annotate=Sum("price"))  # noqa: ERA001
+        # Instead of the more redundant:
+        #   total: int = gql.django.field(annotate={"total": Sum("price")})  # noqa: ERA001
+        field_store.annotate = {
+            field.name: field_store.annotate[_annotate_placeholder],
+        }
+
+    return field_store.with_prefix(prefix, info=f_info) if prefix else field_store
+
+
+def _get_hints_from_model_property(
+    field: StrawberryField,
+    model: type[models.Model],
+    *,
+    f_info: GraphQLResolveInfo,
+    prefix: str = "",
+) -> OptimizerStore | None:
+    model_attr = getattr(model, field.python_name, None)
+    if (
+        model_attr is not None
+        and isinstance(model_attr, ModelProperty)
+        and model_attr.store
+    ):
+        attr_store = model_attr.store
+        store = attr_store.with_prefix(prefix, info=f_info) if prefix else attr_store
+    else:
+        store = None
+
+    return store
+
+
+def _get_hints_from_django_foreign_key(
+    field: StrawberryField,
+    field_definition: GraphQLObjectType,
+    model_field: models.ForeignKey | OneToOneRel,
+    model_fieldname: str,
+    schema: Schema,
+    *,
+    config: OptimizerConfig,
+    field_info: GraphQLResolveInfo,
+    path: str,
+    cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
+    level: int = 0,
+) -> OptimizerStore:
+    store = OptimizerStore.with_hints(
+        only=[path],
+        select_related=[path],
+    )
+
+    # If adding a reverse relation, make sure to select its pointer to us,
+    # or else this might causa a refetch from the database
+    if isinstance(model_field, OneToOneRel):
+        remote_field = model_field.remote_field
+        store.only.append(
+            f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}",
+        )
+
+    for f_type_def in get_possible_type_definitions(field.type):
+        f_model = model_field.related_model
+        f_store = _get_model_hints(
+            f_model,
+            schema,
+            f_type_def,
+            parent_type=field_definition,
+            info=field_info,
+            config=config,
+            cache=cache,
+            level=level + 1,
+        )
+        if f_store is not None:
+            cache.setdefault(f_model, []).append((level, f_store))
+            store |= f_store.with_prefix(path, info=field_info)
+
+    return store
+
+
+def _get_hints_from_django_relation(
+    field: StrawberryField,
+    field_definition: GraphQLObjectType,
+    field_selection: FieldNode,
+    model_field: (
+        models.ManyToManyField | ManyToManyRel | ManyToOneRel | GenericRelation
+    ),
+    model_fieldname: str,
+    schema: Schema,
+    *,
+    config: OptimizerConfig,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    field_info: GraphQLResolveInfo,
+    path: str,
+    cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
+    level: int = 0,
+) -> OptimizerStore:
+    try:
+        from django.contrib.contenttypes.fields import GenericRelation
+    except (ImportError, RuntimeError):  # pragma: no cover
+        GenericRelation = None  # noqa: N806
+
+    store = OptimizerStore()
+
+    f_types = list(get_possible_type_definitions(field.type))
+    if len(f_types) > 1:
+        # This might be a generic foreign key.
+        # In this case, just prefetch it
+        store.prefetch_related.append(model_fieldname)
+        return store
+
+    remote_field = model_field.remote_field
+    remote_model = remote_field.model
+    field_store = _get_model_hints(
+        remote_model,
+        schema,
+        f_types[0],
+        parent_type=field_definition,
+        info=field_info,
+        config=config,
+        cache=cache,
+        level=level + 1,
+    )
+    if field_store is None:
+        return store
+
+    related_field_id = getattr(remote_field, "attname", None) or getattr(
+        remote_field, "name", None
+    )
+
+    if (
+        config.enable_only
+        and field_store.only
+        and not isinstance(remote_field, ManyToManyRel)
+    ):
+        # If adding a reverse relation, make sure to select its
+        # pointer to us, or else this might causa a refetch from
+        # the database
+        if GenericRelation is not None and isinstance(
+            model_field,
+            GenericRelation,
+        ):
+            field_store.only.append(model_field.object_id_field_name)
+            field_store.only.append(model_field.content_type_field_name)
+        elif related_field_id is not None:
+            field_store.only.append(related_field_id)
+
+    path_lookup = f"{path}{LOOKUP_SEP}"
+    if store.only and field_store.only:
+        extra_only = [o for o in store.only or [] if o.startswith(path_lookup)]
+        store.only = [o for o in store.only if o not in extra_only]
+        field_store.only.extend(o[len(path_lookup) :] for o in extra_only)
+
+    if store.select_related and field_store.select_related:
+        extra_sr = [o for o in store.select_related or [] if o.startswith(path_lookup)]
+        store.select_related = [o for o in store.select_related if o not in extra_sr]
+        field_store.select_related.extend(o[len(path_lookup) :] for o in extra_sr)
+
+    cache.setdefault(remote_model, []).append((level, field_store))
+
+    base_qs = _get_prefetch_queryset(
+        remote_model,
+        schema,
+        field,
+        parent_type,
+        field_selection,
+        config=config,
+        info=field_info,
+        related_field_id=related_field_id,
+    )
+    field_qs = field_store.apply(base_qs, info=field_info, config=config)
+    field_prefetch = Prefetch(path, queryset=field_qs)
+    field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
+    store.prefetch_related.append(field_prefetch)
+
+    return store
+
+
+def _get_hints_from_django_field(
+    field: StrawberryField,
+    field_definition: GraphQLObjectType,
+    field_selection: FieldNode,
+    model: type[models.Model],
+    schema: Schema,
+    *,
+    config: OptimizerConfig,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    field_info: GraphQLResolveInfo,
+    prefix: str = "",
+    cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
     level: int = 0,
 ) -> OptimizerStore | None:
     try:
@@ -635,6 +860,63 @@ def _get_model_hints(
             GenericRelation,
         )
 
+    model_fieldname: str = getattr(field, "django_name", None) or field.python_name
+    if (model_field := get_model_field(model, model_fieldname)) is None:
+        return None
+
+    path = f"{prefix}{model_fieldname}"
+
+    if isinstance(model_field, (models.ForeignKey, OneToOneRel)):
+        store = _get_hints_from_django_foreign_key(
+            field,
+            field_definition=field_definition,
+            model_field=model_field,
+            model_fieldname=model_fieldname,
+            schema=schema,
+            config=config,
+            field_info=field_info,
+            path=path,
+            cache=cache,
+            level=level,
+        )
+    elif GenericForeignKey and isinstance(model_field, GenericForeignKey):
+        # There's not much we can do to optimize generic foreign keys regarding
+        # only/select_related because they can be anything.
+        # Just prefetch_related them
+        store = OptimizerStore.with_hints(prefetch_related=[model_fieldname])
+    elif isinstance(model_field, _relation_fields):
+        store = _get_hints_from_django_relation(
+            field,
+            field_definition=field_definition,
+            field_selection=field_selection,
+            model_field=model_field,
+            model_fieldname=model_fieldname,
+            schema=schema,
+            config=config,
+            parent_type=parent_type,
+            field_info=field_info,
+            path=path,
+            cache=cache,
+            level=level,
+        )
+    else:
+        store = OptimizerStore.with_hints(only=[path])
+
+    return store
+
+
+def _get_model_hints(
+    model: type[models.Model],
+    schema: Schema,
+    object_definition: StrawberryObjectDefinition,
+    *,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    info: GraphQLResolveInfo,
+    config: OptimizerConfig | None = None,
+    prefix: str = "",
+    cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]] | None = None,
+    level: int = 0,
+) -> OptimizerStore | None:
     cache = cache or {}
 
     # In case this is a relay field, find the selected edges/nodes, the selected fields
@@ -653,11 +935,7 @@ def _get_model_hints(
         )
 
     store = OptimizerStore()
-    fields = {
-        schema.config.name_converter.get_graphql_name(f): f
-        for f in object_definition.fields
-    }
-    model_fields = get_model_fields(model)
+    config = config or OptimizerConfig()
 
     dj_definition = get_django_definition(object_definition.origin)
     if (
@@ -677,180 +955,46 @@ def _get_model_hints(
         store.only.append(pk.attname)
 
     for f_selections in _get_selections(info, parent_type).values():
-        f_selection = f_selections[0]
-        field = fields.get(f_selection.name.value, None)
-        if not field:
-            continue
-
-        # Do not optimize the field if the user asked not to
-        if getattr(field, "disable_optimization", False):
-            continue
-
-        field_definition = parent_type.fields[f_selection.name.value].type
-        while isinstance(field_definition, GraphQLWrappingType):
-            field_definition = field_definition.of_type
-
-        f_info = _generate_selection_resolve_info(
-            info,
+        field_data = _get_field_data(
             f_selections,
-            field_definition,
-            parent_type,
+            object_definition,
+            schema,
+            parent_type=parent_type,
+            info=info,
         )
+        if field_data is None:
+            continue
+
+        field, f_definition, f_selection, f_info = field_data
 
         # Add annotations from the field if they exist
-        field_store = getattr(field, "store", None)
-        if field_store:
-            if (
-                len(field_store.annotate) == 1
-                and _annotate_placeholder in field_store.annotate
-            ):
-                # This is a special case where we need to update the field name,
-                # because when field_store was created on __init__,
-                # the field name wasn't available.
-                # This allows for annotate expressions to be declared as:
-                #   total: int = gql.django.field(annotate=Sum("price"))  # noqa: ERA001
-                # Instead of the more redundant:
-                #   total: int = gql.django.field(annotate={"total": Sum("price")})  # noqa: ERA001
-                field_store.annotate = {
-                    field.name: field_store.annotate[_annotate_placeholder],
-                }
-            store |= (
-                field_store.with_prefix(prefix, info=f_info) if prefix else field_store
-            )
+        if field_store := _get_hints_from_field(field, f_info=f_info, prefix=prefix):
+            store |= field_store
 
         # Then from the model property if one is defined
-        model_attr = getattr(model, field.python_name, None)
-        if (
-            model_attr is not None
-            and isinstance(model_attr, ModelProperty)
-            and model_attr.store
+        if model_property_store := _get_hints_from_model_property(
+            field,
+            model,
+            f_info=f_info,
+            prefix=prefix,
         ):
-            attr_store = model_attr.store
-            store |= (
-                attr_store.with_prefix(prefix, info=f_info) if prefix else attr_store
-            )
+            store |= model_property_store
 
         # Lastly, from the django field itself
-        model_fieldname: str = getattr(field, "django_name", None) or field.python_name
-        model_field = model_fields.get(model_fieldname, None)
-        if model_field is not None:
-            path = f"{prefix}{model_fieldname}"
-
-            if isinstance(model_field, (models.ForeignKey, OneToOneRel)):
-                store.only.append(path)
-                store.select_related.append(path)
-
-                # If adding a reverse relation, make sure to select its pointer to us,
-                # or else this might causa a refetch from the database
-                if isinstance(model_field, OneToOneRel):
-                    remote_field = model_field.remote_field
-                    store.only.append(
-                        f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}",
-                    )
-
-                for f_type_def in get_possible_type_definitions(field.type):
-                    f_model = model_field.related_model
-                    f_store = _get_model_hints(
-                        f_model,
-                        schema,
-                        f_type_def,
-                        parent_type=cast(GraphQLObjectType, field_definition),
-                        info=f_info,
-                        config=config,
-                        cache=cache,
-                        level=level + 1,
-                    )
-                    if f_store is not None:
-                        cache.setdefault(f_model, []).append((level, f_store))
-                        store |= f_store.with_prefix(path, info=f_info)
-            elif GenericForeignKey and isinstance(model_field, GenericForeignKey):
-                # There's not much we can do to optimize generic foreign keys regarding
-                # only/select_related because they can be anything.
-                # Just prefetch_related them
-                store.prefetch_related.append(model_fieldname)
-            elif isinstance(model_field, _relation_fields):
-                f_types = list(get_possible_type_definitions(field.type))
-                if len(f_types) > 1:
-                    # This might be a generic foreign key.
-                    # In this case, just prefetch it
-                    store.prefetch_related.append(model_fieldname)
-                elif len(f_types) == 1:
-                    remote_field = model_field.remote_field
-                    remote_model = remote_field.model
-                    f_store = _get_model_hints(
-                        remote_model,
-                        schema,
-                        f_types[0],
-                        parent_type=cast(GraphQLObjectType, field_definition),
-                        info=f_info,
-                        config=config,
-                        cache=cache,
-                        level=level + 1,
-                    )
-
-                    if f_store is not None:
-                        related_field_id = getattr(
-                            remote_field, "attname", None
-                        ) or getattr(remote_field, "name", None)
-
-                        if (
-                            (config is None or config.enable_only)
-                            and f_store.only
-                            and not isinstance(remote_field, ManyToManyRel)
-                        ):
-                            # If adding a reverse relation, make sure to select its
-                            # pointer to us, or else this might causa a refetch from
-                            # the database
-                            if GenericRelation is not None and isinstance(
-                                model_field,
-                                GenericRelation,
-                            ):
-                                f_store.only.append(model_field.object_id_field_name)
-                                f_store.only.append(model_field.content_type_field_name)
-                            elif related_field_id is not None:
-                                f_store.only.append(related_field_id)
-
-                        path_lookup = f"{path}{LOOKUP_SEP}"
-                        if store.only and f_store.only:
-                            extra_only = [
-                                o for o in store.only or [] if o.startswith(path_lookup)
-                            ]
-                            store.only = [o for o in store.only if o not in extra_only]
-                            f_store.only.extend(
-                                o[len(path_lookup) :] for o in extra_only
-                            )
-
-                        if store.select_related and f_store.select_related:
-                            extra_sr = [
-                                o
-                                for o in store.select_related or []
-                                if o.startswith(path_lookup)
-                            ]
-                            store.select_related = [
-                                o for o in store.select_related if o not in extra_sr
-                            ]
-                            f_store.select_related.extend(
-                                o[len(path_lookup) :] for o in extra_sr
-                            )
-
-                        cache.setdefault(remote_model, []).append((level, f_store))
-
-                        base_qs = _get_prefetch_queryset(
-                            remote_model,
-                            schema,
-                            field,
-                            parent_type,
-                            f_selection,
-                            config=config,
-                            info=f_info,
-                            related_field_id=related_field_id,
-                        )
-                        f_qs = f_store.apply(base_qs, info=f_info, config=config)
-                        f_prefetch = Prefetch(path, queryset=f_qs)
-                        f_prefetch._optimizer_sentinel = _sentinel  # type: ignore
-                        store.prefetch_related.append(f_prefetch)
-            else:
-                store.only.append(path)
+        if model_field_store := _get_hints_from_django_field(
+            field,
+            f_definition,
+            f_selection,
+            model,
+            schema,
+            config=config,
+            parent_type=parent_type,
+            field_info=f_info,
+            prefix=prefix,
+            cache=cache,
+            level=level,
+        ):
+            store |= model_field_store
 
     # Django keeps track of known fields. That means that if one model select_related or
     # prefetch_related another one, and later another one select_related or
