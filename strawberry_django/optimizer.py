@@ -168,6 +168,7 @@ class OptimizerStore:
         return new
 
     def copy(self):
+        """Create a shallow copy of the store."""
         return self.__class__(
             only=self.only[:],
             select_related=self.select_related[:],
@@ -184,6 +185,7 @@ class OptimizerStore:
         prefetch_related: TypeOrSequence[PrefetchType] | None = None,
         annotate: TypeOrMapping[AnnotateType] | None = None,
     ):
+        """Create a new store with the given hints."""
         return cls(
             only=[only] if isinstance(only, str) else list(only or []),
             select_related=(
@@ -206,6 +208,11 @@ class OptimizerStore:
         )
 
     def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
+        """Create a copy of this store with the given prefix.
+
+        This is useful when we need to apply the same store to a nested field.
+        `prefix` will be prepended to all fields in the store.
+        """
         prefetch_related = []
         for p in self.prefetch_related:
             if isinstance(p, Callable):
@@ -243,82 +250,121 @@ class OptimizerStore:
         info: GraphQLResolveInfo,
         config: OptimizerConfig | None = None,
     ) -> QuerySet[_M]:
+        """Apply this store optimizations to the given queryset."""
         config = config or OptimizerConfig()
 
-        if config.enable_prefetch_related and self.prefetch_related:
-            # Add all str at the same time to make it easier to handle Prefetch below
-            to_prefetch: dict[str, str | Prefetch] = {
-                p: p for p in self.prefetch_related if isinstance(p, str)
-            }
+        qs = self._apply_prefetch_related(
+            qs,
+            info=info,
+            config=config,
+        )
+        qs, extra_only_set = self._apply_select_related(
+            qs,
+            info=info,
+            config=config,
+        )
+        qs = self._apply_only(
+            qs,
+            info=info,
+            config=config,
+            extra_only_set=extra_only_set,
+        )
+        qs = self._apply_annotate(
+            qs,
+            info=info,
+            config=config,
+        )
 
-            abort_only = set()
-            # Merge already existing prefetches together
-            for p in itertools.chain(
-                qs._prefetch_related_lookups,  # type: ignore
-                self.prefetch_related,
-            ):
-                # Already added above
-                if isinstance(p, str):
-                    continue
+        return qs  # noqa: RET504
 
-                if isinstance(p, Callable):
-                    assert_type(p, PrefetchCallable)
-                    p = p(info)  # noqa: PLW2901
+    def _apply_prefetch_related(
+        self,
+        qs: QuerySet[_M],
+        *,
+        info: GraphQLResolveInfo,
+        config: OptimizerConfig,
+    ) -> QuerySet[_M]:
+        if not config.enable_prefetch_related or not self.prefetch_related:
+            return qs
 
-                path = cast(str, p.prefetch_to)  # type: ignore
-                existing = to_prefetch.get(path)
-                # The simplest case. The prefetch doesn't exist or is a string.
-                # In this case, just replace it.
-                if not existing or isinstance(existing, str):
-                    to_prefetch[path] = p
-                    if isinstance(existing, str):
-                        abort_only.add(path)
-                    continue
+        # Add all str at the same time to make it easier to handle Prefetch below
+        to_prefetch: dict[str, str | Prefetch] = {
+            p: p for p in self.prefetch_related if isinstance(p, str)
+        }
 
-                p1 = PrefetchInspector(existing)
-                p2 = PrefetchInspector(p)
-                if getattr(existing, "_optimizer_sentinel", None) is _sentinel:
-                    ret = p1.merge(p2, allow_unsafe_ops=True)
-                elif getattr(p, "_optimizer_sentinel", None) is _sentinel:
-                    ret = p2.merge(p1, allow_unsafe_ops=True)
-                else:
-                    # The order here doesn't matter
-                    ret = p1.merge(p2)
+        abort_only = set()
+        # Merge already existing prefetches together
+        for p in itertools.chain(
+            qs._prefetch_related_lookups,  # type: ignore
+            self.prefetch_related,
+        ):
+            # Already added above
+            if isinstance(p, str):
+                continue
 
-                to_prefetch[path] = ret.prefetch
+            if isinstance(p, Callable):
+                assert_type(p, PrefetchCallable)
+                p = p(info)  # noqa: PLW2901
 
-            # Abort only optimization if one prefetch related was made for everything
-            for ao in abort_only:
-                to_prefetch[ao].queryset.query.deferred_loading = (  # type: ignore
-                    [],
-                    True,
-                )
+            path = cast(str, p.prefetch_to)  # type: ignore
+            existing = to_prefetch.get(path)
+            # The simplest case. The prefetch doesn't exist or is a string.
+            # In this case, just replace it.
+            if not existing or isinstance(existing, str):
+                to_prefetch[path] = p
+                if isinstance(existing, str):
+                    abort_only.add(path)
+                continue
 
-            # First prefetch_related(None) to clear all existing prefetches, and them
-            # add ours, which also contains them. This is to avoid the
-            # "lookup was already seen with a different queryset" error
-            qs = qs.prefetch_related(None).prefetch_related(*to_prefetch.values())
+            p1 = PrefetchInspector(existing)
+            p2 = PrefetchInspector(p)
+            if getattr(existing, "_optimizer_sentinel", None) is _sentinel:
+                ret = p1.merge(p2, allow_unsafe_ops=True)
+            elif getattr(p, "_optimizer_sentinel", None) is _sentinel:
+                ret = p2.merge(p1, allow_unsafe_ops=True)
+            else:
+                # The order here doesn't matter
+                ret = p1.merge(p2)
 
+            to_prefetch[path] = ret.prefetch
+
+        # Abort only optimization if one prefetch related was made for everything
+        for ao in abort_only:
+            to_prefetch[ao].queryset.query.deferred_loading = (  # type: ignore
+                [],
+                True,
+            )
+
+        # First prefetch_related(None) to clear all existing prefetches, and them
+        # add ours, which also contains them. This is to avoid the
+        # "lookup was already seen with a different queryset" error
+        return qs.prefetch_related(None).prefetch_related(*to_prefetch.values())
+
+    def _apply_select_related(
+        self,
+        qs: QuerySet[_M],
+        *,
+        info: GraphQLResolveInfo,
+        config: OptimizerConfig,
+    ) -> tuple[QuerySet[_M], set[str]]:
         only_set = set(self.only)
-        select_related_only_set = set()
+        extra_only_set = set()
         select_related_set = set(self.select_related)
 
         # inspect the queryset to find any existing select_related fields
         def get_related_fields_with_prefix(
-            queryset_select_related: dict[str, Any], prefix=""
+            queryset_select_related: dict[str, Any],
+            prefix: str = "",
         ):
-            fields = []
             for parent, nested in queryset_select_related.items():
                 current_path = f"{prefix}{parent}"
-                fields.append(current_path)
+                yield current_path
+
                 if nested:  # If there are nested relations, dive deeper
-                    fields.extend(
-                        get_related_fields_with_prefix(
-                            nested,
-                            prefix=f"{current_path}{LOOKUP_SEP}",
-                        )
+                    yield from get_related_fields_with_prefix(
+                        nested,
+                        prefix=f"{current_path}{LOOKUP_SEP}",
                     )
-            return fields
 
         if isinstance(qs.query.select_related, dict):
             select_related_set.update(
@@ -328,26 +374,50 @@ class OptimizerStore:
         if config.enable_select_related and select_related_set:
             qs = qs.select_related(*select_related_set)
 
+            # Update our extra_select_related_only_set with the fields that were
+            # selected by select_related to make sure they actually get selected
             for select_related in select_related_set:
                 if select_related in only_set:
                     continue
 
                 if not any(only.startswith(select_related) for only in only_set):
-                    select_related_only_set.add(select_related)
+                    extra_only_set.add(select_related)
 
-        if config.enable_only and (only_set or select_related_only_set):
-            qs = qs.only(*(only_set | select_related_only_set))
+        return qs, extra_only_set
 
-        if config.enable_annotate and self.annotate:
-            to_annotate = {}
-            for k, v in self.annotate.items():
-                if isinstance(v, Callable):
-                    assert_type(v, AnnotateCallable)
-                    v = v(info)  # noqa: PLW2901
-                to_annotate[k] = v
-            qs = qs.annotate(**to_annotate)
+    def _apply_only(
+        self,
+        qs: QuerySet[_M],
+        *,
+        info: GraphQLResolveInfo,
+        config: OptimizerConfig,
+        extra_only_set: set[str],
+    ) -> QuerySet[_M]:
+        only_set = set(self.only) | extra_only_set
+
+        if config.enable_only and only_set:
+            qs = qs.only(*only_set)
 
         return qs
+
+    def _apply_annotate(
+        self,
+        qs: QuerySet[_M],
+        *,
+        info: GraphQLResolveInfo,
+        config: OptimizerConfig,
+    ) -> QuerySet[_M]:
+        if not config.enable_annotate or not self.annotate:
+            return qs
+
+        to_annotate = {}
+        for k, v in self.annotate.items():
+            if isinstance(v, Callable):
+                assert_type(v, AnnotateCallable)
+                v = v(info)  # noqa: PLW2901
+            to_annotate[k] = v
+
+        return qs.annotate(**to_annotate)
 
 
 def _get_prefetch_queryset(
