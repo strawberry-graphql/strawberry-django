@@ -158,6 +158,12 @@ class MilestoneType(relay.Node, Named):
         order=IssueOrder,
         pagination=True,
     )
+    issues_with_filters: ListConnectionWithTotalCount["IssueType"] = (
+        strawberry_django.connection(
+            field_name="issues",
+            filters=IssueFilter,
+        )
+    )
 
     @strawberry_django.field(
         prefetch_related=[
@@ -177,14 +183,6 @@ class MilestoneType(relay.Node, Named):
     )
     def my_issues(self) -> List["IssueType"]:
         return self._my_issues  # type: ignore
-
-    @strawberry_django.connection(
-        ListConnectionWithTotalCount["IssueType"],
-        field_name="issues",
-        filters=IssueFilter,
-    )
-    def issues_with_filters(self) -> List["IssueType"]:
-        return self.issues.all()  # type: ignore
 
     @strawberry_django.field(
         annotate={
