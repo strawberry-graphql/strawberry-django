@@ -97,8 +97,9 @@ def assert_num_queries(n: int, *, using=DEFAULT_DB_ALIAS):
     # FIXME: Async will not have access to the correct number of queries without
     # execing CaptureQueriesContext.(__enter__|__exit__) wrapped in sync_to_async
     # How can we fix this?
-    if _client.get().is_async and executed == 0:
-        return
+    with contextlib.suppress(LookupError):
+        if _client.get().is_async and executed == 0:
+            return
 
     assert (
         executed == n
