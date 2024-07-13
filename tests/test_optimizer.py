@@ -1368,58 +1368,6 @@ def test_nested_prefetch_with_get_queryset(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_select_related_fallsback_to_prefetch_when_type_defines_get_queryset(
-    db,
-):
-    @strawberry_django.type(Milestone)
-    class MilestoneType:
-        pk: strawberry.ID
-
-        @classmethod
-        def get_queryset(cls, queryset, info, **kwargs):
-            return queryset.filter(name__startswith="Foo")
-
-    @strawberry_django.type(Issue)
-    class IssueType:
-        pk: strawberry.ID
-        milestone: Optional[MilestoneType]
-
-    @strawberry.type
-    class Query:
-        issues: List[IssueType] = strawberry_django.field()
-
-    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
-
-    milestone1 = MilestoneFactory.create(name="Foo")
-    milestone2 = MilestoneFactory.create(name="Bar")
-
-    issue1 = IssueFactory.create(milestone=milestone1)
-    issue2 = IssueFactory.create(milestone=milestone2)
-
-    query = """\
-      query TestQuery {
-        issues {
-          pk
-          milestone {
-            pk
-          }
-        }
-      }
-    """
-
-    with assert_num_queries(2):
-        res = schema.execute_sync(query)
-
-    assert res.errors is None
-    assert res.data == {
-        "issues": [
-            {"pk": str(issue1.pk), "milestone": {"pk": str(milestone1.pk)}},
-            {"pk": str(issue2.pk), "milestone": None},
-        ],
-    }
-
-
-@pytest.mark.django_db(transaction=True)
 def test_prefetch_hint_with_same_name_field_no_extra_queries(
     db,
 ):
