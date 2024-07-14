@@ -798,6 +798,14 @@ def _get_hints_from_django_relation(
         store.prefetch_related.append(model_fieldname)
         return store
 
+    field_store = getattr(field, "store", None)
+    if field_store and field_store.prefetch_related:
+        # Skip optimization if 'prefetch_related' is present in the field's store.
+        # This is necessary because 'prefetch_related' likely modifies the queryset
+        # with filtering or annotating, making the optimization redundant and
+        # potentially causing an extra unused query.
+        return store
+
     remote_field = model_field.remote_field
     remote_model = remote_field.model
     field_store = _get_model_hints(

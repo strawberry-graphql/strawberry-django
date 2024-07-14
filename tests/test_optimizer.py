@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List, Optional, cast
+from typing import Any, List, cast
 
 import pytest
 import strawberry
@@ -1368,39 +1368,47 @@ def test_nested_prefetch_with_get_queryset(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_select_related_fallsback_to_prefetch_when_type_defines_get_queryset(
+def test_prefetch_hint_with_same_name_field_no_extra_queries(
     db,
 ):
+    @strawberry_django.type(Issue)
+    class IssueType:
+        pk: strawberry.ID
+
     @strawberry_django.type(Milestone)
     class MilestoneType:
         pk: strawberry.ID
 
-        @classmethod
-        def get_queryset(cls, queryset, info, **kwargs):
-            return queryset.filter(name__startswith="Foo")
-
-    @strawberry_django.type(Issue)
-    class IssueType:
-        pk: strawberry.ID
-        milestone: Optional[MilestoneType]
+        @strawberry_django.field(
+            prefetch_related=[
+                lambda info: Prefetch(
+                    "issues",
+                    queryset=Issue.objects.filter(name__startswith="Foo"),
+                    to_attr="_my_issues",
+                ),
+            ],
+        )
+        def issues(self) -> List[IssueType]:
+            return self._my_issues  # type: ignore
 
     @strawberry.type
     class Query:
-        issues: List[IssueType] = strawberry_django.field()
+        milestone: MilestoneType = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
 
-    milestone1 = MilestoneFactory.create(name="Foo")
-    milestone2 = MilestoneFactory.create(name="Bar")
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
 
-    issue1 = IssueFactory.create(milestone=milestone1)
-    issue2 = IssueFactory.create(milestone=milestone2)
+    issue1 = IssueFactory.create(name="Foo", milestone=milestone1)
+    IssueFactory.create(name="Bar", milestone=milestone1)
+    IssueFactory.create(name="Foo", milestone=milestone2)
 
     query = """\
-      query TestQuery {
-        issues {
+      query TestQuery ($pk: ID!) {
+        milestone(pk: $pk) {
           pk
-          milestone {
+          issues {
             pk
           }
         }
@@ -1408,12 +1416,12 @@ def test_select_related_fallsback_to_prefetch_when_type_defines_get_queryset(
     """
 
     with assert_num_queries(2):
-        res = schema.execute_sync(query)
+        res = schema.execute_sync(query, {"pk": milestone1.pk})
 
     assert res.errors is None
     assert res.data == {
-        "issues": [
-            {"pk": str(issue1.pk), "milestone": {"pk": str(milestone1.pk)}},
-            {"pk": str(issue2.pk), "milestone": None},
-        ],
+        "milestone": {
+            "pk": str(milestone1.pk),
+            "issues": [{"pk": str(issue1.pk)}],
+        },
     }
