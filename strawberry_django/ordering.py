@@ -108,8 +108,10 @@ def process_order(
     sequence = sequence or {}
     args = []
 
-    if not skip_object_order_method and (order_method := getattr(order, "order", None)):
-        assert isinstance(order_method, FilterOrderFieldResolver)
+    if not skip_object_order_method and isinstance(
+        order_method := getattr(order, "order", None),
+        FilterOrderFieldResolver,
+    ):
         return order_method(
             order, info, queryset=queryset, prefix=prefix, sequence=sequence
         )
