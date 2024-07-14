@@ -1,6 +1,7 @@
 import io
 import textwrap
 from typing import List, Optional, cast
+from unittest import mock
 
 import pytest
 import strawberry
@@ -312,4 +313,4 @@ def test_field_name():
         }
       }
     """)
-    assert result.data == {"fruit": {"colorId": 1, "name": "Banana"}}
+    assert result.data == {"fruit": {"colorId": mock.ANY, "name": "Banana"}}

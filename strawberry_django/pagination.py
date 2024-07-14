@@ -1,3 +1,4 @@
+import sys
 from typing import TYPE_CHECKING, List, Optional, TypeVar, Union
 
 import strawberry
@@ -103,9 +104,13 @@ def apply_window_pagination(
             partition_by=related_field_id,
         ),
     )
+
     if offset:
         queryset = queryset.filter(_strawberry_row_number__gt=offset)
-    if limit >= 0:
+
+    # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
+    # from the end to as a way to mimic a "not limit" as well
+    if limit >= 0 and limit != sys.maxsize:
         queryset = queryset.filter(_strawberry_row_number__lte=offset + limit)
 
     return queryset
