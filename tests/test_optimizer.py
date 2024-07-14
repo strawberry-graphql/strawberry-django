@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List, Optional, cast
+from typing import Any, List, cast
 
 import pytest
 import strawberry
