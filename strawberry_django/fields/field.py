@@ -359,6 +359,8 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
                 return cast(Iterable[Any], retval)
 
+            default_resolver.can_optimize = True  # type: ignore
+
             field.base_resolver = StrawberryResolver(default_resolver)
 
         return super().apply(field)

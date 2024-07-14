@@ -373,7 +373,6 @@ type MilestoneType implements Node & Named {
   dueDate: Date
   project: ProjectType!
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
-  myIssues: [IssueType!]!
   issuesWithFilters(
     filters: IssueFilter
 
@@ -389,6 +388,7 @@ type MilestoneType implements Node & Named {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection!
+  myIssues: [IssueType!]!
   myBugsCount: Int!
   asyncField(value: String!): String!
 }
