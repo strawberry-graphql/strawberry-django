@@ -19,7 +19,8 @@ from django.db import models
 from strawberry import relay
 from strawberry.relay.exceptions import NodeIDAnnotationError
 from strawberry.relay.types import NodeIterableType
-from strawberry.type import StrawberryContainer, get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Literal, Self

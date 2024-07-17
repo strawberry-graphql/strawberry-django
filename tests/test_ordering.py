@@ -9,12 +9,13 @@ from pytest_mock import MockFixture
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingArgumentsAnnotationsError
-from strawberry.field import StrawberryField
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.base import (
     StrawberryOptional,
     WithStrawberryObjectDefinition,
     get_object_definition,
 )
+from strawberry.types.field import StrawberryField
 
 import strawberry_django
 from strawberry_django.exceptions import (

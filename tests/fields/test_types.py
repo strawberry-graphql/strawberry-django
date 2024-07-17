@@ -12,14 +12,14 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from strawberry import auto
-from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.scalars import JSON
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.base import (
     StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
-    get_object_definition,
 )
+from strawberry.types.enum import EnumDefinition, EnumValue
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField

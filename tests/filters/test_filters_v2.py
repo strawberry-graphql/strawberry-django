@@ -8,8 +8,8 @@ from django.db.models import Case, Count, Q, QuerySet, Value, When
 from strawberry import auto
 from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
-from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
-from strawberry.types import ExecutionResult
+from strawberry.types import ExecutionResult, get_object_definition
+from strawberry.types.base import WithStrawberryObjectDefinition, get_object_definition
 
 import strawberry_django
 from strawberry_django.exceptions import (

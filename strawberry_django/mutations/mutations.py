@@ -17,7 +17,7 @@ from strawberry.extensions.field_extension import FieldExtension
 from strawberry.field_extensions import InputMutationExtension
 from strawberry.permission import BasePermission
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.unset import UNSET, UnsetType
+from strawberry.types.unset import UNSET, UnsetType
 from typing_extensions import Literal
 
 from .fields import (
