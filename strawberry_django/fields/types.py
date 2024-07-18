@@ -24,9 +24,9 @@ from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
 from django.db.models.fields import files, json, related, reverse_related
 from strawberry import UNSET, relay
-from strawberry.enum import EnumValueDefinition
 from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
+from strawberry.types.enum import EnumValueDefinition
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django import filters

@@ -22,10 +22,11 @@ from typing import (
 import strawberry
 from django.db.models import Q, QuerySet
 from strawberry import UNSET, relay
-from strawberry.field import StrawberryField, field
 from strawberry.tools import create_type
-from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
-from strawberry.unset import UnsetType
+from strawberry.types import has_object_definition
+from strawberry.types.base import WithStrawberryObjectDefinition
+from strawberry.types.field import StrawberryField, field
+from strawberry.types.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform
 
 from strawberry_django.fields.filter_order import (
@@ -47,8 +48,8 @@ if TYPE_CHECKING:
     from types import FunctionType
 
     from django.db.models import Model
-    from strawberry.arguments import StrawberryArgument
     from strawberry.types import Info
+    from strawberry.types.arguments import StrawberryArgument
 
 
 T = TypeVar("T")

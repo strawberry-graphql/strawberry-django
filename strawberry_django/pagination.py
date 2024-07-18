@@ -5,9 +5,9 @@ import strawberry
 from django.db import DEFAULT_DB_ALIAS
 from django.db.models import Count, Window
 from django.db.models.functions import RowNumber
-from strawberry.arguments import StrawberryArgument
 from strawberry.types import Info
-from strawberry.unset import UNSET, UnsetType
+from strawberry.types.arguments import StrawberryArgument
+from strawberry.types.unset import UNSET, UnsetType
 from typing_extensions import Self
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase

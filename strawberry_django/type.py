@@ -27,9 +27,10 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import (
     MissingFieldAnnotationError,
 )
-from strawberry.field import StrawberryField
-from strawberry.private import is_private
-from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.base import WithStrawberryObjectDefinition
+from strawberry.types.field import StrawberryField
+from strawberry.types.private import is_private
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Literal, Self, dataclass_transform
 

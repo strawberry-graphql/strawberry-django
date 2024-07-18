@@ -40,13 +40,14 @@ from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry import relay
 from strawberry.extensions import SchemaExtension
-from strawberry.lazy_type import LazyType
-from strawberry.object_type import StrawberryObjectDefinition
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
-from strawberry.type import StrawberryContainer, get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
+from strawberry.types.lazy_type import LazyType
+from strawberry.types.object_type import StrawberryObjectDefinition
 from typing_extensions import assert_never, assert_type
 
 from strawberry_django.fields.types import resolve_model_field_name
@@ -74,7 +75,7 @@ from .utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from strawberry.field import StrawberryField  # noqa: I001
+    from strawberry.types.field import StrawberryField  # noqa: I001
     from strawberry.types.execution import ExecutionContext
     from strawberry.utils.await_maybe import AwaitableOrValue
     from django.contrib.contenttypes.fields import GenericRelation
