@@ -29,7 +29,7 @@ We'll build an example database of fruit and their colours.
 > You'll notice that for `Fruit.category`, we use `TextChoicesField` instead of `TextField(choices=...)`.
 > This allows strawberry-django to automatically use an enum in the graphQL schema, instead of
 > a string which would be the default behaviour for TextField.
->
+
 > See the [choices-field integration](./integrations/choices-field.md) for more information.
 
 ```python title="models.py"
