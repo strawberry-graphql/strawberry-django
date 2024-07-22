@@ -13,7 +13,7 @@ However it is possible to override them with custom resolvers.
 Sync resolvers can be used in both ASGI/WSGI and will be automatically wrapped
 in `sync_to_async` when running async.
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry import auto
 from typing import List
@@ -33,7 +33,7 @@ class Color:
 
 Async resolvers can be used when running using ASGI.
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry import auto
 from typing import List
@@ -64,7 +64,7 @@ It is important to note that overriding resolvers also removes default capabilit
 (e.g. `Pagination`, `Filter`), exception for [relay connections](relay.md). You can
 however still add those by hand and resolve them:
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry
 from strawberry import auto
 from strawberry.types import Info

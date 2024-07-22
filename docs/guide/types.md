@@ -17,7 +17,7 @@ A many-to-many relation is described with the `typing.List` type annotation.
 `strawberry_django` will automatically generate resolvers for relational fields.
 More information about that can be read from [resolvers](resolvers.md) page.
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 
 from strawberry import auto
@@ -41,7 +41,7 @@ class Color:
 Input types can be generated from Django models using the `strawberry_django.input` decorator.
 The first parameter is the model which the type is derived from.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.input(models.Fruit)
 class FruitInput:
     id: auto
@@ -54,7 +54,7 @@ Partial input types can be generated from existing input types through class inh
 
 Non-`auto` type annotations will be respected—and therefore required—unless explicitly marked `Optional[]`.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.input(models.Color, partial=True)
 class FruitPartialInput(FruitInput):
     color: List["ColorPartialInput"]
@@ -78,7 +78,7 @@ class ColorNameRequiredPartialInput:
 
 Django models can be converted to `strawberry` Types with the `strawberry_django.type` decorator. Custom descriptions can be added using the `description` keyword argument (See: [`strawberry.type` decorator API](https://strawberry.rocks/docs/types/object-types#api)).
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 
 @strawberry_django.type(models.Fruit, description="A tasty snack")
@@ -103,7 +103,7 @@ By default, a `strawberry_django` type will get data from the default manager fo
 You can implement a custom `get_queryset` classmethod to your type to do some extra processing to the default queryset,
 like filtering it further.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.type(models.Fruit)
 class Berry:
 
@@ -118,7 +118,7 @@ a `strawberry` `Info` object containing details about the request.
 You can use that `info` parameter to, for example,
 limit access to results based on the current user in the request:
 
-```{.python title=types.py}
+```python title="types.py"
 from stawberry_django.auth.utils import get_current_user
 
 @strawberry_django.type(models.Fruit)

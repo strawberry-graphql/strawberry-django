@@ -16,7 +16,7 @@ you will be missing support for some interesting features, such as
 
 Expose the strawberry API when using ASGI by setting your urls.py like this:
 
-```{.python title=urls.py}
+```python title="urls.py"
 from django.urls import path
 from strawberry.django.views import AsyncGraphQLView
 
@@ -31,7 +31,7 @@ urlpatterns = [
 
 Expose the strawberry API when using WSGI by setting your urls.py like this:
 
-```{.python title=urls.py}
+```python title="urls.py"
 from django.urls import path
 from strawberry.django.views import GraphQLView
 

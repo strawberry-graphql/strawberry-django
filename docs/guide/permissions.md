@@ -36,7 +36,7 @@ graph TD
 
 ## Example
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry_django.permissions import (
     IsAuthenticated,

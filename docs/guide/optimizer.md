@@ -27,7 +27,7 @@ Those are specially useful to avoid some common GraphQL pitfalls, like the famou
 The automatic optimization can be enabled by adding the `DjangoOptimizerExtension`
 to your strawberry's schema config.
 
-```{.python title=schema.py}
+```python title="schema.py"
 import strawberry
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
@@ -45,7 +45,7 @@ schema = strawberry.Schema(
 The optimizer will try to optimize all types automatically by introspecting it.
 Consider the following example:
 
-```{.python title=models.py}
+```python title="models.py"
 class Artist(models.Model):
     name = models.CharField()
 
@@ -62,7 +62,7 @@ class Song(models.Model):
     album = models.ForeignKey("Album", related_name="songs")
 ```
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry import auto
 import strawberry_django
 
@@ -96,7 +96,7 @@ class Query:
 
 Querying for `artist` and `songs` like this:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 query {
   artist {
     id
@@ -179,7 +179,7 @@ Song.objects.all().only(
 Sometimes you will have a custom resolver which cannot be automatically optimized
 by the extension. Take this for example:
 
-```{.python title=models.py}
+```python title="models.py"
 class OrderItem(models.Model):
     price = models.DecimalField()
     quantity = models.IntegerField()
@@ -189,7 +189,7 @@ class OrderItem(models.Model):
         return self.price * self.quantity
 ```
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry import auto
 import strawberry_django
 
@@ -207,7 +207,7 @@ by the optimizer.
 
 A solution in this case would be to "tell the optimizer" how to optimize that field:
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry import auto
 import strawberry_django
 
@@ -222,7 +222,7 @@ class OrderItem:
 
 Or if you are using a custom resolver:
 
-```{.python title=types.py}
+```python title="types.py"
 import decimal
 
 from strawberry import auto
@@ -269,7 +269,7 @@ For that this integration provides 2 decorators that can be used:
 
 The example in the previous section could be written using `@model_property` like this:
 
-```{.python title=models.py}
+```python title="models.py"
 from strawberry_django import model_property
 
 class OrderItem(models.Model):
@@ -281,7 +281,7 @@ class OrderItem(models.Model):
         return self.price * self.quantity
 ```
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry import auto
 import strawberry_django
 

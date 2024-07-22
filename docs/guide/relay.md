@@ -7,7 +7,7 @@ title: Relay
 You can use the [official strawberry relay integration](https://strawberry.rocks/docs/guides/relay)
 directly with django types like this:
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount

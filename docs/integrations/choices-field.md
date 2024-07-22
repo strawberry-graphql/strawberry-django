@@ -9,7 +9,7 @@ This lib provides integration for enum resolution for
 when defining the fields using the
 [django-choices-field](https://github.com/bellini666/django-choices-field) lib:
 
-```{.python title=models.py}
+```python title="models.py"
 from django.db import models
 from django_choices_field import TextChoicesField
 
@@ -24,7 +24,7 @@ class Company(models.Model):
     )
 ```
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry
 import strawberry_django
 
@@ -37,7 +37,7 @@ class Company:
 
 The code above would generate the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 enum Status {
   ACTIVE
   INACTIVE

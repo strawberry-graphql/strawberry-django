@@ -24,7 +24,7 @@ Here are the differences between those:
 When defining a mutation you can pass `handle_django_errors=True` to make it handle
 common django errors, such as `ValidationError`, `PermissionDenied` and `ObjectDoesNotExist`:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry.type
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
@@ -40,7 +40,7 @@ class Mutation:
 
 The code above would generate following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 enum OperationMessageKind {
   INFO
   WARNING
@@ -109,7 +109,7 @@ The following CUD mutations are provided by this lib:
 
 A basic example would be:
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry import auto
 from strawberry_django import mutations, NodeInput
 from strawberry.relay import Node
@@ -178,7 +178,7 @@ class Mutation:
 Filters can be added to update and delete mutations. More information in the
 [filtering](filters.md) section.
 
-```{.python title=schema.py}
+```python title="schema.py"
 import strawberry
 from strawberry_django import mutations
 

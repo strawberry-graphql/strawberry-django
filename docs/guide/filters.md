@@ -7,7 +7,7 @@ title: Filtering
 It is possible to define filters for Django types, which will
 be converted into `.filter(...)` queries for the ORM:
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry import auto
 
@@ -30,7 +30,7 @@ class Fruit:
 
 The code above would generate following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input FruitFilter {
   id: ID
   name: String
@@ -70,7 +70,7 @@ To every filter `AND`, `OR`, `NOT` & `DISTINCT` fields are added to allow more c
 Lookups can be added to all fields with `lookups=True`, which will
 add more options to resolve each type. For example:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
@@ -79,7 +79,7 @@ class FruitFilter:
 
 The code above would generate the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input IDBaseFilterLookup {
   exact: ID
   isNull: Boolean
@@ -113,7 +113,7 @@ input FruitFilter {
 
 Single-field lookup can be annotated with the `FilterLookup` generic type.
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry_django import FilterLookup
 
 @strawberry_django.filter(models.Fruit)
@@ -123,7 +123,7 @@ class FruitFilter:
 
 ## Filtering over relationships
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Color)
 class ColorFilter:
     id: auto
@@ -138,7 +138,7 @@ class FruitFilter:
 
 The code above would generate following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input ColorFilter {
   id: ID
   name: String
@@ -161,7 +161,7 @@ input FruitFilter {
 
 You can define custom filter method by defining your own resolver.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: auto
@@ -241,7 +241,7 @@ class FruitFilter:
 
 The code above generates the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input FruitFilter {
   name: String
   lastName: String
@@ -258,7 +258,7 @@ input FruitFilter {
   - Important for nested filtering
   - In code bellow custom filter `name` ends up filtering `Fruit` instead of `Color` without applying `prefix`
 
-```{.python title="Why prefix?"}
+```python title=""Why prefix?""
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: auto
@@ -310,7 +310,7 @@ Works similar to field filter method, but:
 - argument `queryset` is **Required**
 - argument `value` is **Forbidden**
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     def ordered(
@@ -355,7 +355,7 @@ class FruitFilter:
 All fields and CUD mutations inherit filters from the underlying type by default.
 So, if you have a field like this:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
@@ -372,7 +372,7 @@ if it was passed to the field.
 
 Filters added into a field override the default filters of this type.
 
-```{.python title=schema.py}
+```python title="schema.py"
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)

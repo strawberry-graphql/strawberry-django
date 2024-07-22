@@ -15,7 +15,7 @@ title: Authentication
 `strawberry_django` provides mutations to get authentication going right away.
 The `auth.register` mutation performs password validation using Django's `validate_password` method.
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry import auto
 from django.contrib.auth import get_user_model
@@ -31,7 +31,7 @@ class UserInput:
     password: auto
 ```
 
-```{.python title=schema.py}
+```python title="schema.py"
 import strawberry
 import strawberry_django
 from .types import User, UserInput

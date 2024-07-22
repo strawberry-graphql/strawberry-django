@@ -13,7 +13,7 @@ To use it, make sure you have the
 [Django Debug Toolbar](https://github.com/jazzband/django-debug-toolbar) installed
 and configured, then change its middleware settings from:
 
-```{.python title=settings.py}
+```python title="settings.py"
 MIDDLEWARE = [
     ...
     "debug_toolbar.middleware.DebugToolbarMiddleware",
@@ -23,7 +23,7 @@ MIDDLEWARE = [
 
 To:
 
-```{.python title=settings.py}
+```python title="settings.py"
 MIDDLEWARE = [
     ...
     "strawberry_django.middlewares.debug_toolbar.DebugToolbarMiddleware",
