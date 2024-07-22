@@ -253,6 +253,7 @@ def test_order_field():
         @strawberry_django.order_field
         def field_method(self, root, info, prefix, value: auto, sequence, queryset):
             pass
+
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
@@ -305,6 +306,7 @@ def test_order_field_on_object():
         @strawberry_django.order_field
         def order(self, root, info, prefix, sequence, queryset):
             pass
+
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
