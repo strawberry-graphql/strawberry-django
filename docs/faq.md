@@ -1,3 +1,7 @@
+---
+title: Frequently Asked Questions
+---
+
 # Frequently Asked Questions (FAQ)
 
 ## How to access Django request object in resolvers?

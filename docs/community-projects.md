@@ -1,3 +1,7 @@
+---
+title: Community Projects
+---
+
 # Community Projects
 
 Those are some community maintained projects worth mentioning:
