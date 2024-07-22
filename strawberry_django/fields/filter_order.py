@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Optional, Sequence, overl
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingArgumentsAnnotationsError
-from strawberry.field import StrawberryField
+from strawberry.types.field import StrawberryField
 from strawberry.types.fields.resolver import ReservedName, StrawberryResolver
 from typing_extensions import Self
 
@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
 
     from strawberry.extensions.field_extension import FieldExtension
-    from strawberry.field import _RESOLVER_TYPE, T
     from strawberry.types import Info
+    from strawberry.types.field import _RESOLVER_TYPE, T
 
 
 QUERYSET_PARAMSPEC = ReservedName("queryset")

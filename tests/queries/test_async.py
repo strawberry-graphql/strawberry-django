@@ -3,7 +3,7 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture()
+@pytest.fixture
 def query(schema):
     async def query(query):
         return await schema.execute(query)

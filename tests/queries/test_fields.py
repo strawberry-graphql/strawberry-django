@@ -104,7 +104,7 @@ def test_foreign_key_id_with_explicit_type(group, user):
     assert result.data["users"] == [{"groupId": str(group.id)}]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_sync_resolver(user, group):
     @strawberry_django.type(models.User)
@@ -122,7 +122,7 @@ async def test_sync_resolver(user, group):
     assert result.data["users"] == [{"myGroup": {"name": "group"}}]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_async_resolver(user, group):
     @strawberry_django.type(models.User)

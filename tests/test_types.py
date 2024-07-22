@@ -4,8 +4,8 @@ import pytest
 import strawberry
 from django.test import override_settings
 from strawberry import auto
-from strawberry.object_type import StrawberryObjectDefinition
-from strawberry.type import get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.object_type import StrawberryObjectDefinition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField

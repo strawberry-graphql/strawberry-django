@@ -3,10 +3,10 @@ from typing import List, Optional, cast
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.base import (
     StrawberryList,
     StrawberryOptional,
-    get_object_definition,
 )
 
 import strawberry_django

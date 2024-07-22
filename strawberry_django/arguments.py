@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument
+from strawberry.types.arguments import StrawberryArgument
 
 
 def argument(

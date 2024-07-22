@@ -33,7 +33,7 @@ class Mutation:
     register: User = auth.register(UserInput)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mutation(db):
     return utils.generate_query(mutation=Mutation)
 

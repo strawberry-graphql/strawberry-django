@@ -184,3 +184,27 @@ def _django_getattr(
     if empty_file_descriptor_as_null and isinstance(result, FileDescriptor):
         result = None
     return result
+
+
+def resolve_base_manager(manager: BaseManager) -> Any:
+    if (result_instance := getattr(manager, "instance", None)) is not None:
+        prefetched_cache = getattr(result_instance, "_prefetched_objects_cache", {})
+        # Both ManyRelatedManager and RelatedManager are defined inside functions, which
+        # prevents us from importing and checking isinstance on them directly.
+        try:
+            # ManyRelatedManager
+            return list(prefetched_cache[manager.prefetch_cache_name])  # type: ignore
+        except (AttributeError, KeyError):
+            try:
+                # RelatedManager
+                result_field = manager.field  # type: ignore
+                cache_name = (
+                    # 5.1+ uses "cache_name" instead of "get_cache_name()
+                    getattr(result_field.remote_field, "cache_name", None)
+                    or result_field.remote_field.get_cache_name()
+                )
+                return list(prefetched_cache[cache_name])
+            except (AttributeError, KeyError):
+                pass
+
+    return manager.all()

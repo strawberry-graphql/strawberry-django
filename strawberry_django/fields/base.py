@@ -1,22 +1,24 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
+import django
 from django.db.models import ForeignKey
 from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.auto import StrawberryAuto
-from strawberry.field import UNRESOLVED, StrawberryField
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.auto import StrawberryAuto
+from strawberry.types.base import (
     StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
     StrawberryType,
     WithStrawberryObjectDefinition,
-    get_object_definition,
 )
-from strawberry.union import StrawberryUnion
+from strawberry.types.field import UNRESOLVED, StrawberryField
+from strawberry.types.union import StrawberryUnion
+from strawberry.utils.inspect import get_specialized_type_var_map
 
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import (
@@ -28,13 +30,18 @@ from strawberry_django.utils.typing import (
 
 if TYPE_CHECKING:
     from django.db import models
-    from strawberry.object_type import StrawberryObjectDefinition
     from strawberry.types import Info
+    from strawberry.types.object_type import StrawberryObjectDefinition
     from typing_extensions import Literal, Self
 
     from strawberry_django.type import StrawberryDjangoDefinition
 
 _QS = TypeVar("_QS", bound="models.QuerySet")
+
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField  # type: ignore
+else:
+    GeneratedField = None
 
 
 class StrawberryDjangoFieldBase(StrawberryField):
@@ -80,16 +87,24 @@ class StrawberryDjangoFieldBase(StrawberryField):
     def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
         origin = self.type
 
+        if isinstance(origin, LazyType):
+            origin = origin.resolve_type()
+
         object_definition = get_object_definition(origin)
 
         if object_definition and issubclass(object_definition.origin, relay.Connection):
-            origin = object_definition.type_var_map.get("NodeType")
+            origin_specialized_type_var_map = (
+                get_specialized_type_var_map(cast(type, origin)) or {}
+            )
+            origin = origin_specialized_type_var_map.get("NodeType")
+
+            if origin is None:
+                origin = object_definition.type_var_map.get("NodeType")
 
             if origin is None:
                 specialized_type_var_map = (
                     object_definition.specialized_type_var_map or {}
                 )
-
                 origin = specialized_type_var_map["NodeType"]
 
             if isinstance(origin, LazyType):
@@ -192,8 +207,15 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 ),
                 self.origin_django_type,
             )
+
+            is_generated_field = GeneratedField is not None and isinstance(
+                model_field, GeneratedField
+            )
+            field_to_check = (
+                model_field.output_field if is_generated_field else model_field  # type: ignore
+            )
             if is_optional(
-                model_field,
+                field_to_check,
                 self.origin_django_type.is_input,
                 self.origin_django_type.is_partial,
             ):

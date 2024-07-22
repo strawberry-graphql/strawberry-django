@@ -35,11 +35,11 @@ from strawberry.extensions.field_extension import (
     FieldExtension,
     SyncExtensionResolver,
 )
-from strawberry.field import StrawberryField
 from strawberry.schema_directive import Location
-from strawberry.type import StrawberryList, StrawberryOptional
+from strawberry.types.base import StrawberryList, StrawberryOptional
+from strawberry.types.field import StrawberryField
 from strawberry.types.info import Info
-from strawberry.union import StrawberryUnion
+from strawberry.types.union import StrawberryUnion
 from typing_extensions import Literal, assert_never
 
 from strawberry_django.auth.utils import aget_current_user, get_current_user
@@ -84,7 +84,7 @@ class PermContext:
 
 perm_context: contextvars.ContextVar[PermContext] = contextvars.ContextVar(
     "perm-safe",
-    default=PermContext(),
+    default=PermContext(),  # noqa: B039
 )
 
 

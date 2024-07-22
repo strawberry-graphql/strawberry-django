@@ -29,7 +29,7 @@ class Mutation:
     delete_fruits: List[Fruit] = mutations.delete(permission_classes=[PermissionClass])
 
 
-@pytest.fixture()
+@pytest.fixture
 def mutation(db):
     return utils.generate_query(mutation=Mutation)
 

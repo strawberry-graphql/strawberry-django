@@ -45,12 +45,18 @@ from .models import (
     FavoriteQuerySet,
     Issue,
     Milestone,
+    NamedModel,
     Project,
     Quiz,
     Tag,
 )
 
 UserModel = cast(Type[AbstractUser], get_user_model())
+
+
+@strawberry_django.interface(NamedModel)
+class Named:
+    name: strawberry.auto
 
 
 @strawberry_django.type(UserModel)
@@ -90,11 +96,10 @@ class ProjectFilter:
     due_date: strawberry.auto
 
 
-@strawberry_django.type(Project, filters=ProjectFilter)
-class ProjectType(relay.Node):
-    name: strawberry.auto
+@strawberry_django.type(Project, filters=ProjectFilter, pagination=True)
+class ProjectType(relay.Node, Named):
     due_date: strawberry.auto
-    milestones: List["MilestoneType"]
+    milestones: List["MilestoneType"] = strawberry_django.field(pagination=True)
     milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
     is_delayed: bool = strawberry_django.field(
         annotate=ExpressionWrapper(
@@ -128,19 +133,37 @@ class MilestoneOrder:
     project: Optional[ProjectOrder]
 
 
-@strawberry_django.filter(Issue)
+@strawberry_django.filter(Issue, lookups=True)
 class IssueFilter:
+    name: strawberry.auto
+
     @strawberry_django.filter_field()
     def search(self, value: str, prefix: str) -> Q:
         return Q(name__contains=value)
 
 
-@strawberry_django.type(Milestone, filters=MilestoneFilter, order=MilestoneOrder)
-class MilestoneType(relay.Node):
+@strawberry_django.order(Issue)
+class IssueOrder:
     name: strawberry.auto
+
+
+@strawberry_django.type(
+    Milestone, filters=MilestoneFilter, order=MilestoneOrder, pagination=True
+)
+class MilestoneType(relay.Node, Named):
     due_date: strawberry.auto
     project: ProjectType
-    issues: List["IssueType"]
+    issues: List["IssueType"] = strawberry_django.field(
+        filters=IssueFilter,
+        order=IssueOrder,
+        pagination=True,
+    )
+    issues_with_filters: ListConnectionWithTotalCount["IssueType"] = (
+        strawberry_django.connection(
+            field_name="issues",
+            filters=IssueFilter,
+        )
+    )
 
     @strawberry_django.field(
         prefetch_related=[
@@ -160,12 +183,6 @@ class MilestoneType(relay.Node):
     )
     def my_issues(self) -> List["IssueType"]:
         return self._my_issues  # type: ignore
-
-    @strawberry_django.connection(
-        ListConnectionWithTotalCount["IssueType"], filters=IssueFilter
-    )
-    def issues_with_filters(self) -> List["IssueType"]:
-        return self.issues.all()  # type: ignore
 
     @strawberry_django.field(
         annotate={
@@ -199,8 +216,7 @@ class FavoriteType(relay.Node):
 
 
 @strawberry_django.type(Issue)
-class IssueType(relay.Node):
-    name: strawberry.auto
+class IssueType(relay.Node, Named):
     milestone: MilestoneType
     priority: strawberry.auto
     kind: strawberry.auto
@@ -208,6 +224,7 @@ class IssueType(relay.Node):
     name_with_kind: str = strawberry_django.field(only=["kind", "name"])
     tags: List["TagType"]
     issue_assignees: List["AssigneeType"]
+    staff_assignees: List["StaffType"] = strawberry_django.field(field_name="assignees")
     favorite_set: ListConnectionWithTotalCount["FavoriteType"] = (
         strawberry_django.connection()
     )
@@ -238,8 +255,7 @@ class IssueType(relay.Node):
 
 
 @strawberry_django.type(Tag)
-class TagType(relay.Node):
-    name: strawberry.auto
+class TagType(relay.Node, Named):
     issues: ListConnectionWithTotalCount[IssueType] = strawberry_django.connection()
 
     @strawberry_django.field

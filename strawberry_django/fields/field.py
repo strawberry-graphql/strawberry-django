@@ -36,7 +36,7 @@ from strawberry_django.arguments import argument
 from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
-from strawberry_django.optimizer import OptimizerStore
+from strawberry_django.optimizer import OptimizerStore, is_optimized_by_prefetching
 from strawberry_django.ordering import ORDER_ARG, StrawberryDjangoFieldOrdering
 from strawberry_django.pagination import StrawberryDjangoPagination
 from strawberry_django.permissions import filter_with_perms
@@ -46,19 +46,20 @@ from strawberry_django.resolvers import (
     default_qs_hook,
     django_getattr,
     django_resolver,
+    resolve_base_manager,
 )
 
 if TYPE_CHECKING:
     from graphql.pyutils import AwaitableOrValue
     from strawberry import BasePermission
-    from strawberry.arguments import StrawberryArgument
     from strawberry.extensions.field_extension import (
         FieldExtension,
         SyncExtensionResolver,
     )
-    from strawberry.field import _RESOLVER_TYPE, StrawberryField
     from strawberry.relay.types import NodeIterableType
-    from strawberry.unset import UnsetType
+    from strawberry.types.arguments import StrawberryArgument
+    from strawberry.types.field import _RESOLVER_TYPE, StrawberryField
+    from strawberry.types.unset import UnsetType
     from typing_extensions import Literal, Self
 
     from strawberry_django.utils.typing import (
@@ -222,7 +223,7 @@ class StrawberryDjangoField(
                 resolved = await result  # type: ignore
 
                 if isinstance(resolved, BaseManager):
-                    resolved = resolved.all()
+                    resolved = resolve_base_manager(resolved)
 
                 if isinstance(resolved, models.QuerySet):
                     if "info" not in kwargs:
@@ -237,7 +238,7 @@ class StrawberryDjangoField(
             return async_resolver()
 
         if isinstance(result, BaseManager):
-            result = result.all()
+            result = resolve_base_manager(result)
 
         if isinstance(result, models.QuerySet):
             if "info" not in kwargs:
@@ -279,6 +280,11 @@ class StrawberryDjangoField(
         return qs_hook
 
     def get_queryset(self, queryset, info, **kwargs):
+        # If the queryset been optimized at prefetch phase, this function has already been
+        # called by the optimizer extension, meaning we don't want to call it again
+        if is_optimized_by_prefetching(queryset):
+            return queryset
+
         queryset = run_type_get_queryset(queryset, self.django_type, info)
         queryset = super().get_queryset(
             filter_with_perms(queryset, info), info, **kwargs
@@ -352,6 +358,8 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     )
 
                 return cast(Iterable[Any], retval)
+
+            default_resolver.can_optimize = True  # type: ignore
 
             field.base_resolver = StrawberryResolver(default_resolver)
 

@@ -1,7 +1,7 @@
 import contextlib
 import dataclasses
 import weakref
-from typing import Optional, Union, cast
+from typing import Optional, Type, Union, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -24,7 +24,9 @@ class ObjectPermissionModels:
     group: GroupObjectPermissionBase
 
 
-def get_object_permission_models(model: models.Model):
+def get_object_permission_models(
+    model: Union[models.Model, Type[models.Model]],
+) -> ObjectPermissionModels:
     return ObjectPermissionModels(
         user=cast(UserObjectPermissionBase, get_user_obj_perms_model(model)),
         group=cast(GroupObjectPermissionBase, get_group_obj_perms_model(model)),

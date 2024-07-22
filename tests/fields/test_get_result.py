@@ -10,7 +10,7 @@ from strawberry_django.fields.field import StrawberryDjangoField
 from tests.types import FruitType
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_resolve_returns_queryset_with_fetched_results():
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
     result = field.get_result(None, None, [], {})
@@ -18,7 +18,7 @@ def test_resolve_returns_queryset_with_fetched_results():
     assert result._result_cache is not None  # type: ignore
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 async def test_resolve_returns_queryset_with_fetched_results_async():
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
     result = await field.get_result(None, None, [], {})
@@ -26,7 +26,7 @@ async def test_resolve_returns_queryset_with_fetched_results_async():
     assert result._result_cache is not None  # type: ignore
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_resolve_returns_queryset_without_fetching_results_when_disabling_it():
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
     field.disable_fetch_list_results = True
@@ -35,7 +35,7 @@ def test_resolve_returns_queryset_without_fetching_results_when_disabling_it():
     assert result._result_cache is None  # type: ignore
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 async def test_resolve_returns_queryset_without_fetching_results_when_disabling_it_async():
     field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
     field.disable_fetch_list_results = True
@@ -44,7 +44,7 @@ async def test_resolve_returns_queryset_without_fetching_results_when_disabling_
     assert result._result_cache is None  # type: ignore
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_resolve_returns_queryset_without_fetching_results_for_connections():
     class FruitImplementingNode(relay.Node, FruitType): ...
 
@@ -57,7 +57,7 @@ def test_resolve_returns_queryset_without_fetching_results_for_connections():
     assert result._result_cache is None  # type: ignore
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 async def test_resolve_returns_queryset_without_fetching_results_for_connections_async():
     class FruitImplementingNode(relay.Node, FruitType): ...
 

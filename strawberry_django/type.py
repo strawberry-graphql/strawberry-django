@@ -27,9 +27,10 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import (
     MissingFieldAnnotationError,
 )
-from strawberry.field import StrawberryField
-from strawberry.private import is_private
-from strawberry.type import WithStrawberryObjectDefinition, get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.base import WithStrawberryObjectDefinition
+from strawberry.types.field import StrawberryField
+from strawberry.types.private import is_private
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Literal, Self, dataclass_transform
 
@@ -242,8 +243,11 @@ def _process_type(
         )
         # We need to reset the `__eval_cache__` to make sure inherited types
         # will be forced to reevaluate the annotation on strawberry 0.192.2+
-        if type_annotation is not None and hasattr(type_annotation, "__eval_cache__"):
-            type_annotation.__eval_cache__ = None
+        if type_annotation is not None and hasattr(
+            type_annotation,
+            "__resolve_cache__",
+        ):
+            type_annotation.__resolve_cache__ = None
 
         if f.name in auto_fields:
             f_is_auto = True

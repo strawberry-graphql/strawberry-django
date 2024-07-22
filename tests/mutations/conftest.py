@@ -83,7 +83,7 @@ class Mutation:
     delete_fruit_types: List[FruitType] = mutations.delete()
 
 
-@pytest.fixture()
+@pytest.fixture
 def mutation(db):
     if settings.GEOS_IMPORTED:
         from tests.types import GeoField, GeoFieldInput, GeoFieldPartialInput
@@ -101,6 +101,6 @@ def mutation(db):
     return utils.generate_query(mutation=mutation)
 
 
-@pytest.fixture()
+@pytest.fixture
 def fruit(db):
     return models.Fruit.objects.create(name="Strawberry")

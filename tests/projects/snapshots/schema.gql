@@ -241,6 +241,7 @@ input IssueAssigneeInputPartialListInput {
 }
 
 input IssueFilter {
+  name: StrFilterLookup
   AND: IssueFilter
   OR: IssueFilter
   NOT: IssueFilter
@@ -280,7 +281,11 @@ input IssueInputPartialWithoutId {
   issueAssignees: IssueAssigneeInputPartialListInput
 }
 
-type IssueType implements Node {
+input IssueOrder {
+  name: Ordering
+}
+
+type IssueType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
@@ -291,6 +296,7 @@ type IssueType implements Node {
   nameWithKind: String!
   tags: [TagType!]!
   issueAssignees: [AssigneeType!]!
+  staffAssignees: [StaffType!]!
   favoriteSet(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -360,14 +366,13 @@ input MilestoneOrder {
   project: ProjectOrder
 }
 
-type MilestoneType implements Node {
+type MilestoneType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   dueDate: Date
   project: ProjectType!
-  issues: [IssueType!]!
-  myIssues: [IssueType!]!
+  issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   issuesWithFilters(
     filters: IssueFilter
 
@@ -383,6 +388,7 @@ type MilestoneType implements Node {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection!
+  myIssues: [IssueType!]!
   myBugsCount: Int!
   asyncField(value: String!): String!
 }
@@ -424,6 +430,10 @@ type Mutation {
     """Input data for `createQuiz` mutation"""
     input: CreateQuizInput!
   ): CreateQuizPayload!
+}
+
+interface Named {
+  name: String!
 }
 
 """An object with a Globally Unique ID"""
@@ -531,12 +541,12 @@ input ProjectOrder {
   name: Ordering
 }
 
-type ProjectType implements Node {
+type ProjectType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   dueDate: Date
-  milestones(filters: MilestoneFilter, order: MilestoneOrder): [MilestoneType!]!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   milestonesCount: Int!
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
@@ -872,7 +882,7 @@ input TagInputPartialListInput {
   remove: [TagInputPartial!]
 }
 
-type TagType implements Node {
+type TagType implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!

@@ -25,12 +25,12 @@ class Query:
     files: List[File] = strawberry_django.field()
 
 
-@pytest.fixture()
+@pytest.fixture
 def query(db):
     return utils.generate_query(Query)
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(mocker):
     mocker.patch(
         "django.core.files.images.ImageFile._get_image_dimensions",

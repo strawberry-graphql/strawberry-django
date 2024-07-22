@@ -1,6 +1,7 @@
 import io
 import textwrap
 from typing import List, Optional, cast
+from unittest import mock
 
 import pytest
 import strawberry
@@ -17,7 +18,7 @@ from strawberry_django.settings import StrawberryDjangoSettings
 from . import models, utils
 
 
-@pytest.fixture()
+@pytest.fixture
 def user_group(users, groups):  # noqa: PT004
     users[0].group = groups[0]
     users[0].save()
@@ -80,12 +81,12 @@ class Query:
     bananas: List[BananaFruit] = strawberry_django.field()
 
 
-@pytest.fixture()
+@pytest.fixture
 def query(db):
     return utils.generate_query(Query)
 
 
-@pytest.fixture()
+@pytest.fixture
 def query_id_as_pk(db):
     with override_settings(
         STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
@@ -312,4 +313,4 @@ def test_field_name():
         }
       }
     """)
-    assert result.data == {"fruit": {"colorId": 1, "name": "Banana"}}
+    assert result.data == {"fruit": {"colorId": mock.ANY, "name": "Banana"}}

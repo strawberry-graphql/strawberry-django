@@ -24,9 +24,9 @@ from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
 from django.db.models.fields import files, json, related, reverse_related
 from strawberry import UNSET, relay
-from strawberry.enum import EnumValueDefinition
 from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
+from strawberry.types.enum import EnumValueDefinition
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django import filters
@@ -38,6 +38,18 @@ try:
 except ImportError:  # pragma: no cover
     IntegerChoicesField = None
     TextChoicesField = None
+
+try:
+    from django.contrib.postgres.fields import ArrayField
+except (ImportError, ModuleNotFoundError):  # pragma: no cover
+    # ArrayField will not be importable if psycopg2 is not installed
+    ArrayField = None
+
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField  # type: ignore
+else:
+    GeneratedField = None
+
 
 if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
@@ -239,6 +251,7 @@ field_type_map: Dict[
     fields.IntegerField: int,
     fields.PositiveIntegerField: int,
     fields.PositiveSmallIntegerField: int,
+    fields.PositiveBigIntegerField: int,
     fields.SlugField: str,
     fields.SmallAutoField: strawberry.ID,
     fields.SmallIntegerField: int,
@@ -246,6 +259,7 @@ field_type_map: Dict[
     fields.TimeField: datetime.time,
     fields.URLField: str,
     fields.UUIDField: uuid.UUID,
+    json.JSONField: JSON,
     files.FileField: DjangoFileType,
     files.ImageField: DjangoImageType,
     related.ForeignKey: DjangoModelType,
@@ -255,18 +269,6 @@ field_type_map: Dict[
     reverse_related.ManyToOneRel: List[DjangoModelType],
     reverse_related.OneToOneRel: DjangoModelType,
 }
-
-if hasattr(fields, "NullBooleanField"):
-    # NullBooleanField was deprecated and will soon be removed
-    field_type_map[fields.NullBooleanField] = Optional[bool]  # type: ignore
-
-if django.VERSION >= (3, 1):
-    field_type_map.update(
-        {
-            json.JSONField: JSON,
-            fields.PositiveBigIntegerField: int,
-        },
-    )
 
 try:
     from django.contrib.gis import geos
@@ -410,6 +412,20 @@ relay_input_field_type_map: Dict[
 }
 
 
+def _resolve_array_field_type(model_field: Field):
+    assert ArrayField is not None
+    if isinstance(model_field, ArrayField):
+        return List[_resolve_array_field_type(model_field.base_field)]
+
+    base_field = field_type_map.get(type(model_field), NotImplemented)
+    if base_field is NotImplemented:
+        raise NotImplementedError(
+            f"GraphQL type for model field '{model_field}' has not been implemented",
+        )
+
+    return base_field
+
+
 def resolve_model_field_type(
     model_field: Union[Field, reverse_related.ForeignObjectRel],
     django_type: "StrawberryDjangoDefinition",
@@ -480,6 +496,12 @@ def resolve_model_field_type(
                 ),
             )
             model_field._strawberry_enum = field_type  # type: ignore
+    # Generated fields
+    elif GeneratedField is not None and isinstance(model_field, GeneratedField):
+        model_field_type = type(model_field.output_field)  # type: ignore
+        field_type = field_type_map.get(model_field_type, NotImplemented)
+    elif ArrayField is not None and isinstance(model_field, ArrayField):
+        field_type = _resolve_array_field_type(model_field)
     # Every other Field possibility
     else:
         force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]

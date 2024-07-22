@@ -2,25 +2,33 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+import django
 import pytest
 import strawberry
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from strawberry import auto
-from strawberry.enum import EnumDefinition, EnumValue
 from strawberry.scalars import JSON
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.base import (
     StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
-    get_object_definition,
 )
+from strawberry.types.enum import EnumDefinition, EnumValue
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.type import _process_type  # noqa: PLC2701
+
+if django.VERSION >= (5, 0):
+    from django.db.models import GeneratedField  # type: ignore
+else:
+    GeneratedField = None
 
 
 class FieldTypesModel(models.Model):
@@ -36,12 +44,6 @@ class FieldTypesModel(models.Model):
     generic_ip_address = models.GenericIPAddressField()
     integer = models.IntegerField()
     image = models.ImageField()
-    # NullBooleanField was deprecated and will soon be removed
-    null_boolean = (
-        models.NullBooleanField()  # type: ignore
-        if hasattr(models, "NullBooleanField")
-        else models.BooleanField(null=True)
-    )
     positive_big_integer = models.PositiveBigIntegerField()
     positive_integer = models.PositiveIntegerField()
     positive_small_integer = models.PositiveSmallIntegerField()
@@ -52,6 +54,24 @@ class FieldTypesModel(models.Model):
     url = models.URLField()
     uuid = models.UUIDField()
     json = models.JSONField()
+    generated_decimal = (
+        GeneratedField(
+            expression=models.F("decimal") * 2,
+            db_persist=True,
+            output_field=models.DecimalField(),
+        )
+        if GeneratedField is not None
+        else None
+    )
+    generated_nullable_decimal = (
+        GeneratedField(
+            expression=models.F("decimal") * 2,
+            db_persist=True,
+            output_field=models.DecimalField(null=True, blank=True),
+        )
+        if GeneratedField is not None
+        else None
+    )
     foreign_key = models.ForeignKey(
         "FieldTypesModel",
         blank=True,
@@ -86,7 +106,6 @@ def test_field_types():
         generic_ip_address: auto
         integer: auto
         image: auto
-        null_boolean: auto
         positive_big_integer: auto
         positive_integer: auto
         positive_small_integer: auto
@@ -98,8 +117,7 @@ def test_field_types():
         uuid: auto
         json: auto
 
-    object_definition = get_object_definition(Type, strict=True)
-    assert [(f.name, f.type) for f in object_definition.fields] == [
+    expected_types: list[tuple[str, Any]] = [
         ("id", strawberry.ID),
         ("boolean", bool),
         ("char", str),
@@ -113,7 +131,6 @@ def test_field_types():
         ("generic_ip_address", str),
         ("integer", int),
         ("image", strawberry_django.DjangoImageType),
-        ("null_boolean", StrawberryOptional(bool)),
         ("positive_big_integer", int),
         ("positive_integer", int),
         ("positive_small_integer", int),
@@ -125,6 +142,67 @@ def test_field_types():
         ("uuid", uuid.UUID),
         ("json", JSON),
     ]
+
+    if django.VERSION >= (5, 0):
+        Type.__annotations__["generated_decimal"] = auto
+        expected_types.append(("generated_decimal", decimal.Decimal))
+
+        Type.__annotations__["generated_nullable_decimal"] = auto
+        expected_types.append(("generated_nullable_decimal", Optional[decimal.Decimal]))
+
+    type_to_test = _process_type(Type, model=FieldTypesModel)
+    object_definition = get_object_definition(type_to_test, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == expected_types
+
+
+def test_field_types_for_array_fields():
+    class ModelWithArrays(models.Model):
+        str_array = ArrayField(models.CharField(max_length=50))
+        int_array = ArrayField(models.IntegerField())
+
+    @strawberry_django.type(ModelWithArrays)
+    class Type:
+        str_array: auto
+        int_array: auto
+
+    type_to_test = _process_type(Type, model=ModelWithArrays)
+    object_definition = get_object_definition(type_to_test, strict=True)
+
+    str_array_field = object_definition.get_field("str_array")
+    assert str_array_field
+    assert isinstance(str_array_field.type, StrawberryList)
+    assert str_array_field.type.of_type is str
+
+    int_array_field = object_definition.get_field("int_array")
+    assert int_array_field
+    assert isinstance(int_array_field.type, StrawberryList)
+    assert int_array_field.type.of_type is int
+
+
+def test_field_types_for_matrix_fields():
+    class ModelWithMatrixes(models.Model):
+        str_matrix = ArrayField(ArrayField(models.CharField(max_length=50)))
+        int_matrix = ArrayField(ArrayField(models.IntegerField()))
+
+    @strawberry_django.type(ModelWithMatrixes)
+    class Type:
+        str_matrix: auto
+        int_matrix: auto
+
+    type_to_test = _process_type(Type, model=ModelWithMatrixes)
+    object_definition = get_object_definition(type_to_test, strict=True)
+
+    str_matrix_field = object_definition.get_field("str_matrix")
+    assert str_matrix_field
+    assert isinstance(str_matrix_field.type, StrawberryList)
+    assert isinstance(str_matrix_field.type.of_type, StrawberryList)
+    assert str_matrix_field.type.of_type.of_type is str
+
+    int_matrix_field = object_definition.get_field("int_matrix")
+    assert int_matrix_field
+    assert isinstance(int_matrix_field.type, StrawberryList)
+    assert isinstance(int_matrix_field.type.of_type, StrawberryList)
+    assert int_matrix_field.type.of_type.of_type is int
 
 
 def test_subset_of_fields():

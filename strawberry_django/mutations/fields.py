@@ -13,7 +13,7 @@ from django.core.exceptions import (
 from django.db import models, transaction
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.field import UNRESOLVED
+from strawberry.types.field import UNRESOLVED
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 from typing_extensions import Annotated
 
@@ -33,10 +33,13 @@ from . import resolvers
 
 if TYPE_CHECKING:
     from graphql.pyutils import AwaitableOrValue
-    from strawberry.arguments import StrawberryArgument
-    from strawberry.type import StrawberryType, WithStrawberryObjectDefinition
     from strawberry.types import Info
-    from strawberry.types.types import StrawberryObjectDefinition
+    from strawberry.types.arguments import StrawberryArgument
+    from strawberry.types.base import (
+        StrawberryObjectDefinition,
+        StrawberryType,
+        WithStrawberryObjectDefinition,
+    )
     from typing_extensions import Literal, Self
 
 

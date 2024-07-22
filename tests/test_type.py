@@ -3,7 +3,7 @@ import textwrap
 
 import strawberry
 from django.db import models
-from strawberry.type import get_object_definition
+from strawberry.types import get_object_definition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
