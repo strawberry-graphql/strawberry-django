@@ -25,15 +25,14 @@ poetry add django-choices-field  # Not required but recommended
 
 We'll build an example database of fruit and their colours.
 
-!!! tip
+> [!TIP]
+> You'll notice that for `Fruit.category`, we use `TextChoicesField` instead of `TextField(choices=...)`.
+> This allows strawberry-django to automatically use an enum in the graphQL schema, instead of
+> a string which would be the default behaviour for TextField.
+>
+> See the [choices-field integration](./integrations/choices-field.md) for more information.
 
-    You'll notice that for `Fruit.category`, we use `TextChoicesField` instead of `TextField(choices=...)`.
-    This allows strawberry-django to automatically use an enum in the graphQL schema, instead of
-    a string which would be the default behaviour for TextField.
-
-    See the [choices-field integration](./integrations/choices-field.md) for more information.
-
-```{.python title=models.py}
+```python title="models.py"
 from django.db import models
 from django_choices_field import TextChoicesField
 
@@ -78,14 +77,13 @@ Now use the django shell, the admin, the loaddata command or whatever tool you l
 Before creating queries, you have to define a `type` for each model. A `type` is a fundamental unit of the [schema](https://strawberry.rocks/docs/types/schema)
 which describes the shape of the data that can be queried from the GraphQL server. Types can represent scalar values (like String, Int, Boolean, Float, and ID), enums, or complex objects that consist of many fields.
 
-!!! tip
+> [!TIP]
+> A key feature of `strawberry-graphql-django` is that it provides helpers to create types from django models,
+> by automatically inferring types (and even documentation!!) from the model fields.
+>
+> See the [fields guide](./guide/fields.md) for more information.
 
-    A key feature of `strawberry-graphql-django` is that it provides helpers to create types from django models,
-    by automatically inferring types (and even documentation!!) from the model fields.
-
-    See the [fields guide](./guide/fields.md) for more information.
-
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry import auto
 
@@ -123,7 +121,7 @@ Next we want to assemble the [schema](https://strawberry.rocks/docs/types/schema
 
     See the [optimizer guide](./guide/optimizer.md) for more information.
 
-```{.python title=schema.py}
+```python title="schema.py"
 import strawberry
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
@@ -149,14 +147,14 @@ existing dosctrings and helptext), setting up the following is super useful for 
 
 If you don't set these true, you can always provide user-oriented descriptions. See the
 
-```{.python title=settings.py}
+```python title="settings.py"
 STRAWBERRY_DJANGO = {
     "FIELD_DESCRIPTION_FROM_HELP_TEXT": True,
     "TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING": True,
 }
 ```
 
-```{.python title=urls.py}
+```python title="urls.py"
 from django.urls import include, path
 from strawberry.django.views import AsyncGraphQLView
 
