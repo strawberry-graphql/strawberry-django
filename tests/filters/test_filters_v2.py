@@ -164,6 +164,7 @@ def test_filter_field():
         @strawberry_django.filter_field
         def field_method(self, root, info, prefix, value: str, queryset):
             pass
+
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
@@ -229,6 +230,7 @@ def test_filter_field_on_object():
         @strawberry_django.filter_field
         def filter(self, root, info, prefix, queryset):
             pass
+
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
