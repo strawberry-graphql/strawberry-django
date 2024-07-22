@@ -1,3 +1,7 @@
+---
+title: Resolvers
+---
+
 # Custom Resolvers
 
 Basic resolvers are generated automatically once the types are declared.

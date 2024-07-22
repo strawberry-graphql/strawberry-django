@@ -1,3 +1,7 @@
+---
+title: Views
+---
+
 # Serving the API
 
 Strawberry works both with ASGI (async) and WSGI (sync). This integration

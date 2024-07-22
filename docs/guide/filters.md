@@ -1,3 +1,7 @@
+---
+title: Filtering
+---
+
 # Filtering
 
 It is possible to define filters for Django types, which will

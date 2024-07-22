@@ -1,3 +1,7 @@
+---
+title: Quick Start
+---
+
 # Quick Start
 
 In this Quick-Start, we will:

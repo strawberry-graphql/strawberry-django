@@ -1,3 +1,7 @@
+---
+title: Ordering
+---
+
 # Ordering
 
 ```{.python title=types.py}

@@ -1,3 +1,7 @@
+---
+title: Permissions
+---
+
 # Permissions
 
 This integration exposes a field extension to extend fields into using the

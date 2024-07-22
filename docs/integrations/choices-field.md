@@ -1,3 +1,7 @@
+---
+title: Django Choices Field
+---
+
 # django-choices-field
 
 This lib provides integration for enum resolution for

@@ -1,3 +1,7 @@
+---
+title: Query Optimizer
+---
+
 # Query Optimizer
 
 ## Features

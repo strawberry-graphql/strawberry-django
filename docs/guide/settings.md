@@ -1,3 +1,7 @@
+---
+title: Settings
+---
+
 # Django Settings
 
 Certain features of this library are configured using custom

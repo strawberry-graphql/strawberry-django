@@ -1,3 +1,7 @@
+---
+title: Pagination
+---
+
 # Pagination
 
 ## Default pagination

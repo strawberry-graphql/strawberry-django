@@ -1,3 +1,7 @@
+---
+title: Queries
+---
+
 # Queries
 
 Queries can be written using `strawberry_django.field()` to load the fields defined in the `types.py` file.

@@ -1,3 +1,7 @@
+---
+title: Django Debug Toolbar
+---
+
 # django-debug-toolbar
 
 This integration provides integration between the

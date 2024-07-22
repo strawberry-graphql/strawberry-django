@@ -1,3 +1,7 @@
+---
+title: Relay
+---
+
 # Relay Support
 
 You can use the [official strawberry relay integration](https://strawberry.rocks/docs/guides/relay)

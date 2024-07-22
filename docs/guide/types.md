@@ -1,3 +1,7 @@
+---
+title: Defining Types
+---
+
 # Defining Types
 
 ## Output types

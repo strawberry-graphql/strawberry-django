@@ -1,3 +1,7 @@
+---
+title: Defining Fields
+---
+
 # Defining Fields
 
 !!! tip
