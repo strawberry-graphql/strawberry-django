@@ -107,19 +107,17 @@ class Color:
 
 Next we want to assemble the [schema](https://strawberry.rocks/docs/types/schema) from its building block types.
 
-!!! warning
+> [!WARNING]
+> You'll notice a familiar statement, `fruits: list[Fruit]`. We already used this statement in the previous step in `types.py`.
+> Seeing it twice can be a point of confusion when you're first getting to grips with graph and strawberry.
+>
+> The purpose here is similar but subtly different. Previously, the syntax defined that it was possible to make a query that **traverses** within the graph, from a Color to a list of Fruits.
+> Here, the usage defines a [**root** query](https://strawberry.rocks/docs/general/queries) (a bit like an entrypoint into the graph).
 
-    You'll notice a familiar statement, `fruits: list[Fruit]`. We already used this statement in the previous step in `types.py`.
-    Seeing it twice can be a point of confusion when you're first getting to grips with graph and strawberry.
-
-    The purpose here is similar but subtly different. Previously, the syntax defined that it was possible to make a query that **traverses** within the graph, from a Color to a list of Fruits.
-    Here, the usage defines a [**root** query](https://strawberry.rocks/docs/general/queries) (a bit like an entrypoint into the graph).
-
-!!! tip
-
-    We add the `DjangoOptimizerExtension` here. Don't worry about why for now, but you're almost certain to want it.
-
-    See the [optimizer guide](./guide/optimizer.md) for more information.
+> [!TIP]
+> We add the `DjangoOptimizerExtension` here. Don't worry about why for now, but you're almost certain to want it.
+>
+> See the [optimizer guide](./guide/optimizer.md) for more information.
 
 ```python title="schema.py"
 import strawberry
