@@ -3,11 +3,11 @@ from typing import Dict, Tuple, Union
 import strawberry
 from django.db import models
 from strawberry import auto
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.base import (
     StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
-    get_object_definition,
 )
 
 import strawberry_django

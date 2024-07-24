@@ -8,6 +8,7 @@ from typing import (
     Callable,
     Iterable,
     List,
+    Type,
     TypeVar,
     cast,
     overload,
@@ -262,7 +263,10 @@ def prepare_create_update(
             (ParsedObject, str),
         ):
             value, value_data = _parse_data(  # noqa: PLW2901
-                info, field.related_model, value, key_attr=key_attr
+                info,
+                cast(Type[Model], field.related_model),
+                value,
+                key_attr=key_attr,
             )
             if value is None and not value_data:
                 value = None  # noqa: PLW2901
@@ -508,7 +512,7 @@ def update_field(info: Info, instance: Model, field: models.Field, value: Any):
         and isinstance(field, models.ForeignObject)
         and not isinstance(value, Model)
     ):
-        value, data = _parse_pk(value, field.related_model)
+        value, data = _parse_pk(value, cast(Type[Model], field.related_model))
 
     field.save_form_data(instance, value)
     # If data was passed to the foreign key, update it recursively
@@ -574,7 +578,9 @@ def update_m2m(
         existing = set(manager.all())
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
-            obj, data = _parse_data(info, manager.model, v, key_attr=key_attr)
+            obj, data = _parse_data(
+                info, cast(Type[Model], manager.model), v, key_attr=key_attr
+            )
             if obj:
                 data.pop(key_attr, None)
                 through_defaults = data.pop("through_defaults", {})
@@ -632,7 +638,12 @@ def update_m2m(
     else:
         need_remove_cache = need_remove_cache or bool(value.add)
         for v in value.add or []:
-            obj, data = _parse_data(info, manager.model, v, key_attr=key_attr)
+            obj, data = _parse_data(
+                info,
+                cast(Type[Model], manager.model),
+                v,
+                key_attr=key_attr,
+            )
             if obj and data:
                 data.pop(key_attr, None)
                 if full_clean:
@@ -653,7 +664,9 @@ def update_m2m(
 
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
-            obj, data = _parse_data(info, manager.model, v, key_attr=key_attr)
+            obj, data = _parse_data(
+                info, cast(Type[Model], manager.model), v, key_attr=key_attr
+            )
             data.pop(key_attr, None)
             assert not data
             to_remove.append(obj)

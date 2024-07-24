@@ -1,12 +1,13 @@
+import sys
 from typing import TYPE_CHECKING, List, Optional, TypeVar, Union
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS
 from django.db.models import Count, Window
 from django.db.models.functions import RowNumber
-from strawberry.arguments import StrawberryArgument
 from strawberry.types import Info
-from strawberry.unset import UNSET, UnsetType
+from strawberry.types.arguments import StrawberryArgument
+from strawberry.types.unset import UNSET, UnsetType
 from typing_extensions import Self
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
@@ -103,9 +104,13 @@ def apply_window_pagination(
             partition_by=related_field_id,
         ),
     )
+
     if offset:
         queryset = queryset.filter(_strawberry_row_number__gt=offset)
-    if limit >= 0:
+
+    # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
+    # from the end to as a way to mimic a "not limit" as well
+    if limit >= 0 and limit != sys.maxsize:
         queryset = queryset.filter(_strawberry_row_number__lte=offset + limit)
 
     return queryset

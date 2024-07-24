@@ -1,6 +1,7 @@
 import strawberry
 from strawberry import auto
-from strawberry.type import StrawberryOptional, get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.base import StrawberryOptional
 
 import strawberry_django
 

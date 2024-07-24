@@ -1,6 +1,6 @@
 from django.db import models
 from strawberry import auto
-from strawberry.type import get_object_definition
+from strawberry.types import get_object_definition
 
 import strawberry_django
 

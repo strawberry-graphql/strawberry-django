@@ -1,34 +1,26 @@
+from __future__ import annotations
+
 import dataclasses
 import functools
 import itertools
 from typing import (
-    Dict,
-    FrozenSet,
+    TYPE_CHECKING,
     Generator,
     Iterable,
-    List,
-    Optional,
-    Type,
-    Union,
     cast,
 )
 
-from django.db import models
-from django.db.models.expressions import Expression
-from django.db.models.fields import Field
-from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.db.models.query import Prefetch, QuerySet
-from django.db.models.sql.query import Query
 from django.db.models.sql.where import WhereNode
-from strawberry.lazy_type import LazyType
-from strawberry.type import (
+from strawberry.types import has_object_definition
+from strawberry.types.base import (
     StrawberryContainer,
+    StrawberryObjectDefinition,
     StrawberryType,
     StrawberryTypeVar,
-    has_object_definition,
 )
-from strawberry.types.types import StrawberryObjectDefinition
-from strawberry.union import StrawberryUnion
+from strawberry.types.lazy_type import LazyType
+from strawberry.types.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import assert_never
 
@@ -36,16 +28,23 @@ from strawberry_django.fields.types import resolve_model_field_name
 
 from .pyutils import DictTree, dicttree_insersection_differs, dicttree_merge
 
+if TYPE_CHECKING:
+    from django.db import models
+    from django.db.models.expressions import Expression
+    from django.db.models.fields import Field
+    from django.db.models.fields.reverse_related import ForeignObjectRel
+    from django.db.models.sql.query import Query
+
 
 @functools.lru_cache
 def get_model_fields(
-    model: Type[models.Model],
+    model: type[models.Model],
     *,
     camel_case: bool = False,
     is_input: bool = False,
     is_filter: bool = False,
-) -> Dict[str, Union[Field, ForeignObjectRel]]:
-    """Get a list of model fields."""
+) -> dict[str, Field | ForeignObjectRel]:
+    """Get a list of model fields from the model."""
     fields = {}
     for f in model._meta.get_fields():
         name = cast(
@@ -58,10 +57,27 @@ def get_model_fields(
     return fields
 
 
-def get_possible_types(
-    gql_type: Union[StrawberryObjectDefinition, StrawberryType, type],
+def get_model_field(
+    model: type[models.Model],
+    field_name: str,
     *,
-    object_definition: Optional[StrawberryObjectDefinition] = None,
+    camel_case: bool = False,
+    is_input: bool = False,
+    is_filter: bool = False,
+) -> Field | ForeignObjectRel | None:
+    """Get a model fields from the model given its name."""
+    return get_model_fields(
+        model,
+        camel_case=camel_case,
+        is_input=is_input,
+        is_filter=is_filter,
+    ).get(field_name)
+
+
+def get_possible_types(
+    gql_type: StrawberryObjectDefinition | StrawberryType | type,
+    *,
+    object_definition: StrawberryObjectDefinition | None = None,
 ) -> Generator[type, None, None]:
     """Resolve all possible types for gql_type.
 
@@ -102,7 +118,7 @@ def get_possible_types(
 
 
 def get_possible_type_definitions(
-    gql_type: Union[StrawberryObjectDefinition, StrawberryType, type],
+    gql_type: StrawberryObjectDefinition | StrawberryType | type,
 ) -> Generator[StrawberryObjectDefinition, None, None]:
     """Resolve all possible type definitions for gql_type.
 
@@ -140,51 +156,51 @@ class PrefetchInspector:
         self.query = self.qs.query
 
     @property
-    def only(self) -> Optional[FrozenSet[str]]:
+    def only(self) -> frozenset[str] | None:
         if self.query.deferred_loading[1]:
             return None
         return frozenset(self.query.deferred_loading[0])
 
     @only.setter
-    def only(self, value: Optional[Iterable[Optional[str]]]):
+    def only(self, value: Iterable[str | None] | None):
         value = frozenset(v for v in (value or []) if v is not None)
         self.query.deferred_loading = (value, len(value) == 0)
 
     @property
-    def defer(self) -> Optional[FrozenSet[str]]:
+    def defer(self) -> frozenset[str] | None:
         if not self.query.deferred_loading[1]:
             return None
         return frozenset(self.query.deferred_loading[0])
 
     @defer.setter
-    def defer(self, value: Optional[Iterable[Optional[str]]]):
+    def defer(self, value: Iterable[str | None] | None):
         value = frozenset(v for v in (value or []) if v is not None)
         self.query.deferred_loading = (value, True)
 
     @property
-    def select_related(self) -> Optional[DictTree]:
+    def select_related(self) -> DictTree | None:
         if not isinstance(self.query.select_related, dict):
             return None
         return self.query.select_related
 
     @select_related.setter
-    def select_related(self, value: Optional[DictTree]):
+    def select_related(self, value: DictTree | None):
         self.query.select_related = value or {}
 
     @property
-    def prefetch_related(self) -> List[Union[Prefetch, str]]:
+    def prefetch_related(self) -> list[Prefetch | str]:
         return list(self.qs._prefetch_related_lookups)  # type: ignore
 
     @prefetch_related.setter
-    def prefetch_related(self, value: Optional[Iterable[Union[Prefetch, str]]]):
+    def prefetch_related(self, value: Iterable[Prefetch | str] | None):
         self.qs._prefetch_related_lookups = tuple(value or [])  # type: ignore
 
     @property
-    def annotations(self) -> Dict[str, Expression]:
+    def annotations(self) -> dict[str, Expression]:
         return self.query.annotations
 
     @annotations.setter
-    def annotations(self, value: Optional[Dict[str, Expression]]):
+    def annotations(self, value: dict[str, Expression] | None):
         self.query.annotations = value or {}  # type: ignore
 
     @property
@@ -192,7 +208,7 @@ class PrefetchInspector:
         return self.query.extra
 
     @extra.setter
-    def extra(self, value: Optional[DictTree]):
+    def extra(self, value: DictTree | None):
         self.query.extra = value or {}  # type: ignore
 
     @property
@@ -200,10 +216,10 @@ class PrefetchInspector:
         return self.query.where
 
     @where.setter
-    def where(self, value: Optional[WhereNode]):
+    def where(self, value: WhereNode | None):
         self.query.where = value or WhereNode()
 
-    def merge(self, other: "PrefetchInspector", *, allow_unsafe_ops: bool = False):
+    def merge(self, other: PrefetchInspector, *, allow_unsafe_ops: bool = False):
         if not allow_unsafe_ops and self.where != other.where:
             raise ValueError(
                 "Tried to prefetch 2 queries with different filters to the "
@@ -248,7 +264,7 @@ class PrefetchInspector:
             raise ValueError("Tried to prefetch 2 queries with overlapping extras.")
         self.extra = {**s_extra, **o_extra}
 
-        prefetch_related: Dict[str, Union[str, Prefetch]] = {}
+        prefetch_related: dict[str, str | Prefetch] = {}
         for p in itertools.chain(self.prefetch_related, other.prefetch_related):
             if isinstance(p, str):
                 if p not in prefetch_related:

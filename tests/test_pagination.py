@@ -1,3 +1,4 @@
+import sys
 from typing import List, cast
 
 import pytest
@@ -6,7 +7,11 @@ from strawberry import auto
 from strawberry.types import ExecutionResult
 
 import strawberry_django
-from strawberry_django.pagination import OffsetPaginationInput, apply
+from strawberry_django.pagination import (
+    OffsetPaginationInput,
+    apply,
+    apply_window_pagination,
+)
 from tests import models, utils
 from tests.projects.faker import MilestoneFactory, ProjectFactory
 
@@ -96,3 +101,47 @@ def test_resolver_pagination(fruits):
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
     ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_apply_window_pagination():
+    color = models.Color.objects.create(name="Red")
+
+    for i in range(10):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    queryset = apply_window_pagination(
+        models.Fruit.objects.all(),
+        related_field_id="color_id",
+        offset=1,
+        limit=1,
+    )
+
+    assert queryset.count() == 1
+    fruit = queryset.get()
+    assert fruit.name == "fruit1"
+    assert fruit._strawberry_row_number == 2  # type: ignore
+    assert fruit._strawberry_total_count == 10  # type: ignore
+
+
+@pytest.mark.parametrize("limit", [-1, sys.maxsize])
+@pytest.mark.django_db(transaction=True)
+def test_apply_window_pagination_with_no_limites(limit):
+    color = models.Color.objects.create(name="Red")
+
+    for i in range(10):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    queryset = apply_window_pagination(
+        models.Fruit.objects.all(),
+        related_field_id="color_id",
+        offset=2,
+        limit=limit,
+    )
+
+    assert queryset.count() == 8
+    first_fruit = queryset.first()
+    assert first_fruit is not None
+    assert first_fruit.name == "fruit2"
+    assert first_fruit._strawberry_row_number == 3  # type: ignore
+    assert first_fruit._strawberry_total_count == 10  # type: ignore

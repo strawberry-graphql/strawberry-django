@@ -1,18 +1,21 @@
 # ruff: noqa: TRY002, B904, BLE001, F811, PT012
 from typing import Any, List, Optional, cast
+from unittest import mock
 
 import pytest
 import strawberry
 from django.db.models import Case, Count, Value, When
+from pytest_mock import MockFixture
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingArgumentsAnnotationsError
-from strawberry.field import StrawberryField
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.base import (
     StrawberryOptional,
     WithStrawberryObjectDefinition,
     get_object_definition,
 )
+from strawberry.types.field import StrawberryField
 
 import strawberry_django
 from strawberry_django.exceptions import (
@@ -250,6 +253,7 @@ def test_order_field():
         @strawberry_django.order_field
         def field_method(self, root, info, prefix, value: auto, sequence, queryset):
             pass
+
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
@@ -302,6 +306,7 @@ def test_order_field_on_object():
         @strawberry_django.order_field
         def order(self, root, info, prefix, sequence, queryset):
             pass
+
     except Exception as exc:
         raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
 
@@ -329,6 +334,33 @@ def test_order_field_method():
 
     with pytest.raises(Exception, match="WAS CALLED"):
         process_order(_order, _info, _queryset, prefix="ROOT", sequence=_sequence)
+
+
+def test_order_method_not_called_when_not_decorated(mocker: MockFixture):
+    @strawberry_django.ordering.order(models.Fruit)
+    class Order:
+        def order(self, root, info, prefix, value: auto, sequence, queryset):
+            pytest.fail("Should not have been called")
+
+    mock_order_method = mocker.spy(Order, "order")
+
+    process_order(
+        cast(WithStrawberryObjectDefinition, Order()), mock.Mock(), mock.Mock()
+    )
+
+    mock_order_method.assert_not_called()
+
+
+def test_order_field_not_called(mocker: MockFixture):
+    @strawberry_django.ordering.order(models.Fruit)
+    class Order:
+        order: Ordering = Ordering.ASC
+
+    # Calling this and no error being raised is the test, as the wrong behavior would
+    # be for the field to be called like a method
+    process_order(
+        cast(WithStrawberryObjectDefinition, Order()), mock.Mock(), mock.Mock()
+    )
 
 
 def test_order_object_method():

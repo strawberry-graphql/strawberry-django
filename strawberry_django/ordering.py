@@ -16,9 +16,10 @@ import strawberry
 from django.db.models import F, OrderBy, QuerySet
 from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
-from strawberry.field import StrawberryField, field
-from strawberry.type import WithStrawberryObjectDefinition, has_object_definition
-from strawberry.unset import UnsetType
+from strawberry.types import has_object_definition
+from strawberry.types.base import WithStrawberryObjectDefinition
+from strawberry.types.field import StrawberryField, field
+from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Self, dataclass_transform
 
@@ -34,8 +35,8 @@ from .arguments import argument
 
 if TYPE_CHECKING:
     from django.db.models import Model
-    from strawberry.arguments import StrawberryArgument
     from strawberry.types import Info
+    from strawberry.types.arguments import StrawberryArgument
 
 _T = TypeVar("_T")
 _QS = TypeVar("_QS", bound="QuerySet")
@@ -108,8 +109,10 @@ def process_order(
     sequence = sequence or {}
     args = []
 
-    if not skip_object_order_method and (order_method := getattr(order, "order", None)):
-        assert isinstance(order_method, FilterOrderFieldResolver)
+    if not skip_object_order_method and isinstance(
+        order_method := getattr(order, "order", None),
+        FilterOrderFieldResolver,
+    ):
         return order_method(
             order, info, queryset=queryset, prefix=prefix, sequence=sequence
         )

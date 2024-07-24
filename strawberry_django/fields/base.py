@@ -7,17 +7,17 @@ import django
 from django.db.models import ForeignKey
 from strawberry import LazyType, relay
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.auto import StrawberryAuto
-from strawberry.field import UNRESOLVED, StrawberryField
-from strawberry.type import (
+from strawberry.types import get_object_definition
+from strawberry.types.auto import StrawberryAuto
+from strawberry.types.base import (
     StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
     StrawberryType,
     WithStrawberryObjectDefinition,
-    get_object_definition,
 )
-from strawberry.union import StrawberryUnion
+from strawberry.types.field import UNRESOLVED, StrawberryField
+from strawberry.types.union import StrawberryUnion
 from strawberry.utils.inspect import get_specialized_type_var_map
 
 from strawberry_django.resolvers import django_resolver
@@ -30,8 +30,8 @@ from strawberry_django.utils.typing import (
 
 if TYPE_CHECKING:
     from django.db import models
-    from strawberry.object_type import StrawberryObjectDefinition
     from strawberry.types import Info
+    from strawberry.types.object_type import StrawberryObjectDefinition
     from typing_extensions import Literal, Self
 
     from strawberry_django.type import StrawberryDjangoDefinition

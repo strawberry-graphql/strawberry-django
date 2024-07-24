@@ -52,14 +52,14 @@ from strawberry_django.resolvers import (
 if TYPE_CHECKING:
     from graphql.pyutils import AwaitableOrValue
     from strawberry import BasePermission
-    from strawberry.arguments import StrawberryArgument
     from strawberry.extensions.field_extension import (
         FieldExtension,
         SyncExtensionResolver,
     )
-    from strawberry.field import _RESOLVER_TYPE, StrawberryField
     from strawberry.relay.types import NodeIterableType
-    from strawberry.unset import UnsetType
+    from strawberry.types.arguments import StrawberryArgument
+    from strawberry.types.field import _RESOLVER_TYPE, StrawberryField
+    from strawberry.types.unset import UnsetType
     from typing_extensions import Literal, Self
 
     from strawberry_django.utils.typing import (
@@ -358,6 +358,8 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     )
 
                 return cast(Iterable[Any], retval)
+
+            default_resolver.can_optimize = True  # type: ignore
 
             field.base_resolver = StrawberryResolver(default_resolver)
 

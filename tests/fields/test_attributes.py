@@ -5,7 +5,7 @@ import strawberry
 from django.db import models
 from django.test import override_settings
 from strawberry import BasePermission, auto, relay
-from strawberry.type import get_object_definition
+from strawberry.types import get_object_definition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField

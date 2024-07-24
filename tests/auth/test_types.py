@@ -1,6 +1,7 @@
 import strawberry
 from django.contrib.auth.models import Group, User
-from strawberry.type import StrawberryList, get_object_definition
+from strawberry.types import get_object_definition
+from strawberry.types.base import StrawberryList
 
 import strawberry_django
 from strawberry_django import DjangoModelType
