@@ -248,10 +248,11 @@ def prepare_create_update(
             # Dont use these, fallback to model defaults.
             direct_field_value = False
         elif isinstance(field, models.FileField):
-            if value is None:
+            if value is None and instance.pk is not None:
                 # We want to reset the file field value when None was passed in the
                 # input, but `FileField.save_form_data` ignores None values. In that
-                # case we manually pass False which clears the file.
+                # case we manually pass False which clears the file
+                # (but only if the instance is already saved and we are updating it)
                 value = False  # noqa: PLW2901
         elif isinstance(field, (ManyToManyField, ForeignObjectRel)):
             # m2m will be processed later

@@ -54,6 +54,30 @@ def test_create_with_optional_file(mutation):
     }
 
 
+def test_create_with_optional_file_when_not_setting_it(mutation):
+    result = mutation(
+        """\
+        CreateFruit($picture: Upload) {
+          createFruit(data: { name: "strawberry", picture: $picture }) {
+            id
+            name
+            picture {
+              name
+            }
+          }
+        }
+        """,
+        variable_values={"picture": None},
+    )
+
+    assert not result.errors
+    assert result.data["createFruit"] == {
+        "id": "1",
+        "name": "strawberry",
+        "picture": None,
+    }
+
+
 def test_update_with_optional_file_when_unsetting_it(mutation):
     fname = "test_update_with_optional_file.png"
     upload = prep_image(fname)
