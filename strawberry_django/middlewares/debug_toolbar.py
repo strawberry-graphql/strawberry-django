@@ -8,10 +8,10 @@ import weakref
 from typing import Optional
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
-from debug_toolbar.middleware import _HTML_TYPES, get_show_toolbar  # noqa: PLC2701
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
+from debug_toolbar.middleware import get_show_toolbar
 from debug_toolbar.panels.sql.panel import SQLPanel
 from debug_toolbar.panels.templates import TemplatesPanel
 from debug_toolbar.toolbar import DebugToolbar
@@ -22,6 +22,8 @@ from django.http.response import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.encoding import force_str
 from strawberry.django.views import BaseView
+
+_HTML_TYPES = {"text/html", "application/xhtml+xml"}
 
 _store_cache = weakref.WeakKeyDictionary()
 _debug_toolbar_map: "weakref.WeakKeyDictionary[HttpRequest, DebugToolbar]" = (
