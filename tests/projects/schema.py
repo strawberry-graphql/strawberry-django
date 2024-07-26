@@ -49,6 +49,7 @@ from .models import (
     Project,
     Quiz,
     Tag,
+    Version,
 )
 
 UserModel = cast(Type[AbstractUser], get_user_model())
@@ -215,6 +216,11 @@ class FavoriteType(relay.Node):
         return queryset.by_user(info.context.request.user)
 
 
+@strawberry_django.type(Version)
+class VersionType(relay.Node):
+    name: strawberry.auto
+
+
 @strawberry_django.type(Issue)
 class IssueType(relay.Node, Named):
     milestone: MilestoneType
@@ -228,6 +234,7 @@ class IssueType(relay.Node, Named):
     favorite_set: ListConnectionWithTotalCount["FavoriteType"] = (
         strawberry_django.connection()
     )
+    versions: List["VersionType"]
 
     @strawberry_django.field(select_related="milestone", only="milestone__name")
     def milestone_name(self) -> str:
@@ -311,18 +318,9 @@ class AssigneeInputPartial(NodeInputPartial):
     through_defaults: Optional[AssigneeThroughInputPartial] = strawberry.UNSET
 
 
-@strawberry_django.partial(Issue)
-class IssueInputPartial(NodeInput, IssueInput):
-    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
-
-
-@strawberry_django.partial(Issue)
-class IssueInputPartialWithoutId(IssueInput):
-    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
+@strawberry_django.partial(Version)
+class VersionInputPartial(NodeInputPartial):
+    name: strawberry.auto
 
 
 @strawberry_django.input(Issue)
@@ -346,6 +344,24 @@ class MilestoneInput:
 @strawberry_django.partial(Milestone)
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
+
+
+@strawberry_django.partial(Issue)
+class IssueInputPartial(NodeInput, IssueInput):
+    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
+    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
+    versions: Optional[ListInput[VersionInputPartial]] = UNSET
+    milestone: Optional[MilestoneInputPartial] = UNSET
+
+
+@strawberry_django.partial(Issue)
+class IssueInputPartialWithoutId(IssueInput):
+    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
+    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
+    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
+    versions: Optional[ListInput[VersionInputPartial]] = UNSET
+    milestone: Optional[MilestoneInputPartial] = UNSET
 
 
 @strawberry.type

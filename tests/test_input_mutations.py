@@ -10,7 +10,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Issue, Milestone, Project
+from .projects.models import Issue, Milestone, Project, Version
 
 
 @pytest.mark.django_db(transaction=True)
@@ -471,6 +471,55 @@ def test_input_update_mutation(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_input_nested_unique_together_update_mutation(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+          name
+          versions {
+            name
+          }
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create()
+    assert not Version.objects.exists()
+
+    # Execute two sequential queries with nested Version objects having `unique_together` contraint.
+    # Only one instance of `Version` is expected to be created with no unique contrant failure
+    for _ in range(2):
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "id": to_base64("IssueType", issue.pk),
+                    "versions": {"set": [{"name": "beta"}, {"name": "beta"}]},
+                },
+            },
+        )
+        assert res.data
+        assert isinstance(res.data["updateIssue"], dict)
+
+    versions = Version.objects.all()
+    assert len(versions) == 1
+    assert len(res.data["updateIssue"]["versions"]) == 1
+    assert res.data["updateIssue"]["versions"][0]["name"] == versions[0].name
+
+
+@pytest.mark.django_db(transaction=True)
 def test_input_nested_update_mutation(db, gql_client: GraphQLTestClient):
     query = """
     mutation UpdateIssue ($input: IssueInputPartial!) {
@@ -640,6 +689,7 @@ def test_input_update_m2m_set_mutation(db, gql_client: GraphQLTestClient):
                 "tags": {
                     "set": [
                         {"id": None, "name": "Foobar"},
+                        {"name": "Foobin"},
                         {"name": "Foobin"},
                     ],
                 },

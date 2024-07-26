@@ -261,24 +261,26 @@ input IssueInput {
 input IssueInputPartial {
   id: GlobalID!
   name: String
-  milestone: MilestoneInputPartial!
+  milestone: MilestoneInputPartial
   priority: Int
   kind: String
   tags: TagInputPartialListInput
   extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
+  versions: VersionInputPartialListInput
 }
 
 input IssueInputPartialWithoutId {
   name: String
-  milestone: MilestoneInputPartial!
+  milestone: MilestoneInputPartial
   priority: Int
   kind: String
   tags: TagInputPartialListInput
   extra: Int
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
+  versions: VersionInputPartialListInput
 }
 
 input IssueOrder {
@@ -310,6 +312,7 @@ type IssueType implements Node & Named {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): FavoriteTypeConnection!
+  versions: [VersionType!]!
   milestoneName: String!
   milestoneNameWithoutOnlyOptimization: String!
   privateName: String
@@ -937,6 +940,24 @@ type UserType implements Node {
   isSuperuser: Boolean!
   isStaff: Boolean!
   fullName: String!
+}
+
+input VersionInputPartial {
+  id: GlobalID
+  name: String
+}
+
+"""Add/remove/set the selected nodes."""
+input VersionInputPartialListInput {
+  set: [VersionInputPartial!]
+  add: [VersionInputPartial!]
+  remove: [VersionInputPartial!]
+}
+
+type VersionType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
 }
 
 """Permission definition for schema directives."""

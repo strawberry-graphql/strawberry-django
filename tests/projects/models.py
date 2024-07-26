@@ -171,6 +171,21 @@ class Issue(NamedModel):
         return f"{self.kind}: {self.priority}"
 
 
+class Version(NamedModel):
+    issue_id: int
+    issue = models.ForeignKey[Issue](
+        Issue,
+        on_delete=models.CASCADE,
+        related_name="versions",
+        related_query_name="version",
+    )
+
+    class Meta:
+        unique_together = [  # noqa: RUF012
+            ("name", "issue")
+        ]
+
+
 class Assignee(models.Model):
     class Meta:  # type: ignore
         unique_together = [  # noqa: RUF012
@@ -202,13 +217,15 @@ class Assignee(models.Model):
     )
 
 
-class Tag(NamedModel):
+class Tag(models.Model):
     issues: "RelatedManager[Issue]"
 
     id = models.BigAutoField(
         verbose_name="ID",
         primary_key=True,
     )
+
+    name = models.CharField(max_length=255, unique=True)
 
 
 class Quiz(models.Model):

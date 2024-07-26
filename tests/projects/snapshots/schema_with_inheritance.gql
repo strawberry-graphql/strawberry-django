@@ -110,6 +110,7 @@ type IssueType implements Node & Named {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): FavoriteTypeConnection!
+  versions: [VersionType!]!
   milestoneName: String!
   milestoneNameWithoutOnlyOptimization: String!
   privateName: String
@@ -412,4 +413,10 @@ type UserType implements Node {
   isSuperuser: Boolean!
   isStaff: Boolean!
   fullName: String!
+}
+
+type VersionType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  name: String!
 }
