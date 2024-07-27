@@ -344,6 +344,7 @@ class MilestoneInput:
 @strawberry_django.partial(Milestone)
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
+    project: Optional[ProjectInputPartial]
 
 
 @strawberry_django.partial(Issue)

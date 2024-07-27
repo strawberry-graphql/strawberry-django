@@ -300,6 +300,82 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("unset_pk", [True, False])
+def test_input_create_mutation_multiple_level_nested_creation(
+    db, gql_client: GraphQLTestClient, unset_pk: bool
+):
+    query = """
+    mutation CreateIssue ($input: IssueInput!) {
+      createIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+          name
+          milestone {
+            id
+            name
+            project {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+    """
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "name": "Some Issue",
+                "milestone": {
+                    "name": "Some Milestone",
+                    "project": {
+                        **({} if unset_pk else {"id": None}),
+                        "name": "Some Project",
+                    },
+                },
+            },
+        },
+    )
+    assert res.data
+    assert isinstance(res.data["createIssue"], dict)
+
+    issue_typename, issue_pk = from_base64(res.data["createIssue"].pop("id"))
+    assert issue_typename == "IssueType"
+    issue = Issue.objects.get(pk=issue_pk)
+
+    milestone_typename, milestone_pk = from_base64(
+        res.data["createIssue"]["milestone"].pop("id")
+    )
+    assert milestone_typename == "MilestoneType"
+    milestone = Milestone.objects.get(pk=milestone_pk)
+    assert issue.milestone == milestone
+
+    project_typename, project_pk = from_base64(
+        res.data["createIssue"]["milestone"]["project"].pop("id")
+    )
+    assert project_typename == "ProjectType"
+    project = Project.objects.get(pk=project_pk)
+    assert issue.milestone.project == project
+
+    assert res.data == {
+        "createIssue": {
+            "__typename": "IssueType",
+            "name": issue.name,
+            "milestone": {"name": milestone.name, "project": {"name": project.name}},
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
     query = """
     mutation CreateMilestone ($input: MilestoneInput!) {

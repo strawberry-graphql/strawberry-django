@@ -99,8 +99,9 @@ def _parse_data(
                 continue
 
             if isinstance(v, ParsedObject):
-                if v.pk is None:
-                    v = create(info, model, v.data or {})  # noqa: PLW2901
+                if v.pk is UNSET or v.pk is None:
+                    related_model = get_model_fields(model).get(k).related_model
+                    v = create(info, related_model, v.data or {})  # noqa: PLW2901
                 elif isinstance(v.pk, models.Model) and v.data:
                     v = update(info, v.pk, v.data, key_attr=key_attr)  # noqa: PLW2901
                 else:
