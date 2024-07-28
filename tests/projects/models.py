@@ -114,8 +114,11 @@ class Favorite(models.Model):
     objects = FavoriteQuerySet.as_manager()
 
 
+class BugReproduction(models.Model):
+    description = models.TextField()
+
+
 class Issue(NamedModel):
-    comments: "RelatedManager[Issue]"
     issue_assignees: "RelatedManager[Assignee]"
 
     class Kind(models.TextChoices):
@@ -159,6 +162,13 @@ class Issue(NamedModel):
         User,
         through="Assignee",
         related_name="+",
+    )
+    bug_reproduction = models.OneToOneField["BugReproduction"](
+        "BugReproduction",
+        null=True,
+        blank=True,
+        related_name="issue",
+        on_delete=models.CASCADE,
     )
 
     @property

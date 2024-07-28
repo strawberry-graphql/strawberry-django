@@ -41,6 +41,7 @@ from strawberry_django.relay import ListConnectionWithTotalCount
 
 from .models import (
     Assignee,
+    BugReproduction,
     Favorite,
     FavoriteQuerySet,
     Issue,
@@ -323,6 +324,11 @@ class VersionInputPartial(NodeInputPartial):
     name: strawberry.auto
 
 
+@strawberry_django.partial(BugReproduction)
+class BugReproductionInputPartial(NodeInputPartial):
+    description: strawberry.auto
+
+
 @strawberry_django.input(Issue)
 class MilestoneIssueInput:
     name: strawberry.auto
@@ -345,6 +351,7 @@ class MilestoneInput:
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
     project: Optional[ProjectInputPartial]
+    issues: Optional[List["IssueInputPartialWithoutId"]]
 
 
 @strawberry_django.partial(Issue)
@@ -354,6 +361,7 @@ class IssueInputPartial(NodeInput, IssueInput):
     issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
     versions: Optional[ListInput[VersionInputPartial]] = UNSET
     milestone: Optional[MilestoneInputPartial] = UNSET
+    bug_reproduction: Optional[BugReproductionInputPartial] = UNSET
 
 
 @strawberry_django.partial(Issue)
@@ -363,6 +371,7 @@ class IssueInputPartialWithoutId(IssueInput):
     issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
     versions: Optional[ListInput[VersionInputPartial]] = UNSET
     milestone: Optional[MilestoneInputPartial] = UNSET
+    bug_reproduction: Optional[BugReproductionInputPartial] = UNSET
 
 
 @strawberry.type

@@ -99,7 +99,7 @@ def _parse_data(
                 continue
 
             if isinstance(v, ParsedObject):
-                if v.pk is UNSET or v.pk is None:
+                if v.pk in (None, UNSET):  # noqa: PLR6201
                     related_model = get_model_fields(model).get(k).related_model
                     v = create(info, related_model, v.data or {})  # noqa: PLW2901
                 elif isinstance(v.pk, models.Model) and v.data:
@@ -553,15 +553,19 @@ def update_m2m(
 
     use_remove = True
     if isinstance(field, ManyToManyField):
-        manager = cast("RelatedManager", getattr(instance, field.attname))
+        remote_field_name = field.attname
+        reverse_field_name = field.remote_field.related_name
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
-        accessor_name = field.get_accessor_name()
-        assert accessor_name
-        manager = cast("RelatedManager", getattr(instance, accessor_name))
+        remote_field_name = field.get_accessor_name()
+        reverse_field_name = field.field.name
         if field.one_to_many:
             # remove if field is nullable, otherwise delete
             use_remove = field.remote_field.null is True
+
+    assert remote_field_name
+    assert reverse_field_name
+    manager = cast("RelatedManager", getattr(instance, remote_field_name))
 
     to_add = []
     to_remove = []
@@ -621,11 +625,13 @@ def update_m2m(
 
                 existing.discard(obj)
             else:
-                if key_attr not in data:  # we have a Input Type
-                    obj, _ = manager.get_or_create(**data)
-                else:
-                    data.pop(key_attr)
-                    obj = manager.create(**data)
+                ref_instance = (
+                    manager.instance
+                    if field.one_to_many or field.one_to_one
+                    else [manager.instance]
+                )
+                data |= {reverse_field_name: ref_instance}
+                obj = create(info, manager.model, data, full_clean=full_clean)
 
                 if full_clean:
                     obj.full_clean(**full_clean_options)

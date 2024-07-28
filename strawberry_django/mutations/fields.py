@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     )
     from typing_extensions import Literal, Self
 
+    from .types import FullCleanOptions
+
 
 def _get_validation_errors(error: Exception):
     if isinstance(error, PermissionDenied):
@@ -176,7 +178,7 @@ class DjangoMutationCUD(DjangoMutationBase):
     def __init__(
         self,
         input_type: type | None = None,
-        full_clean: bool = True,
+        full_clean: bool | FullCleanOptions = True,
         argument_name: str | None = None,
         key_attr: str | None = None,
         **kwargs,

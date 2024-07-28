@@ -81,6 +81,11 @@ type AssigneeType implements Node {
   owner: Boolean!
 }
 
+input BugReproductionInputPartial {
+  id: GlobalID
+  description: String
+}
+
 union CreateIssuePayload = IssueType | OperationInfo
 
 union CreateMilestonePayload = MilestoneType | OperationInfo
@@ -269,6 +274,7 @@ input IssueInputPartial {
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
   versions: VersionInputPartialListInput
+  bugReproduction: BugReproductionInputPartial
 }
 
 input IssueInputPartialWithoutId {
@@ -281,6 +287,7 @@ input IssueInputPartialWithoutId {
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
   versions: VersionInputPartialListInput
+  bugReproduction: BugReproductionInputPartial
 }
 
 input IssueOrder {
@@ -359,6 +366,7 @@ input MilestoneInputPartial {
   id: GlobalID
   name: String
   project: ProjectInputPartial
+  issues: [IssueInputPartialWithoutId!]
 }
 
 input MilestoneIssueInput {

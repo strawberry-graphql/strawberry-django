@@ -300,6 +300,66 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
 
 
 @pytest.mark.django_db(transaction=True)
+def test_input_create_mutation_multiple_nested_creation(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateProject ($input: ProjectInputPartial!) {
+      updateProject (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          dueDate
+          milestones {
+            id
+            name
+          }
+          cost
+        }
+      }
+    }
+    """
+
+    project = ProjectFactory.create()
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("ProjectType", project.pk),
+                "milestones": [
+                    {
+                        "name": "Milestone 1",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                                "bugReproduction": {
+                                    "description": "Steps to reproduce"
+                                },
+                            }
+                        ],
+                    }
+                ],
+            },
+        },
+    )
+
+    assert res.data
+    assert isinstance(res.data["updateProject"], dict)
+
+    typename, _ = from_base64(res.data["updateProject"].pop("id"))
+    assert typename == "ProjectType"
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("unset_pk", [True, False])
 def test_input_create_mutation_multiple_level_nested_creation(
     db, gql_client: GraphQLTestClient, unset_pk: bool
