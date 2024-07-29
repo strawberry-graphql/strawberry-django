@@ -206,9 +206,7 @@ python manage.py runserver
 Then visit [localhost:8000/graphql](http://localhost:8000/graphql) in your browser. You should see the graphql explorer being served by django.
 Using the interactive query tool, you can query for the fruits you added earlier:
 
-<div style="width: 100%;">
-    <img src="../images/graphiql-with-fruit.png" style="width: 100%;" />
-</div>
+![GraphiQL with fruit](./images/graphiql-with-fruit.png)
 
 ## Next steps
 
