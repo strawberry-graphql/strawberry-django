@@ -1,6 +1,10 @@
+---
+title: Ordering
+---
+
 # Ordering
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.order(models.Color)
 class ColorOrder:
     name: auto
@@ -11,15 +15,14 @@ class FruitOrder:
     color: ColorOrder | None
 ```
 
-!!! tip
-
-    In most cases order fields should have `Optional` annotations and default value `strawberry.UNSET`.
-    Above `auto` annotation is wrapped in `Optional` automatically.
-    `UNSET` is automatically used for fields without `field` or with `strawberry_django.order_field`.
+> [!TIP]
+> In most cases order fields should have `Optional` annotations and default value `strawberry.UNSET`.
+> Above `auto` annotation is wrapped in `Optional` automatically.
+> `UNSET` is automatically used for fields without `field` or with `strawberry_django.order_field`.
 
 The code above generates the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 enum Ordering {
   ASC
   ASC_NULLS_FIRST
@@ -43,7 +46,7 @@ input FruitOrder {
 
 You can define custom order method by defining your own resolver.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
@@ -70,20 +73,17 @@ class FruitOrder:
         return queryset, [ordering]
 ```
 
-!!! warning
+> [!WARNING]
+> Do not use `queryset.order_by()` directly. Due to `order_by` not being chainable
+> operation, changes applied this way would be overriden later.
 
-    Do not use `queryset.order_by()` directly. Due to `order_by` not being chainable
-    operation, changes applied this way would be overriden later.
-
-!!! tip
-
-    `strawberry_django.Ordering` has convenient method `resolve` that can be used to
-    convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
-    with `nulls_first` and `nulls_last` arguments.
+> [!TIP] > `strawberry_django.Ordering` has convenient method `resolve` that can be used to
+> convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
+> with `nulls_first` and `nulls_last` arguments.
 
 The code above generates the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 enum Ordering {
   ASC
   ASC_NULLS_FIRST
@@ -107,7 +107,7 @@ input FruitOrder {
   - Important for nested ordering
   - In code bellow custom order `name` ends up ordering `Fruit` instead of `Color` without applying `prefix`
 
-```{.python title="Why prefix?"}
+```python title="Why prefix?"
 @strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
@@ -167,7 +167,7 @@ Works similar to field order method, but:
 - argument `value` is **Forbidden**
 - should probaly use `sequence`
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
@@ -208,18 +208,17 @@ class FruitOrder:
 
 ```
 
-!!! tip
-
-    As seen above `strawberry_django.process_order` function is exposed and can be
-    reused in custom methods.
-    For order method `order` `skip_object_order_method` was used to avoid endless recursion.
+> [!TIP]
+> As seen above `strawberry_django.process_order` function is exposed and can be
+> reused in custom methods.
+> For order method `order` `skip_object_order_method` was used to avoid endless recursion.
 
 ## Adding orderings to types
 
 All fields and mutations inherit orderings from the underlying type by default.
 So, if you have a field like this:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.type(models.Fruit, order=FruitOrder)
 class Fruit:
     ...
@@ -232,7 +231,7 @@ if it was passed to the field.
 
 Orderings added into a field override the default order of this type.
 
-```{.python title=schema.py}
+```python title="schema.py"
 @strawberry.type
 class Query:
     fruit: Fruit = strawberry_django.field(order=FruitOrder)

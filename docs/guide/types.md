@@ -1,11 +1,14 @@
+---
+title: Defining Types
+---
+
 # Defining Types
 
 ## Output types
 
-!!! note
-
-    It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
-    for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
+> ![NOTE}
+> It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
+> for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
 
 Output types are generated from models. The `auto` type is used for field type auto resolution.
 Relational fields are described by referencing to other types generated from Django models.
@@ -13,7 +16,7 @@ A many-to-many relation is described with the `typing.List` type annotation.
 `strawberry_django` will automatically generate resolvers for relational fields.
 More information about that can be read from [resolvers](resolvers.md) page.
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 
 from strawberry import auto
@@ -37,7 +40,7 @@ class Color:
 Input types can be generated from Django models using the `strawberry_django.input` decorator.
 The first parameter is the model which the type is derived from.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.input(models.Fruit)
 class FruitInput:
     id: auto
@@ -50,7 +53,7 @@ Partial input types can be generated from existing input types through class inh
 
 Non-`auto` type annotations will be respected—and therefore required—unless explicitly marked `Optional[]`.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.input(models.Color, partial=True)
 class FruitPartialInput(FruitInput):
     color: List["ColorPartialInput"]
@@ -74,7 +77,7 @@ class ColorNameRequiredPartialInput:
 
 Django models can be converted to `strawberry` Types with the `strawberry_django.type` decorator. Custom descriptions can be added using the `description` keyword argument (See: [`strawberry.type` decorator API](https://strawberry.rocks/docs/types/object-types#api)).
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 
 @strawberry_django.type(models.Fruit, description="A tasty snack")
@@ -89,17 +92,16 @@ on [How to define Fields](fields.md) for that.
 
 ### Customizing the returned `QuerySet`
 
-!!! warning
-
-    By doing this you are modifying all automatic `QuerySet` generation for any field
-    that returns this type. Ideally you will want to define your own [resolver](resolvers.md)
-    instead, which gives you more control over it.
+> [!WARNING]
+> By doing this you are modifying all automatic `QuerySet` generation for any field
+> that returns this type. Ideally you will want to define your own [resolver](resolvers.md)
+> instead, which gives you more control over it.
 
 By default, a `strawberry_django` type will get data from the default manager for its Django Model.
 You can implement a custom `get_queryset` classmethod to your type to do some extra processing to the default queryset,
 like filtering it further.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.type(models.Fruit)
 class Berry:
 
@@ -114,7 +116,7 @@ a `strawberry` `Info` object containing details about the request.
 You can use that `info` parameter to, for example,
 limit access to results based on the current user in the request:
 
-```{.python title=types.py}
+```python title="types.py"
 from stawberry_django.auth.utils import get_current_user
 
 @strawberry_django.type(models.Fruit)
@@ -129,10 +131,9 @@ class Berry:
         return queryset.filter(name__contains="berry")
 ```
 
-!!! note
-
-    Another way of limiting this is by using the [PermissionExtension](permissions.md)
-    provided by this lib.
+> [!NOTE]
+> Another way of limiting this is by using the [PermissionExtension](permissions.md)
+> provided by this lib.
 
 The `kwargs` dictionary can include other parameters that were added in a `@strawberry.django.type` definition
 like [filters](filters.md) or [pagination](pagination.md).

@@ -1,9 +1,13 @@
+---
+title: Relay
+---
+
 # Relay Support
 
 You can use the [official strawberry relay integration](https://strawberry.rocks/docs/guides/relay)
 directly with django types like this:
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount
@@ -51,12 +55,11 @@ Behind the scenes this extension is doing the following for you:
 You can also define your own `relay.NodeID` field and your resolve, in the same way as
 `some_model_conn_with_resolver` is doing. In those cases, they will not be overridden.
 
-!!! tip
-
-    If you are only working with types inheriting from `relay.Node` and `GlobalID`
-    for identifying objects, you might want to set `MAP_AUTO_ID_AS_GLOBAL_ID=True`
-    in your [strawberry django settings](../settings) to make sure `auto` fields gets
-    mapped to `GlobalID` on types and filters.
+> [!TIP]
+> If you are only working with types inheriting from `relay.Node` and `GlobalID`
+> for identifying objects, you might want to set `MAP_AUTO_ID_AS_GLOBAL_ID=True`
+> in your [strawberry django settings](../settings) to make sure `auto` fields gets
+> mapped to `GlobalID` on types and filters.
 
 Also, this lib exposes a `strawberry_django.relay.ListConnectionWithTotalCount`, which works
 the same way as `strawberry.relay.ListConnection` does, but also exposes a

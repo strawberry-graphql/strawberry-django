@@ -1,3 +1,7 @@
+---
+title: Django Channels
+---
+
 # django-channels
 
 Strawberry provides an integration for

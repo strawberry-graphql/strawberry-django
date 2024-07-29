@@ -1,9 +1,13 @@
+---
+title: Filtering
+---
+
 # Filtering
 
 It is possible to define filters for Django types, which will
 be converted into `.filter(...)` queries for the ORM:
 
-```{.python title=types.py}
+```python title="types.py"
 import strawberry_django
 from strawberry import auto
 
@@ -17,16 +21,15 @@ class Fruit:
     ...
 ```
 
-!!! tip
-
-    In most cases filter fields should have `Optional` annotations and default value `strawberry.UNSET` like so:
-    `foo: Optional[SomeType] = strawberry.UNSET`
-    Above `auto` annotation is wrapped in `Optional` automatically.
-    `UNSET` is automatically used for fields without `field` or with `strawberry_django.filter_field`.
+> [!TIP]
+> In most cases filter fields should have `Optional` annotations and default value `strawberry.UNSET` like so:
+> `foo: Optional[SomeType] = strawberry.UNSET`
+> Above `auto` annotation is wrapped in `Optional` automatically.
+> `UNSET` is automatically used for fields without `field` or with `strawberry_django.filter_field`.
 
 The code above would generate following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input FruitFilter {
   id: ID
   name: String
@@ -37,12 +40,11 @@ input FruitFilter {
 }
 ```
 
-!!! tip
-
-    If you are using the [relay integration](relay.md) and working with types inheriting
-    from `relay.Node` and `GlobalID` for identifying objects, you might want to set
-    `MAP_AUTO_ID_AS_GLOBAL_ID=True` in your [strawberry django settings](../settings)
-    to make sure `auto` fields gets mapped to `GlobalID` on types and filters.
+> [!TIP]
+> If you are using the [relay integration](relay.md) and working with types inheriting
+> from `relay.Node` and `GlobalID` for identifying objects, you might want to set
+> `MAP_AUTO_ID_AS_GLOBAL_ID=True` in your [strawberry django settings](../settings)
+> to make sure `auto` fields gets mapped to `GlobalID` on types and filters.
 
 ## AND, OR, NOT, DISTINCT ...
 
@@ -66,7 +68,7 @@ To every filter `AND`, `OR`, `NOT` & `DISTINCT` fields are added to allow more c
 Lookups can be added to all fields with `lookups=True`, which will
 add more options to resolve each type. For example:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
@@ -75,7 +77,7 @@ class FruitFilter:
 
 The code above would generate the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input IDBaseFilterLookup {
   exact: ID
   isNull: Boolean
@@ -109,7 +111,7 @@ input FruitFilter {
 
 Single-field lookup can be annotated with the `FilterLookup` generic type.
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry_django import FilterLookup
 
 @strawberry_django.filter(models.Fruit)
@@ -119,7 +121,7 @@ class FruitFilter:
 
 ## Filtering over relationships
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Color)
 class ColorFilter:
     id: auto
@@ -134,7 +136,7 @@ class FruitFilter:
 
 The code above would generate following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input ColorFilter {
   id: ID
   name: String
@@ -157,7 +159,7 @@ input FruitFilter {
 
 You can define custom filter method by defining your own resolver.
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: auto
@@ -202,42 +204,42 @@ class FruitFilter:
         )
 ```
 
-!!! warning
+> [!WARNING]
+> It is discouraged to use `queryset.filter()` directly. When using more
+> complex filtering via `NOT`, `OR` & `AND` this might lead to undesired behaviour.
 
-    It is discouraged to use `queryset.filter()` directly. When using more
-    complex filtering via `NOT`, `OR` & `AND` this might lead to undesired behaviour.
-
-!!! tip
-
-    #### process_filters
-
-    As seen above `strawberry_django.process_filters` function is exposed and can be
-    reused in custom methods. Above it's used to resolve fields lookups
-
-    #### null values
-
-    By default `null` value is ignored for all filters & lookups. This applies to custom
-    filter methods as well. Those won't even be called (you don't have to check for `None`).
-    This can be modified using
-    `strawberry_django.filter_field(filter_none=True)`
-
-    This also means that built in `exact` & `iExact` lookups cannot be used to filter for `None`
-    and `isNull` have to be used explicitly.
-
-    #### value resolution
-    - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute
-    - `value` parameter of type `Enum` is resolved to is's value
-    - above types are converted in `lists` as well
-
-    resolution can modified via `strawberry_django.filter_field(resolve_value=...)`
-
-    - True - always resolve
-    - False - never resolve
-    - UNSET (default) - resolves for filters without custom method only
+> [!TIP]
+>
+> #### process_filters
+>
+> As seen above `strawberry_django.process_filters` function is exposed and can be
+> reused in custom methods. Above it's used to resolve fields lookups
+>
+> #### null values
+>
+> By default `null` value is ignored for all filters & lookups. This applies to custom
+> filter methods as well. Those won't even be called (you don't have to check for `None`).
+> This can be modified using
+> `strawberry_django.filter_field(filter_none=True)`
+>
+> This also means that built in `exact` & `iExact` lookups cannot be used to filter for `None`
+> and `isNull` have to be used explicitly.
+>
+> #### value resolution
+>
+> - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute
+> - `value` parameter of type `Enum` is resolved to is's value
+> - above types are converted in `lists` as well
+>
+> resolution can modified via `strawberry_django.filter_field(resolve_value=...)`
+>
+> - True - always resolve
+> - False - never resolve
+> - UNSET (default) - resolves for filters without custom method only
 
 The code above generates the following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 input FruitFilter {
   name: String
   lastName: String
@@ -254,7 +256,7 @@ input FruitFilter {
   - Important for nested filtering
   - In code bellow custom filter `name` ends up filtering `Fruit` instead of `Color` without applying `prefix`
 
-```{.python title="Why prefix?"}
+```python title="Why prefix?"
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: auto
@@ -306,7 +308,7 @@ Works similar to field filter method, but:
 - argument `queryset` is **Required**
 - argument `value` is **Forbidden**
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     def ordered(
@@ -340,18 +342,17 @@ class FruitFilter:
         )
 ```
 
-!!! tip
-
-    As seen above `strawberry_django.process_filters` function is exposed and can be
-    reused in custom methods.
-    For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
+> [!TIP]
+> As seen above `strawberry_django.process_filters` function is exposed and can be
+> reused in custom methods.
+> For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
 
 ## Adding filters to types
 
 All fields and CUD mutations inherit filters from the underlying type by default.
 So, if you have a field like this:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
     ...
@@ -368,7 +369,7 @@ if it was passed to the field.
 
 Filters added into a field override the default filters of this type.
 
-```{.python title=schema.py}
+```python title="schema.py"
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
@@ -420,10 +421,9 @@ There is 7 already defined Generic Lookup `strawberry.input` classes importable 
 
 The previous version of filters can be enabled via [**USE_DEPRECATED_FILTERS**](settings.md#strawberry_django)
 
-!!! warning
-
-    If **USE_DEPRECATED_FILTERS** is not set to `True` legacy custom filtering
-    methods will be _not_ be called.
+> [!WARNING]
+> If **USE_DEPRECATED_FILTERS** is not set to `True` legacy custom filtering
+> methods will be _not_ be called.
 
 When using legacy filters it is important to use legacy
 `strawberry_django.filters.FilterLookup` lookups as well.

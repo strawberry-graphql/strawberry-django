@@ -1,3 +1,7 @@
+---
+title: Settings
+---
+
 # Django Settings
 
 Certain features of this library are configured using custom
@@ -60,7 +64,7 @@ A dictionary with the following optional keys:
 
 These features can be enabled by adding this code to your `settings.py` file.
 
-```{.python title=settings.py}
+```python title="settings.py"
 STRAWBERRY_DJANGO = {
     "FIELD_DESCRIPTION_FROM_HELP_TEXT": True,
     "TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING": True,

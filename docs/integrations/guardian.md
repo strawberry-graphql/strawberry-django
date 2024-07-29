@@ -1,3 +1,7 @@
+---
+title: django-guardian
+---
+
 # django-guardian
 
 This lib provides integration for per-object-permissions using

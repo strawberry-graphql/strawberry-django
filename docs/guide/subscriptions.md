@@ -1,3 +1,7 @@
+---
+title: Subscriptions
+---
+
 # Subscriptions
 
 Subscriptions are supported using the

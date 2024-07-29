@@ -1,3 +1,7 @@
+---
+title: Mutations
+---
+
 # Mutations
 
 ## Getting started
@@ -20,7 +24,7 @@ Here are the differences between those:
 When defining a mutation you can pass `handle_django_errors=True` to make it handle
 common django errors, such as `ValidationError`, `PermissionDenied` and `ObjectDoesNotExist`:
 
-```{.python title=types.py}
+```python title="types.py"
 @strawberry.type
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
@@ -36,7 +40,7 @@ class Mutation:
 
 The code above would generate following schema:
 
-```{.graphql title=schema.graphql}
+```graphql title="schema.graphql"
 enum OperationMessageKind {
   INFO
   WARNING
@@ -81,11 +85,10 @@ mutation {
 }
 ```
 
-!!! tip
-
-    If all or most of your mutations use this behaviour, you can change the
-    default behaviour for `handle_django_errors` by setting
-    `MUTATIONS_DEFAULT_HANDLE_ERRORS=True`  in your [strawberry django settings](../settings)
+> [!TIP]
+> If all or most of your mutations use this behaviour, you can change the
+> default behaviour for `handle_django_errors` by setting
+> `MUTATIONS_DEFAULT_HANDLE_ERRORS=True` in your [strawberry django settings](../settings)
 
 ## Input mutations
 
@@ -105,7 +108,7 @@ The following CUD mutations are provided by this lib:
 
 A basic example would be:
 
-```{.python title=types.py}
+```python title="types.py"
 from strawberry import auto
 from strawberry_django import mutations, NodeInput
 from strawberry.relay import Node
@@ -145,7 +148,7 @@ Some things to note here:
   see [partial input types](./types.md#input-types) documentation for examples.
 - I's also possible to update or delete model by using unique identifier other than id by providing `key_attr` property :
 
-```{.python}
+```python
 @strawberry_django.partial(SomeModel)
 class SomeModelInputPartial:
     unique_field: strawberry.auto
@@ -164,17 +167,14 @@ class Mutation:
 
 ## Filtering
 
-!!! danger
-
-    This is totally discouraged as it allows for any issue with the filters
-    to be able to alter your whole model collection.
-
-    **You have been warned!**
+> [!CAUTION]
+> This is totally discouraged as it allows for any issue with the filters
+> to be able to alter your whole model collection.
 
 Filters can be added to update and delete mutations. More information in the
 [filtering](filters.md) section.
 
-```{.python title=schema.py}
+```python title="schema.py"
 import strawberry
 from strawberry_django import mutations
 
