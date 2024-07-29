@@ -86,6 +86,12 @@ input BugReproductionInputPartial {
   description: String
 }
 
+type BugReproductionType implements Node {
+  """The Globally Unique ID of this object"""
+  id: GlobalID!
+  description: String!
+}
+
 union CreateIssuePayload = IssueType | OperationInfo
 
 union CreateMilestonePayload = MilestoneType | OperationInfo
@@ -102,6 +108,7 @@ union CreateProjectPayload = ProjectType | OperationInfo
 
 input CreateQuizInput {
   title: String!
+  id: ID
   fullCleanOptions: Boolean! = false
 }
 
@@ -254,23 +261,14 @@ input IssueFilter {
   search: String
 }
 
-input IssueInput {
-  name: String!
-  milestone: MilestoneInputPartial!
-  priority: Int
-  kind: String
-  tags: [NodeInput!]
-  extra: Int
-}
-
 input IssueInputPartial {
   id: GlobalID!
   name: String
-  milestone: MilestoneInputPartial
   priority: Int
   kind: String
   tags: TagInputPartialListInput
   extra: Int
+  milestone: MilestoneInputPartial
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
   versions: VersionInputPartialListInput
@@ -279,15 +277,24 @@ input IssueInputPartial {
 
 input IssueInputPartialWithoutId {
   name: String
-  milestone: MilestoneInputPartial
   priority: Int
   kind: String
   tags: TagInputPartialListInput
   extra: Int
+  milestone: MilestoneInputPartial
   assignees: AssigneeInputPartialListInput
   issueAssignees: IssueAssigneeInputPartialListInput
   versions: VersionInputPartialListInput
   bugReproduction: BugReproductionInputPartial
+}
+
+input IssueInputWithMilestones {
+  name: String!
+  priority: Int
+  kind: String
+  tags: [NodeInput!]
+  extra: Int
+  milestone: MilestoneInputPartial!
 }
 
 input IssueOrder {
@@ -320,6 +327,7 @@ type IssueType implements Node & Named {
     last: Int = null
   ): FavoriteTypeConnection!
   versions: [VersionType!]!
+  bugReproduction: BugReproductionType!
   milestoneName: String!
   milestoneNameWithoutOnlyOptimization: String!
   privateName: String
@@ -367,6 +375,13 @@ input MilestoneInputPartial {
   name: String
   project: ProjectInputPartial
   issues: [IssueInputPartialWithoutId!]
+}
+
+"""Add/remove/set the selected nodes."""
+input MilestoneInputPartialListInput {
+  set: [MilestoneInputPartial!]
+  add: [MilestoneInputPartial!]
+  remove: [MilestoneInputPartial!]
 }
 
 input MilestoneIssueInput {
@@ -427,12 +442,13 @@ type MilestoneTypeEdge {
 }
 
 type Mutation {
-  createIssue(input: IssueInput!): CreateIssuePayload!
+  createIssue(input: IssueInputWithMilestones!): CreateIssuePayload!
   updateIssue(input: IssueInputPartial!): UpdateIssuePayload!
   updateIssueWithKeyAttr(input: IssueInputPartialWithoutId!): UpdateIssueWithKeyAttrPayload!
   deleteIssue(input: NodeInput!): DeleteIssuePayload!
   deleteIssueWithKeyAttr(input: MilestoneIssueInput!): DeleteIssueWithKeyAttrPayload!
   updateProject(input: ProjectInputPartial!): UpdateProjectPayload!
+  updateProjectWithMilestoneList(input: ProjectWithMilestoneListInputPartial!): UpdateProjectWithMilestoneListPayload!
   createMilestone(input: MilestoneInput!): CreateMilestonePayload!
   createProject(
     """Input data for `createProject` mutation"""
@@ -572,6 +588,12 @@ type ProjectTypeEdge {
 
   """The item at the end of the edge"""
   node: ProjectType!
+}
+
+input ProjectWithMilestoneListInputPartial {
+  id: GlobalID
+  name: String
+  milestones: MilestoneInputPartialListInput
 }
 
 type Query {
@@ -940,6 +962,8 @@ union UpdateIssuePayload = IssueType | OperationInfo
 union UpdateIssueWithKeyAttrPayload = IssueType | OperationInfo
 
 union UpdateProjectPayload = ProjectType | OperationInfo
+
+union UpdateProjectWithMilestoneListPayload = ProjectType | OperationInfo
 
 type UserType implements Node {
   """The Globally Unique ID of this object"""

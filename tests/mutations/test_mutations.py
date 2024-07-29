@@ -205,8 +205,11 @@ def test_update_m2m_with_new_different_objects(mutation, fruit):
 
 
 def test_update_m2m_with_duplicates(mutation, fruit):
+    # Pass id `null` value in the second argument to force create one.
+    # If id is not specified, `apple` type won't be duplicated  as
+    # "get-or-create" approach is used under the hood
     result = mutation(
-        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "apple"}]}) { id types { id name }}}'
+        '{ fruits: updateFruits(data: { types: [{ name: "apple"}, {id: null, name: "apple"}]}) { id types { id name }}}'
     )
     assert not result.errors
     assert result.data["fruits"][0]["types"] == [

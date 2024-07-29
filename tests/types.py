@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from django.conf import settings
-from strawberry import auto  # noqa: TCH002
+from strawberry import auto
 
 import strawberry_django
 
@@ -97,7 +97,7 @@ class ColorPartialInput(ColorInput):
 
 @strawberry_django.input(models.FruitType, partial=True)
 class FruitTypePartialInput(FruitTypeInput):
-    pass
+    id = Optional[auto]
 
 
 @strawberry_django.type(models.User)

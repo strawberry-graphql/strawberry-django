@@ -26,8 +26,12 @@ class ParsedObject:
     data: dict[str, Any] | None = None
 
     def parse(self, model: type[_M]) -> tuple[_M | None, dict[str, Any] | None]:
-        if self.pk is None or self.pk is UNSET:
+        if self.pk is UNSET:
             return None, self.data
+        if self.pk is None:
+            # if `pk` was explicitly passed with `None` value, keep one in data as it indicates
+            # that object must be forced created when Django `get_or_create()` invoked
+            return None, (self.data or {}) | {"pk": None}
 
         if isinstance(self.pk, models.Model):
             assert isinstance(self.pk, model)

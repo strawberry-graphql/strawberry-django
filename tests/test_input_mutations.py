@@ -10,7 +10,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Issue, Milestone, Project, Version
+from .projects.models import BugReproduction, Issue, Milestone, Project, Version
 
 
 @pytest.mark.django_db(transaction=True)
@@ -171,7 +171,7 @@ def test_input_mutation_with_errors(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_create_mutation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateIssue ($input: IssueInput!) {
+    mutation CreateIssue ($input: IssueInputWithMilestones!) {
       createIssue (input: $input) {
         __typename
         ... on OperationInfo {
@@ -300,7 +300,7 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
 
 
 @pytest.mark.django_db(transaction=True)
-def test_input_create_mutation_multiple_nested_creation(
+def test_input_create_mutation_multiple_level_nested_m2m_creation(
     db, gql_client: GraphQLTestClient
 ):
     query = """
@@ -317,18 +317,24 @@ def test_input_create_mutation_multiple_nested_creation(
         ... on ProjectType {
           id
           name
-          dueDate
           milestones {
             id
             name
+            issues {
+              id
+              name
+                bugReproduction {
+                  id
+                  description
+                }
+            }
           }
-          cost
         }
       }
     }
     """
 
-    project = ProjectFactory.create()
+    project = ProjectFactory.create(name="Some Project")
 
     res = gql_client.query(
         query,
@@ -337,7 +343,7 @@ def test_input_create_mutation_multiple_nested_creation(
                 "id": to_base64("ProjectType", project.pk),
                 "milestones": [
                     {
-                        "name": "Milestone 1",
+                        "name": "Some Milestone",
                         "issues": [
                             {
                                 "name": "Some Issue",
@@ -355,8 +361,134 @@ def test_input_create_mutation_multiple_nested_creation(
     assert res.data
     assert isinstance(res.data["updateProject"], dict)
 
-    typename, _ = from_base64(res.data["updateProject"].pop("id"))
-    assert typename == "ProjectType"
+    project_typename, project_pk = from_base64(res.data["updateProject"].pop("id"))
+    assert project_typename == "ProjectType"
+    assert project.pk == int(project_pk)
+
+    milestones = Milestone.objects.all()
+    assert len(milestones) == 1
+    assert len(res.data["updateProject"]["milestones"]) == 1
+
+    fetched_milestone = res.data["updateProject"]["milestones"][0]
+    milestone_typename, milestone_pk = from_base64(fetched_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[0] == Milestone.objects.get(pk=milestone_pk)
+
+    issues = Issue.objects.all()
+    assert len(issues) == 1
+    assert len(fetched_milestone["issues"]) == 1
+
+    fetched_issue = fetched_milestone["issues"][0]
+    issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+    assert issue_typename == "IssueType"
+    assert issues[0] == Issue.objects.get(pk=issue_pk)
+
+    bug_reproductions = BugReproduction.objects.all()
+    assert len(bug_reproductions) == 1
+    bug_reproduction_typename, bug_reproduction_pk = from_base64(
+        fetched_issue["bugReproduction"].pop("id")
+    )
+    assert bug_reproduction_typename == "BugReproductionType"
+    assert bug_reproductions[0] == BugReproduction.objects.get(pk=bug_reproduction_pk)
+
+    assert res.data == {
+        "updateProject": {
+            "__typename": "ProjectType",
+            "name": "Some Project",
+            "milestones": [
+                {
+                    "name": "Some Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                            "bugReproduction": {"description": "Steps to reproduce"},
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_create_mutation_multiple_level_nested_list_input_creation(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateProjectWithMilestoneList ($input: ProjectWithMilestoneListInputPartial!) {
+      updateProjectWithMilestoneList (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          milestones {
+            id
+            name
+            issues {
+              id
+              name
+              bugReproduction {
+                id
+                description
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    milestone = MilestoneFactory.create(name="Milestone 1")
+    project = milestone.project
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("ProjectType", project.pk),
+                "milestones": {
+                    "add": [
+                        {
+                            "id": None,
+                            "name": "Extra Milestone",
+                            "issues": [
+                                {
+                                    "name": "Some Issue",
+                                    "bugReproduction": {"description": "Test"},
+                                }
+                            ],
+                        }
+                    ]
+                },
+            },
+        },
+    )
+
+    assert res.data
+    assert isinstance(res.data["updateProjectWithMilestoneList"], dict)
+
+    project_typename, _ = from_base64(
+        res.data["updateProjectWithMilestoneList"].pop("id")
+    )
+    assert project_typename == "ProjectType"
+
+    milestones = Milestone.objects.all()
+    assert len(milestones) == 2
+
+    fetched_milestones = res.data["updateProjectWithMilestoneList"]["milestones"]
+    assert len(fetched_milestones) == 2
+
+    milestone_typename, milestone_pk = from_base64(fetched_milestones[1].pop("id"))
+    assert milestone_typename == "MilestoneType"
+    created_milestone = Milestone.objects.exclude(pk=milestone.pk).get()
+    assert created_milestone.pk == int(milestone_pk)
+    assert created_milestone.name == fetched_milestones[1]["name"]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -365,7 +497,7 @@ def test_input_create_mutation_multiple_level_nested_creation(
     db, gql_client: GraphQLTestClient, unset_pk: bool
 ):
     query = """
-    mutation CreateIssue ($input: IssueInput!) {
+    mutation CreateIssue ($input: IssueInputWithMilestones!) {
       createIssue (input: $input) {
         __typename
         ... on OperationInfo {
@@ -1254,6 +1386,7 @@ def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
         query,
         {
             "input": {
+                "pk": None,
                 "title": "ABC",
             },
         },
@@ -1302,21 +1435,21 @@ def test_mutation_full_clean_with_kwargs(db, gql_client: GraphQLTestClient):
 
     res = gql_client.query(
         query,
-        {"input": {"title": "ABC", "fullCleanOptions": True}},
+        {"input": {"pk": None, "title": "ABC", "fullCleanOptions": True}},
     )
     expected = {"createQuiz": {"__typename": "QuizType", "sequence": 2, "title": "ABC"}}
     assert res.data == expected
 
     res = gql_client.query(
         query,
-        {"input": {"title": "ABC", "fullCleanOptions": True}},
+        {"input": {"pk": None, "title": "ABC", "fullCleanOptions": True}},
     )
     expected = {"createQuiz": {"__typename": "QuizType", "sequence": 3, "title": "ABC"}}
     assert res.data == expected
 
     res = gql_client.query(
         query,
-        {"input": {"title": "ABC", "fullCleanOptions": True}},
+        {"input": {"pk": None, "title": "ABC", "fullCleanOptions": True}},
     )
     expected = {"createQuiz": {"__typename": "QuizType", "sequence": 4, "title": "ABC"}}
     assert res.data == expected
