@@ -4,13 +4,12 @@ title: Authentication
 
 # Authentication
 
-!!! warning
-
-    This solution is enough for web browsers, but will not work for clients that
-    doesn't have a way to store cookies in it (e.g. mobile apps). For those it is
-    recommended to use token authentication methods. JWT can be used with
-    [strawberry-django-jwt](https://github.com/KundaPanda/strawberry-django-jwt)
-    lib.
+> ![WARNING]
+> This solution is enough for web browsers, but will not work for clients that
+> doesn't have a way to store cookies in it (e.g. mobile apps). For those it is
+> recommended to use token authentication methods. JWT can be used with
+> [strawberry-django-jwt](https://github.com/KundaPanda/strawberry-django-jwt)
+> lib.
 
 `strawberry_django` provides mutations to get authentication going right away.
 The `auth.register` mutation performs password validation using Django's `validate_password` method.

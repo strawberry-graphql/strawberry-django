@@ -15,11 +15,10 @@ class FruitOrder:
     color: ColorOrder | None
 ```
 
-!!! tip
-
-    In most cases order fields should have `Optional` annotations and default value `strawberry.UNSET`.
-    Above `auto` annotation is wrapped in `Optional` automatically.
-    `UNSET` is automatically used for fields without `field` or with `strawberry_django.order_field`.
+> ![TIP]
+> In most cases order fields should have `Optional` annotations and default value `strawberry.UNSET`.
+> Above `auto` annotation is wrapped in `Optional` automatically.
+> `UNSET` is automatically used for fields without `field` or with `strawberry_django.order_field`.
 
 The code above generates the following schema:
 
@@ -74,16 +73,13 @@ class FruitOrder:
         return queryset, [ordering]
 ```
 
-!!! warning
+> ![WARNING]
+> Do not use `queryset.order_by()` directly. Due to `order_by` not being chainable
+> operation, changes applied this way would be overriden later.
 
-    Do not use `queryset.order_by()` directly. Due to `order_by` not being chainable
-    operation, changes applied this way would be overriden later.
-
-!!! tip
-
-    `strawberry_django.Ordering` has convenient method `resolve` that can be used to
-    convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
-    with `nulls_first` and `nulls_last` arguments.
+> ![TIP] > `strawberry_django.Ordering` has convenient method `resolve` that can be used to
+> convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
+> with `nulls_first` and `nulls_last` arguments.
 
 The code above generates the following schema:
 
@@ -212,11 +208,10 @@ class FruitOrder:
 
 ```
 
-!!! tip
-
-    As seen above `strawberry_django.process_order` function is exposed and can be
-    reused in custom methods.
-    For order method `order` `skip_object_order_method` was used to avoid endless recursion.
+> ![TIP]
+> As seen above `strawberry_django.process_order` function is exposed and can be
+> reused in custom methods.
+> For order method `order` `skip_object_order_method` was used to avoid endless recursion.
 
 ## Adding orderings to types
 

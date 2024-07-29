@@ -78,13 +78,12 @@ Available options are:
   will filter the return value, removing objects that fails the check (check below for more
   information regarding other possibilities).
 
-!!! note
-
-    The `HasSourcePerm` and `HasRetvalPerm` require having an
-    [authentication backend](https://docs.djangoproject.com/en/4.2/topics/auth/customizing/)
-    which supports resolving object permissions. This lib works out of the box with
-    [django-guardian](https://django-guardian.readthedocs.io/en/stable/), so if you are
-    using it you don't need to do anything else.
+> ![NOTE]
+> The `HasSourcePerm` and `HasRetvalPerm` require having an
+> [authentication backend](https://docs.djangoproject.com/en/4.2/topics/auth/customizing/)
+> which supports resolving object permissions. This lib works out of the box with
+> [django-guardian](https://django-guardian.readthedocs.io/en/stable/), so if you are
+> using it you don't need to do anything else.
 
 ## No Permission Handling
 

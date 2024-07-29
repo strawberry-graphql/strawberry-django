@@ -4,10 +4,9 @@ title: Defining Fields
 
 # Defining Fields
 
-!!! tip
-
-    It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
-    for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
+> ![TIP]
+> It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
+> for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
 
 Fields can be defined manually or `auto` type can be used for automatic type resolution. All basic field types and relation fields are supported out of the box. If you use a library that defines a custom field you will need to define an equivalent type such as `str`, `float`, `bool`, `int` or `id`.
 
@@ -28,12 +27,11 @@ class Fruit2:
     name: str
 ```
 
-!!! tip
-
-    For choices using
-    [Django's TextChoices/IntegerChoices](https://docs.djangoproject.com/en/4.2/ref/models/fields/#enumeration-types)
-    it is recommented using the [django-choices-field](/integrations/choices-field) integration
-    enum handling.
+> ![TIP]
+> For choices using
+> [Django's TextChoices/IntegerChoices](https://docs.djangoproject.com/en/4.2/ref/models/fields/#enumeration-types)
+> it is recommented using the [django-choices-field](/integrations/choices-field) integration
+> enum handling.
 
 ## Relationships
 
@@ -124,9 +122,8 @@ field_type_map.update({
 
 ## Including / excluding Django model fields by name
 
-!!! warning
-
-    These new keywords should be used with caution, as they may inadvertently lead to exposure of unwanted data. Especially with `fields="__all__"` or `exclude`, sensitive model attributes may be included and made available in the schema without your awareness.
+> ![WARNING]
+> These new keywords should be used with caution, as they may inadvertently lead to exposure of unwanted data. Especially with `fields="__all__"` or `exclude`, sensitive model attributes may be included and made available in the schema without your awareness.
 
 `strawberry_django.type` includes two optional keyword fields to help you populate fields from the Django model, `fields` and `exclude`.
 

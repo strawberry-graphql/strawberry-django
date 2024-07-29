@@ -6,10 +6,9 @@ title: Defining Types
 
 ## Output types
 
-!!! note
-
-    It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
-    for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
+> ![NOTE}
+> It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
+> for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
 
 Output types are generated from models. The `auto` type is used for field type auto resolution.
 Relational fields are described by referencing to other types generated from Django models.
@@ -93,11 +92,10 @@ on [How to define Fields](fields.md) for that.
 
 ### Customizing the returned `QuerySet`
 
-!!! warning
-
-    By doing this you are modifying all automatic `QuerySet` generation for any field
-    that returns this type. Ideally you will want to define your own [resolver](resolvers.md)
-    instead, which gives you more control over it.
+> ![WARNING]
+> By doing this you are modifying all automatic `QuerySet` generation for any field
+> that returns this type. Ideally you will want to define your own [resolver](resolvers.md)
+> instead, which gives you more control over it.
 
 By default, a `strawberry_django` type will get data from the default manager for its Django Model.
 You can implement a custom `get_queryset` classmethod to your type to do some extra processing to the default queryset,
@@ -133,10 +131,9 @@ class Berry:
         return queryset.filter(name__contains="berry")
 ```
 
-!!! note
-
-    Another way of limiting this is by using the [PermissionExtension](permissions.md)
-    provided by this lib.
+> ![NOTE]
+> Another way of limiting this is by using the [PermissionExtension](permissions.md)
+> provided by this lib.
 
 The `kwargs` dictionary can include other parameters that were added in a `@strawberry.django.type` definition
 like [filters](filters.md) or [pagination](pagination.md).

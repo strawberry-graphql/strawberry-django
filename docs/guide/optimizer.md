@@ -168,11 +168,10 @@ Song.objects.all().only(
 )
 ```
 
-!!! note
-
-    Even though `album__release_date` field was not selected here, it got selected
-    in the prefetch query later. Since Django caches known objects, we have to select it here or
-    else it would trigger extra queries latter.
+> ![NOTE]
+> Even though `album__release_date` field was not selected here, it got selected
+> in the prefetch query later. Since Django caches known objects, we have to select it here or
+> else it would trigger extra queries latter.
 
 ## Optimization hints
 
