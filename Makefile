@@ -1,16 +1,11 @@
-.PHONY : install test serve-docs lint
+.PHONY : install test lint
 
 POETRY := $(shell command -v poetry 2> /dev/null)
-MKDOCS := $(shell command -v mkdocs 2> /dev/null)
 
-all: install test serve-docs
+all: install test
 
 install:
 	${POETRY} install
 
 test:
 	${POETRY} run pytest
-
-serve-docs:
-	poetry install
-	${MKDOCS} serve
