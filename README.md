@@ -6,7 +6,7 @@
 [![Downloads](https://pepy.tech/badge/strawberry-graphql-django)](https://pepy.tech/project/strawberry-graphql-django)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/strawberry-graphql-django)
 
-[**Docs**](https://strawberry-graphql.github.io/strawberry-django/) | [**Discord**](https://strawberry.rocks/discord)
+[**Docs**](https://strawberry.rocks/docs/django) | [**Discord**](https://strawberry.rocks/discord)
 
 This package provides powerful tools to generate GraphQL types, queries,
 mutations and resolvers from Django models.
