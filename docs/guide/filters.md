@@ -256,7 +256,7 @@ input FruitFilter {
   - Important for nested filtering
   - In code bellow custom filter `name` ends up filtering `Fruit` instead of `Color` without applying `prefix`
 
-```python title=""Why prefix?""
+```python title="Why prefix?"
 @strawberry_django.filter(models.Fruit)
 class FruitFilter:
     name: auto

@@ -107,7 +107,7 @@ input FruitOrder {
   - Important for nested ordering
   - In code bellow custom order `name` ends up ordering `Fruit` instead of `Color` without applying `prefix`
 
-```python title=""Why prefix?""
+```python title="Why prefix?"
 @strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto

@@ -132,19 +132,19 @@ Valid values for `fields` are:
 - `__all__` to assign `strawberry.auto` as the field type for all model fields.
 - `[<List of field names>]` to assign `strawberry.auto` as the field type for the enumerated fields. These can be combined with manual type annotations if needed.
 
-```python title=""All Fields""
+```python title="All Fields"
 @strawberry_django.type(models.Fruit, fields="__all__")
 class FruitType:
     pass
 ```
 
-```python title=""Enumerated Fields""
+```python title="Enumerated Fields"
 @strawberry_django.type(models.Fruit, fields=["name", "color"])
 class FruitType:
     pass
 ```
 
-```python title=""Overriden Fields""
+```python title="Overriden Fields"
 @strawberry_django.type(models.Fruit, fields=["color"])
 class FruitType:
     name: str
@@ -154,13 +154,13 @@ Valid values for `exclude` are:
 
 - `[<List of field names>]` to exclude from the fields list. All other Django model fields will included and have `strawberry.auto` as the field type. These can also be overriden if another field type should be assigned. An empty list is ignored.
 
-```python title=""Exclude Fields""
+```python title="Exclude Fields"
 @strawberry_django.type(models.Fruit, exclude=["name"])
 class FruitType:
     pass
 ```
 
-```python title=""Overriden Exclude Fields""
+```python title="Overriden Exclude Fields"
 @strawberry_django.type(models.Fruit, exclude=["name"])
 class FruitType:
     color: int
