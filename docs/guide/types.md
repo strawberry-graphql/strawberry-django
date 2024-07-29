@@ -92,7 +92,7 @@ on [How to define Fields](fields.md) for that.
 
 ### Customizing the returned `QuerySet`
 
-> ![WARNING]
+> [!WARNING]
 > By doing this you are modifying all automatic `QuerySet` generation for any field
 > that returns this type. Ideally you will want to define your own [resolver](resolvers.md)
 > instead, which gives you more control over it.
@@ -131,7 +131,7 @@ class Berry:
         return queryset.filter(name__contains="berry")
 ```
 
-> ![NOTE]
+> [!NOTE]
 > Another way of limiting this is by using the [PermissionExtension](permissions.md)
 > provided by this lib.
 

@@ -55,7 +55,7 @@ Behind the scenes this extension is doing the following for you:
 You can also define your own `relay.NodeID` field and your resolve, in the same way as
 `some_model_conn_with_resolver` is doing. In those cases, they will not be overridden.
 
-> ![TIP]
+> [!TIP]
 > If you are only working with types inheriting from `relay.Node` and `GlobalID`
 > for identifying objects, you might want to set `MAP_AUTO_ID_AS_GLOBAL_ID=True`
 > in your [strawberry django settings](../settings) to make sure `auto` fields gets

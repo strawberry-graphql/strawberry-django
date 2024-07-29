@@ -21,7 +21,7 @@ class Fruit:
     ...
 ```
 
-> ![TIP]
+> [!TIP]
 > In most cases filter fields should have `Optional` annotations and default value `strawberry.UNSET` like so:
 > `foo: Optional[SomeType] = strawberry.UNSET`
 > Above `auto` annotation is wrapped in `Optional` automatically.
@@ -40,7 +40,7 @@ input FruitFilter {
 }
 ```
 
-> ![TIP]
+> [!TIP]
 > If you are using the [relay integration](relay.md) and working with types inheriting
 > from `relay.Node` and `GlobalID` for identifying objects, you might want to set
 > `MAP_AUTO_ID_AS_GLOBAL_ID=True` in your [strawberry django settings](../settings)
@@ -204,11 +204,11 @@ class FruitFilter:
         )
 ```
 
-> ![WARNING]
+> [!WARNING]
 > It is discouraged to use `queryset.filter()` directly. When using more
 > complex filtering via `NOT`, `OR` & `AND` this might lead to undesired behaviour.
 
-> ![TIP]
+> [!TIP]
 >
 > #### process_filters
 >
@@ -342,7 +342,7 @@ class FruitFilter:
         )
 ```
 
-> ![TIP]
+> [!TIP]
 > As seen above `strawberry_django.process_filters` function is exposed and can be
 > reused in custom methods.
 > For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
@@ -421,7 +421,7 @@ There is 7 already defined Generic Lookup `strawberry.input` classes importable 
 
 The previous version of filters can be enabled via [**USE_DEPRECATED_FILTERS**](settings.md#strawberry_django)
 
-> ![WARNING]
+> [!WARNING]
 > If **USE_DEPRECATED_FILTERS** is not set to `True` legacy custom filtering
 > methods will be _not_ be called.
 

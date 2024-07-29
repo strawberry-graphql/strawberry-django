@@ -4,7 +4,7 @@ title: Authentication
 
 # Authentication
 
-> ![WARNING]
+> [!WARNING]
 > This solution is enough for web browsers, but will not work for clients that
 > doesn't have a way to store cookies in it (e.g. mobile apps). For those it is
 > recommended to use token authentication methods. JWT can be used with

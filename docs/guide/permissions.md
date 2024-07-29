@@ -78,7 +78,7 @@ Available options are:
   will filter the return value, removing objects that fails the check (check below for more
   information regarding other possibilities).
 
-> ![NOTE]
+> [!NOTE]
 > The `HasSourcePerm` and `HasRetvalPerm` require having an
 > [authentication backend](https://docs.djangoproject.com/en/4.2/topics/auth/customizing/)
 > which supports resolving object permissions. This lib works out of the box with
