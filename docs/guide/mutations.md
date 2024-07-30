@@ -85,7 +85,7 @@ mutation {
 }
 ```
 
-> [!TIP]
+> ![TIP]
 > If all or most of your mutations use this behaviour, you can change the
 > default behaviour for `handle_django_errors` by setting
 > `MUTATIONS_DEFAULT_HANDLE_ERRORS=True` in your [strawberry django settings](../settings)
@@ -167,7 +167,7 @@ class Mutation:
 
 ## Filtering
 
-> [!CAUTION]
+> ![CAUTION]
 > This is totally discouraged as it allows for any issue with the filters
 > to be able to alter your whole model collection.
 
