@@ -77,7 +77,8 @@ class FruitOrder:
 > Do not use `queryset.order_by()` directly. Due to `order_by` not being chainable
 > operation, changes applied this way would be overriden later.
 
-> [!TIP] > `strawberry_django.Ordering` has convenient method `resolve` that can be used to
+> [!TIP]
+> The `strawberry_django.Ordering` type has convenient method `resolve` that can be used to
 > convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
 > with `nulls_first` and `nulls_last` arguments.
 
