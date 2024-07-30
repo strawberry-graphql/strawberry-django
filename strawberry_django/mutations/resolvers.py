@@ -76,7 +76,7 @@ def _parse_pk(
 
         if key_attr in value:
             obj_pk = value[key_attr]
-            if obj_pk not in (None, strawberry.UNSET):  # noqa: PLR6201
+            if obj_pk not in (None, UNSET):  # noqa: PLR6201
                 return model._default_manager.get(pk=obj_pk), value
 
         return None, value
@@ -244,7 +244,7 @@ def prepare_create_update(
     if dataclasses.is_dataclass(data):
         data = vars(data)
 
-    # `pk` may be explicitly passed as `None` to force crete object, `pk` is not a field and won't be handled below,
+    # `pk` may be explicitly passed as `None` to force create object, `pk` is not a field and won't be handled below,
     # so manually add one into `direct_field_values`
     pk = data.pop("pk", UNSET)
     if pk is not UNSET:
