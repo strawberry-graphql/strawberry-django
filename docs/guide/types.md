@@ -6,7 +6,7 @@ title: Defining Types
 
 ## Output types
 
-> ![NOTE}
+> ![NOTE]
 > It is highly recommended to enable the [Query Optimizer Extension](optimizer.md)
 > for improved performance and avoid some common pitfalls (e.g. the `n+1` issue)
 
