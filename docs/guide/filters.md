@@ -43,7 +43,7 @@ input FruitFilter {
 > [!TIP]
 > If you are using the [relay integration](relay.md) and working with types inheriting
 > from `relay.Node` and `GlobalID` for identifying objects, you might want to set
-> `MAP_AUTO_ID_AS_GLOBAL_ID=True` in your [strawberry django settings](../settings)
+> `MAP_AUTO_ID_AS_GLOBAL_ID=True` in your [strawberry django settings](./settings.md)
 > to make sure `auto` fields gets mapped to `GlobalID` on types and filters.
 
 ## AND, OR, NOT, DISTINCT ...

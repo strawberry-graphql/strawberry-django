@@ -28,4 +28,4 @@ There is not default limit defined. All elements are returned if no pagination l
 ## Relay pagination
 
 For more complex scenarios, a cursor pagination would be better. For this,
-use the [relay integration](../relay) to define those.
+use the [relay integration](./relay.md) to define those.

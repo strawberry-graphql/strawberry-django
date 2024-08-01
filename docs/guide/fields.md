@@ -30,7 +30,7 @@ class Fruit2:
 > [!TIP]
 > For choices using
 > [Django's TextChoices/IntegerChoices](https://docs.djangoproject.com/en/4.2/ref/models/fields/#enumeration-types)
-> it is recommented using the [django-choices-field](/integrations/choices-field) integration
+> it is recommented using the [django-choices-field](../integrations/choices-field.md) integration
 > enum handling.
 
 ## Relationships
@@ -56,7 +56,7 @@ class Color:
 ```
 
 Note that all relations can naturally trigger the n+1 problem. To avoid that, you can either
-enable the [Optimizer Extension](../optimizer) which will automatically
+enable the [Optimizer Extension](./optimizer.md) which will automatically
 solve some general issues for you, or even use
 [Data Loaders](https://strawberry.rocks/docs/guides/dataloaders) for more complex
 situations.

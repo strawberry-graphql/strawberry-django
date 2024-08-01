@@ -15,7 +15,7 @@ Here are the differences between those:
 - Strawberry Django's mutation will be sure that the mutation is executed in an async safe
   environment, meaning that if you are running ASGI and you define a `sync` resolver, it will
   automatically be wrapped in a `sync_to_async` call.
-- It will better integrate with the [permissioning integration](../permissions)
+- It will better integrate with the [permission integration](./permissions.md)
 - It has an option to automatically handle common django errors and return them
   in a standardized way (more on that below)
 
