@@ -39,8 +39,6 @@ django-debug-toolbar = { version = ">=3.4", optional = true }
 strawberry-graphql = ">=0.236.0"
 
 [tool.poetry.group.dev.dependencies]
-Markdown = "^3.3.7"
-Pygments = "^2.15.1"
 channels = { version = ">=3.0.5" }
 django-choices-field = "^2.2.2"
 django-debug-toolbar = "^3.4"
@@ -49,7 +47,6 @@ django-mptt = "^0.14.0"
 django-types = "^0.19.1"
 factory-boy = "^3.2.1"
 pillow = "^10.2.0"
-pymdown-extensions = "^10.0.1"
 pytest = "^8.0.2"
 pytest-asyncio = "^0.23.4"
 pytest-cov = "^5.0.0"
