@@ -22,11 +22,11 @@ from .fields.types import (
     OneToManyInput,
     OneToOneInput,
 )
-from .filters import filter, process_filters
+from .filters import filter, process_filters  # noqa: A004
 from .mutations.mutations import input_mutation, mutation
 from .ordering import Ordering, order, process_order
 from .resolvers import django_resolver
-from .type import input, interface, partial, type
+from .type import input, interface, partial, type  # noqa: A004
 
 __all__ = [
     "BaseFilterLookup",

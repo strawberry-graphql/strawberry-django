@@ -123,6 +123,7 @@ extend-select = [
   "YTT",
 ]
 extend-ignore = [
+  "A005",
   "D1",
   "D203",
   "D213",

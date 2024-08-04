@@ -372,7 +372,7 @@ def filter(  # noqa: A001
     directives: Sequence[object] | None = (),
     lookups: bool = False,
 ) -> Callable[[_T], _T]:
-    from .type import input
+    from .type import input  # noqa: A004
 
     return input(
         model,
