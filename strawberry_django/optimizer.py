@@ -35,7 +35,12 @@ from graphql import (
     GraphQLWrappingType,
     get_argument_values,
 )
-from graphql.execution.collect_fields import collect_sub_fields
+
+try:
+    from graphql.execution.collect_fields import collect_sub_fields
+except ImportError:
+    from graphql.execution.collect_fields import collect_subfields as collect_sub_fields
+
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry import relay
