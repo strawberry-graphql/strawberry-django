@@ -88,7 +88,7 @@ mutation {
 > [!TIP]
 > If all or most of your mutations use this behaviour, you can change the
 > default behaviour for `handle_django_errors` by setting
-> `MUTATIONS_DEFAULT_HANDLE_ERRORS=True` in your [strawberry django settings](../settings)
+> `MUTATIONS_DEFAULT_HANDLE_ERRORS=True` in your [strawberry django settings](./settings.md)
 
 ## Input mutations
 
