@@ -332,7 +332,7 @@ def create(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
-):
+) -> list[_M] | _M:
     # Before creating your instance, verify this is not a bulk create
     # if so, add them one by one. Otherwise, get to work.
     if isinstance(data, list):

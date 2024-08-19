@@ -19,7 +19,7 @@ from . import models, utils
 
 
 @pytest.fixture
-def user_group(users, groups):  # noqa: PT004
+def user_group(users, groups):
     users[0].group = groups[0]
     users[0].save()
 
