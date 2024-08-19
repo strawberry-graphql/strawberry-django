@@ -142,7 +142,7 @@ Some things to note here:
 - The mutation will receive the type in an argument named `"data"` by default.
   To change it to `"info"` for example, you can change it by passing
   `argument_name="info"` to the mutation, or set `MUTATIONS_DEFAULT_ARGUMENT_NAME="info"`
-  in your [strawberry django settings](../settings) to make it the default when not provided.
+  in your [strawberry django settings](./settings.md) to make it the default when not provided.
 - Take note that inputs using `partial` will _not_ automatically mark non-auto fields optional
   and instead will respect explicit type annotations;
   see [partial input types](./types.md#input-types) documentation for examples.
