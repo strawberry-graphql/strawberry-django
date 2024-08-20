@@ -58,7 +58,7 @@ You can also define your own `relay.NodeID` field and your resolve, in the same 
 > [!TIP]
 > If you are only working with types inheriting from `relay.Node` and `GlobalID`
 > for identifying objects, you might want to set `MAP_AUTO_ID_AS_GLOBAL_ID=True`
-> in your [strawberry django settings](../settings) to make sure `auto` fields gets
+> in your [strawberry django settings](./settings.md) to make sure `auto` fields gets
 > mapped to `GlobalID` on types and filters.
 
 Also, this lib exposes a `strawberry_django.relay.ListConnectionWithTotalCount`, which works
