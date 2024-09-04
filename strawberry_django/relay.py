@@ -187,13 +187,9 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
             )
             for node in result
         ]
-        has_previous_page = (
-            result[0]._strawberry_row_number > 1  # type: ignore
-            if result
-            else False
-        )
+        has_previous_page = result[0]._strawberry_row_number > 1 if result else False
         has_next_page = (
-            result[-1]._strawberry_row_number < result[-1]._strawberry_total_count  # type: ignore
+            result[-1]._strawberry_row_number < result[-1]._strawberry_total_count
             if result
             else False
         )

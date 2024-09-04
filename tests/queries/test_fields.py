@@ -13,7 +13,7 @@ from tests import models, types, utils
 def generate_query(user_type):
     @strawberry.type
     class Query:
-        users: List[user_type] = strawberry_django.field()
+        users: List[user_type] = strawberry_django.field()  # type: ignore
 
     return utils.generate_query(Query)
 
