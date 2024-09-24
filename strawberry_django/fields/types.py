@@ -404,9 +404,9 @@ relay_input_field_type_map: Dict[
     type,
 ] = {
     related.ForeignKey: NodeInput,
-    related.ManyToManyField: ListInput[NodeInputPartial],
+    related.ManyToManyField: ListInput[NodeInput],
     related.OneToOneField: NodeInput,
-    reverse_related.ManyToManyRel: ListInput[NodeInputPartial],
+    reverse_related.ManyToManyRel: ListInput[NodeInput],
     reverse_related.ManyToOneRel: ListInput[NodeInput],
     reverse_related.OneToOneRel: NodeInput,
 }
