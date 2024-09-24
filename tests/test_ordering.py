@@ -255,7 +255,7 @@ def test_order_field():
             pass
 
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
+        raise pytest.fail(f"DID RAISE {exc}")
 
 
 def test_order_field_forbidden_param_annotation():
@@ -308,7 +308,7 @@ def test_order_field_on_object():
             pass
 
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
+        raise pytest.fail(f"DID RAISE {exc}")
 
 
 def test_order_field_method():

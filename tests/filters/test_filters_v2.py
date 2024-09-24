@@ -166,7 +166,7 @@ def test_filter_field():
             pass
 
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
+        raise pytest.fail(f"DID RAISE {exc}")
 
 
 def test_filter_field_sequence():
@@ -232,7 +232,7 @@ def test_filter_field_on_object():
             pass
 
     except Exception as exc:
-        raise pytest.fail(f"DID RAISE {exc}")  # type: ignore
+        raise pytest.fail(f"DID RAISE {exc}")
 
 
 def test_filter_field_method():

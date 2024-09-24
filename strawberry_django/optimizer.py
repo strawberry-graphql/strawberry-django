@@ -1338,7 +1338,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         execution_context: ExecutionContext | None = None,
         prefetch_custom_queryset: bool = False,
     ):
-        super().__init__(execution_context=execution_context)  # type: ignore
+        super().__init__(execution_context=execution_context)
         self.enable_only = enable_only_optimization
         self.enable_select_related = enable_select_related_optimization
         self.enable_prefetch_related = enable_prefetch_related_optimization
