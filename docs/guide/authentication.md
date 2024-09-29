@@ -8,7 +8,7 @@ title: Authentication
 > This solution is enough for web browsers, but will not work for clients that
 > doesn't have a way to store cookies in it (e.g. mobile apps). For those it is
 > recommended to use token authentication methods. JWT can be used with
-> [strawberry-django-jwt](https://github.com/KundaPanda/strawberry-django-jwt)
+> [strawberry-django-auth](https://github.com/nrbnlulu/strawberry-django-auth)
 > lib.
 
 `strawberry_django` provides mutations to get authentication going right away.
