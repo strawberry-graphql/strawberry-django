@@ -217,7 +217,7 @@ def _process_type(
 
     settings = django_settings()
     if (
-        kwargs.get("description", None) is None
+        kwargs.get("description") is None
         and model.__doc__
         and settings["TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING"]
     ):
