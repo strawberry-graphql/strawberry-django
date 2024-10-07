@@ -290,7 +290,7 @@ def test_foreign_key_required(mutation):
 
 
 def test_foreign_key_optional(mutation):
-    """Tests behaviour for a required foreign key field."""
+    """Tests behaviour for an optional foreign key field."""
     query = """mutation UpdateIssueMilestone($id: ID!, $milestone: OneToManyInput) {
       updateIssue(data: { id: $id, milestone: $milestone }) {
         ...on IssueType {
@@ -363,9 +363,172 @@ def test_many_to_many(mutation):
     issue.refresh_from_db()
     assert list(issue.tags.all()) == tags
 
-    # Update the issue, explicitly providing `null` for the `milestone` field
+    # Update the issue, explicitly providing `null` for the `tags` field
     # We expect the mutation to succeed, but the tags to remain unchanged
-    result = mutation(query, {"id": issue.pk, "milestone": None})
+    result = mutation(query, {"id": issue.pk, "tags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+
+def test_many_to_many_set(mutation):
+    """Tests behaviour for `set` on a many to many field."""
+    query = """mutation SetIssueTags($id: ID!, $setTags: [ID!]) {
+      updateIssue(data: { id: $id, tags: { set: $setTags } }) {
+        ...on IssueType {
+          tags { pk }
+        }
+        ... on OperationInfo {
+          messages {
+            kind
+            code
+            message
+            field
+          }
+        }
+      }
+    }
+    """
+
+    # Create an issue
+    tags = TagFactory.create_batch(3)
+    issue = IssueFactory.create()
+    issue.tags.set(tags)
+
+    # Update the issue, omitting the `setTags` field
+    # We expect the mutation to succeed and the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing `null` for the `setTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk, "setTags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing an empty list for the `setTags` field
+    # We expect the mutation to succeed, and the tags to be cleared
+    result = mutation(query, {"id": issue.pk, "setTags": []})
+    assert result.errors is None
+    assert result.data == {"updateIssue": {"tags": []}}
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == []
+
+
+def test_many_to_many_add(mutation):
+    """Tests behaviour for `add` on a many to many field."""
+    query = """mutation AddIssueTags($id: ID!, $addTags: [ID!]) {
+      updateIssue(data: { id: $id, tags: { add: $addTags } }) {
+        ...on IssueType {
+          tags { pk }
+        }
+        ... on OperationInfo {
+          messages {
+            kind
+            code
+            message
+            field
+          }
+        }
+      }
+    }
+    """
+
+    # Create an issue
+    tags = TagFactory.create_batch(3)
+    issue = IssueFactory.create()
+    issue.tags.set(tags)
+
+    # Update the issue, omitting the `addTags` field
+    # We expect the mutation to succeed and the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing `null` for the `addTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk, "addTags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing an empty list for the `addTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk, "addTags": []})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+
+def test_many_to_many_remove(mutation):
+    """Tests behaviour for `remove` on a many to many field."""
+    query = """mutation RemoveIssueTags($id: ID!, $removeTags: [ID!]) {
+      updateIssue(data: { id: $id, tags: { remove: $removeTags } }) {
+        ...on IssueType {
+          tags { pk }
+        }
+        ... on OperationInfo {
+          messages {
+            kind
+            code
+            message
+            field
+          }
+        }
+      }
+    }
+    """
+
+    # Create an issue
+    tags = TagFactory.create_batch(3)
+    issue = IssueFactory.create()
+    issue.tags.set(tags)
+
+    # Update the issue, omitting the `removeTags` field
+    # We expect the mutation to succeed and the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing `null` for the `removeTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk, "removeTags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing an empty list for the `removeTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = mutation(query, {"id": issue.pk, "removeTags": []})
     assert result.errors is None
     assert result.data == {
         "updateIssue": {"tags": [{"pk": str(tag.pk)} for tag in tags]}
@@ -637,7 +800,7 @@ def test_relay_foreign_key_required(relay_mutation):
 
 
 def test_relay_foreign_key_optional(relay_mutation):
-    """Tests Relay behaviour for a required foreign key field."""
+    """Tests Relay behaviour for an optional foreign key field."""
     query = """mutation UpdateIssueMilestone($id: GlobalID!, $milestone: NodeInput) {
       updateIssue(data: { id: $id, milestone: $milestone }) {
         ...on IssueType {
@@ -714,9 +877,178 @@ def test_relay_many_to_many(relay_mutation):
     issue.refresh_from_db()
     assert list(issue.tags.all()) == tags
 
-    # Update the issue, explicitly providing `null` for the `milestone` field
+    # Update the issue, explicitly providing `null` for the `tags` field
     # We expect the mutation to succeed, but the tags to remain unchanged
-    result = relay_mutation(query, {"id": issue_id, "milestone": None})
+    result = relay_mutation(query, {"id": issue_id, "tags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+
+def test_relay_many_to_many_set(relay_mutation):
+    """Tests Relay behaviour for `set` on a many to many field."""
+    query = """mutation SetIssueTags($id: GlobalID!, $setTags: [NodeInput!]) {
+      updateIssue(data: { id: $id, tags: { set: $setTags } }) {
+        ...on IssueType {
+          tags { id }
+        }
+        ... on OperationInfo {
+          messages {
+            kind
+            code
+            message
+            field
+          }
+        }
+      }
+    }
+    """
+
+    # Create an issue
+    tags = TagFactory.create_batch(3)
+    tag_ids = [to_base64("TagType", tag.pk) for tag in tags]
+    issue = IssueFactory.create()
+    issue.tags.set(tags)
+    issue_id = to_base64("IssueType", issue.pk)
+
+    # Update the issue, omitting the `setTags` field
+    # We expect the mutation to succeed and the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing `null` for the `setTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id, "setTags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing an empty list for the `setTags` field
+    # We expect the mutation to succeed, and the tags to be cleared
+    result = relay_mutation(query, {"id": issue_id, "setTags": []})
+    assert result.errors is None
+    assert result.data == {"updateIssue": {"tags": []}}
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == []
+
+
+def test_relay_many_to_many_add(relay_mutation):
+    """Tests Relay behaviour for `add` on a many to many field."""
+    query = """mutation AddIssueTags($id: GlobalID!, $addTags: [NodeInput!]) {
+      updateIssue(data: { id: $id, tags: { add: $addTags } }) {
+        ...on IssueType {
+          tags { id }
+        }
+        ... on OperationInfo {
+          messages {
+            kind
+            code
+            message
+            field
+          }
+        }
+      }
+    }
+    """
+
+    # Create an issue
+    tags = TagFactory.create_batch(3)
+    tag_ids = [to_base64("TagType", tag.pk) for tag in tags]
+    issue = IssueFactory.create()
+    issue.tags.set(tags)
+    issue_id = to_base64("IssueType", issue.pk)
+
+    # Update the issue, omitting the `addTags` field
+    # We expect the mutation to succeed and the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing `null` for the `addTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id, "addTags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing an empty list for the `addTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id, "addTags": []})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+
+def test_relay_many_to_many_remove(relay_mutation):
+    """Tests Relay behaviour for `remove` on a many to many field."""
+    query = """mutation RemoveIssueTags($id: GlobalID!, $removeTags: [NodeInput!]) {
+      updateIssue(data: { id: $id, tags: { remove: $removeTags } }) {
+        ...on IssueType {
+          tags { id }
+        }
+        ... on OperationInfo {
+          messages {
+            kind
+            code
+            message
+            field
+          }
+        }
+      }
+    }
+    """
+
+    # Create an issue
+    tags = TagFactory.create_batch(3)
+    tag_ids = [to_base64("TagType", tag.pk) for tag in tags]
+    issue = IssueFactory.create()
+    issue.tags.set(tags)
+    issue_id = to_base64("IssueType", issue.pk)
+
+    # Update the issue, omitting the `removeTags` field
+    # We expect the mutation to succeed and the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing `null` for the `removeTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id, "removeTags": None})
+    assert result.errors is None
+    assert result.data == {
+        "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
+    }
+    issue.refresh_from_db()
+    assert list(issue.tags.all()) == tags
+
+    # Update the issue, explicitly providing an empty list for the `removeTags` field
+    # We expect the mutation to succeed, but the tags to remain unchanged
+    result = relay_mutation(query, {"id": issue_id, "removeTags": []})
     assert result.errors is None
     assert result.data == {
         "updateIssue": {"tags": [{"id": tag_id} for tag_id in tag_ids]}
