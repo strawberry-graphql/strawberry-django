@@ -418,7 +418,7 @@ def _resolve_array_field_type(model_field: Field):
         return List[_resolve_array_field_type(model_field.base_field)]
 
     base_field = field_type_map.get(type(model_field), NotImplemented)
-    if base_field is NotImplemented:
+    if base_field is NotImplemented:  # type: ignore
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",
         )

@@ -1,4 +1,5 @@
 import contextlib
+import warnings
 from typing import Any, Awaitable, Dict, Optional, cast
 
 from asgiref.sync import sync_to_async
@@ -6,6 +7,7 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.test.client import AsyncClient, Client  # type: ignore
 from strawberry.test import BaseGraphQLTestClient
 from strawberry.test.client import Response
+from typing_extensions import override
 
 
 class TestClient(BaseGraphQLTestClient):
@@ -49,13 +51,15 @@ class AsyncTestClient(TestClient):
     def client(self) -> AsyncClient:
         return self._client
 
+    @override
     async def query(
         self,
         query: str,
         variables: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, object]] = None,
-        asserts_errors: Optional[bool] = True,
+        asserts_errors: Optional[bool] = None,
         files: Optional[Dict[str, object]] = None,
+        assert_no_errors: Optional[bool] = True,
     ) -> Response:
         body = self._build_body(query, variables, files)
 
@@ -67,8 +71,19 @@ class AsyncTestClient(TestClient):
             data=data.get("data"),
             extensions=data.get("extensions"),
         )
-        if asserts_errors:
-            assert response.errors is None, response.errors
+
+        if asserts_errors is not None:
+            warnings.warn(
+                "The `asserts_errors` argument has been renamed to `assert_no_errors`",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        assert_no_errors = (
+            assert_no_errors if asserts_errors is None else asserts_errors
+        )
+        if assert_no_errors:
+            assert response.errors is None
 
         return response
 

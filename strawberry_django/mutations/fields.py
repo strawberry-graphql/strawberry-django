@@ -131,7 +131,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
 
                 name = capitalize_first(to_camel_case(self.python_name))
                 resolved = Annotated[
-                    Union[types_],  # type: ignore
+                    Union[types_],
                     strawberry.union(f"{name}Payload"),
                 ]
                 self.type_annotation = StrawberryAnnotation(
