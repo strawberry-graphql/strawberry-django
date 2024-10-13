@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 from collections.abc import Iterable, Mapping, Sequence
-from functools import cached_property
+from functools import cached_property, partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -227,9 +227,12 @@ class StrawberryDjangoField(
                     if "info" not in kwargs:
                         kwargs["info"] = info
 
-                    resolved = await sync_to_async(self.get_queryset_hook(**kwargs))(
-                        resolved,
-                    )
+                    @sync_to_async
+                    def resolve():
+                        inner_resolved = self.get_queryset_hook(**kwargs)(resolved)
+                        return self.get_wrapped_result(inner_resolved, **kwargs)
+
+                    resolved = await resolve()
 
                 return resolved
 
@@ -243,15 +246,15 @@ class StrawberryDjangoField(
                 kwargs["info"] = info
 
             result = django_resolver(
-                lambda obj: obj,
+                partial(self.get_wrapped_result, **kwargs),
                 qs_hook=self.get_queryset_hook(**kwargs),
             )(result)
 
         return result
 
     def get_queryset_hook(self, info: Info, **kwargs):
-        if self.is_connection:
-            # We don't want to fetch results yet, those will be done by the connection
+        if self.is_connection or self.is_paginated:
+            # We don't want to fetch results yet, those will be done by the connection/pagination
             def qs_hook(qs: models.QuerySet):  # type: ignore
                 return self.get_queryset(qs, info, **kwargs)
 
