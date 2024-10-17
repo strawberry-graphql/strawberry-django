@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import shutil
-from typing import Dict, List, Tuple, Type, Union, cast
+from typing import Union, cast
 
 import pytest
 import strawberry
@@ -32,7 +32,7 @@ def _cleanup(request):
 @pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])
 def gql_client(request):
     client, path, with_optimizer = cast(
-        Dict[str, Tuple[Union[Type[Client], Type[AsyncClient]], str, bool]],
+        dict[str, tuple[Union[type[Client], type[AsyncClient]], str, bool]],
         {
             "sync": (Client, "/graphql/", True),
             "async": (AsyncClient, "/graphql_async/", True),
@@ -166,11 +166,11 @@ def schema(request):
     @strawberry.type
     class Query:
         user: types.User = strawberry_django.field()
-        users: List[types.User] = strawberry_django.field()
+        users: list[types.User] = strawberry_django.field()
         group: types.Group = strawberry_django.field()
-        groups: List[types.Group] = strawberry_django.field()
+        groups: list[types.Group] = strawberry_django.field()
         tag: types.Tag = strawberry_django.field()
-        tags: List[types.Tag] = strawberry_django.field()
+        tags: list[types.Tag] = strawberry_django.field()
 
     if request.param == "optimizer_enabled":
         extensions = [DjangoOptimizerExtension()]
@@ -183,7 +183,7 @@ def schema(request):
 
         @strawberry.type
         class GeoQuery(Query):
-            geofields: List[types.GeoField] = strawberry_django.field()
+            geofields: list[types.GeoField] = strawberry_django.field()
 
         return strawberry.Schema(query=GeoQuery, extensions=extensions)
 

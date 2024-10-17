@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 from django.contrib.auth.models import Permission
 from guardian.shortcuts import assign_perm
@@ -18,7 +16,7 @@ from .projects.faker import (
 from .utils import GraphQLTestClient
 
 PermKind: TypeAlias = Literal["user", "group", "superuser"]
-perm_kinds: List[PermKind] = ["user", "group", "superuser"]
+perm_kinds: list[PermKind] = ["user", "group", "superuser"]
 
 
 @pytest.mark.django_db(transaction=True)

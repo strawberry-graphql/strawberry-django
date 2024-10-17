@@ -1,17 +1,15 @@
+import builtins
 import copy
 import dataclasses
 import functools
 import inspect
 import sys
 import types
+from collections.abc import Collection, Sequence
 from typing import (
     Callable,
-    Collection,
     Generic,
-    List,
     Optional,
-    Sequence,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -66,15 +64,15 @@ __all = [
 ]
 
 _T = TypeVar("_T", bound=type)
-_O = TypeVar("_O", bound=Type[WithStrawberryObjectDefinition])
+_O = TypeVar("_O", bound=type[WithStrawberryObjectDefinition])
 _M = TypeVar("_M", bound=Model)
 
 
 def _process_type(
     cls: _T,
-    model: Type[Model],
+    model: type[Model],
     *,
-    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     filters: Optional[type] = None,
     order: Optional[type] = None,
     pagination: bool = False,
@@ -85,8 +83,8 @@ def _process_type(
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     annotate: Optional[TypeOrMapping[AnnotateType]] = None,
     disable_optimization: bool = False,
-    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
-    exclude: Optional[List[str]] = None,
+    fields: Optional[Union[list[str], Literal["__all__"]]] = None,
+    exclude: Optional[list[str]] = None,
     **kwargs,
 ) -> _T:
     is_input = kwargs.get("is_input", False)
@@ -127,7 +125,7 @@ def _process_type(
         )
 
     django_type = StrawberryDjangoDefinition(
-        origin=cast(Type[WithStrawberryObjectDefinition], cls),
+        origin=cast(builtins.type[WithStrawberryObjectDefinition], cls),
         model=model,
         field_cls=field_cls,
         is_partial=partial,
@@ -228,7 +226,7 @@ def _process_type(
     # update annotations and fields
     type_def = get_object_definition(cls, strict=True)
     description_from_doc = settings["FIELD_DESCRIPTION_FROM_HELP_TEXT"]
-    new_fields: List[StrawberryField] = []
+    new_fields: list[StrawberryField] = []
     for f in type_def.fields:
         django_name: Optional[str] = (
             getattr(f, "django_name", None) or f.python_name or f.name
@@ -403,7 +401,7 @@ def _process_type(
 @dataclasses.dataclass
 class StrawberryDjangoDefinition(Generic[_O, _M]):
     origin: _O
-    model: Type[_M]
+    model: type[_M]
     store: OptimizerStore
     is_input: bool = False
     is_partial: bool = False
@@ -411,7 +409,7 @@ class StrawberryDjangoDefinition(Generic[_O, _M]):
     filters: Optional[type] = None
     order: Optional[type] = None
     pagination: bool = False
-    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField
     disable_optimization: bool = False
 
 
@@ -423,10 +421,10 @@ class StrawberryDjangoDefinition(Generic[_O, _M]):
     ),
 )
 def type(  # noqa: A001
-    model: Type[Model],
+    model: type[Model],
     *,
     name: Optional[str] = None,
-    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     is_input: bool = False,
     is_interface: bool = False,
     is_filter: Union[Literal["lookups"], bool] = False,
@@ -441,8 +439,8 @@ def type(  # noqa: A001
     prefetch_related: Optional[TypeOrSequence[PrefetchType]] = None,
     annotate: Optional[TypeOrMapping[AnnotateType]] = None,
     disable_optimization: bool = False,
-    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
-    exclude: Optional[List[str]] = None,
+    fields: Optional[Union[list[str], Literal["__all__"]]] = None,
+    exclude: Optional[list[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL type.
 
@@ -492,10 +490,10 @@ def type(  # noqa: A001
     ),
 )
 def interface(
-    model: Type[Model],
+    model: builtins.type[Model],
     *,
     name: Optional[str] = None,
-    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    field_cls: builtins.type[StrawberryDjangoField] = StrawberryDjangoField,
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
     disable_optimization: bool = False,
@@ -536,16 +534,16 @@ def interface(
     ),
 )
 def input(  # noqa: A001
-    model: Type[Model],
+    model: builtins.type[Model],
     *,
     name: Optional[str] = None,
-    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    field_cls: builtins.type[StrawberryDjangoField] = StrawberryDjangoField,
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
     is_filter: Union[Literal["lookups"], bool] = False,
     partial: bool = False,
-    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
-    exclude: Optional[List[str]] = None,
+    fields: Optional[Union[list[str], Literal["__all__"]]] = None,
+    exclude: Optional[list[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL input.
 
@@ -586,14 +584,14 @@ def input(  # noqa: A001
     ),
 )
 def partial(
-    model: Type[Model],
+    model: builtins.type[Model],
     *,
     name: Optional[str] = None,
-    field_cls: Type[StrawberryDjangoField] = StrawberryDjangoField,
+    field_cls: builtins.type[StrawberryDjangoField] = StrawberryDjangoField,
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
-    fields: Optional[Union[List[str], Literal["__all__"]]] = None,
-    exclude: Optional[List[str]] = None,
+    fields: Optional[Union[list[str], Literal["__all__"]]] = None,
+    exclude: Optional[list[str]] = None,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 

@@ -1,8 +1,8 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 import strawberry
 from strawberry import relay
-from typing_extensions import Annotated, TypeAlias
+from typing_extensions import TypeAlias
 
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount

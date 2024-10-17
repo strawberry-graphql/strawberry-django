@@ -1,12 +1,9 @@
 import dataclasses
+from collections.abc import Mapping, Sequence
 from typing import (
     Any,
     Callable,
-    List,
-    Mapping,
     Optional,
-    Sequence,
-    Type,
     TypeVar,
     Union,
     overload,
@@ -39,14 +36,14 @@ def mutation(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[False] = False,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
 ) -> _T: ...
 
@@ -59,14 +56,14 @@ def mutation(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
 ) -> Any: ...
 
@@ -79,14 +76,14 @@ def mutation(
     field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
 ) -> DjangoMutationBase: ...
 
@@ -98,14 +95,14 @@ def mutation(
     field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -145,14 +142,14 @@ def input_mutation(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[False] = False,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
 ) -> _T: ...
 
@@ -165,14 +162,14 @@ def input_mutation(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
 ) -> Any: ...
 
@@ -185,14 +182,14 @@ def input_mutation(
     field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
 ) -> DjangoMutationBase: ...
 
@@ -204,14 +201,14 @@ def input_mutation(
     field_name: Optional[str] = None,
     is_subscription: bool = False,
     description: Optional[str] = None,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     handle_django_errors: Optional[bool] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -251,14 +248,14 @@ def create(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> Any:
@@ -309,14 +306,14 @@ def update(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
     key_attr: Optional[str] = None,
@@ -368,13 +365,13 @@ def delete(
     is_subscription: bool = False,
     description: Optional[str] = None,
     init: Literal[True] = True,
-    permission_classes: Optional[List[Type[BasePermission]]] = None,
+    permission_classes: Optional[list[type[BasePermission]]] = None,
     deprecation_reason: Optional[str] = None,
     default: Any = dataclasses.MISSING,
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
-    extensions: List[FieldExtension] = (),  # type: ignore
+    extensions: list[FieldExtension] = (),  # type: ignore
     graphql_type: Optional[Any] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,

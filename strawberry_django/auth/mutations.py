@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Type, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import strawberry
 from asgiref.sync import async_to_sync
@@ -77,7 +77,7 @@ def resolve_logout(info: Info) -> bool:
 
 class DjangoRegisterMutation(DjangoCreateMutation):
     def create(self, data: dict[str, Any], *, info: Info):
-        model = cast(Type["AbstractBaseUser"], self.django_model)
+        model = cast(type["AbstractBaseUser"], self.django_model)
         assert model is not None
 
         password = data.pop("password")

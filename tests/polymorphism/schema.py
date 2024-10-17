@@ -1,5 +1,3 @@
-from typing import List
-
 import strawberry
 
 import strawberry_django
@@ -25,7 +23,7 @@ class ResearchProjectType(ProjectType):
 
 @strawberry.type
 class Query:
-    projects: List[ProjectType] = strawberry_django.field()
+    projects: list[ProjectType] = strawberry_django.field()
 
 
 schema = strawberry.Schema(

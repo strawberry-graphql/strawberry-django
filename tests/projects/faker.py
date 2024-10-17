@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, Generic, List, Type, TypeVar, cast
+from typing import Any, ClassVar, Generic, TypeVar, cast
 
 import factory
 from django.contrib.auth import get_user_model
@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractUser, Group
 from .models import Favorite, Issue, Milestone, Project, Tag
 
 _T = TypeVar("_T")
-User = cast(Type[AbstractUser], get_user_model())
+User = cast(type[AbstractUser], get_user_model())
 
 
 class _BaseFactory(factory.django.DjangoModelFactory, Generic[_T]):
@@ -19,7 +19,7 @@ class _BaseFactory(factory.django.DjangoModelFactory, Generic[_T]):
         return super().create(**kwargs)
 
     @classmethod
-    def create_batch(cls, size: int, **kwargs) -> List[_T]:
+    def create_batch(cls, size: int, **kwargs) -> list[_T]:
         return super().create_batch(size, **kwargs)
 
 

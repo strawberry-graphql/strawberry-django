@@ -1,5 +1,5 @@
 import functools
-from typing import TYPE_CHECKING, List, Optional, Set, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Optional, TypeVar, cast
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Exists, F, Model, Q, QuerySet
@@ -21,10 +21,10 @@ _Q = TypeVar("_Q", bound=QuerySet)
 
 def _filter(
     qs: _Q,
-    perms: List[str],
+    perms: list[str],
     *,
     lookup: str = "",
-    model: Type[Model],
+    model: type[Model],
     any_perm: bool = True,
     ctype: Optional["ContentType"] = None,
 ) -> _Q:
@@ -80,7 +80,7 @@ def filter_for_user_q(
     if isinstance(perms, str):
         perms = [perms]
 
-    model = cast(Type[Model], qs.model)
+    model = cast(type[Model], qs.model)
     if model._meta.concrete_model:
         model = model._meta.concrete_model
 
@@ -125,7 +125,7 @@ def filter_for_user_q(
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
 
     # Small optimization if the user's permissions are cached
-    perm_cache: Optional[Set[str]] = getattr(user, "_perm_cache", None)
+    perm_cache: Optional[set[str]] = getattr(user, "_perm_cache", None)
     if perm_cache is not None:
         f = any if any_perm else all
         if f(p in perm_cache for p in perms_list):

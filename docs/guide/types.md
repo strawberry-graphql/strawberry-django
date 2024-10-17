@@ -20,7 +20,6 @@ More information about that can be read from [resolvers](resolvers.md) page.
 import strawberry_django
 
 from strawberry import auto
-from typing import List
 
 @strawberry_django.type(models.Fruit)
 class Fruit:
@@ -32,7 +31,7 @@ class Fruit:
 class Color:
     id: auto
     name: auto
-    fruits: List[Fruit]
+    fruits: list[Fruit]
 ```
 
 ## Input types
@@ -56,21 +55,21 @@ Non-`auto` type annotations will be respected—and therefore required—unless 
 ```python title="types.py"
 @strawberry_django.input(models.Color, partial=True)
 class FruitPartialInput(FruitInput):
-    color: List["ColorPartialInput"]
+    color: list["ColorPartialInput"]
 
 # Auto fields are optional
 @strawberry_django.input(models.Color, partial=True)
 class ColorPartialInput:
     id: auto
     name: auto
-    fruits: List[FruitPartialInput]
+    fruits: list[FruitPartialInput]
 
 # Alternate input; "name" field will be required
 @strawberry_django.input(models.Color, partial=True)
 class ColorNameRequiredPartialInput:
     id: auto
     name: str
-    fruits: List[FruitPartialInput]
+    fruits: list[FruitPartialInput]
 ```
 
 ## Types from Django models

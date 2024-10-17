@@ -1,14 +1,15 @@
-from typing import Any, Dict, Mapping, TypeVar
+from collections.abc import Mapping
+from typing import Any, TypeVar
 
 from typing_extensions import TypeAlias
 
 _K = TypeVar("_K", bound=Any)
 _V = TypeVar("_V", bound=Any)
 
-DictTree: TypeAlias = Dict[str, "DictTree"]
+DictTree: TypeAlias = dict[str, "DictTree"]
 
 
-def dicttree_merge(dict1: Mapping[_K, _V], dict2: Mapping[_K, _V]) -> Dict[_K, _V]:
+def dicttree_merge(dict1: Mapping[_K, _V], dict2: Mapping[_K, _V]) -> dict[_K, _V]:
     new = {
         **dict1,
         **dict2,

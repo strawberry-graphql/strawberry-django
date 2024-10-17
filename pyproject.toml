@@ -20,19 +20,19 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Framework :: Django",
   "Framework :: Django :: 4.2",
   "Framework :: Django :: 5.0",
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4.0"
-django = ">=3.2"
+python = ">=3.9,<4.0"
+django = ">=4.2"
 asgiref = ">=3.8"
 django-choices-field = { version = ">=2.2.2", optional = true }
 django-debug-toolbar = { version = ">=3.4", optional = true }
@@ -69,7 +69,7 @@ requires = ["poetry-core>=1.0.0", "setuptools"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 preview = true
 
 [tool.ruff.lint]
@@ -147,8 +147,6 @@ extend-ignore = [
   "Q003",
   "W191",
 ]
-# FIXME: Enable autofix for UP006 when we don't need to support django 3.8 anymore
-extend-unfixable = ["UP006"]
 exclude = [
   ".eggs",
   ".git",
@@ -176,7 +174,7 @@ max-nested-blocks = 7
 [tool.ruff.format]
 
 [tool.pyright]
-pythonVersion = "3.8"
+pythonVersion = "3.9"
 useLibraryCodeForTypes = true
 exclude = [".venv", "**/migrations", "dist", "docs"]
 reportCallInDefaultInitializer = "warning"

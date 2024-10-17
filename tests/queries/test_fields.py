@@ -1,5 +1,5 @@
 import textwrap
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pytest
 import strawberry
@@ -13,7 +13,7 @@ from tests import models, types, utils
 def generate_query(user_type):
     @strawberry.type
     class Query:
-        users: List[user_type] = strawberry_django.field()  # type: ignore
+        users: list[user_type] = strawberry_django.field()  # type: ignore
 
     return utils.generate_query(Query)
 
@@ -53,7 +53,7 @@ def test_foreign_key_id_with_auto(group, user):
 
     @strawberry.type
     class Query:
-        users: List[MyUser] = strawberry_django.field()
+        users: list[MyUser] = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
 
@@ -82,7 +82,7 @@ def test_foreign_key_id_with_explicit_type(group, user):
 
     @strawberry.type
     class Query:
-        users: List[MyUser] = strawberry_django.field()
+        users: list[MyUser] = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
 

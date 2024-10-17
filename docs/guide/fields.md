@@ -39,8 +39,6 @@ All one-to-one, one-to-many, many-to-one and many-to-many relationship types are
 The default resolver of `strawberry_django.fields()` resolves the relationship based on given type information.
 
 ```python title="types.py"
-from typing import List
-
 @strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
@@ -52,7 +50,7 @@ class Fruit:
 class Color:
     id: auto
     name: auto
-    fruits: List[Fruit]
+    fruits: list[Fruit]
 ```
 
 Note that all relations can naturally trigger the n+1 problem. To avoid that, you can either

@@ -37,7 +37,7 @@ class Query:
 
     # Option 3: You can manually create resolver by your method manually.
     @strawberry_django.connection(ListConnectionWithTotalCount[FruitType])
-    def fruit_with_custom_resolver(self) -> List[SomeModel]:
+    def fruit_with_custom_resolver(self) -> list[SomeModel]:
         return Fruit.objects.all()
 ```
 

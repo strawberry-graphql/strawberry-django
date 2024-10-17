@@ -4,7 +4,7 @@ import contextvars
 import dataclasses
 import inspect
 import warnings
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS, connections
@@ -134,11 +134,11 @@ class GraphQLTestClient(TestClient):
 
     def request(
         self,
-        body: Dict[str, object],
-        headers: Optional[Dict[str, object]] = None,
-        files: Optional[Dict[str, object]] = None,
+        body: dict[str, object],
+        headers: Optional[dict[str, object]] = None,
+        files: Optional[dict[str, object]] = None,
     ):
-        kwargs: Dict[str, object] = {"data": body}
+        kwargs: dict[str, object] = {"data": body}
         if files:  # pragma:nocover
             kwargs["format"] = "multipart"
         else:
@@ -153,10 +153,10 @@ class GraphQLTestClient(TestClient):
     def query(
         self,
         query: str,
-        variables: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, object]] = None,
+        variables: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, object]] = None,
         asserts_errors: Optional[bool] = None,
-        files: Optional[Dict[str, object]] = None,
+        files: Optional[dict[str, object]] = None,
         assert_no_errors: Optional[bool] = True,
     ) -> Response:
         body = self._build_body(query, variables, files)

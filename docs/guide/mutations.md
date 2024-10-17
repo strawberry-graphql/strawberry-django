@@ -180,8 +180,8 @@ from strawberry_django import mutations
 
 @strawberry.type
 class Mutation:
-    updateFruits: List[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
-    deleteFruits: List[Fruit] = mutations.delete(filters=FruitFilter)
+    updateFruits: list[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
+    deleteFruits: list[Fruit] = mutations.delete(filters=FruitFilter)
 
 schema = strawberry.Schema(mutation=Mutation)
 ```

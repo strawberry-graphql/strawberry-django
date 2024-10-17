@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS
@@ -127,7 +127,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         return new_field
 
     @property
-    def arguments(self) -> List[StrawberryArgument]:
+    def arguments(self) -> list[StrawberryArgument]:
         arguments = []
         if self.base_resolver is None and self.is_list:
             pagination = self.get_pagination()
@@ -138,7 +138,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         return super().arguments + arguments
 
     @arguments.setter
-    def arguments(self, value: List[StrawberryArgument]):
+    def arguments(self, value: list[StrawberryArgument]):
         args_prop = super(StrawberryDjangoPagination, self.__class__).arguments
         return args_prop.fset(self, value)  # type: ignore
 

@@ -1,6 +1,6 @@
 import io
 import textwrap
-from typing import List, Optional, cast
+from typing import Optional, cast
 from unittest import mock
 
 import pytest
@@ -35,7 +35,7 @@ class User:
 class Group:
     id: auto
     name: auto
-    users: List[User]
+    users: list[User]
 
 
 @strawberry_django.type(models.Fruit)
@@ -73,12 +73,12 @@ class BananaFruit(FruitInterface):
 @strawberry.type
 class Query:
     user: User = strawberry_django.field()
-    users: List[User] = strawberry_django.field()
+    users: list[User] = strawberry_django.field()
     group: Group = strawberry_django.field()
-    groups: List[Group] = strawberry_django.field()
+    groups: list[Group] = strawberry_django.field()
     fruit: Fruit = strawberry_django.field()
-    berries: List[BerryFruit] = strawberry_django.field()
-    bananas: List[BananaFruit] = strawberry_django.field()
+    berries: list[BerryFruit] = strawberry_django.field()
+    bananas: list[BananaFruit] = strawberry_django.field()
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
+from collections.abc import Iterable
 from typing import (
+    Annotated,
     Any,
     ClassVar,
-    Iterable,
-    List,
     Optional,
 )
 
@@ -11,7 +11,6 @@ from django.db import models
 from strawberry import relay
 from strawberry.permission import BasePermission
 from strawberry.types import Info
-from typing_extensions import Annotated
 
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount
@@ -19,7 +18,7 @@ from strawberry_django.relay import ListConnectionWithTotalCount
 
 class FruitModel(models.Model):
     class Meta:  # type: ignore
-        ordering: ClassVar[List[str]] = ["id"]
+        ordering: ClassVar[list[str]] = ["id"]
 
     name = models.CharField(max_length=255)
     color = models.CharField(max_length=255)
@@ -56,9 +55,9 @@ class Query:
     node_with_async_permissions: relay.Node = strawberry_django.node(
         permission_classes=[DummyPermission],
     )
-    nodes: List[relay.Node] = strawberry_django.node()
+    nodes: list[relay.Node] = strawberry_django.node()
     node_optional: Optional[relay.Node] = strawberry_django.node()
-    nodes_optional: List[Optional[relay.Node]] = strawberry_django.node()
+    nodes_optional: list[Optional[relay.Node]] = strawberry_django.node()
     fruits: ListConnectionWithTotalCount[Fruit] = strawberry_django.connection()
     fruits_lazy: ListConnectionWithTotalCount[
         Annotated["Fruit", strawberry.lazy("tests.relay.schema")]

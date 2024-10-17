@@ -1,4 +1,4 @@
-from typing import Iterator
+from collections.abc import Iterator
 
 from strawberry.schema.execute import validate_document
 

@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 from django.db.models import QuerySet
 from strawberry import relay
@@ -12,7 +10,7 @@ from tests.types import FruitType
 
 @pytest.mark.django_db
 def test_resolve_returns_queryset_with_fetched_results():
-    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(list[FruitType]))
     result = field.get_result(None, None, [], {})
     assert isinstance(result, QuerySet)
     assert result._result_cache is not None  # type: ignore
@@ -20,7 +18,7 @@ def test_resolve_returns_queryset_with_fetched_results():
 
 @pytest.mark.django_db
 async def test_resolve_returns_queryset_with_fetched_results_async():
-    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(list[FruitType]))
     result = await field.get_result(None, None, [], {})
     assert isinstance(result, QuerySet)
     assert result._result_cache is not None  # type: ignore
@@ -28,7 +26,7 @@ async def test_resolve_returns_queryset_with_fetched_results_async():
 
 @pytest.mark.django_db
 def test_resolve_returns_queryset_without_fetching_results_when_disabling_it():
-    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(list[FruitType]))
     field.disable_fetch_list_results = True
     result = field.get_result(None, None, [], {})
     assert isinstance(result, QuerySet)
@@ -37,7 +35,7 @@ def test_resolve_returns_queryset_without_fetching_results_when_disabling_it():
 
 @pytest.mark.django_db
 async def test_resolve_returns_queryset_without_fetching_results_when_disabling_it_async():
-    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(List[FruitType]))
+    field = StrawberryDjangoField(type_annotation=StrawberryAnnotation(list[FruitType]))
     field.disable_fetch_list_results = True
     result = await field.get_result(None, None, [], {})
     assert isinstance(result, QuerySet)

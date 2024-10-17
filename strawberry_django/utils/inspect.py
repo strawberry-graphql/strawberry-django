@@ -5,8 +5,6 @@ import functools
 import itertools
 from typing import (
     TYPE_CHECKING,
-    Generator,
-    Iterable,
     cast,
 )
 
@@ -29,6 +27,8 @@ from strawberry_django.fields.types import resolve_model_field_name
 from .pyutils import DictTree, dicttree_insersection_differs, dicttree_merge
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
     from django.db import models
     from django.db.models.expressions import Expression
     from django.db.models.fields import Field
@@ -78,7 +78,7 @@ def get_possible_types(
     gql_type: StrawberryObjectDefinition | StrawberryType | type,
     *,
     object_definition: StrawberryObjectDefinition | None = None,
-) -> Generator[type, None, None]:
+) -> Generator[type]:
     """Resolve all possible types for gql_type.
 
     Args:
@@ -119,7 +119,7 @@ def get_possible_types(
 
 def get_possible_type_definitions(
     gql_type: StrawberryObjectDefinition | StrawberryType | type,
-) -> Generator[StrawberryObjectDefinition, None, None]:
+) -> Generator[StrawberryObjectDefinition]:
     """Resolve all possible type definitions for gql_type.
 
     Args:

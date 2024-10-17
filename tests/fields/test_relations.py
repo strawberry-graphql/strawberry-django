@@ -1,4 +1,4 @@
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import strawberry
 from django.db import models
@@ -37,7 +37,7 @@ class ChildModel(models.Model):
 class Parent:
     id: auto
     name: auto
-    children: List["Child"]
+    children: list["Child"]
     one_to_one: Optional["OneToOne"]
 
 
@@ -52,7 +52,7 @@ class OneToOne:
 class Child:
     id: auto
     name: auto
-    parents: List[Parent]
+    parents: list[Parent]
 
 
 def test_relation():

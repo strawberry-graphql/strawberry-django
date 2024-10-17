@@ -1,5 +1,6 @@
+from collections.abc import Hashable
 from functools import _make_key  # noqa: PLC2701
-from typing import Callable, Dict, Hashable, Optional, Tuple, cast
+from typing import Callable, Optional, cast
 
 from django.core.cache import caches
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
@@ -31,7 +32,7 @@ class DjangoCacheBase(SchemaExtension):
         self,
         cache_name: str = "default",
         timeout: Optional[int] = None,
-        hash_fn: Optional[Callable[[Tuple, Dict], Hashable]] = None,
+        hash_fn: Optional[Callable[[tuple, dict], Hashable]] = None,
         *,
         execution_context: Optional[ExecutionContext] = None,
     ):

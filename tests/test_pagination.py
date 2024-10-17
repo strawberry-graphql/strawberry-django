@@ -1,5 +1,5 @@
 import sys
-from typing import List, cast
+from typing import cast
 
 import pytest
 import strawberry
@@ -33,8 +33,8 @@ class BerryFruit:
 
 @strawberry.type
 class Query:
-    fruits: List[Fruit] = strawberry_django.field()
-    berries: List[BerryFruit] = strawberry_django.field()
+    fruits: list[Fruit] = strawberry_django.field()
+    berries: list[BerryFruit] = strawberry_django.field()
 
 
 @pytest.fixture
@@ -89,9 +89,9 @@ def test_resolver_pagination(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, pagination: OffsetPaginationInput) -> List[Fruit]:
+        def fruits(self, pagination: OffsetPaginationInput) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
-            return cast(List[Fruit], apply(pagination, queryset))
+            return cast(list[Fruit], apply(pagination, queryset))
 
     query = utils.generate_query(Query)
     result = query("{ fruits(pagination: { limit: 1 }) { id name } }")

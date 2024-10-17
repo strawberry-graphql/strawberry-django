@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 import strawberry
 from django.db import models
@@ -22,7 +20,7 @@ class File:
 
 @strawberry.type
 class Query:
-    files: List[File] = strawberry_django.field()
+    files: list[File] = strawberry_django.field()
 
 
 @pytest.fixture

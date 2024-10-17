@@ -91,7 +91,7 @@ class SongType:
 @strawberry.type
 class Query:
     artist: Artist = strawberry_django.field()
-    songs: List[SongType] = strawberry_django.field()
+    songs: list[SongType] = strawberry_django.field()
 ```
 
 Querying for `artist` and `songs` like this:

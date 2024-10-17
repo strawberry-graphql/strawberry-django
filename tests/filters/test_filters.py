@@ -1,6 +1,6 @@
 import textwrap
 from enum import Enum
-from typing import Generic, List, Optional, TypeVar, cast
+from typing import Generic, Optional, TypeVar, cast
 
 import pytest
 import strawberry
@@ -49,7 +49,7 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
     @strawberry.input
     class FilterInLookup(Generic[_T]):
         exact: Optional[_T] = strawberry.UNSET
-        in_list: Optional[List[_T]] = strawberry.UNSET
+        in_list: Optional[list[_T]] = strawberry.UNSET
 
     @strawberry_django.filters.filter(models.Fruit)
     class EnumLookupFilter:
@@ -93,11 +93,11 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
 
     @strawberry.type
     class Query:
-        fruits: List[Fruit] = strawberry_django.field()
-        field_filter: List[Fruit] = strawberry_django.field(filters=FieldFilter)
-        type_filter: List[Fruit] = strawberry_django.field(filters=TypeFilter)
-        enum_filter: List[Fruit] = strawberry_django.field(filters=EnumFilter)
-        enum_lookup_filter: List[Fruit] = strawberry_django.field(
+        fruits: list[Fruit] = strawberry_django.field()
+        field_filter: list[Fruit] = strawberry_django.field(filters=FieldFilter)
+        type_filter: list[Fruit] = strawberry_django.field(filters=TypeFilter)
+        enum_filter: list[Fruit] = strawberry_django.field(filters=EnumFilter)
+        enum_lookup_filter: list[Fruit] = strawberry_django.field(
             filters=EnumLookupFilter
         )
 
@@ -242,9 +242,9 @@ def test_resolver_filter(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, filters: FruitFilter) -> List[Fruit]:
+        def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
-            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
+            return cast(list[Fruit], strawberry_django.filters.apply(filters, queryset))
 
     query = utils.generate_query(Query)
     result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
@@ -260,9 +260,9 @@ def test_empty_resolver_filter():
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, filters: FruitFilter) -> List[Fruit]:
+        def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.none()
-            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
+            return cast(list[Fruit], strawberry_django.filters.apply(filters, queryset))
 
     query = utils.generate_query(Query)
     result = query('{ fruits(filters: { name: { exact: "strawberry" } }) { id name } }')
@@ -278,11 +278,11 @@ async def test_async_resolver_filter(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        async def fruits(self, filters: FruitFilter) -> List[Fruit]:
+        async def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
             queryset = strawberry_django.filters.apply(filters, queryset)
             # cast fixes funny typing issue between list and List
-            return cast(List[Fruit], [fruit async for fruit in queryset])
+            return cast(list[Fruit], [fruit async for fruit in queryset])
 
     query = utils.generate_query(Query)
     result = await query(  # type: ignore
@@ -299,10 +299,10 @@ def test_resolver_filter_with_inheritance(vegetables):
     @strawberry.type
     class Query:
         @strawberry.field
-        def vegetables(self, filters: VegetableFilter) -> List[Vegetable]:
+        def vegetables(self, filters: VegetableFilter) -> list[Vegetable]:
             queryset = models.Vegetable.objects.all()
             return cast(
-                List[Vegetable], strawberry_django.filters.apply(filters, queryset)
+                list[Vegetable], strawberry_django.filters.apply(filters, queryset)
             )
 
     query = utils.generate_query(Query)
@@ -352,10 +352,10 @@ def test_resolver_filter_with_info(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
+        def fruits(self, filters: FruitFilterWithInfo, info: Info) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
             return cast(
-                List[Fruit],
+                list[Fruit],
                 strawberry_django.filters.apply(filters, queryset, info=info),
             )
 
@@ -384,10 +384,10 @@ def test_resolver_filter_override_with_info(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, filters: FruitFilterWithInfo, info: Info) -> List[Fruit]:
+        def fruits(self, filters: FruitFilterWithInfo, info: Info) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
             return cast(
-                List[Fruit],
+                list[Fruit],
                 strawberry_django.filters.apply(filters, queryset, info=info),
             )
 
@@ -405,9 +405,9 @@ def test_resolver_nonfilter(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, filters: NonFilter) -> List[Fruit]:
+        def fruits(self, filters: NonFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
-            return cast(List[Fruit], strawberry_django.filters.apply(filters, queryset))
+            return cast(list[Fruit], strawberry_django.filters.apply(filters, queryset))
 
     query = utils.generate_query(Query)
     result = query("{ fruits(filters: { name: strawberry } ) { id name } }")

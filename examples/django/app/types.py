@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from strawberry import auto
 
@@ -76,7 +76,7 @@ class Fruit:
 class Color:
     id: auto
     name: auto
-    fruits: List[Fruit]
+    fruits: list[Fruit]
 
 
 @strawberry_django.type(get_user_model())

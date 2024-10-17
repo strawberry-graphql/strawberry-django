@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Final, Literal, Optional, Sequence, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Optional, overload
 
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
@@ -19,7 +19,7 @@ from strawberry_django.exceptions import (
 from strawberry_django.utils.typing import is_auto
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, MutableMapping
+    from collections.abc import Callable, MutableMapping, Sequence
 
     from strawberry.extensions.field_extension import FieldExtension
     from strawberry.types import Info

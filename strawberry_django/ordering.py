@@ -5,9 +5,7 @@ import enum
 from typing import (
     TYPE_CHECKING,
     Callable,
-    Collection,
     Optional,
-    Sequence,
     TypeVar,
     cast,
 )
@@ -34,6 +32,8 @@ from strawberry_django.utils.typing import is_auto
 from .arguments import argument
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Sequence
+
     from django.db.models import Model
     from strawberry.types import Info
     from strawberry.types.arguments import StrawberryArgument
@@ -266,7 +266,7 @@ def order(
         try:
             cls.__annotations__  # noqa: B018
         except AttributeError:
-            # Manual creation for python 3.8 / 3.9
+            # FIXME: Manual creation for python 3.9 (remove when 3.9 is dropped)
             cls.__annotations__ = {}
 
         for fname, type_ in cls.__annotations__.items():

@@ -6,18 +6,13 @@ import dataclasses
 import enum
 import functools
 import inspect
+from collections.abc import Hashable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
-    Dict,
-    Hashable,
-    Iterable,
-    List,
     Optional,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -68,8 +63,8 @@ def _get_user_or_anonymous_getter() -> Optional[Callable[[UserType], UserType]]:
 
 @dataclasses.dataclass
 class PermContext:
-    is_safe_list: List[bool] = dataclasses.field(default_factory=list)
-    checkers: List["HasPerm"] = dataclasses.field(default_factory=list)
+    is_safe_list: list[bool] = dataclasses.field(default_factory=list)
+    checkers: list["HasPerm"] = dataclasses.field(default_factory=list)
 
     def __copy__(self):
         return self.__class__(
@@ -145,7 +140,7 @@ def get_with_perms(
     info: Info,
     *,
     required: Literal[True],
-    model: Type[_M],
+    model: type[_M],
     key_attr: Optional[str] = ...,
 ) -> _M: ...
 
@@ -156,7 +151,7 @@ def get_with_perms(
     info: Info,
     *,
     required: bool = ...,
-    model: Type[_M],
+    model: type[_M],
     key_attr: Optional[str] = ...,
 ) -> Optional[_M]: ...
 
@@ -167,7 +162,7 @@ def get_with_perms(
     info: Info,
     *,
     required: Literal[True],
-    model: Type[_M],
+    model: type[_M],
     key_attr: Optional[str] = ...,
 ) -> _M: ...
 
@@ -178,7 +173,7 @@ def get_with_perms(
     info: Info,
     *,
     required: bool = ...,
-    model: Type[_M],
+    model: type[_M],
     key_attr: Optional[str] = ...,
 ) -> Optional[_M]: ...
 
@@ -259,7 +254,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
     """Base django permission extension."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User does not have permission."
-    SCHEMA_DIRECTIVE_LOCATIONS: ClassVar[List[Location]] = [Location.FIELD_DEFINITION]
+    SCHEMA_DIRECTIVE_LOCATIONS: ClassVar[list[Location]] = [Location.FIELD_DEFINITION]
     SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = None
 
     def __init__(
@@ -306,7 +301,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         next_: SyncExtensionResolver,
         source: Any,
         info: Info,
-        **kwargs: Dict[str, Any],
+        **kwargs: dict[str, Any],
     ) -> Any:
         user = get_current_user(info)
 
@@ -336,7 +331,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
         next_: AsyncExtensionResolver,
         source: Any,
         info: Info,
-        **kwargs: Dict[str, Any],
+        **kwargs: dict[str, Any],
     ) -> Any:
         user = await aget_current_user(info)
 
@@ -641,7 +636,7 @@ class HasPerm(DjangoPermissionExtension):
 
     def __init__(
         self,
-        perms: Union[List[str], str],
+        perms: Union[list[str], str],
         *,
         message: Optional[str] = None,
         use_directives: bool = True,
@@ -669,7 +664,7 @@ class HasPerm(DjangoPermissionExtension):
         if not perms:
             raise TypeError(f"At least one perm is required for {self!r}")
 
-        self.perms: Tuple[PermDefinition, ...] = tuple(
+        self.perms: tuple[PermDefinition, ...] = tuple(
             PermDefinition.from_perm(p) if isinstance(p, str) else p for p in perms
         )
 
@@ -702,7 +697,7 @@ class HasPerm(DjangoPermissionExtension):
                 repeatable=True,
             )
             class AutoDirective:
-                permissions: List[PermDefinition] = strawberry.field(
+                permissions: list[PermDefinition] = strawberry.field(
                     description="Required perms to access this resource.",
                     default_factory=list,
                 )
@@ -778,7 +773,7 @@ class HasPerm(DjangoPermissionExtension):
         self,
         info: Info,
         user: UserType,
-    ) -> Dict[Tuple[Hashable, ...], bool]:
+    ) -> dict[tuple[Hashable, ...], bool]:
         cache_key = "_strawberry_django_permissions_cache"
 
         cache = getattr(user, cache_key, None)

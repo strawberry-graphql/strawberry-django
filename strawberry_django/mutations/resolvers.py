@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Iterable
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Iterable,
-    List,
-    Type,
     TypeVar,
     cast,
     overload,
@@ -192,13 +190,13 @@ def parse_input(
 
         return ParsedObjectList(
             add=cast(
-                List[InputListTypes], parse_input(info, data.add, key_attr=key_attr)
+                list[InputListTypes], parse_input(info, data.add, key_attr=key_attr)
             ),
             remove=cast(
-                List[InputListTypes], parse_input(info, data.remove, key_attr=key_attr)
+                list[InputListTypes], parse_input(info, data.remove, key_attr=key_attr)
             ),
             set=cast(
-                List[InputListTypes], parse_input(info, data.set, key_attr=key_attr)
+                list[InputListTypes], parse_input(info, data.set, key_attr=key_attr)
             ),
         )
 
@@ -265,7 +263,7 @@ def prepare_create_update(
         ):
             value, value_data = _parse_data(  # noqa: PLW2901
                 info,
-                cast(Type[Model], field.related_model),
+                cast(type[Model], field.related_model),
                 value,
                 key_attr=key_attr,
             )
@@ -513,7 +511,7 @@ def update_field(info: Info, instance: Model, field: models.Field, value: Any):
         and isinstance(field, models.ForeignObject)
         and not isinstance(value, Model)
     ):
-        value, data = _parse_pk(value, cast(Type[Model], field.related_model))
+        value, data = _parse_pk(value, cast(type[Model], field.related_model))
 
     field.save_form_data(instance, value)
     # If data was passed to the foreign key, update it recursively
@@ -580,7 +578,7 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
             obj, data = _parse_data(
-                info, cast(Type[Model], manager.model), v, key_attr=key_attr
+                info, cast(type[Model], manager.model), v, key_attr=key_attr
             )
             if obj:
                 data.pop(key_attr, None)
@@ -641,7 +639,7 @@ def update_m2m(
         for v in value.add or []:
             obj, data = _parse_data(
                 info,
-                cast(Type[Model], manager.model),
+                cast(type[Model], manager.model),
                 v,
                 key_attr=key_attr,
             )
@@ -666,7 +664,7 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
             obj, data = _parse_data(
-                info, cast(Type[Model], manager.model), v, key_attr=key_attr
+                info, cast(type[Model], manager.model), v, key_attr=key_attr
             )
             data.pop(key_attr, None)
             assert not data

@@ -7,13 +7,9 @@ import uuid
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Generic,
-    List,
     NewType,
     Optional,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -88,16 +84,16 @@ class OneToManyInput:
 
 @strawberry.input
 class ManyToOneInput:
-    add: Optional[List[strawberry.ID]] = UNSET
-    remove: Optional[List[strawberry.ID]] = UNSET
-    set: Optional[List[strawberry.ID]] = UNSET
+    add: Optional[list[strawberry.ID]] = UNSET
+    remove: Optional[list[strawberry.ID]] = UNSET
+    set: Optional[list[strawberry.ID]] = UNSET
 
 
 @strawberry.input
 class ManyToManyInput:
-    add: Optional[List[strawberry.ID]] = UNSET
-    remove: Optional[List[strawberry.ID]] = UNSET
-    set: Optional[List[strawberry.ID]] = UNSET
+    add: Optional[list[strawberry.ID]] = UNSET
+    remove: Optional[list[strawberry.ID]] = UNSET
+    set: Optional[list[strawberry.ID]] = UNSET
 
 
 @strawberry.input(
@@ -142,13 +138,13 @@ class ListInput(Generic[K]):
     # FIXME: Without this pyright will not let any class inheric from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        set: Optional[List[K]]
-        add: Optional[List[K]]
-        remove: Optional[List[K]]
+        set: Optional[list[K]]
+        add: Optional[list[K]]
+        remove: Optional[list[K]]
     else:
-        set: Optional[List[K]] = UNSET
-        add: Optional[List[K]] = UNSET
-        remove: Optional[List[K]] = UNSET
+        set: Optional[list[K]] = UNSET
+        add: Optional[list[K]] = UNSET
+        remove: Optional[list[K]] = UNSET
 
     def __eq__(self, other: object):
         if not isinstance(other, ListInput):
@@ -214,7 +210,7 @@ class OperationMessage:
 class OperationInfo:
     """Multiple messages returned by an operation."""
 
-    messages: List[OperationMessage] = strawberry.field(
+    messages: list[OperationMessage] = strawberry.field(
         description="List of messages returned by the operation.",
     )
 
@@ -228,11 +224,11 @@ class OperationInfo:
         return hash((self.__class__, *tuple(self.messages)))
 
 
-field_type_map: Dict[
+field_type_map: dict[
     Union[
-        Type[fields.Field],
-        Type[related.RelatedField],
-        Type[reverse_related.ForeignObjectRel],
+        type[fields.Field],
+        type[related.RelatedField],
+        type[reverse_related.ForeignObjectRel],
     ],
     type,
 ] = {
@@ -263,10 +259,10 @@ field_type_map: Dict[
     files.FileField: DjangoFileType,
     files.ImageField: DjangoImageType,
     related.ForeignKey: DjangoModelType,
-    related.ManyToManyField: List[DjangoModelType],
+    related.ManyToManyField: list[DjangoModelType],
     related.OneToOneField: DjangoModelType,
-    reverse_related.ManyToManyRel: List[DjangoModelType],
-    reverse_related.ManyToOneRel: List[DjangoModelType],
+    reverse_related.ManyToManyRel: list[DjangoModelType],
+    reverse_related.ManyToOneRel: list[DjangoModelType],
     reverse_related.OneToOneRel: DjangoModelType,
 }
 
@@ -285,14 +281,14 @@ except ImproperlyConfigured:
     MultiPolygon = None
 else:
     Point = strawberry.scalar(
-        NewType("Point", Tuple[float, float, Optional[float]]),
+        NewType("Point", tuple[float, float, Optional[float]]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
         parse_value=geos.Point,
         description="Represents a point as `(x, y, z)` or `(x, y)`.",
     )
 
     LineString = strawberry.scalar(
-        NewType("LineString", Tuple[Point]),
+        NewType("LineString", tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
         parse_value=geos.LineString,
         description=(
@@ -302,7 +298,7 @@ else:
     )
 
     LinearRing = strawberry.scalar(
-        NewType("LinearRing", Tuple[Point]),
+        NewType("LinearRing", tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
         parse_value=geos.LinearRing,
         description=(
@@ -313,7 +309,7 @@ else:
     )
 
     Polygon = strawberry.scalar(
-        NewType("Polygon", Tuple[LinearRing]),
+        NewType("Polygon", tuple[LinearRing]),
         serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
         parse_value=lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
         description=(
@@ -323,21 +319,21 @@ else:
     )
 
     MultiPoint = strawberry.scalar(
-        NewType("MultiPoint", Tuple[Point]),
+        NewType("MultiPoint", tuple[Point]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
         parse_value=lambda v: geos.MultiPoint(*[geos.Point(x) for x in v]),
         description="A geographical object that contains multiple Points.",
     )
 
     MultiLineString = strawberry.scalar(
-        NewType("MultiLineString", Tuple[LineString]),
+        NewType("MultiLineString", tuple[LineString]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiLineString) else v,
         parse_value=lambda v: geos.MultiLineString(*[geos.LineString(x) for x in v]),
         description="A geographical object that contains multiple line strings.",
     )
 
     MultiPolygon = strawberry.scalar(
-        NewType("MultiPolygon", Tuple[Polygon]),
+        NewType("MultiPolygon", tuple[Polygon]),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
         parse_value=lambda v: geos.MultiPolygon(
             *[geos.Polygon(*list(x)) for x in v],
@@ -357,11 +353,11 @@ else:
     )
 
 
-input_field_type_map: Dict[
+input_field_type_map: dict[
     Union[
-        Type[fields.Field],
-        Type[related.RelatedField],
-        Type[reverse_related.ForeignObjectRel],
+        type[fields.Field],
+        type[related.RelatedField],
+        type[reverse_related.ForeignObjectRel],
     ],
     type,
 ] = {
@@ -376,30 +372,30 @@ input_field_type_map: Dict[
 }
 
 
-relay_field_type_map: Dict[
+relay_field_type_map: dict[
     Union[
-        Type[fields.Field],
-        Type[related.RelatedField],
-        Type[reverse_related.ForeignObjectRel],
+        type[fields.Field],
+        type[related.RelatedField],
+        type[reverse_related.ForeignObjectRel],
     ],
     type,
 ] = {
     fields.AutoField: relay.GlobalID,
     fields.BigAutoField: relay.GlobalID,
     related.ForeignKey: relay.Node,
-    related.ManyToManyField: List[relay.Node],
+    related.ManyToManyField: list[relay.Node],
     related.OneToOneField: relay.Node,
-    reverse_related.ManyToManyRel: List[relay.Node],
-    reverse_related.ManyToOneRel: List[relay.Node],
+    reverse_related.ManyToManyRel: list[relay.Node],
+    reverse_related.ManyToOneRel: list[relay.Node],
     reverse_related.OneToOneRel: relay.Node,
 }
 
 
-relay_input_field_type_map: Dict[
+relay_input_field_type_map: dict[
     Union[
-        Type[fields.Field],
-        Type[related.RelatedField],
-        Type[reverse_related.ForeignObjectRel],
+        type[fields.Field],
+        type[related.RelatedField],
+        type[reverse_related.ForeignObjectRel],
     ],
     type,
 ] = {
@@ -415,7 +411,7 @@ relay_input_field_type_map: Dict[
 def _resolve_array_field_type(model_field: Field):
     assert ArrayField is not None
     if isinstance(model_field, ArrayField):
-        return List[_resolve_array_field_type(model_field.base_field)]
+        return list[_resolve_array_field_type(model_field.base_field)]
 
     base_field = field_type_map.get(type(model_field), NotImplemented)
     if base_field is NotImplemented:  # type: ignore
@@ -565,7 +561,7 @@ def resolve_model_field_name(
     return model_field.name
 
 
-def get_model_field(model: Type[Model], field_name: str):
+def get_model_field(model: type[Model], field_name: str):
     try:
         return model._meta.get_field(field_name)
     except FieldDoesNotExist as e:

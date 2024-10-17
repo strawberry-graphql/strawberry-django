@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import django
 import pytest
@@ -333,7 +333,7 @@ def test_related_input_fields():
         related_one_to_one: auto
         related_many_to_many: auto
 
-    expected_fields: Dict[str, Tuple[Union[type, StrawberryContainer], bool]] = {
+    expected_fields: dict[str, tuple[Union[type, StrawberryContainer], bool]] = {
         "foreign_key": (
             strawberry_django.OneToManyInput,
             True,
@@ -412,7 +412,7 @@ def test_inherit_type():
 
     @strawberry_django.type(FieldTypesModel)
     class Type(Base):  # type: ignore
-        many_to_many: List["Type"]
+        many_to_many: list["Type"]
 
     object_definition = get_object_definition(Type, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
@@ -429,7 +429,7 @@ def test_inherit_input():
     class Type:  # type: ignore
         char: auto
         one_to_one: "Type"
-        many_to_many: List["Type"]
+        many_to_many: list["Type"]
 
     @strawberry_django.input(FieldTypesModel)
     class Input(Type):
