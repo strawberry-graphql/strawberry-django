@@ -309,6 +309,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                 and is_root_query
                 and not self.is_list
                 and not self.is_connection
+                and not self.is_paginated
             ):
                 settings = strawberry_django_settings()
                 arguments.append(

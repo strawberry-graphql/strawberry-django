@@ -55,12 +55,12 @@ from .fields.field import field as _field
 from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
 
-__all = [
-    "StrawberryDjangoType",
-    "type",
-    "interface",
+__all__ = [
+    "StrawberryDjangoDefinition",
     "input",
+    "interface",
     "partial",
+    "type",
 ]
 
 _T = TypeVar("_T", bound=type)

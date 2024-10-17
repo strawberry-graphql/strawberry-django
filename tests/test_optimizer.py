@@ -1425,3 +1425,183 @@ def test_prefetch_hint_with_same_name_field_no_extra_queries(
             "issues": [{"pk": str(issue1.pk)}],
         },
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_paginated(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($pagination: OffsetPaginationInput) {
+        issuesPaginated (pagination: $pagination) {
+          totalCount
+          results {
+            name
+            milestone {
+              name
+            }
+          }
+        }
+      }
+    """
+
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
+
+    issue1 = IssueFactory.create(milestone=milestone1)
+    issue2 = IssueFactory.create(milestone=milestone1)
+    issue3 = IssueFactory.create(milestone=milestone1)
+    issue4 = IssueFactory.create(milestone=milestone2)
+    issue5 = IssueFactory.create(milestone=milestone2)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 7):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "issuesPaginated": {
+            "totalCount": 5,
+            "results": [
+                {"name": issue1.name, "milestone": {"name": milestone1.name}},
+                {"name": issue2.name, "milestone": {"name": milestone1.name}},
+                {"name": issue3.name, "milestone": {"name": milestone1.name}},
+                {"name": issue4.name, "milestone": {"name": milestone2.name}},
+                {"name": issue5.name, "milestone": {"name": milestone2.name}},
+            ],
+        }
+    }
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 4):
+        res = gql_client.query(query, variables={"pagination": {"limit": 2}})
+
+    assert res.data == {
+        "issuesPaginated": {
+            "totalCount": 5,
+            "results": [
+                {"name": issue1.name, "milestone": {"name": milestone1.name}},
+                {"name": issue2.name, "milestone": {"name": milestone1.name}},
+            ],
+        }
+    }
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 4):
+        res = gql_client.query(
+            query, variables={"pagination": {"limit": 2, "offset": 2}}
+        )
+
+    assert res.data == {
+        "issuesPaginated": {
+            "totalCount": 5,
+            "results": [
+                {"name": issue3.name, "milestone": {"name": milestone1.name}},
+                {"name": issue4.name, "milestone": {"name": milestone2.name}},
+            ],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_paginated_nested(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($pagination: OffsetPaginationInput) {
+        milestoneList {
+          name
+          issuesPaginated  (pagination: $pagination) {
+            totalCount
+            results {
+              name
+              milestone {
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
+
+    issue1 = IssueFactory.create(milestone=milestone1)
+    issue2 = IssueFactory.create(milestone=milestone1)
+    issue3 = IssueFactory.create(milestone=milestone1)
+    issue4 = IssueFactory.create(milestone=milestone2)
+    issue5 = IssueFactory.create(milestone=milestone2)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "name": milestone1.name,
+                "issuesPaginated": {
+                    "totalCount": 3,
+                    "results": [
+                        {"name": issue1.name, "milestone": {"name": milestone1.name}},
+                        {"name": issue2.name, "milestone": {"name": milestone1.name}},
+                        {"name": issue3.name, "milestone": {"name": milestone1.name}},
+                    ],
+                },
+            },
+            {
+                "name": milestone2.name,
+                "issuesPaginated": {
+                    "totalCount": 2,
+                    "results": [
+                        {"name": issue4.name, "milestone": {"name": milestone2.name}},
+                        {"name": issue5.name, "milestone": {"name": milestone2.name}},
+                    ],
+                },
+            },
+        ]
+    }
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query, variables={"pagination": {"limit": 1}})
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "name": milestone1.name,
+                "issuesPaginated": {
+                    "totalCount": 3,
+                    "results": [
+                        {"name": issue1.name, "milestone": {"name": milestone1.name}},
+                    ],
+                },
+            },
+            {
+                "name": milestone2.name,
+                "issuesPaginated": {
+                    "totalCount": 2,
+                    "results": [
+                        {"name": issue4.name, "milestone": {"name": milestone2.name}},
+                    ],
+                },
+            },
+        ]
+    }
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(
+            query, variables={"pagination": {"limit": 1, "offset": 2}}
+        )
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "name": milestone1.name,
+                "issuesPaginated": {
+                    "totalCount": 3,
+                    "results": [
+                        {"name": issue3.name, "milestone": {"name": milestone1.name}},
+                    ],
+                },
+            },
+            {
+                "name": milestone2.name,
+                "issuesPaginated": {
+                    "totalCount": 2,
+                    "results": [],
+                },
+            },
+        ]
+    }
