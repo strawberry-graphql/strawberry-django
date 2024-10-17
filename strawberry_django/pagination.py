@@ -45,7 +45,7 @@ class Paginated(Generic[NodeType]):
 
     @strawberry.field(description="Total count of existing results.")
     @django_resolver
-    def total_count(self) -> int:
+    def total_count(self, root) -> int:
         return get_total_count(self.queryset)
 
     @strawberry.field(description="List of paginated results.")
@@ -103,6 +103,10 @@ def apply(
     return queryset
 
 
+class _PaginationWindow(Window):
+    """Marker to be able to remove where clause at `get_total_count` if needed."""
+
+
 def apply_window_pagination(
     queryset: _QS,
     *,
@@ -131,13 +135,14 @@ def apply_window_pagination(
             using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
         ).get_order_by()
     ]
+
     queryset = queryset.annotate(
-        _strawberry_row_number=Window(
+        _strawberry_row_number=_PaginationWindow(
             RowNumber(),
             partition_by=related_field_id,
             order_by=order_by,
         ),
-        _strawberry_total_count=Window(
+        _strawberry_total_count=_PaginationWindow(
             Count(1),
             partition_by=related_field_id,
         ),
@@ -165,17 +170,31 @@ def get_total_count(queryset: QuerySet) -> int:
     if is_optimized_by_prefetching(queryset):
         results = queryset._result_cache  # type: ignore
 
-        try:
-            return results[0]._strawberry_total_count if results else 0
-        except AttributeError:
-            warnings.warn(
-                (
-                    "Pagination annotations not found, falling back to QuerySet resolution. "
-                    "This might cause n+1 issues..."
-                ),
-                RuntimeWarning,
-                stacklevel=2,
+        if results:
+            try:
+                return results[0]._strawberry_total_count
+            except AttributeError:
+                warnings.warn(
+                    (
+                        "Pagination annotations not found, falling back to QuerySet resolution. "
+                        "This might cause n+1 issues..."
+                    ),
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+
+        # If we have no results, we can't get the total count from the cache.
+        # In this case we will remove the pagination filter to be able to `.count()`
+        # the whole queryset with its original filters.
+        queryset = queryset._chain()  # type: ignore
+        queryset.query.where.children = [
+            child
+            for child in queryset.query.where.children
+            if (
+                not hasattr(child, "lhs")
+                or not isinstance(child.lhs, _PaginationWindow)
             )
+        ]
 
     return queryset.count()
 
@@ -243,6 +262,12 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
+
+        # If this is `Paginated`, return the queryset as is as the pagination will
+        # be resolved when resolving its results.
+        if self.is_paginated:
+            return queryset
+
         return self.apply_pagination(
             queryset,
             pagination,

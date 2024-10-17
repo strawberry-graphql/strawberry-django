@@ -246,8 +246,8 @@ class StrawberryDjangoField(
                 kwargs["info"] = info
 
             result = django_resolver(
-                partial(self.get_wrapped_result, **kwargs),
-                qs_hook=self.get_queryset_hook(**kwargs),
+                self.get_queryset_hook(**kwargs),
+                qs_hook=partial(self.get_wrapped_result, **kwargs),
             )(result)
 
         return result
