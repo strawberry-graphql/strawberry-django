@@ -1,6 +1,6 @@
 # ruff: noqa: TRY002, B904, BLE001, F811, PT012, A001, PLC2701
 from enum import Enum
-from typing import Any, List, Optional, cast
+from typing import Any, Optional, cast
 
 import pytest
 import strawberry
@@ -101,8 +101,8 @@ class FruitFilter:
 
 @strawberry.type
 class Query:
-    types: List[FruitType] = strawberry_django.field(filters=FruitTypeFilter)
-    fruits: List[Fruit] = strawberry_django.field(filters=FruitFilter)
+    types: list[FruitType] = strawberry_django.field(filters=FruitTypeFilter)
+    fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
 
 
 @pytest.fixture
@@ -424,11 +424,11 @@ def test_empty_resolver_filter():
     @strawberry.type
     class Query:
         @strawberry.field
-        def fruits(self, filters: FruitFilter) -> List[Fruit]:
+        def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.none()
             _info: Any = object()
             return cast(
-                List[Fruit], strawberry_django.filters.apply(filters, queryset, _info)
+                list[Fruit], strawberry_django.filters.apply(filters, queryset, _info)
             )
 
     query = utils.generate_query(Query)
@@ -445,12 +445,12 @@ async def test_async_resolver_filter(fruits):
     @strawberry.type
     class Query:
         @strawberry.field
-        async def fruits(self, filters: FruitFilter) -> List[Fruit]:
+        async def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
             _info: Any = object()
             queryset = strawberry_django.filters.apply(filters, queryset, _info)
             # cast fixes funny typing issue between list and List
-            return cast(List[Fruit], [fruit async for fruit in queryset])
+            return cast(list[Fruit], [fruit async for fruit in queryset])
 
     query = utils.generate_query(Query)
     result = await query(  # type: ignore

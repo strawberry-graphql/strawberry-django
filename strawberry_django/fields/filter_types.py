@@ -3,7 +3,6 @@ import decimal
 import uuid
 from typing import (
     Generic,
-    List,
     Optional,
     TypeVar,
 )
@@ -25,7 +24,7 @@ _SKIP_MSG = "Filter will be skipped on `null` value"
 class BaseFilterLookup(Generic[T]):
     exact: Optional[T] = filter_field(description=f"Exact match. {_SKIP_MSG}")
     is_null: Optional[bool] = filter_field(description=f"Assignment test. {_SKIP_MSG}")
-    in_list: Optional[List[T]] = filter_field(
+    in_list: Optional[list[T]] = filter_field(
         description=f"Exact match of items in a given list. {_SKIP_MSG}"
     )
 

@@ -1,7 +1,8 @@
 import asyncio
 import datetime
 import decimal
-from typing import Iterable, List, Optional, Type, cast
+from collections.abc import Iterable
+from typing import Annotated, Optional, cast
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -21,7 +22,6 @@ from django.db.models.functions import Now
 from django.db.models.query import QuerySet
 from strawberry import UNSET, relay
 from strawberry.types.info import Info
-from typing_extensions import Annotated
 
 import strawberry_django
 from strawberry_django import mutations
@@ -51,7 +51,7 @@ from .models import (
     Tag,
 )
 
-UserModel = cast(Type[AbstractUser], get_user_model())
+UserModel = cast(type[AbstractUser], get_user_model())
 
 
 @strawberry_django.interface(NamedModel)
@@ -99,7 +99,7 @@ class ProjectFilter:
 @strawberry_django.type(Project, filters=ProjectFilter, pagination=True)
 class ProjectType(relay.Node, Named):
     due_date: strawberry.auto
-    milestones: List["MilestoneType"] = strawberry_django.field(pagination=True)
+    milestones: list["MilestoneType"] = strawberry_django.field(pagination=True)
     milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
     is_delayed: bool = strawberry_django.field(
         annotate=ExpressionWrapper(
@@ -153,7 +153,7 @@ class IssueOrder:
 class MilestoneType(relay.Node, Named):
     due_date: strawberry.auto
     project: ProjectType
-    issues: List["IssueType"] = strawberry_django.field(
+    issues: list["IssueType"] = strawberry_django.field(
         filters=IssueFilter,
         order=IssueOrder,
         pagination=True,
@@ -181,7 +181,7 @@ class MilestoneType(relay.Node, Named):
             ),
         ],
     )
-    def my_issues(self) -> List["IssueType"]:
+    def my_issues(self) -> list["IssueType"]:
         return self._my_issues  # type: ignore
 
     @strawberry_django.field(
@@ -222,9 +222,9 @@ class IssueType(relay.Node, Named):
     kind: strawberry.auto
     name_with_priority: strawberry.auto
     name_with_kind: str = strawberry_django.field(only=["kind", "name"])
-    tags: List["TagType"]
-    issue_assignees: List["AssigneeType"]
-    staff_assignees: List["StaffType"] = strawberry_django.field(field_name="assignees")
+    tags: list["TagType"]
+    issue_assignees: list["AssigneeType"]
+    staff_assignees: list["StaffType"] = strawberry_django.field(field_name="assignees")
     favorite_set: ListConnectionWithTotalCount["FavoriteType"] = (
         strawberry_django.connection()
     )
@@ -259,7 +259,7 @@ class TagType(relay.Node, Named):
     issues: ListConnectionWithTotalCount[IssueType] = strawberry_django.connection()
 
     @strawberry_django.field
-    def issues_with_selected_related_milestone_and_project(self) -> List[IssueType]:
+    def issues_with_selected_related_milestone_and_project(self) -> list[IssueType]:
         # here, the `select_related` is on the queryset directly, and not on the field
         return (
             self.issues.all()  # type: ignore
@@ -285,7 +285,7 @@ class IssueInput:
     milestone: "MilestoneInputPartial"
     priority: strawberry.auto
     kind: strawberry.auto
-    tags: Optional[List[NodeInput]]
+    tags: Optional[list[NodeInput]]
     extra: Optional[str] = strawberry.field(default=UNSET, graphql_type=Optional[int])
 
 
@@ -333,14 +333,14 @@ class MilestoneIssueInput:
 @strawberry_django.partial(Project)
 class ProjectInputPartial(NodeInputPartial):
     name: strawberry.auto
-    milestones: Optional[List["MilestoneInputPartial"]]
+    milestones: Optional[list["MilestoneInputPartial"]]
 
 
 @strawberry_django.input(Milestone)
 class MilestoneInput:
     name: strawberry.auto
     project: ProjectInputPartial
-    issues: Optional[List[MilestoneIssueInput]]
+    issues: Optional[list[MilestoneIssueInput]]
 
 
 @strawberry_django.partial(Milestone)
@@ -365,23 +365,23 @@ class Query:
         Annotated["MilestoneType", strawberry.lazy("tests.projects.schema")]
     ] = strawberry_django.node()
     milestone_mandatory: MilestoneType = strawberry_django.node()
-    milestones: List[MilestoneType] = strawberry_django.node()
+    milestones: list[MilestoneType] = strawberry_django.node()
     project: Optional[ProjectType] = strawberry_django.node()
     project_login_required: Optional[ProjectType] = strawberry_django.node(
         extensions=[IsAuthenticated()],
     )
     tag: Optional[TagType] = strawberry_django.node()
     staff: Optional[StaffType] = strawberry_django.node()
-    staff_list: List[Optional[StaffType]] = strawberry_django.node()
+    staff_list: list[Optional[StaffType]] = strawberry_django.node()
 
-    issue_list: List[IssueType] = strawberry_django.field()
-    milestone_list: List[MilestoneType] = strawberry_django.field(
+    issue_list: list[IssueType] = strawberry_django.field()
+    milestone_list: list[MilestoneType] = strawberry_django.field(
         order=MilestoneOrder,
         filters=MilestoneFilter,
         pagination=True,
     )
-    project_list: List[ProjectType] = strawberry_django.field()
-    tag_list: List[TagType] = strawberry_django.field()
+    project_list: list[ProjectType] = strawberry_django.field()
+    tag_list: list[TagType] = strawberry_django.field()
 
     favorite_conn: ListConnectionWithTotalCount[FavoriteType] = (
         strawberry_django.connection()
@@ -426,7 +426,7 @@ class Query:
     issue_perm_required_optional: Optional[IssueType] = strawberry_django.node(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
-    issue_list_perm_required: List[IssueType] = strawberry_django.field(
+    issue_list_perm_required: list[IssueType] = strawberry_django.field(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
     issue_conn_perm_required: ListConnectionWithTotalCount[IssueType] = (
@@ -441,10 +441,10 @@ class Query:
     issue_obj_perm_required_optional: Optional[IssueType] = strawberry_django.node(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
-    issue_list_obj_perm_required: List[IssueType] = strawberry_django.field(
+    issue_list_obj_perm_required: list[IssueType] = strawberry_django.field(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
-    issue_list_obj_perm_required_paginated: List[IssueType] = strawberry_django.field(
+    issue_list_obj_perm_required_paginated: list[IssueType] = strawberry_django.field(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])], pagination=True
     )
     issue_conn_obj_perm_required: ListConnectionWithTotalCount[IssueType] = (

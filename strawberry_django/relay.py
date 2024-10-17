@@ -1,12 +1,9 @@
 import inspect
 import warnings
+from collections.abc import Iterable, Sized
 from typing import (
     Any,
-    Iterable,
-    List,
     Optional,
-    Sized,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -58,7 +55,7 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
         if isinstance(self.nodes, models.QuerySet) and is_optimized_by_prefetching(
             self.nodes
         ):
-            result = cast(List[relay.NodeType], self.nodes._result_cache)  # type: ignore
+            result = cast(list[relay.NodeType], self.nodes._result_cache)  # type: ignore
             try:
                 return (
                     result[0]._strawberry_total_count  # type: ignore
@@ -180,7 +177,7 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
 
         edge_class = cast(relay.Edge[relay.NodeType], field)
 
-        edges: List[relay.Edge] = [
+        edges: list[relay.Edge] = [
             edge_class.resolve_edge(
                 cls.resolve_node(node, info=info, **kwargs),
                 cursor=node._strawberry_row_number - 1,
@@ -208,9 +205,9 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
 @overload
 def resolve_model_nodes(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     *,
     info: Optional[Info] = None,
@@ -223,9 +220,9 @@ def resolve_model_nodes(
 @overload
 def resolve_model_nodes(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     *,
     info: Optional[Info] = None,
@@ -238,9 +235,9 @@ def resolve_model_nodes(
 @overload
 def resolve_model_nodes(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     *,
     info: Optional[Info] = None,
@@ -253,9 +250,9 @@ def resolve_model_nodes(
 @overload
 def resolve_model_nodes(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     *,
     info: Optional[Info] = None,
@@ -268,9 +265,9 @@ def resolve_model_nodes(
 @overload
 def resolve_model_nodes(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     *,
     info: Optional[Info] = None,
@@ -333,7 +330,7 @@ def resolve_model_nodes(
     else:
         origin = source
         django_type = get_django_definition(source, strict=True)
-        source = cast(Type[_M], django_type.model)
+        source = cast(type[_M], django_type.model)
 
     qs = cast(models.QuerySet[_M], source._default_manager.all())
     qs = run_type_get_queryset(qs, origin, info)
@@ -371,9 +368,9 @@ def resolve_model_nodes(
     if not node_ids:
         return retval
 
-    def map_results(results: models.QuerySet[_M]) -> List[_M]:
+    def map_results(results: models.QuerySet[_M]) -> list[_M]:
         results_map = {str(getattr(obj, id_attr)): obj for obj in results}
-        retval: List[Optional[_M]] = []
+        retval: list[Optional[_M]] = []
         for node_id in node_ids:
             if required:
                 retval.append(results_map[str(node_id)])
@@ -395,9 +392,9 @@ def resolve_model_nodes(
 @overload
 def resolve_model_node(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     node_id: Union[str, relay.GlobalID],
     *,
@@ -410,9 +407,9 @@ def resolve_model_node(
 @overload
 def resolve_model_node(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     node_id: Union[str, relay.GlobalID],
     *,
@@ -460,7 +457,7 @@ def resolve_model_node(
     else:
         origin = source
         django_type = get_django_definition(source, strict=True)
-        source = cast(Type[models.Model], django_type.model)
+        source = cast(type[models.Model], django_type.model)
 
     if isinstance(node_id, relay.GlobalID):
         node_id = node_id.node_id
@@ -483,7 +480,7 @@ def resolve_model_node(
     return django_resolver(lambda: qs.get() if required else qs.first())()
 
 
-def resolve_model_id_attr(source: Type) -> str:
+def resolve_model_id_attr(source: type) -> str:
     """Resolve the model id, ensuring it is retrieved in a sync context.
 
     Args:
@@ -506,9 +503,9 @@ def resolve_model_id_attr(source: Type) -> str:
 
 def resolve_model_id(
     source: Union[
-        Type[WithStrawberryDjangoObjectDefinition],
-        Type[relay.Node],
-        Type[_M],
+        type[WithStrawberryDjangoObjectDefinition],
+        type[relay.Node],
+        type[_M],
     ],
     root: models.Model,
     *,

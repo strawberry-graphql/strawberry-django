@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
@@ -14,7 +14,7 @@ def argument(
     default: object = UNSET,
 ):
     if is_list:
-        type_ = List[type_]
+        type_ = list[type_]
     if is_optional:
         type_ = Optional[type_]
 

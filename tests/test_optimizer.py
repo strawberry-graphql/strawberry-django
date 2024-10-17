@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List, cast
+from typing import Any, cast
 
 import pytest
 import strawberry
@@ -130,7 +130,7 @@ def test_interface_query(db, gql_client: GraphQLTestClient):
     assert isinstance(res.data, dict)
     assert isinstance(res.data["node"], dict)
     assert {
-        frozenset(d.items()) for d in cast(List, res.data["node"].pop("tags"))
+        frozenset(d.items()) for d in cast(list, res.data["node"].pop("tags"))
     } == frozenset(
         {
             frozenset(
@@ -925,7 +925,7 @@ def test_user_query_with_prefetch():
 
     @strawberry.type
     class Query:
-        milestones: List[MilestoneTypeWithNestedPrefetch] = strawberry_django.field()
+        milestones: list[MilestoneTypeWithNestedPrefetch] = strawberry_django.field()
 
     query = utils.generate_query(Query, enable_optimizer=True)
     query_str = """
@@ -1105,7 +1105,7 @@ def test_query_with_optimizer_paginated_prefetch():
         def name(self, info) -> str:
             return self.name
 
-        milestones: List[MilestoneTypeWithNestedPrefetch]
+        milestones: list[MilestoneTypeWithNestedPrefetch]
 
     milestone1 = MilestoneFactory.create()
     project = milestone1.project
@@ -1113,7 +1113,7 @@ def test_query_with_optimizer_paginated_prefetch():
 
     @strawberry.type
     class Query:
-        projects: List[ProjectTypeWithPrefetch] = strawberry_django.field()
+        projects: list[ProjectTypeWithPrefetch] = strawberry_django.field()
 
     query1 = utils.generate_query(Query, enable_optimizer=False)
     query_str = """
@@ -1388,7 +1388,7 @@ def test_prefetch_hint_with_same_name_field_no_extra_queries(
                 ),
             ],
         )
-        def issues(self) -> List[IssueType]:
+        def issues(self) -> list[IssueType]:
             return self._my_issues  # type: ignore
 
     @strawberry.type

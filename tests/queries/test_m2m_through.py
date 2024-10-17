@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import strawberry
 from django.db import models
@@ -24,7 +24,7 @@ class MembershipModel(models.Model):
 @strawberry_django.type(ProjectModel)
 class Project:
     name: auto
-    membership: List["Membership"] = strawberry_django.field(
+    membership: list["Membership"] = strawberry_django.field(
         field_name="membershipmodel_set",
     )
 
@@ -32,7 +32,7 @@ class Project:
 @strawberry_django.type(MemberModel)
 class Member:
     name: auto
-    membership: List["Membership"] = strawberry_django.field(
+    membership: list["Membership"] = strawberry_django.field(
         field_name="membershipmodel_set",
     )
 
@@ -45,7 +45,7 @@ class Membership:
 
 @strawberry.type
 class Query:
-    projects: Optional[List[Project]] = strawberry_django.field()
+    projects: Optional[list[Project]] = strawberry_django.field()
 
 
 schema = strawberry.Schema(query=Query)

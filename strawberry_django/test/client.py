@@ -1,6 +1,7 @@
 import contextlib
 import warnings
-from typing import Any, Awaitable, Dict, Optional, cast
+from collections.abc import Awaitable
+from typing import Any, Optional, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -21,11 +22,11 @@ class TestClient(BaseGraphQLTestClient):
 
     def request(
         self,
-        body: Dict[str, object],
-        headers: Optional[Dict[str, object]] = None,
-        files: Optional[Dict[str, object]] = None,
+        body: dict[str, object],
+        headers: Optional[dict[str, object]] = None,
+        files: Optional[dict[str, object]] = None,
     ):
-        kwargs: Dict[str, object] = {"data": body, "headers": headers}
+        kwargs: dict[str, object] = {"data": body, "headers": headers}
         if files:
             kwargs["format"] = "multipart"
         else:
@@ -55,10 +56,10 @@ class AsyncTestClient(TestClient):
     async def query(
         self,
         query: str,
-        variables: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, object]] = None,
+        variables: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, object]] = None,
         asserts_errors: Optional[bool] = None,
-        files: Optional[Dict[str, object]] = None,
+        files: Optional[dict[str, object]] = None,
         assert_no_errors: Optional[bool] = True,
     ) -> Response:
         body = self._build_body(query, variables, files)

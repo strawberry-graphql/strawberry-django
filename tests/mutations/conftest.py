@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import cast
 
 import pytest
 import strawberry
@@ -35,8 +35,8 @@ class FruitFilter:
 @strawberry.type
 class Mutation:
     create_fruit: Fruit = mutations.create(FruitInput)
-    create_fruits: List[Fruit] = mutations.create(FruitInput)
-    update_fruits: List[Fruit] = mutations.update(
+    create_fruits: list[Fruit] = mutations.create(FruitInput)
+    update_fruits: list[Fruit] = mutations.update(
         FruitPartialInput, filters=FruitFilter, key_attr="id"
     )
     create_tomato_with_required_picture: TomatoWithRequiredPictureType = (
@@ -70,17 +70,17 @@ class Mutation:
             ),
         )
 
-    delete_fruits: List[Fruit] = mutations.delete(filters=FruitFilter)
+    delete_fruits: list[Fruit] = mutations.delete(filters=FruitFilter)
 
     create_color: Color = mutations.create(ColorInput)
-    create_colors: List[Color] = mutations.create(ColorInput)
-    update_colors: List[Color] = mutations.update(ColorPartialInput)
-    delete_colors: List[Color] = mutations.delete()
+    create_colors: list[Color] = mutations.create(ColorInput)
+    update_colors: list[Color] = mutations.update(ColorPartialInput)
+    delete_colors: list[Color] = mutations.delete()
 
     create_fruit_type: FruitType = mutations.create(FruitTypeInput)
-    create_fruit_types: List[FruitType] = mutations.create(FruitTypeInput)
-    update_fruit_types: List[FruitType] = mutations.update(FruitTypePartialInput)
-    delete_fruit_types: List[FruitType] = mutations.delete()
+    create_fruit_types: list[FruitType] = mutations.create(FruitTypeInput)
+    update_fruit_types: list[FruitType] = mutations.update(FruitTypePartialInput)
+    delete_fruit_types: list[FruitType] = mutations.delete()
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ def mutation(db):
         @strawberry.type
         class GeoMutation(Mutation):
             create_geo_field: GeoField = mutations.create(GeoFieldInput)
-            update_geo_fields: List[GeoField] = mutations.update(GeoFieldPartialInput)
+            update_geo_fields: list[GeoField] = mutations.update(GeoFieldPartialInput)
 
         mutation = GeoMutation
 

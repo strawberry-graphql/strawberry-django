@@ -16,7 +16,6 @@ in `sync_to_async` when running async.
 ```python title="types.py"
 import strawberry_django
 from strawberry import auto
-from typing import List
 from . import models
 
 @strawberry_django.type(models.Color)
@@ -25,7 +24,7 @@ class Color:
     name: auto
 
     @strawberry_django.field
-    def fruits(self) -> List[Fruit]:
+    def fruits(self) -> list[Fruit]:
         return self.fruits.objects.filter(...)
 ```
 
@@ -36,7 +35,6 @@ Async resolvers can be used when running using ASGI.
 ```python title="types.py"
 import strawberry_django
 from strawberry import auto
-from typing import List
 from . import models
 from asgiref.sync import sync_to_async
 
@@ -46,7 +44,7 @@ class Color:
     name: auto
 
     @strawberry_django.field
-    async def fruits(self) -> List[Fruit]:
+    async def fruits(self) -> list[Fruit]:
         return sync_to_async(list)(self.fruits.objects.filter(...))
 ```
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from django.conf import settings
 from strawberry import auto  # noqa: TCH002
 
@@ -15,7 +13,7 @@ class Fruit:
     id: auto
     name: auto
     color: Color | None
-    types: List[FruitType]  # noqa: UP006
+    types: list[FruitType]
     picture: auto
 
 
@@ -23,14 +21,14 @@ class Fruit:
 class Color:
     id: auto
     name: auto
-    fruits: List[Fruit]  # noqa: UP006
+    fruits: list[Fruit]
 
 
 @strawberry_django.type(models.FruitType)
 class FruitType:
     id: auto
     name: auto
-    fruits: List[Fruit]  # noqa: UP006
+    fruits: list[Fruit]
 
 
 @strawberry_django.type(models.TomatoWithRequiredPicture, fields="__all__")
@@ -61,7 +59,7 @@ if settings.GEOS_IMPORTED:
 
 @strawberry_django.input(models.Fruit)
 class FruitInput(Fruit):
-    types: List[FruitTypeInput] | None  # type: ignore  # noqa: UP006
+    types: list[FruitTypeInput] | None  # type: ignore
 
 
 @strawberry_django.input(models.TomatoWithRequiredPicture)
@@ -82,7 +80,7 @@ class FruitTypeInput(FruitType):
 
 @strawberry_django.input(models.Fruit, partial=True)
 class FruitPartialInput(FruitInput):
-    types: List[FruitTypePartialInput] | None  # type: ignore  # noqa: UP006
+    types: list[FruitTypePartialInput] | None  # type: ignore
 
 
 @strawberry_django.partial(models.TomatoWithRequiredPicture, fields="__all__")
@@ -112,13 +110,13 @@ class User:
 class Group:
     id: auto
     name: auto
-    tags: List[Tag]  # noqa: UP006
-    users: List[User]  # noqa: UP006
+    tags: list[Tag]
+    users: list[User]
 
 
 @strawberry_django.type(models.Tag)
 class Tag:
     id: auto
     name: auto
-    groups: List[Group]  # noqa: UP006
+    groups: list[Group]
     user: User

@@ -1,6 +1,6 @@
 import contextlib
 import dataclasses
-from typing import Type, Union, cast
+from typing import Union, cast
 
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -19,7 +19,7 @@ class ObjectPermissionModels:
 
 
 def get_object_permission_models(
-    model: Union[models.Model, Type[models.Model]],
+    model: Union[models.Model, type[models.Model]],
 ) -> ObjectPermissionModels:
     return ObjectPermissionModels(
         user=cast(UserObjectPermissionBase, get_user_obj_perms_model(model)),

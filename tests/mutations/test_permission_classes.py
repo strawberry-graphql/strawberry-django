@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 import strawberry
 from strawberry.permission import BasePermission
@@ -18,15 +16,15 @@ class PermissionClass(BasePermission):
 
 @strawberry.type
 class Mutation:
-    create_fruits: List[Fruit] = mutations.create(
+    create_fruits: list[Fruit] = mutations.create(
         FruitInput,
         permission_classes=[PermissionClass],
     )
-    update_fruits: List[Fruit] = mutations.update(
+    update_fruits: list[Fruit] = mutations.update(
         FruitPartialInput,
         permission_classes=[PermissionClass],
     )
-    delete_fruits: List[Fruit] = mutations.delete(permission_classes=[PermissionClass])
+    delete_fruits: list[Fruit] = mutations.delete(permission_classes=[PermissionClass])
 
 
 @pytest.fixture

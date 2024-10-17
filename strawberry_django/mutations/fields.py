@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Iterable, Union
+from typing import TYPE_CHECKING, Annotated, Any, Union
 
 import strawberry
 from django.core.exceptions import (
@@ -15,7 +15,6 @@ from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.field import UNRESOLVED
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
-from typing_extensions import Annotated
 
 from strawberry_django.arguments import argument
 from strawberry_django.fields.field import (
@@ -32,6 +31,8 @@ from strawberry_django.utils.inspect import get_possible_types
 from . import resolvers
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from graphql.pyutils import AwaitableOrValue
     from strawberry.types import Info
     from strawberry.types.arguments import StrawberryArgument

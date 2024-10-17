@@ -1,5 +1,5 @@
 # ruff: noqa: TRY002, B904, BLE001, F811, PT012
-from typing import Any, List, Optional, cast
+from typing import Any, Optional, cast
 from unittest import mock
 
 import pytest
@@ -67,7 +67,7 @@ class FruitWithOrder:
 
 @strawberry.type
 class Query:
-    fruits: List[Fruit] = strawberry_django.field(order=FruitOrder)
+    fruits: list[Fruit] = strawberry_django.field(order=FruitOrder)
 
 
 @pytest.fixture

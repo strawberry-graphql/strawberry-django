@@ -10,8 +10,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Generator,
-    Type,
     TypeVar,
     cast,
 )
@@ -75,10 +73,12 @@ from .utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from strawberry.types.field import StrawberryField  # noqa: I001
-    from strawberry.types.execution import ExecutionContext
-    from strawberry.utils.await_maybe import AwaitableOrValue
+    from collections.abc import Generator
+
     from django.contrib.contenttypes.fields import GenericRelation
+    from strawberry.types.execution import ExecutionContext
+    from strawberry.types.field import StrawberryField
+    from strawberry.utils.await_maybe import AwaitableOrValue
 
 
 __all__ = [
@@ -1111,7 +1111,7 @@ def _get_model_hints_from_connection(
 
         e_definition = get_object_definition(relay.Edge, strict=True)
         e_type = e_definition.resolve_generic(
-            relay.Edge[cast(Type[relay.Node], n_type)],
+            relay.Edge[cast(type[relay.Node], n_type)],
         )
         e_gql_definition = _get_gql_definition(
             schema,
@@ -1346,7 +1346,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         self.enable_nested_relations_prefetch = enable_nested_relations_prefetch
         self.prefetch_custom_queryset = prefetch_custom_queryset
 
-    def on_execute(self) -> Generator[None, None, None]:
+    def on_execute(self) -> Generator[None]:
         token = optimizer.set(self)
         try:
             yield

@@ -10,12 +10,7 @@ from typing import (
     Any,
     Callable,
     Generic,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -45,6 +40,7 @@ from .fields.base import StrawberryDjangoFieldBase
 from .settings import strawberry_django_settings
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from types import FunctionType
 
     from django.db.models import Model
@@ -87,23 +83,23 @@ def get_django_model_filter_input_type():
 
 @strawberry.input
 class FilterLookup(Generic[T]):
-    exact: Optional[T] = UNSET
-    i_exact: Optional[T] = UNSET
-    contains: Optional[T] = UNSET
-    i_contains: Optional[T] = UNSET
-    in_list: Optional[List[T]] = UNSET
-    gt: Optional[T] = UNSET
-    gte: Optional[T] = UNSET
-    lt: Optional[T] = UNSET
-    lte: Optional[T] = UNSET
-    starts_with: Optional[T] = UNSET
-    i_starts_with: Optional[T] = UNSET
-    ends_with: Optional[T] = UNSET
-    i_ends_with: Optional[T] = UNSET
-    range: Optional[List[T]] = UNSET
-    is_null: Optional[bool] = UNSET
-    regex: Optional[str] = UNSET
-    i_regex: Optional[str] = UNSET
+    exact: T | None = UNSET
+    i_exact: T | None = UNSET
+    contains: T | None = UNSET
+    i_contains: T | None = UNSET
+    in_list: list[T] | None = UNSET
+    gt: T | None = UNSET
+    gte: T | None = UNSET
+    lt: T | None = UNSET
+    lte: T | None = UNSET
+    starts_with: T | None = UNSET
+    i_starts_with: T | None = UNSET
+    ends_with: T | None = UNSET
+    i_ends_with: T | None = UNSET
+    range: list[T] | None = UNSET
+    is_null: bool | None = UNSET
+    regex: str | None = UNSET
+    i_regex: str | None = UNSET
 
 
 lookup_name_conversion_map = {
@@ -162,7 +158,7 @@ def process_filters(
     info: Info | None,
     prefix: str = "",
     skip_object_filter_method: bool = False,
-) -> Tuple[_QS, Q]:
+) -> tuple[_QS, Q]:
     using_old_filters = strawberry_django_settings()["USE_DEPRECATED_FILTERS"]
 
     q = Q()
@@ -276,7 +272,7 @@ def apply(
 
 
 class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
-    def __init__(self, filters: Union[type, UnsetType, None] = UNSET, **kwargs):
+    def __init__(self, filters: type | UnsetType | None = UNSET, **kwargs):
         if filters and not has_object_definition(filters):
             raise TypeError("filters needs to be a strawberry type")
 
@@ -289,7 +285,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         return new_field
 
     @property
-    def arguments(self) -> List[StrawberryArgument]:
+    def arguments(self) -> list[StrawberryArgument]:
         arguments = []
         if self.base_resolver is None:
             filters = self.get_filters()
@@ -303,7 +299,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
             ):
                 arguments.append(
                     (
-                        argument("ids", List[relay.GlobalID])
+                        argument("ids", list[relay.GlobalID])
                         if self.is_list
                         else argument("id", relay.GlobalID)
                     ),
@@ -348,7 +344,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         queryset: _QS,
         info: Info,
         *,
-        filters: Optional[WithStrawberryDjangoObjectDefinition] = None,
+        filters: WithStrawberryDjangoObjectDefinition | None = None,
         **kwargs,
     ) -> _QS:
         settings = strawberry_django_settings()

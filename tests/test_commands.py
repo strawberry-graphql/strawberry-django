@@ -36,8 +36,11 @@ def test_django_export_schema_exception_handle():
         "strawberry_django.management.commands.export_schema.import_module_symbol",
         return_value=_FakeSchema(),
     )
-    with mock_import_module, pytest.raises(
-        CommandError,
-        match="The `schema` must be an instance of strawberry.Schema",
+    with (
+        mock_import_module,
+        pytest.raises(
+            CommandError,
+            match="The `schema` must be an instance of strawberry.Schema",
+        ),
     ):
         call_command("export_schema", "tests.schema")
