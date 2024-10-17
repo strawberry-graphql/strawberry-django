@@ -32,7 +32,7 @@ class OffsetPaginationInput:
 
 @strawberry.type
 class Paginated(Generic[NodeType]):
-    queryset: strawberry.Private[QuerySet]
+    queryset: strawberry.Private[Optional[QuerySet]]
     pagination: strawberry.Private[OffsetPaginationInput]
 
     @strawberry.field
@@ -46,12 +46,18 @@ class Paginated(Generic[NodeType]):
     @strawberry.field(description="Total count of existing results.")
     @django_resolver
     def total_count(self, root) -> int:
+        if self.queryset is None:
+            return 0
+
         return get_total_count(self.queryset)
 
     @strawberry.field(description="List of paginated results.")
     @django_resolver
     def results(self) -> list[NodeType]:
         from strawberry_django.optimizer import is_optimized_by_prefetching
+
+        if self.queryset is None:
+            return []
 
         if is_optimized_by_prefetching(self.queryset):
             results = self.queryset._result_cache  # type: ignore

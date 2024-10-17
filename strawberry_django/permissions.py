@@ -39,6 +39,7 @@ from typing_extensions import Literal, assert_never
 
 from strawberry_django.auth.utils import aget_current_user, get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
+from strawberry_django.pagination import OffsetPaginationInput, Paginated
 from strawberry_django.resolvers import django_resolver
 
 from .utils.query import filter_for_user
@@ -404,6 +405,9 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
 
         if isinstance(ret_type, StrawberryList):
             return []
+
+        if isinstance(ret_type, type) and issubclass(ret_type, Paginated):
+            return Paginated(queryset=None, pagination=OffsetPaginationInput())
 
         # If it is a Connection, try to return an empty connection, but only if
         # it is the only possibility available...

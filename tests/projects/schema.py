@@ -435,7 +435,7 @@ class Query:
     issue_list_perm_required: list[IssueType] = strawberry_django.field(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
-    issue_paginated_list_perm_required: Paginated[IssueType] = strawberry_django.field(
+    issues_paginated_perm_required: Paginated[IssueType] = strawberry_django.field(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
     issue_conn_perm_required: ListConnectionWithTotalCount[IssueType] = (
@@ -456,10 +456,8 @@ class Query:
     issue_list_obj_perm_required_paginated: list[IssueType] = strawberry_django.field(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])], pagination=True
     )
-    issue_paginated_list_obj_perm_required_paginated: Paginated[IssueType] = (
-        strawberry_django.field(
-            extensions=[HasRetvalPerm(perms=["projects.view_issue"])], pagination=True
-        )
+    issues_paginated_obj_perm_required: Paginated[IssueType] = strawberry_django.field(
+        extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
     issue_conn_obj_perm_required: ListConnectionWithTotalCount[IssueType] = (
         strawberry_django.connection(
