@@ -786,8 +786,6 @@ class HasPerm(DjangoPermissionExtension):
             cache = {}
             setattr(user, cache_key, cache)
 
-        cache = {}
-        setattr(user, cache_key, cache)
         return cache
 
     def _has_perm(
