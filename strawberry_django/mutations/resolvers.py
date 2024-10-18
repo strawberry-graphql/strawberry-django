@@ -527,7 +527,7 @@ def update_m2m(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
 ):
-    if value is UNSET:
+    if value in (None, UNSET):  # noqa: PLR6201
         return
 
     # FIXME / NOTE:  Should this be here?
