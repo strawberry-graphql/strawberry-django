@@ -26,8 +26,13 @@ type Fruit {
   name: String!
 }
 
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
+}
+
 type Query {
-  fruits(pagination: PaginationInput): [Fruit!]!
+  fruits(pagination: OffsetPaginationInput): [Fruit!]!
 }
 ```
 
@@ -99,8 +104,13 @@ type FruitPaginated {
   results: [Fruit]!
 }
 
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
+}
+
 type Query {
-  fruits(pagination: PaginationInput): [FruitPaginated!]!
+  fruits(pagination: OffsetPaginationInput): [FruitPaginated!]!
 }
 ```
 
@@ -180,8 +190,13 @@ type FruitPaginated {
   paginatedAveragePrice: Decimal!
 }
 
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
+}
+
 type Query {
-  fruits(pagination: PaginationInput): [FruitPaginated!]!
+  fruits(pagination: OffsetPaginationInput): [FruitPaginated!]!
 }
 ```
 

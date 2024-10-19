@@ -127,7 +127,12 @@ def apply(
 
 
 class _PaginationWindow(Window):
-    """Marker to be able to remove where clause at `get_total_count` if needed."""
+    """Window function to be used for pagination.
+
+    This is the same as django's `Window` function, but we can easily identify
+    it in case we need to remove it from the queryset, as there might be other
+    window functions in the queryset and no other way to identify ours.
+    """
 
 
 def apply_window_pagination(
@@ -182,6 +187,26 @@ def apply_window_pagination(
     return queryset
 
 
+def remove_window_pagination(queryset: _QS) -> _QS:
+    """Remove pagination window functions from a queryset.
+
+    Utility function to remove the pagination `WHERE` clause added by
+    the `apply_window_pagination` function.
+
+    Args:
+    ----
+        queryset: The queryset to apply pagination to.
+
+    """
+    queryset = queryset._chain()  # type: ignore
+    queryset.query.where.children = [
+        child
+        for child in queryset.query.where.children
+        if (not hasattr(child, "lhs") or not isinstance(child.lhs, _PaginationWindow))
+    ]
+    return queryset
+
+
 def get_total_count(queryset: QuerySet) -> int:
     """Get the total count of a queryset.
 
@@ -209,15 +234,7 @@ def get_total_count(queryset: QuerySet) -> int:
         # If we have no results, we can't get the total count from the cache.
         # In this case we will remove the pagination filter to be able to `.count()`
         # the whole queryset with its original filters.
-        queryset = queryset._chain()  # type: ignore
-        queryset.query.where.children = [
-            child
-            for child in queryset.query.where.children
-            if (
-                not hasattr(child, "lhs")
-                or not isinstance(child.lhs, _PaginationWindow)
-            )
-        ]
+        queryset = remove_window_pagination(queryset)
 
     return queryset.count()
 
@@ -286,8 +303,10 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
 
-        # If this is `Paginated`, return the queryset as is as the pagination will
-        # be resolved when resolving its results.
+        # This is counter intuitive, but in case we are returning a `Paginated`
+        # result, we want to set the original queryset _as is_ as it will apply
+        # the pagination later on when resolving its `.results` field.
+        # Check `get_wrapped_result` below for more details.
         if self.is_paginated:
             return queryset
 

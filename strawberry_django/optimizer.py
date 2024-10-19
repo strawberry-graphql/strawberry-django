@@ -1000,7 +1000,7 @@ def _get_model_hints(
             level=level,
         )
 
-    # In case this is a relay field, the selected fields are inside results selection
+    # In case this is a Paginated field, the selected fields are inside results selection
     if issubclass(object_definition.origin, Paginated):
         return _get_model_hints_from_paginated(
             model,
