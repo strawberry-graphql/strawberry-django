@@ -31,40 +31,57 @@ class OffsetPaginationInput:
 
 
 @strawberry.type
+class PaginatedInfo:
+    limit: int
+    offset: int
+
+
+@strawberry.type
 class Paginated(Generic[NodeType]):
     queryset: strawberry.Private[Optional[QuerySet]]
     pagination: strawberry.Private[OffsetPaginationInput]
 
     @strawberry.field
-    def limit(self) -> int:
-        return self.pagination.limit
-
-    @strawberry.field
-    def offset(self) -> int:
-        return self.pagination.limit
+    def page_info(self) -> PaginatedInfo:
+        return PaginatedInfo(
+            limit=self.pagination.limit,
+            offset=self.pagination.offset,
+        )
 
     @strawberry.field(description="Total count of existing results.")
     @django_resolver
-    def total_count(self, root) -> int:
-        if self.queryset is None:
-            return 0
-
-        return get_total_count(self.queryset)
+    def total_count(self) -> int:
+        return self.get_total_count()
 
     @strawberry.field(description="List of paginated results.")
     @django_resolver
     def results(self) -> list[NodeType]:
+        paginated_queryset = self.get_paginated_queryset()
+
+        return cast(
+            list[NodeType], paginated_queryset if paginated_queryset is not None else []
+        )
+
+    def get_total_count(self) -> int:
+        """Retrieve tht total count of the queryset without pagination."""
+        return get_total_count(self.queryset) if self.queryset is not None else 0
+
+    def get_paginated_queryset(self) -> Optional[QuerySet]:
+        """Retrieve the queryset with pagination applied.
+
+        This will apply the paginated arguments to the queryset and return it.
+        To use the original queryset, access `.queryset` directly.
+        """
         from strawberry_django.optimizer import is_optimized_by_prefetching
 
         if self.queryset is None:
-            return []
+            return None
 
-        if is_optimized_by_prefetching(self.queryset):
-            results = self.queryset._result_cache  # type: ignore
-        else:
-            results = apply(self.pagination, self.queryset)
-
-        return cast(list[NodeType], results)
+        return (
+            self.queryset._result_cache  # type: ignore
+            if is_optimized_by_prefetching(self.queryset)
+            else apply(self.pagination, self.queryset)
+        )
 
 
 def apply(

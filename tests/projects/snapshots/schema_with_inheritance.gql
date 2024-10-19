@@ -137,8 +137,7 @@ type IssueTypeEdge {
 }
 
 type IssueTypePaginated {
-  limit: Int!
-  offset: Int!
+  pageInfo: PaginatedInfo!
 
   """Total count of existing results."""
   totalCount: Int!
@@ -298,6 +297,11 @@ type PageInfo {
 
   """When paginating forwards, the cursor to continue."""
   endCursor: String
+}
+
+type PaginatedInfo {
+  limit: Int!
+  offset: Int!
 }
 
 input ProjectOrder {

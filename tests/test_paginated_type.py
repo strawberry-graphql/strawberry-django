@@ -8,7 +8,7 @@ from strawberry_django.pagination import Paginated
 from tests import models
 
 
-def test_pagination_schema():
+def test_paginated_schema():
     @strawberry_django.type(models.Fruit)
     class Fruit:
         id: int
@@ -35,8 +35,7 @@ def test_pagination_schema():
     }
 
     type ColorPaginated {
-      limit: Int!
-      offset: Int!
+      pageInfo: PaginatedInfo!
 
       """Total count of existing results."""
       totalCount: Int!
@@ -51,8 +50,7 @@ def test_pagination_schema():
     }
 
     type FruitPaginated {
-      limit: Int!
-      offset: Int!
+      pageInfo: PaginatedInfo!
 
       """Total count of existing results."""
       totalCount: Int!
@@ -64,6 +62,11 @@ def test_pagination_schema():
     input OffsetPaginationInput {
       offset: Int! = 0
       limit: Int! = -1
+    }
+
+    type PaginatedInfo {
+      limit: Int!
+      offset: Int!
     }
 
     type Query {
