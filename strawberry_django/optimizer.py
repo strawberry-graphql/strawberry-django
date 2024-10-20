@@ -49,7 +49,7 @@ from strawberry.types.object_type import StrawberryObjectDefinition
 from typing_extensions import assert_never, assert_type
 
 from strawberry_django.fields.types import resolve_model_field_name
-from strawberry_django.pagination import Paginated, apply_window_pagination
+from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
 from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
 from strawberry_django.relay import ListConnectionWithTotalCount
 from strawberry_django.resolvers import django_fetch
@@ -574,7 +574,7 @@ def _optimize_prefetch_queryset(
             else:
                 mark_optimized = False
 
-        if isinstance(field.type, type) and issubclass(field.type, Paginated):
+        if isinstance(field.type, type) and issubclass(field.type, OffsetPaginated):
             pagination = field_kwargs.get("pagination")
             qs = apply_window_pagination(
                 qs,
@@ -1001,7 +1001,7 @@ def _get_model_hints(
         )
 
     # In case this is a Paginated field, the selected fields are inside results selection
-    if issubclass(object_definition.origin, Paginated):
+    if issubclass(object_definition.origin, OffsetPaginated):
         return _get_model_hints_from_paginated(
             model,
             schema,

@@ -4,7 +4,7 @@ import pytest
 import strawberry
 
 import strawberry_django
-from strawberry_django.pagination import Paginated
+from strawberry_django.pagination import OffsetPaginated
 from tests import models
 
 
@@ -18,12 +18,12 @@ def test_paginated_schema():
     class Color:
         id: int
         name: str
-        fruits: Paginated[Fruit]
+        fruits: OffsetPaginated[Fruit]
 
     @strawberry.type
     class Query:
-        fruits: Paginated[Fruit] = strawberry_django.field()
-        colors: Paginated[Color] = strawberry_django.field()
+        fruits: OffsetPaginated[Fruit] = strawberry_django.field()
+        colors: OffsetPaginated[Color] = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
 
@@ -31,11 +31,11 @@ def test_paginated_schema():
     type Color {
       id: Int!
       name: String!
-      fruits(pagination: OffsetPaginationInput): FruitPaginated!
+      fruits(pagination: OffsetPaginationInput): FruitOffsetPaginated!
     }
 
-    type ColorPaginated {
-      pageInfo: PaginatedInfo!
+    type ColorOffsetPaginated {
+      pageInfo: OffsetPaginationInfo!
 
       """Total count of existing results."""
       totalCount: Int!
@@ -49,8 +49,8 @@ def test_paginated_schema():
       name: String!
     }
 
-    type FruitPaginated {
-      pageInfo: PaginatedInfo!
+    type FruitOffsetPaginated {
+      pageInfo: OffsetPaginationInfo!
 
       """Total count of existing results."""
       totalCount: Int!
@@ -59,19 +59,19 @@ def test_paginated_schema():
       results: [Fruit!]!
     }
 
+    type OffsetPaginationInfo {
+      offset: Int!
+      limit: Int
+    }
+
     input OffsetPaginationInput {
       offset: Int! = 0
       limit: Int = null
     }
 
-    type PaginatedInfo {
-      offset: Int!
-      limit: Int
-    }
-
     type Query {
-      fruits(pagination: OffsetPaginationInput): FruitPaginated!
-      colors(pagination: OffsetPaginationInput): ColorPaginated!
+      fruits(pagination: OffsetPaginationInput): FruitOffsetPaginated!
+      colors(pagination: OffsetPaginationInput): ColorOffsetPaginated!
     }
     '''
 
@@ -87,7 +87,7 @@ def test_pagination_query():
 
     @strawberry.type
     class Query:
-        fruits: Paginated[Fruit] = strawberry_django.field()
+        fruits: OffsetPaginated[Fruit] = strawberry_django.field()
 
     models.Fruit.objects.create(name="Apple")
     models.Fruit.objects.create(name="Banana")
@@ -145,7 +145,7 @@ async def test_pagination_query_async():
 
     @strawberry.type
     class Query:
-        fruits: Paginated[Fruit] = strawberry_django.field()
+        fruits: OffsetPaginated[Fruit] = strawberry_django.field()
 
     await models.Fruit.objects.acreate(name="Apple")
     await models.Fruit.objects.acreate(name="Banana")
@@ -205,11 +205,11 @@ def test_pagination_nested_query():
     class Color:
         id: int
         name: str
-        fruits: Paginated[Fruit]
+        fruits: OffsetPaginated[Fruit]
 
     @strawberry.type
     class Query:
-        colors: Paginated[Color] = strawberry_django.field()
+        colors: OffsetPaginated[Color] = strawberry_django.field()
 
     red = models.Color.objects.create(name="Red")
     yellow = models.Color.objects.create(name="Yellow")
@@ -316,11 +316,11 @@ async def test_pagination_nested_query_async():
     class Color:
         id: int
         name: str
-        fruits: Paginated[Fruit]
+        fruits: OffsetPaginated[Fruit]
 
     @strawberry.type
     class Query:
-        colors: Paginated[Color] = strawberry_django.field()
+        colors: OffsetPaginated[Color] = strawberry_django.field()
 
     red = await models.Color.objects.acreate(name="Red")
     yellow = await models.Color.objects.acreate(name="Yellow")

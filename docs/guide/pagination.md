@@ -90,14 +90,14 @@ class Query:
     fruits: list[Fruit] = strawberry_django.field(pagination=MyOffsetPaginationInput)
 ```
 
-## Paginated Generic
+## OffsetPaginated Generic
 
-For more complex pagination needs, you can use the `Paginated` generic, which alongside
+For more complex pagination needs, you can use the `OffsetPaginated` generic, which alongside
 the `pagination` argument, will wrap the results in an object that contains the results
 and the pagination information, together with the `totalCount` of elements excluding pagination.
 
 ```python title="types.py"
-from strawberry_django.pagination import Paginated
+from strawberry_django.pagination import OffsetPaginated
 
 
 @strawberry_django.type(models.Fruit)
@@ -107,7 +107,7 @@ class Fruit:
 
 @strawberry.type
 class Query:
-    fruits: Paginated[Fruit] = strawberry_django.field()
+    fruits: OffsetPaginated[Fruit] = strawberry_django.field()
 ```
 
 Would produce the following schema:
@@ -117,13 +117,13 @@ type Fruit {
   name: String!
 }
 
-type PaginatedInfo {
+type PaginationInfo {
   limit: Int!
   offset: Int!
 }
 
-type FruitPaginated {
-  pageInfo: PaginatedInfo!
+type FruitOffsetPaginated {
+  pageInfo: PaginationInfo!
   totalCount: Int!
   results: [Fruit]!
 }
@@ -134,7 +134,7 @@ input OffsetPaginationInput {
 }
 
 type Query {
-  fruits(pagination: OffsetPaginationInput): [FruitPaginated!]!
+  fruits(pagination: OffsetPaginationInput): [FruitOffsetPaginated!]!
 }
 ```
 
@@ -156,17 +156,17 @@ query {
 ```
 
 > [!NOTE]
-> Paginated follow the same rules for the default pagination limit, and can be configured
+> OffsetPaginated follow the same rules for the default pagination limit, and can be configured
 > in the same way as explained above.
 
 ### Customizing the pagination
 
-Like other generics, `Paginated` can be customized to modify its behavior or to
+Like other generics, `OffsetPaginated` can be customized to modify its behavior or to
 add extra functionality in it. For example, suppose we want to add the average
 price of the fruits in the pagination:
 
 ```python title="types.py"
-from strawberry_django.pagination import Paginated
+from strawberry_django.pagination import OffsetPaginated
 
 
 @strawberry_django.type(models.Fruit)
@@ -176,7 +176,7 @@ class Fruit:
 
 
 @strawberry.type
-class FruitPaginated(Paginated[Fruit]):
+class FruitOffsetPaginated(OffsetPaginated[Fruit]):
     @strawberry_django.field
     def average_price(self) -> Decimal:
         if self.queryset is None:
@@ -195,7 +195,7 @@ class FruitPaginated(Paginated[Fruit]):
 
 @strawberry.type
 class Query:
-    fruits: FruitPaginated = strawberry_django.field()
+    fruits: FruitOffsetPaginated = strawberry_django.field()
 ```
 
 Would produce the following schema:
@@ -205,13 +205,13 @@ type Fruit {
   name: String!
 }
 
-type PaginatedInfo {
+type PaginationInfo {
   limit: Int!
   offset: Int!
 }
 
-type FruitPaginated {
-  pageInfo: PaginatedInfo!
+type FruitOffsetPaginated {
+  pageInfo: PaginationInfo!
   totalCount: Int!
   results: [Fruit]!
   averagePrice: Decimal!
@@ -224,11 +224,11 @@ input OffsetPaginationInput {
 }
 
 type Query {
-  fruits(pagination: OffsetPaginationInput): [FruitPaginated!]!
+  fruits(pagination: OffsetPaginationInput): [FruitOffsetPaginated!]!
 }
 ```
 
-The following attributes/methods can be accessed in the `Paginated` class:
+The following attributes/methods can be accessed in the `OffsetPaginated` class:
 
 - `queryset`: The queryset original queryset with any filters/ordering applied,
   but not paginated yet

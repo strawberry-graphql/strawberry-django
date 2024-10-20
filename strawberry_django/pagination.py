@@ -28,19 +28,19 @@ class OffsetPaginationInput:
 
 
 @strawberry.type
-class PaginatedInfo:
+class OffsetPaginationInfo:
     offset: int = 0
     limit: Optional[int] = None
 
 
 @strawberry.type
-class Paginated(Generic[NodeType]):
+class OffsetPaginated(Generic[NodeType]):
     queryset: strawberry.Private[Optional[QuerySet]]
     pagination: strawberry.Private[OffsetPaginationInput]
 
     @strawberry.field
-    def page_info(self) -> PaginatedInfo:
-        return PaginatedInfo(
+    def page_info(self) -> OffsetPaginationInfo:
+        return OffsetPaginationInfo(
             limit=self.pagination.limit,
             offset=self.pagination.offset,
         )
@@ -320,7 +320,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         *,
         pagination: Optional[object] = None,
         **kwargs,
-    ) -> Union[_T, Paginated[_T]]:
+    ) -> Union[_T, OffsetPaginated[_T]]:
         if not self.is_paginated:
             return result
 
@@ -333,7 +333,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         ):
             raise TypeError(f"Don't know how to resolve pagination {pagination!r}")
 
-        return Paginated(
+        return OffsetPaginated(
             queryset=result,
             pagination=pagination or OffsetPaginationInput(),
         )

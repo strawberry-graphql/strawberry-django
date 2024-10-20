@@ -336,8 +336,8 @@ type IssueTypeEdge {
   node: IssueType!
 }
 
-type IssueTypePaginated {
-  pageInfo: PaginatedInfo!
+type IssueTypeOffsetPaginated {
+  pageInfo: OffsetPaginationInfo!
 
   """Total count of existing results."""
   totalCount: Int!
@@ -383,7 +383,7 @@ type MilestoneType implements Node & Named {
   dueDate: Date
   project: ProjectType!
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
-  issuesPaginated(pagination: OffsetPaginationInput): IssueTypePaginated!
+  issuesPaginated(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter
 
@@ -463,6 +463,11 @@ input NodeInputPartial {
   id: GlobalID
 }
 
+type OffsetPaginationInfo {
+  offset: Int!
+  limit: Int
+}
+
 input OffsetPaginationInput {
   offset: Int! = 0
   limit: Int = null
@@ -519,11 +524,6 @@ type PageInfo {
 
   """When paginating forwards, the cursor to continue."""
   endCursor: String
-}
-
-type PaginatedInfo {
-  offset: Int!
-  limit: Int
 }
 
 type ProjectConnection {
@@ -626,7 +626,7 @@ type Query {
     ids: [GlobalID!]!
   ): [StaffType]!
   issueList: [IssueType!]!
-  issuesPaginated(pagination: OffsetPaginationInput): IssueTypePaginated!
+  issuesPaginated(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated!
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   projectList(filters: ProjectFilter): [ProjectType!]!
   tagList: [TagType!]!
@@ -746,7 +746,7 @@ type Query {
     id: GlobalID!
   ): IssueType @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListPermRequired: [IssueType!]! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
-  issuesPaginatedPermRequired(pagination: OffsetPaginationInput): IssueTypePaginated! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issuesPaginatedPermRequired(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueConnPermRequired(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -770,7 +770,7 @@ type Query {
   ): IssueType @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListObjPermRequired: [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListObjPermRequiredPaginated(pagination: OffsetPaginationInput): [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
-  issuesPaginatedObjPermRequired(pagination: OffsetPaginationInput): IssueTypePaginated! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
+  issuesPaginatedObjPermRequired(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueConnObjPermRequired(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
