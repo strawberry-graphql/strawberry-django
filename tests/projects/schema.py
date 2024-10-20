@@ -159,7 +159,7 @@ class MilestoneType(relay.Node, Named):
         order=IssueOrder,
         pagination=True,
     )
-    issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.field(
+    issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
         field_name="issues",
         order=IssueOrder,
     )
@@ -380,7 +380,7 @@ class Query:
     staff_list: list[Optional[StaffType]] = strawberry_django.node()
 
     issue_list: list[IssueType] = strawberry_django.field()
-    issues_paginated: OffsetPaginated[IssueType] = strawberry_django.field()
+    issues_paginated: OffsetPaginated[IssueType] = strawberry_django.offset_paginated()
     milestone_list: list[MilestoneType] = strawberry_django.field(
         order=MilestoneOrder,
         filters=MilestoneFilter,
@@ -436,7 +436,7 @@ class Query:
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
     issues_paginated_perm_required: OffsetPaginated[IssueType] = (
-        strawberry_django.field(
+        strawberry_django.offset_paginated(
             extensions=[HasPerm(perms=["projects.view_issue"])],
         )
     )
@@ -459,7 +459,7 @@ class Query:
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])], pagination=True
     )
     issues_paginated_obj_perm_required: OffsetPaginated[IssueType] = (
-        strawberry_django.field(
+        strawberry_django.offset_paginated(
             extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
         )
     )

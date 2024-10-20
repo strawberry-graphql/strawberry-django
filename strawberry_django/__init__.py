@@ -1,5 +1,5 @@
 from . import auth, filters, mutations, ordering, pagination, relay
-from .fields.field import connection, field, node
+from .fields.field import connection, field, node, offset_paginated
 from .fields.filter_order import filter_field, order_field
 from .fields.filter_types import (
     BaseFilterLookup,
@@ -60,6 +60,7 @@ __all__ = [
     "mutation",
     "mutations",
     "node",
+    "offset_paginated",
     "order",
     "order_field",
     "ordering",

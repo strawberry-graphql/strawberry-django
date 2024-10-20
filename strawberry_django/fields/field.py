@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-from collections.abc import Iterable, Mapping, Sequence
-from functools import cached_property, partial
+from collections.abc import (
+    AsyncIterable,
+    AsyncIterator,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -26,9 +34,12 @@ from django.db.models.manager import BaseManager
 from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.extensions.field_extension import FieldExtension
+from strawberry.types.field import _RESOLVER_TYPE  # noqa: PLC2701
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info  # noqa: TCH002
 from strawberry.utils.await_maybe import await_maybe
+from typing_extensions import TypeAlias
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument
@@ -37,7 +48,12 @@ from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
 from strawberry_django.optimizer import OptimizerStore, is_optimized_by_prefetching
 from strawberry_django.ordering import ORDER_ARG, StrawberryDjangoFieldOrdering
-from strawberry_django.pagination import StrawberryDjangoPagination
+from strawberry_django.pagination import (
+    PAGINATION_ARG,
+    OffsetPaginated,
+    OffsetPaginationInput,
+    StrawberryDjangoPagination,
+)
 from strawberry_django.permissions import filter_with_perms
 from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.relay import resolve_model_nodes
@@ -51,13 +67,11 @@ from strawberry_django.resolvers import (
 if TYPE_CHECKING:
     from graphql.pyutils import AwaitableOrValue
     from strawberry import BasePermission
-    from strawberry.extensions.field_extension import (
-        FieldExtension,
-        SyncExtensionResolver,
-    )
+    from strawberry.extensions.field_extension import SyncExtensionResolver
     from strawberry.relay.types import NodeIterableType
     from strawberry.types.arguments import StrawberryArgument
-    from strawberry.types.field import _RESOLVER_TYPE, StrawberryField
+    from strawberry.types.base import WithStrawberryObjectDefinition
+    from strawberry.types.field import StrawberryField
     from strawberry.types.unset import UnsetType
     from typing_extensions import Literal, Self
 
@@ -228,12 +242,9 @@ class StrawberryDjangoField(
                     if "info" not in kwargs:
                         kwargs["info"] = info
 
-                    @sync_to_async
-                    def resolve(resolved=resolved):
-                        inner_resolved = self.get_queryset_hook(**kwargs)(resolved)
-                        return self.get_wrapped_result(inner_resolved, **kwargs)
-
-                    resolved = await resolve()
+                    resolved = await sync_to_async(self.get_queryset_hook(**kwargs))(
+                        resolved
+                    )
 
                 return resolved
 
@@ -248,7 +259,7 @@ class StrawberryDjangoField(
 
             result = django_resolver(
                 self.get_queryset_hook(**kwargs),
-                qs_hook=partial(self.get_wrapped_result, **kwargs),
+                qs_hook=lambda qs: qs,
             )(result)
 
         return result
@@ -300,6 +311,44 @@ class StrawberryDjangoField(
         return queryset
 
 
+def _get_field_arguments_for_extensions(
+    field: StrawberryDjangoField,
+    *,
+    add_filters: bool = True,
+    add_order: bool = True,
+    add_pagination: bool = True,
+) -> list[StrawberryArgument]:
+    """Get a list of arguments to be set to fields using extensions.
+
+    Because we have a base_resolver defined in those, our parents will not add
+    order/filters/pagination resolvers in here, so we need to add them by hand (unless they
+    are somewhat in there). We are not adding pagination because it doesn't make
+    sense together with a Connection
+    """
+    args: dict[str, StrawberryArgument] = {a.python_name: a for a in field.arguments}
+
+    if add_filters and FILTERS_ARG not in args:
+        filters = field.get_filters()
+        if filters not in (None, UNSET):  # noqa: PLR6201
+            args[FILTERS_ARG] = argument(FILTERS_ARG, filters, is_optional=True)
+
+    if add_order and ORDER_ARG not in args:
+        order = field.get_order()
+        if order not in (None, UNSET):  # noqa: PLR6201
+            args[ORDER_ARG] = argument(ORDER_ARG, order, is_optional=True)
+
+    if add_pagination and PAGINATION_ARG not in args:
+        pagination = field.get_pagination()
+        if pagination not in (None, UNSET):  # noqa: PLR6201
+            args[PAGINATION_ARG] = argument(
+                PAGINATION_ARG,
+                pagination,
+                is_optional=True,
+            )
+
+    return list(args.values())
+
+
 class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
     def apply(self, field: StrawberryField) -> None:
         if not isinstance(field, StrawberryDjangoField):
@@ -307,24 +356,10 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                 "The extension can only be applied to StrawberryDjangoField"
             )
 
-        # NOTE: Because we have a base_resolver defined, our parents will not add
-        # order/filters resolvers in here, so we need to add them by hand (unless they
-        # are somewhat in there). We are not adding pagination because it doesn't make
-        # sense together with a Connection
-        args: dict[str, StrawberryArgument] = {
-            a.python_name: a for a in field.arguments
-        }
-
-        if FILTERS_ARG not in args:
-            filters = field.get_filters()
-            if filters not in (None, UNSET):  # noqa: PLR6201
-                args[FILTERS_ARG] = argument(FILTERS_ARG, filters, is_optional=True)
-        if ORDER_ARG not in args:
-            order = field.get_order()
-            if order not in (None, UNSET):  # noqa: PLR6201
-                args[ORDER_ARG] = argument(ORDER_ARG, order, is_optional=True)
-
-        field.arguments = list(args.values())
+        field.arguments = _get_field_arguments_for_extensions(
+            field,
+            add_pagination=False,
+        )
 
         if field.base_resolver is None:
 
@@ -409,6 +444,67 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
             after=after,
             first=first,
             last=last,
+        )
+
+
+class StrawberryOffsetPaginatedExtension(FieldExtension):
+    paginated_type: type[OffsetPaginated]
+
+    def apply(self, field: StrawberryField) -> None:
+        if not isinstance(field, StrawberryDjangoField):
+            raise TypeError(
+                "The extension can only be applied to StrawberryDjangoField"
+            )
+
+        field.arguments = _get_field_arguments_for_extensions(field)
+        self.paginated_type = cast(type[OffsetPaginated], field.type)
+
+    def resolve(
+        self,
+        next_: SyncExtensionResolver,
+        source: Any,
+        info: Info,
+        *,
+        pagination: OffsetPaginationInput | None = None,
+        order: WithStrawberryObjectDefinition | None = None,
+        filters: WithStrawberryObjectDefinition | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        assert self.paginated_type is not None
+        queryset = cast(models.QuerySet, next_(source, info, **kwargs))
+
+        def get_queryset(queryset):
+            return cast(StrawberryDjangoField, info._field).get_queryset(
+                queryset,
+                info,
+                pagination=pagination,
+                order=order,
+                filters=filters,
+            )
+
+        # We have a single resolver for both sync and async, so we need to check if
+        # nodes is awaitable or not and resolve it accordingly
+        if inspect.isawaitable(queryset):
+
+            async def async_resolver(queryset=queryset):
+                resolved = self.paginated_type.resolve_paginated(
+                    get_queryset(await queryset),
+                    info=info,
+                    pagination=pagination,
+                    **kwargs,
+                )
+                if inspect.isawaitable(resolved):
+                    resolved = await resolved
+
+                return resolved
+
+            return async_resolver()
+
+        return self.paginated_type.resolve_paginated(
+            get_queryset(queryset),
+            info=info,
+            pagination=pagination,
+            **kwargs,
         )
 
 
@@ -778,6 +874,187 @@ def connection(
 
     """
     extensions = [*extensions, StrawberryDjangoConnectionExtension()]
+    f = field_cls(
+        python_name=None,
+        django_name=field_name,
+        graphql_name=name,
+        type_annotation=StrawberryAnnotation.from_annotation(graphql_type),
+        description=description,
+        is_subscription=is_subscription,
+        permission_classes=permission_classes or [],
+        deprecation_reason=deprecation_reason,
+        default=default,
+        default_factory=default_factory,
+        metadata=metadata,
+        directives=directives or (),
+        filters=filters,
+        order=order,
+        extensions=extensions,
+        only=only,
+        select_related=select_related,
+        prefetch_related=prefetch_related,
+        annotate=annotate,
+        disable_optimization=disable_optimization,
+    )
+
+    if resolver:
+        f = f(resolver)
+
+    return f
+
+
+_OFFSET_PAGINATED_RESOLVER_TYPE: TypeAlias = _RESOLVER_TYPE[
+    Union[
+        Iterator[models.Model],
+        Iterable[models.Model],
+        AsyncIterator[models.Model],
+        AsyncIterable[models.Model],
+    ]
+]
+
+
+@overload
+def offset_paginated(
+    graphql_type: type[OffsetPaginated] | None = None,
+    *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
+    name: str | None = None,
+    field_name: str | None = None,
+    is_subscription: bool = False,
+    description: str | None = None,
+    permission_classes: list[type[BasePermission]] | None = None,
+    deprecation_reason: str | None = None,
+    default: Any = dataclasses.MISSING,
+    default_factory: Callable[..., object] | object = dataclasses.MISSING,
+    metadata: Mapping[Any, Any] | None = None,
+    directives: Sequence[object] | None = (),
+    extensions: Sequence[FieldExtension] = (),
+    filters: type | None = UNSET,
+    order: type | None = UNSET,
+    only: TypeOrSequence[str] | None = None,
+    select_related: TypeOrSequence[str] | None = None,
+    prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
+    disable_optimization: bool = False,
+) -> Any: ...
+
+
+@overload
+def offset_paginated(
+    graphql_type: type[OffsetPaginated] | None = None,
+    *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
+    resolver: _OFFSET_PAGINATED_RESOLVER_TYPE | None = None,
+    name: str | None = None,
+    field_name: str | None = None,
+    is_subscription: bool = False,
+    description: str | None = None,
+    init: Literal[True] = True,
+    permission_classes: list[type[BasePermission]] | None = None,
+    deprecation_reason: str | None = None,
+    default: Any = dataclasses.MISSING,
+    default_factory: Callable[..., object] | object = dataclasses.MISSING,
+    metadata: Mapping[Any, Any] | None = None,
+    directives: Sequence[object] | None = (),
+    extensions: Sequence[FieldExtension] = (),
+    filters: type | None = UNSET,
+    order: type | None = UNSET,
+    only: TypeOrSequence[str] | None = None,
+    select_related: TypeOrSequence[str] | None = None,
+    prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
+    disable_optimization: bool = False,
+) -> Any: ...
+
+
+def offset_paginated(
+    graphql_type: type[OffsetPaginated] | None = None,
+    *,
+    field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
+    resolver: _OFFSET_PAGINATED_RESOLVER_TYPE | None = None,
+    name: str | None = None,
+    field_name: str | None = None,
+    is_subscription: bool = False,
+    description: str | None = None,
+    permission_classes: list[type[BasePermission]] | None = None,
+    deprecation_reason: str | None = None,
+    default: Any = dataclasses.MISSING,
+    default_factory: Callable[..., object] | object = dataclasses.MISSING,
+    metadata: Mapping[Any, Any] | None = None,
+    directives: Sequence[object] | None = (),
+    extensions: Sequence[FieldExtension] = (),
+    filters: type | None = UNSET,
+    order: type | None = UNSET,
+    only: TypeOrSequence[str] | None = None,
+    select_related: TypeOrSequence[str] | None = None,
+    prefetch_related: TypeOrSequence[PrefetchType] | None = None,
+    annotate: TypeOrMapping[AnnotateType] | None = None,
+    disable_optimization: bool = False,
+    # This init parameter is used by pyright to determine whether this field
+    # is added in the constructor or not. It is not used to change
+    # any behavior at the moment.
+    init: Literal[True, False, None] = None,
+) -> Any:
+    """Annotate a property or a method to create a relay connection field.
+
+    Relay connections_ are mostly used for pagination purposes. This decorator
+    helps creating a complete relay endpoint that provides default arguments
+    and has a default implementation for the connection slicing.
+
+    Note that when setting a resolver to this field, it is expected for this
+    resolver to return an iterable of the expected node type, not the connection
+    itself. That iterable will then be paginated accordingly. So, the main use
+    case for this is to provide a filtered iterable of nodes by using some custom
+    filter arguments.
+
+    Examples
+    --------
+        Annotating something like this:
+
+        >>> @strawberry.type
+        >>> class X:
+        ...     some_node: relay.Connection[SomeType] = relay.connection(
+        ...         description="ABC",
+        ...     )
+        ...
+        ...     @relay.connection(description="ABC")
+        ...     def get_some_nodes(self, age: int) -> Iterable[SomeType]:
+        ...         ...
+
+        Will produce a query like this:
+
+        ```
+        query {
+          someNode (
+            before: String
+            after: String
+            first: String
+            after: String
+            age: Int
+          ) {
+            totalCount
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+            edges {
+              cursor
+              node {
+                  id
+                  ...
+              }
+            }
+          }
+        }
+        ```
+
+    .. _Relay connections:
+        https://relay.dev/graphql/connections.htm
+
+    """
+    extensions = [*extensions, StrawberryOffsetPaginatedExtension()]
     f = field_cls(
         python_name=None,
         django_name=field_name,

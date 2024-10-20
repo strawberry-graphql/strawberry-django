@@ -39,7 +39,7 @@ from typing_extensions import Literal, assert_never
 
 from strawberry_django.auth.utils import aget_current_user, get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
-from strawberry_django.pagination import OffsetPaginated, OffsetPaginationInput
+from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.resolvers import django_resolver
 
 from .utils.query import filter_for_user
@@ -47,6 +47,8 @@ from .utils.typing import UserType
 
 if TYPE_CHECKING:
     from strawberry.django.context import StrawberryDjangoContext
+
+    from strawberry_django.fields.field import StrawberryDjangoField
 
 
 _M = TypeVar("_M", bound=Model)
@@ -407,7 +409,9 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
             return []
 
         if isinstance(ret_type, type) and issubclass(ret_type, OffsetPaginated):
-            return OffsetPaginated(queryset=None, pagination=OffsetPaginationInput())
+            django_model = cast("StrawberryDjangoField", info._field).django_model
+            assert django_model
+            return django_model._default_manager.none()
 
         # If it is a Connection, try to return an empty connection, but only if
         # it is the only possibility available...

@@ -17,8 +17,9 @@ from strawberry_django.resolvers import django_resolver
 from .arguments import argument
 
 NodeType = TypeVar("NodeType")
-_T = TypeVar("_T")
 _QS = TypeVar("_QS", bound=QuerySet)
+
+PAGINATION_ARG = "pagination"
 
 
 @strawberry.input
@@ -337,35 +338,4 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
             queryset,
             pagination,
             related_field_id=_strawberry_related_field_id,
-        )
-
-    def get_wrapped_result(
-        self,
-        result: _T,
-        info: Info,
-        *,
-        pagination: Optional[OffsetPaginationInput] = None,
-        **kwargs,
-    ) -> Union[_T, OffsetPaginated[_T]]:
-        if not self.is_paginated:
-            return result
-
-        if not isinstance(result, QuerySet):
-            raise TypeError(f"Result expected to be a queryset, got {result!r}")
-
-        if (
-            pagination not in (None, UNSET)  # noqa: PLR6201
-            and not isinstance(pagination, OffsetPaginationInput)
-        ):
-            raise TypeError(f"Don't know how to resolve pagination {pagination!r}")
-
-        paginated_type = self.type
-        assert isinstance(paginated_type, type)
-        assert issubclass(paginated_type, OffsetPaginated)
-
-        return paginated_type.resolve_paginated(
-            result,
-            info=info,
-            pagination=pagination,
-            **kwargs,
         )
