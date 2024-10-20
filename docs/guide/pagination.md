@@ -63,8 +63,32 @@ class Query:
 
 Which will produce the exact same schema.
 
-> [!NOTE]
-> There is no default limit defined. All elements are returned if no pagination limit is defined.
+### Default limit for pagination
+
+The default limit for pagination is set to `100`. This can be changed in the
+[strawberry django settings](./settings.md) to increase or decrease that number,
+or even set to `None` to set it to unlimited.
+
+To configure it on a per field basis, you can define your own `OffsetPaginationInput`
+subclass and modify its default value, like:
+
+```python
+@strawberry.input
+def MyOffsetPaginationInput(OffsetPaginationInput):
+    limit: int = 250
+
+
+# Pass it to the pagination argument when defining the type
+@strawberry_django.type(models.Fruit, pagination=MyOffsetPaginationInput)
+class Fruit:
+    ...
+
+
+@strawberry.type
+class Query:
+    # Or pass it to the pagination argument when defining the field
+    fruits: list[Fruit] = strawberry_django.field(pagination=MyOffsetPaginationInput)
+```
 
 ## Paginated Generic
 
@@ -130,6 +154,10 @@ query {
   }
 }
 ```
+
+> [!NOTE]
+> Paginated follow the same rules for the default pagination limit, and can be configured
+> in the same way as explained above.
 
 ### Customizing the pagination
 

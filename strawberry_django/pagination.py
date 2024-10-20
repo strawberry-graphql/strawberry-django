@@ -20,20 +20,17 @@ NodeType = TypeVar("NodeType")
 _T = TypeVar("_T")
 _QS = TypeVar("_QS", bound=QuerySet)
 
-DEFAULT_OFFSET: int = 0
-DEFAULT_LIMIT: int = -1
-
 
 @strawberry.input
 class OffsetPaginationInput:
-    offset: int = DEFAULT_OFFSET
-    limit: int = DEFAULT_LIMIT
+    offset: int = 0
+    limit: Optional[int] = None
 
 
 @strawberry.type
 class PaginatedInfo:
-    limit: int
-    offset: int
+    offset: int = 0
+    limit: Optional[int] = None
 
 
 @strawberry.type
@@ -117,7 +114,7 @@ def apply(
         )
     else:
         start = pagination.offset
-        if pagination.limit >= 0:
+        if pagination.limit is not None and pagination.limit >= 0:
             stop = start + pagination.limit
             queryset = queryset[start:stop]
         else:
@@ -140,7 +137,7 @@ def apply_window_pagination(
     *,
     related_field_id: str,
     offset: int = 0,
-    limit: int = -1,
+    limit: Optional[int] = None,
 ) -> _QS:
     """Apply pagination using window functions.
 
@@ -181,7 +178,7 @@ def apply_window_pagination(
 
     # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
     # from the end to as a way to mimic a "not limit" as well
-    if limit >= 0 and limit != sys.maxsize:
+    if limit is not None and limit >= 0 and limit != sys.maxsize:
         queryset = queryset.filter(_strawberry_row_number__lte=offset + limit)
 
     return queryset

@@ -61,12 +61,12 @@ def test_paginated_schema():
 
     input OffsetPaginationInput {
       offset: Int! = 0
-      limit: Int! = -1
+      limit: Int = null
     }
 
     type PaginatedInfo {
-      limit: Int!
       offset: Int!
+      limit: Int
     }
 
     type Query {

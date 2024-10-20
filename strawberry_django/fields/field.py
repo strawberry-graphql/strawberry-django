@@ -229,7 +229,7 @@ class StrawberryDjangoField(
                         kwargs["info"] = info
 
                     @sync_to_async
-                    def resolve():
+                    def resolve(resolved=resolved):
                         inner_resolved = self.get_queryset_hook(**kwargs)(resolved)
                         return self.get_wrapped_result(inner_resolved, **kwargs)
 

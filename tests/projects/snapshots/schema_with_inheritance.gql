@@ -243,7 +243,7 @@ input NodeInput {
 
 input OffsetPaginationInput {
   offset: Int! = 0
-  limit: Int! = -1
+  limit: Int = null
 }
 
 type OperationInfo {
@@ -300,8 +300,8 @@ type PageInfo {
 }
 
 type PaginatedInfo {
-  limit: Int!
   offset: Int!
+  limit: Int
 }
 
 input ProjectOrder {
