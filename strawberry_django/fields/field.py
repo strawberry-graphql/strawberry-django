@@ -28,6 +28,7 @@ from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info  # noqa: TCH002
+from strawberry.utils.await_maybe import await_maybe
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument
@@ -215,10 +216,10 @@ class StrawberryDjangoField(
                 if isinstance(attr, FileDescriptor) and not result:
                     result = None
 
-        if is_awaitable:
+        if is_awaitable or self.is_async:
 
             async def async_resolver():
-                resolved = await result  # type: ignore
+                resolved = await await_maybe(result)
 
                 if isinstance(resolved, BaseManager):
                     resolved = resolve_base_manager(resolved)
