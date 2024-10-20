@@ -235,6 +235,8 @@ The following attributes/methods can be accessed in the `OffsetPaginated` class:
 - `pagination`: The `OffsetPaginationInput` object, with the `offset` and `limit` for pagination
 - `get_total_count()`: Returns the total count of elements in the queryset without pagination
 - `get_paginated_queryset()`: Returns the queryset with pagination applied
+- `resolve_paginated(queryset, *, info, pagiantion, **kwargs)`: The classmethod that
+  strawberry-django calls to create an instance of the `OffsetPaginated` class/subclass.
 
 ## Cursor pagination (aka Relay style pagination)
 

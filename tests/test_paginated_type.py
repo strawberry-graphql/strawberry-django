@@ -4,7 +4,7 @@ import pytest
 import strawberry
 
 import strawberry_django
-from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.pagination import OffsetPaginated, OffsetPaginationInput
 from tests import models
 
 
@@ -412,5 +412,83 @@ async def test_pagination_nested_query_async():
                     }
                 },
             ],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_pagination_query_with_subclass():
+    @strawberry_django.type(models.Fruit)
+    class Fruit:
+        id: int
+        name: str
+
+    @strawberry.type
+    class FruitPaginated(OffsetPaginated[Fruit]):
+        _custom_field: strawberry.Private[str]
+
+        @strawberry_django.field
+        def custom_field(self) -> str:
+            return self._custom_field
+
+        @classmethod
+        def resolve_paginated(cls, queryset, *, info, pagination=None, **kwargs):
+            return cls(
+                queryset=queryset,
+                pagination=pagination or OffsetPaginationInput(),
+                _custom_field="pagination rocks",
+            )
+
+    @strawberry.type
+    class Query:
+        fruits: FruitPaginated = strawberry_django.field()
+
+    models.Fruit.objects.create(name="Apple")
+    models.Fruit.objects.create(name="Banana")
+    models.Fruit.objects.create(name="Strawberry")
+
+    schema = strawberry.Schema(query=Query)
+
+    query = """\
+    query GetFruits ($pagination: OffsetPaginationInput) {
+      fruits (pagination: $pagination) {
+        totalCount
+        customField
+        results {
+          name
+        }
+      }
+    }
+    """
+
+    res = schema.execute_sync(query)
+    assert res.errors is None
+    assert res.data == {
+        "fruits": {
+            "totalCount": 3,
+            "customField": "pagination rocks",
+            "results": [{"name": "Apple"}, {"name": "Banana"}, {"name": "Strawberry"}],
+        }
+    }
+
+    res = schema.execute_sync(query, variable_values={"pagination": {"limit": 1}})
+    assert res.errors is None
+    assert res.data == {
+        "fruits": {
+            "totalCount": 3,
+            "customField": "pagination rocks",
+            "results": [{"name": "Apple"}],
+        }
+    }
+
+    res = schema.execute_sync(
+        query, variable_values={"pagination": {"limit": 1, "offset": 2}}
+    )
+    assert res.errors is None
+    assert res.data == {
+        "fruits": {
+            "totalCount": 3,
+            "customField": "pagination rocks",
+            "results": [{"name": "Strawberry"}],
         }
     }

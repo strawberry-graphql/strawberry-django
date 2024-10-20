@@ -59,6 +59,32 @@ class OffsetPaginated(Generic[NodeType]):
             list[NodeType], paginated_queryset if paginated_queryset is not None else []
         )
 
+    @classmethod
+    def resolve_paginated(
+        cls,
+        queryset: QuerySet,
+        *,
+        info: Info,
+        pagination: Optional[OffsetPaginationInput] = None,
+        **kwargs,
+    ) -> Self:
+        """Resolve the paginated queryset.
+
+        Args:
+            queryset: The queryset to be paginated.
+            info: The strawberry execution info resolve the type name from.
+            pagination: The pagination input to be applied.
+            kwargs: Additional arguments passed to the resolver.
+
+        Returns:
+            The resolved `OffsetPaginated`
+
+        """
+        return cls(
+            queryset=queryset,
+            pagination=pagination or OffsetPaginationInput(),
+        )
+
     def get_total_count(self) -> int:
         """Retrieve tht total count of the queryset without pagination."""
         return get_total_count(self.queryset) if self.queryset is not None else 0
@@ -294,7 +320,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         queryset: _QS,
         info: Info,
         *,
-        pagination: Optional[object] = None,
+        pagination: Optional[OffsetPaginationInput] = None,
         _strawberry_related_field_id: Optional[str] = None,
         **kwargs,
     ) -> _QS:
@@ -318,7 +344,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         result: _T,
         info: Info,
         *,
-        pagination: Optional[object] = None,
+        pagination: Optional[OffsetPaginationInput] = None,
         **kwargs,
     ) -> Union[_T, OffsetPaginated[_T]]:
         if not self.is_paginated:
@@ -333,7 +359,13 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         ):
             raise TypeError(f"Don't know how to resolve pagination {pagination!r}")
 
-        return OffsetPaginated(
-            queryset=result,
-            pagination=pagination or OffsetPaginationInput(),
+        paginated_type = self.type
+        assert isinstance(paginated_type, type)
+        assert issubclass(paginated_type, OffsetPaginated)
+
+        return paginated_type.resolve_paginated(
+            result,
+            info=info,
+            pagination=pagination,
+            **kwargs,
         )
