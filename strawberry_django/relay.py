@@ -22,6 +22,7 @@ from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 from typing_extensions import Literal, Self
 
+from strawberry_django.pagination import get_total_count
 from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.resolvers import django_getattr, django_resolver
 from strawberry_django.utils.typing import (
@@ -48,41 +49,12 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
     @strawberry.field(description="Total quantity of existing nodes.")
     @django_resolver
     def total_count(self) -> Optional[int]:
-        from .optimizer import is_optimized_by_prefetching
-
         assert self.nodes is not None
 
-        if isinstance(self.nodes, models.QuerySet) and is_optimized_by_prefetching(
-            self.nodes
-        ):
-            result = cast(list[relay.NodeType], self.nodes._result_cache)  # type: ignore
-            try:
-                return (
-                    result[0]._strawberry_total_count  # type: ignore
-                    if result
-                    else 0
-                )
-            except AttributeError:
-                warnings.warn(
-                    (
-                        "Pagination annotations not found, falling back to QuerySet resolution. "
-                        "This might cause n+1 issues..."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        if isinstance(self.nodes, models.QuerySet):
+            return get_total_count(self.nodes)
 
-        total_count = None
-        try:
-            total_count = cast(
-                "models.QuerySet[models.Model]",
-                self.nodes,
-            ).count()
-        except (AttributeError, ValueError, TypeError):
-            if isinstance(self.nodes, Sized):
-                total_count = len(self.nodes)
-
-        return total_count
+        return len(self.nodes) if isinstance(self.nodes, Sized) else None
 
     @classmethod
     def resolve_connection(
