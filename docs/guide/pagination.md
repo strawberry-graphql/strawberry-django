@@ -165,7 +165,7 @@ It is possible to define a custom resolver for the queryset to either provide a 
 queryset for it, or even to receive extra arguments alongside the pagination arguments.
 
 Suppose we want to pre-filter a queryset of fruits for only available ones,
-while also adding [ordering](./ordering.md) to it. This can be achieved like:
+while also adding [ordering](./ordering.md) to it. This can be achieved with:
 
 ```python title="types.py"
 
@@ -183,7 +183,7 @@ class FruitOrder:
 
 @strawberry.type
 class Query:
-    @straberry.offset_paginated(OffsetPaginated[Fruit], order=order)
+    @strawberry_django.offset_paginated(OffsetPaginated[Fruit], order=order)
     def fruits(self, only_available: bool = True) -> QuerySet[Fruit]:
         queryset = models.Fruit.objects.all()
         if only_available:
