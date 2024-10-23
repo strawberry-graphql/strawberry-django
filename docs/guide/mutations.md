@@ -168,8 +168,7 @@ class Mutation:
 ## Filtering
 
 > [!CAUTION]
-> This is totally discouraged as it allows for any issue with the filters
-> to be able to alter your whole model collection.
+> Filtering on mutations is discouraged as it can potentially alter your entire model collection if there are issues with the filters.
 
 Filters can be added to update and delete mutations. More information in the
 [filtering](filters.md) section.
