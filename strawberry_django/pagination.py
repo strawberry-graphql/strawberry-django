@@ -1,9 +1,10 @@
 import sys
-from typing import TYPE_CHECKING, Optional, TypeVar, Union
+import warnings
+from typing import Generic, Optional, TypeVar, Union, cast
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS
-from django.db.models import Count, Window
+from django.db.models import Count, QuerySet, Window
 from django.db.models.functions import RowNumber
 from strawberry.types import Info
 from strawberry.types.arguments import StrawberryArgument
@@ -11,19 +12,100 @@ from strawberry.types.unset import UNSET, UnsetType
 from typing_extensions import Self
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
+from strawberry_django.resolvers import django_resolver
 
 from .arguments import argument
 
-if TYPE_CHECKING:
-    from django.db.models import QuerySet
+NodeType = TypeVar("NodeType")
+_QS = TypeVar("_QS", bound=QuerySet)
 
-_QS = TypeVar("_QS", bound="QuerySet")
+PAGINATION_ARG = "pagination"
 
 
 @strawberry.input
 class OffsetPaginationInput:
     offset: int = 0
-    limit: int = -1
+    limit: Optional[int] = None
+
+
+@strawberry.type
+class OffsetPaginationInfo:
+    offset: int = 0
+    limit: Optional[int] = None
+
+
+@strawberry.type
+class OffsetPaginated(Generic[NodeType]):
+    queryset: strawberry.Private[Optional[QuerySet]]
+    pagination: strawberry.Private[OffsetPaginationInput]
+
+    @strawberry.field
+    def page_info(self) -> OffsetPaginationInfo:
+        return OffsetPaginationInfo(
+            limit=self.pagination.limit,
+            offset=self.pagination.offset,
+        )
+
+    @strawberry.field(description="Total count of existing results.")
+    @django_resolver
+    def total_count(self) -> int:
+        return self.get_total_count()
+
+    @strawberry.field(description="List of paginated results.")
+    @django_resolver
+    def results(self) -> list[NodeType]:
+        paginated_queryset = self.get_paginated_queryset()
+
+        return cast(
+            list[NodeType], paginated_queryset if paginated_queryset is not None else []
+        )
+
+    @classmethod
+    def resolve_paginated(
+        cls,
+        queryset: QuerySet,
+        *,
+        info: Info,
+        pagination: Optional[OffsetPaginationInput] = None,
+        **kwargs,
+    ) -> Self:
+        """Resolve the paginated queryset.
+
+        Args:
+            queryset: The queryset to be paginated.
+            info: The strawberry execution info resolve the type name from.
+            pagination: The pagination input to be applied.
+            kwargs: Additional arguments passed to the resolver.
+
+        Returns:
+            The resolved `OffsetPaginated`
+
+        """
+        return cls(
+            queryset=queryset,
+            pagination=pagination or OffsetPaginationInput(),
+        )
+
+    def get_total_count(self) -> int:
+        """Retrieve tht total count of the queryset without pagination."""
+        return get_total_count(self.queryset) if self.queryset is not None else 0
+
+    def get_paginated_queryset(self) -> Optional[QuerySet]:
+        """Retrieve the queryset with pagination applied.
+
+        This will apply the paginated arguments to the queryset and return it.
+        To use the original queryset, access `.queryset` directly.
+        """
+        from strawberry_django.optimizer import is_optimized_by_prefetching
+
+        if self.queryset is None:
+            return None
+
+        return (
+            self.queryset._result_cache  # type: ignore
+            if is_optimized_by_prefetching(self.queryset)
+            else apply(self.pagination, self.queryset)
+        )
 
 
 def apply(
@@ -59,10 +141,22 @@ def apply(
         )
     else:
         start = pagination.offset
-        stop = start + pagination.limit
-        queryset = queryset[start:stop]
+        if pagination.limit is not None and pagination.limit >= 0:
+            stop = start + pagination.limit
+            queryset = queryset[start:stop]
+        else:
+            queryset = queryset[start:]
 
     return queryset
+
+
+class _PaginationWindow(Window):
+    """Window function to be used for pagination.
+
+    This is the same as django's `Window` function, but we can easily identify
+    it in case we need to remove it from the queryset, as there might be other
+    window functions in the queryset and no other way to identify ours.
+    """
 
 
 def apply_window_pagination(
@@ -70,7 +164,7 @@ def apply_window_pagination(
     *,
     related_field_id: str,
     offset: int = 0,
-    limit: int = -1,
+    limit: Optional[int] = None,
 ) -> _QS:
     """Apply pagination using window functions.
 
@@ -93,13 +187,14 @@ def apply_window_pagination(
             using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
         ).get_order_by()
     ]
+
     queryset = queryset.annotate(
-        _strawberry_row_number=Window(
+        _strawberry_row_number=_PaginationWindow(
             RowNumber(),
             partition_by=related_field_id,
             order_by=order_by,
         ),
-        _strawberry_total_count=Window(
+        _strawberry_total_count=_PaginationWindow(
             Count(1),
             partition_by=related_field_id,
         ),
@@ -110,10 +205,62 @@ def apply_window_pagination(
 
     # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
     # from the end to as a way to mimic a "not limit" as well
-    if limit >= 0 and limit != sys.maxsize:
+    if limit is not None and limit >= 0 and limit != sys.maxsize:
         queryset = queryset.filter(_strawberry_row_number__lte=offset + limit)
 
     return queryset
+
+
+def remove_window_pagination(queryset: _QS) -> _QS:
+    """Remove pagination window functions from a queryset.
+
+    Utility function to remove the pagination `WHERE` clause added by
+    the `apply_window_pagination` function.
+
+    Args:
+    ----
+        queryset: The queryset to apply pagination to.
+
+    """
+    queryset = queryset._chain()  # type: ignore
+    queryset.query.where.children = [
+        child
+        for child in queryset.query.where.children
+        if (not hasattr(child, "lhs") or not isinstance(child.lhs, _PaginationWindow))
+    ]
+    return queryset
+
+
+def get_total_count(queryset: QuerySet) -> int:
+    """Get the total count of a queryset.
+
+    Try to get the total count from the queryset cache, if it's optimized by
+    prefetching. Otherwise, fallback to the `QuerySet.count()` method.
+    """
+    from strawberry_django.optimizer import is_optimized_by_prefetching
+
+    if is_optimized_by_prefetching(queryset):
+        results = queryset._result_cache  # type: ignore
+
+        if results:
+            try:
+                return results[0]._strawberry_total_count
+            except AttributeError:
+                warnings.warn(
+                    (
+                        "Pagination annotations not found, falling back to QuerySet resolution. "
+                        "This might cause n+1 issues..."
+                    ),
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+
+        # If we have no results, we can't get the total count from the cache.
+        # In this case we will remove the pagination filter to be able to `.count()`
+        # the whole queryset with its original filters.
+        queryset = remove_window_pagination(queryset)
+
+    return queryset.count()
 
 
 class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
@@ -126,10 +273,25 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         new_field.pagination = self.pagination
         return new_field
 
+    def _has_pagination(self) -> bool:
+        if isinstance(self.pagination, bool):
+            return self.pagination
+
+        if self.is_paginated:
+            return True
+
+        django_type = self.django_type
+        if django_type is not None and not issubclass(
+            django_type, strawberry.relay.Node
+        ):
+            return django_type.__strawberry_django_definition__.pagination
+
+        return False
+
     @property
     def arguments(self) -> list[StrawberryArgument]:
         arguments = []
-        if self.base_resolver is None and self.is_list:
+        if self.base_resolver is None and (self.is_list or self.is_paginated):
             pagination = self.get_pagination()
             if pagination is not None:
                 arguments.append(
@@ -143,20 +305,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         return args_prop.fset(self, value)  # type: ignore
 
     def get_pagination(self) -> Optional[type]:
-        has_pagination = self.pagination
-
-        if isinstance(has_pagination, UnsetType):
-            django_type = self.django_type
-            has_pagination = (
-                django_type.__strawberry_django_definition__.pagination
-                if (
-                    django_type is not None
-                    and not issubclass(django_type, strawberry.relay.Node)
-                )
-                else False
-            )
-
-        return OffsetPaginationInput if has_pagination else None
+        return OffsetPaginationInput if self._has_pagination() else None
 
     def apply_pagination(
         self,
@@ -172,11 +321,19 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         queryset: _QS,
         info: Info,
         *,
-        pagination: Optional[object] = None,
+        pagination: Optional[OffsetPaginationInput] = None,
         _strawberry_related_field_id: Optional[str] = None,
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
+
+        # This is counter intuitive, but in case we are returning a `Paginated`
+        # result, we want to set the original queryset _as is_ as it will apply
+        # the pagination later on when resolving its `.results` field.
+        # Check `get_wrapped_result` below for more details.
+        if self.is_paginated:
+            return queryset
+
         return self.apply_pagination(
             queryset,
             pagination,

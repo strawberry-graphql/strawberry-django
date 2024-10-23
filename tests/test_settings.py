@@ -30,6 +30,7 @@ def test_non_defaults():
             MAP_AUTO_ID_AS_GLOBAL_ID=True,
             DEFAULT_PK_FIELD_NAME="id",
             USE_DEPRECATED_FILTERS=True,
+            PAGINATION_DEFAULT_LIMIT=250,
         ),
     ):
         assert (
@@ -43,5 +44,6 @@ def test_non_defaults():
                 MAP_AUTO_ID_AS_GLOBAL_ID=True,
                 DEFAULT_PK_FIELD_NAME="id",
                 USE_DEPRECATED_FILTERS=True,
+                PAGINATION_DEFAULT_LIMIT=250,
             )
         )
