@@ -35,7 +35,8 @@ class FruitFilter:
 @strawberry.type
 class Mutation:
     create_fruit: Fruit = mutations.create(FruitInput)
-    create_fruits: list[Fruit] = mutations.create(FruitInput)
+    create_fruits: list[Fruit] = mutations.create(list[FruitInput])
+    patch_fruits: list[Fruit] = mutations.update(list[FruitPartialInput], key_attr="id")
     update_fruits: list[Fruit] = mutations.update(
         FruitPartialInput, filters=FruitFilter, key_attr="id"
     )

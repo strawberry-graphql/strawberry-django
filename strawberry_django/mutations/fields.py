@@ -215,7 +215,6 @@ class DjangoMutationCUD(DjangoMutationBase):
             argument(
                 self.argument_name,
                 self.input_type,
-                is_list=self.is_list and isinstance(self, DjangoCreateMutation),
             ),
         ]
 
@@ -272,6 +271,10 @@ class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
             )
 
 
+def get_vdata(data: Any) -> dict[str, Any]:
+    return vars(data).copy() if data is not None else {}
+
+
 def get_pk(
     data: dict[str, Any],
     *,
@@ -300,13 +303,25 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
     ) -> Any:
         assert info is not None
 
+        data: list[Any] | Any = kwargs.get(self.argument_name)
+
+        if isinstance(data, list):
+            return [self.instance_level_update(info, kwargs, d) for d in data]
+
+        return self.instance_level_update(info, kwargs, data)
+
+    def instance_level_update(
+        self,
+        info: Info | None,
+        kwargs: dict[str, Any],
+        data: Any,
+    ) -> Any:
         model = self.django_model
         assert model is not None
 
-        data: Any = kwargs.get(self.argument_name)
         vdata = vars(data).copy() if data is not None else {}
-
         pk = get_pk(vdata, key_attr=self.key_attr)
+
         if pk not in (None, UNSET):  # noqa: PLR6201
             instance = get_with_perms(
                 pk,
@@ -366,7 +381,7 @@ class DjangoDeleteMutation(
         assert model is not None
 
         data: Any = kwargs.get(self.argument_name)
-        vdata = vars(data).copy() if data is not None else {}
+        vdata = get_vdata(data)
 
         pk = get_pk(vdata, key_attr=self.key_attr)
         if pk not in (None, UNSET):  # noqa: PLR6201
