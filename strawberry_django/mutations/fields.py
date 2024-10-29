@@ -312,14 +312,14 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
 
     def instance_level_update(
         self,
-        info: Info | None,
+        info: Info,
         kwargs: dict[str, Any],
         data: Any,
     ) -> Any:
         model = self.django_model
         assert model is not None
 
-        vdata = vars(data).copy() if data is not None else {}
+        vdata = get_vdata(data)
         pk = get_pk(vdata, key_attr=self.key_attr)
 
         if pk not in (None, UNSET):  # noqa: PLR6201
