@@ -103,14 +103,14 @@ def assert_num_queries(n: int, *, using=DEFAULT_DB_ALIAS):
         if _client.get().is_async and executed == 0:
             return
 
-    assert (
-        executed == n
-    ), "{} queries executed, {} expected\nCaptured queries were:\n{}".format(
-        executed,
-        n,
-        "\n".join(
-            f"{i}. {q['sql']}" for i, q in enumerate(ctx.captured_queries, start=1)
-        ),
+    assert executed == n, (
+        "{} queries executed, {} expected\nCaptured queries were:\n{}".format(
+            executed,
+            n,
+            "\n".join(
+                f"{i}. {q['sql']}" for i, q in enumerate(ctx.captured_queries, start=1)
+            ),
+        )
     )
 
 
