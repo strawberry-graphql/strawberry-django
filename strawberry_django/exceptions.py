@@ -16,9 +16,7 @@ class MissingFieldArgumentError(StrawberryException):
     def __init__(self, field_name: str, resolver: FilterOrderFieldResolver):
         self.function = resolver.wrapped_func
 
-        self.message = (
-            f'Missing required argument "{field_name}" ' f'in "{resolver.name}"'
-        )
+        self.message = f'Missing required argument "{field_name}" in "{resolver.name}"'
         self.rich_message = (
             f'[bold red]Missing argument [underline]"{field_name}" for field '
             f"`[underline]{resolver.name}[/]`"
