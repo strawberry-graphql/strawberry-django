@@ -269,7 +269,7 @@ For that this integration provides 2 decorators that can be used:
 The example in the previous section could be written using `@model_property` like this:
 
 ```python title="models.py"
-from strawberry_django import model_property
+from strawberry_django.descriptors import model_property
 
 class OrderItem(models.Model):
     price = models.DecimalField()
