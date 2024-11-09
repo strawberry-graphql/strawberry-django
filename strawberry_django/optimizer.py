@@ -49,7 +49,7 @@ from strawberry.types.object_type import StrawberryObjectDefinition
 from typing_extensions import assert_never, assert_type
 
 from strawberry_django.fields.types import resolve_model_field_name
-from strawberry_django.pagination import apply_window_pagination
+from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
 from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
 from strawberry_django.relay import ListConnectionWithTotalCount
 from strawberry_django.resolvers import django_fetch
@@ -528,7 +528,7 @@ def _optimize_prefetch_queryset(
     )
     field_kwargs.pop("info", None)
 
-    # Disable the optimizer to avoid doint double optimization while running get_queryset
+    # Disable the optimizer to avoid doing double optimization while running get_queryset
     with DjangoOptimizerExtension.disabled():
         qs = field.get_queryset(
             qs,
@@ -573,6 +573,15 @@ def _optimize_prefetch_queryset(
                 )
             else:
                 mark_optimized = False
+
+        if isinstance(field.type, type) and issubclass(field.type, OffsetPaginated):
+            pagination = field_kwargs.get("pagination")
+            qs = apply_window_pagination(
+                qs,
+                related_field_id=related_field_id,
+                offset=pagination.offset if pagination else 0,
+                limit=pagination.limit if pagination else -1,
+            )
 
     if mark_optimized:
         qs = mark_optimized_by_prefetching(qs)
@@ -977,10 +986,23 @@ def _get_model_hints(
 ) -> OptimizerStore | None:
     cache = cache or {}
 
-    # In case this is a relay field, find the selected edges/nodes, the selected fields
-    # are actually inside edges -> node selection...
+    # In case this is a relay field, the selected fields are inside edges -> node selection
     if issubclass(object_definition.origin, relay.Connection):
         return _get_model_hints_from_connection(
+            model,
+            schema,
+            object_definition,
+            parent_type=parent_type,
+            info=info,
+            config=config,
+            prefix=prefix,
+            cache=cache,
+            level=level,
+        )
+
+    # In case this is a Paginated field, the selected fields are inside results selection
+    if issubclass(object_definition.origin, OffsetPaginated):
+        return _get_model_hints_from_paginated(
             model,
             schema,
             object_definition,
@@ -1152,6 +1174,55 @@ def _get_model_hints_from_connection(
                 cache=cache,
                 level=level,
             )
+
+    return store
+
+
+def _get_model_hints_from_paginated(
+    model: type[models.Model],
+    schema: Schema,
+    object_definition: StrawberryObjectDefinition,
+    *,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    info: GraphQLResolveInfo,
+    config: OptimizerConfig | None = None,
+    prefix: str = "",
+    cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]] | None = None,
+    level: int = 0,
+) -> OptimizerStore | None:
+    store = None
+
+    n_type = object_definition.type_var_map.get("NodeType")
+    n_definition = get_object_definition(n_type, strict=True)
+    n_gql_definition = _get_gql_definition(
+        schema,
+        get_object_definition(n_type, strict=True),
+    )
+    assert isinstance(n_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
+
+    for selections in _get_selections(info, parent_type).values():
+        selection = selections[0]
+        if selection.name.value != "results":
+            continue
+
+        n_info = _generate_selection_resolve_info(
+            info,
+            selections,
+            n_gql_definition,
+            n_gql_definition,
+        )
+
+        store = _get_model_hints(
+            model=model,
+            schema=schema,
+            object_definition=n_definition,
+            parent_type=n_gql_definition,
+            info=n_info,
+            config=config,
+            prefix=prefix,
+            cache=cache,
+            level=level,
+        )
 
     return store
 

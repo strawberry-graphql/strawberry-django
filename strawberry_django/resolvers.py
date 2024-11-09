@@ -193,7 +193,7 @@ def resolve_base_manager(manager: BaseManager) -> Any:
         # prevents us from importing and checking isinstance on them directly.
         try:
             # ManyRelatedManager
-            return list(prefetched_cache[manager.prefetch_cache_name])  # type: ignore
+            return prefetched_cache[manager.prefetch_cache_name]  # type: ignore
         except (AttributeError, KeyError):
             try:
                 # RelatedManager
@@ -203,7 +203,7 @@ def resolve_base_manager(manager: BaseManager) -> Any:
                     getattr(result_field.remote_field, "cache_name", None)
                     or result_field.remote_field.get_cache_name()
                 )
-                return list(prefetched_cache[cache_name])
+                return prefetched_cache[cache_name]
             except (AttributeError, KeyError):
                 pass
 

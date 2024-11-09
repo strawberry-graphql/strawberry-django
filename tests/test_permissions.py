@@ -9,11 +9,12 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from .projects.faker import (
     GroupFactory,
     IssueFactory,
+    MilestoneFactory,
     StaffUserFactory,
     SuperuserUserFactory,
     UserFactory,
 )
-from .utils import GraphQLTestClient
+from .utils import GraphQLTestClient, assert_num_queries
 
 PermKind: TypeAlias = Literal["user", "group", "superuser"]
 perm_kinds: list[PermKind] = ["user", "group", "superuser"]
@@ -934,3 +935,167 @@ def test_conn_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                     "totalCount": 1,
                 },
             }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_paginated_with_permissions(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($pagination: OffsetPaginationInput) {
+        issuesPaginatedPermRequired (pagination: $pagination) {
+          totalCount
+          results {
+            name
+            milestone {
+              name
+            }
+          }
+        }
+      }
+    """
+
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
+
+    issue1 = IssueFactory.create(milestone=milestone1)
+    issue2 = IssueFactory.create(milestone=milestone1)
+    issue3 = IssueFactory.create(milestone=milestone1)
+    issue4 = IssueFactory.create(milestone=milestone2)
+    issue5 = IssueFactory.create(milestone=milestone2)
+
+    # No user logged in
+    with assert_num_queries(0):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "issuesPaginatedPermRequired": {
+            "totalCount": 0,
+            "results": [],
+        }
+    }
+
+    user = UserFactory.create()
+
+    # User logged in without permissions
+    with gql_client.login(user):
+        with assert_num_queries(4):
+            res = gql_client.query(query)
+
+        assert res.data == {
+            "issuesPaginatedPermRequired": {
+                "totalCount": 0,
+                "results": [],
+            }
+        }
+
+    # User logged in with permissions
+    user.user_permissions.add(Permission.objects.get(codename="view_issue"))
+    with gql_client.login(user):
+        with assert_num_queries(6 if DjangoOptimizerExtension.enabled.get() else 11):
+            res = gql_client.query(query)
+
+        assert res.data == {
+            "issuesPaginatedPermRequired": {
+                "totalCount": 5,
+                "results": [
+                    {"name": issue1.name, "milestone": {"name": milestone1.name}},
+                    {"name": issue2.name, "milestone": {"name": milestone1.name}},
+                    {"name": issue3.name, "milestone": {"name": milestone1.name}},
+                    {"name": issue4.name, "milestone": {"name": milestone2.name}},
+                    {"name": issue5.name, "milestone": {"name": milestone2.name}},
+                ],
+            }
+        }
+
+        with assert_num_queries(6 if DjangoOptimizerExtension.enabled.get() else 8):
+            res = gql_client.query(query, variables={"pagination": {"limit": 2}})
+
+        assert res.data == {
+            "issuesPaginatedPermRequired": {
+                "totalCount": 5,
+                "results": [
+                    {"name": issue1.name, "milestone": {"name": milestone1.name}},
+                    {"name": issue2.name, "milestone": {"name": milestone1.name}},
+                ],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_paginated_with_obj_permissions(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($pagination: OffsetPaginationInput) {
+        issuesPaginatedObjPermRequired (pagination: $pagination) {
+          totalCount
+          results {
+            name
+            milestone {
+              name
+            }
+          }
+        }
+      }
+    """
+
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
+
+    IssueFactory.create(milestone=milestone1)
+    issue2 = IssueFactory.create(milestone=milestone1)
+    IssueFactory.create(milestone=milestone1)
+    issue4 = IssueFactory.create(milestone=milestone2)
+    IssueFactory.create(milestone=milestone2)
+
+    # No user logged in
+    with assert_num_queries(0):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "issuesPaginatedObjPermRequired": {
+            "totalCount": 0,
+            "results": [],
+        }
+    }
+
+    user = UserFactory.create()
+
+    # User logged in without permissions
+    with gql_client.login(user):
+        with assert_num_queries(5):
+            res = gql_client.query(query)
+
+        assert res.data == {
+            "issuesPaginatedObjPermRequired": {
+                "totalCount": 0,
+                "results": [],
+            }
+        }
+
+    assign_perm("view_issue", user, issue2)
+    assign_perm("view_issue", user, issue4)
+
+    # User logged in with permissions
+    with gql_client.login(user):
+        with assert_num_queries(4 if DjangoOptimizerExtension.enabled.get() else 6):
+            res = gql_client.query(query)
+
+        assert res.data == {
+            "issuesPaginatedObjPermRequired": {
+                "totalCount": 2,
+                "results": [
+                    {"name": issue2.name, "milestone": {"name": milestone1.name}},
+                    {"name": issue4.name, "milestone": {"name": milestone2.name}},
+                ],
+            }
+        }
+
+        with assert_num_queries(4 if DjangoOptimizerExtension.enabled.get() else 5):
+            res = gql_client.query(query, variables={"pagination": {"limit": 1}})
+
+        assert res.data == {
+            "issuesPaginatedObjPermRequired": {
+                "totalCount": 2,
+                "results": [
+                    {"name": issue2.name, "milestone": {"name": milestone1.name}},
+                ],
+            }
+        }

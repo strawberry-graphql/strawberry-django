@@ -29,6 +29,7 @@ from strawberry_django.auth.queries import get_current_user
 from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartial
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.permissions import (
     HasPerm,
     HasRetvalPerm,
@@ -157,6 +158,10 @@ class MilestoneType(relay.Node, Named):
         filters=IssueFilter,
         order=IssueOrder,
         pagination=True,
+    )
+    issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
+        field_name="issues",
+        order=IssueOrder,
     )
     issues_with_filters: ListConnectionWithTotalCount["IssueType"] = (
         strawberry_django.connection(
@@ -375,6 +380,7 @@ class Query:
     staff_list: list[Optional[StaffType]] = strawberry_django.node()
 
     issue_list: list[IssueType] = strawberry_django.field()
+    issues_paginated: OffsetPaginated[IssueType] = strawberry_django.offset_paginated()
     milestone_list: list[MilestoneType] = strawberry_django.field(
         order=MilestoneOrder,
         filters=MilestoneFilter,
@@ -429,6 +435,11 @@ class Query:
     issue_list_perm_required: list[IssueType] = strawberry_django.field(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
+    issues_paginated_perm_required: OffsetPaginated[IssueType] = (
+        strawberry_django.offset_paginated(
+            extensions=[HasPerm(perms=["projects.view_issue"])],
+        )
+    )
     issue_conn_perm_required: ListConnectionWithTotalCount[IssueType] = (
         strawberry_django.connection(
             extensions=[HasPerm(perms=["projects.view_issue"])],
@@ -446,6 +457,11 @@ class Query:
     )
     issue_list_obj_perm_required_paginated: list[IssueType] = strawberry_django.field(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])], pagination=True
+    )
+    issues_paginated_obj_perm_required: OffsetPaginated[IssueType] = (
+        strawberry_django.offset_paginated(
+            extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
+        )
     )
     issue_conn_obj_perm_required: ListConnectionWithTotalCount[IssueType] = (
         strawberry_django.connection(

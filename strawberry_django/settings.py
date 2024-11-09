@@ -1,6 +1,6 @@
 """Code for interacting with Django settings."""
 
-from typing import cast
+from typing import Optional, cast
 
 from django.conf import settings
 from typing_extensions import TypedDict
@@ -42,6 +42,10 @@ class StrawberryDjangoSettings(TypedDict):
     #: If True, deprecated way of using filters will be working
     USE_DEPRECATED_FILTERS: bool
 
+    #: The default limit for pagination when not provided. Can be set to `None`
+    #: to set it to unlimited.
+    PAGINATION_DEFAULT_LIMIT: Optional[int]
+
 
 DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     FIELD_DESCRIPTION_FROM_HELP_TEXT=False,
@@ -52,6 +56,7 @@ DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     MAP_AUTO_ID_AS_GLOBAL_ID=False,
     DEFAULT_PK_FIELD_NAME="pk",
     USE_DEPRECATED_FILTERS=False,
+    PAGINATION_DEFAULT_LIMIT=100,
 )
 
 

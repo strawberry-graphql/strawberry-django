@@ -85,6 +85,8 @@ class StrawberryDjangoFieldBase(StrawberryField):
 
     @functools.cached_property
     def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
+        from strawberry_django.pagination import OffsetPaginated
+
         origin = self.type
 
         if isinstance(origin, LazyType):
@@ -92,7 +94,9 @@ class StrawberryDjangoFieldBase(StrawberryField):
 
         object_definition = get_object_definition(origin)
 
-        if object_definition and issubclass(object_definition.origin, relay.Connection):
+        if object_definition and issubclass(
+            object_definition.origin, (relay.Connection, OffsetPaginated)
+        ):
             origin_specialized_type_var_map = (
                 get_specialized_type_var_map(cast(type, origin)) or {}
             )
@@ -147,6 +151,16 @@ class StrawberryDjangoFieldBase(StrawberryField):
             type_ = type_.of_type
 
         return isinstance(type_, StrawberryList)
+
+    @functools.cached_property
+    def is_paginated(self) -> bool:
+        from strawberry_django.pagination import OffsetPaginated
+
+        type_ = self.type
+        if isinstance(type_, StrawberryOptional):
+            type_ = type_.of_type
+
+        return isinstance(type_, type) and issubclass(type_, OffsetPaginated)
 
     @functools.cached_property
     def is_connection(self) -> bool:

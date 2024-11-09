@@ -62,7 +62,11 @@ A dictionary with the following optional keys:
 
       If True, [legacy filters](filters.md#legacy-filtering) are enabled. This is usefull for migrating from previous version.
 
-These features can be enabled by adding this code to your `settings.py` file.
+- **`PAGINATION_DEFAULT_LIMIT`** (default: `100`)
+
+      Defualt limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
+
+These features can be enabled by adding this code to your `settings.py` file, like:
 
 ```python title="settings.py"
 STRAWBERRY_DJANGO = {
@@ -73,5 +77,6 @@ STRAWBERRY_DJANGO = {
     "GENERATE_ENUMS_FROM_CHOICES": False,
     "MAP_AUTO_ID_AS_GLOBAL_ID": True,
     "DEFAULT_PK_FIELD_NAME": "id",
+    "PAGINATION_DEFAULT_LIMIT": 250,
 }
 ```
