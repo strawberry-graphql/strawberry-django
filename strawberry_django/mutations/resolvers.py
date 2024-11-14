@@ -14,7 +14,6 @@ from typing import (
 
 import strawberry
 from django.db import models, transaction
-from django.db.models.manager import BaseManager
 from django.db.models.base import Model
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import (
@@ -45,7 +44,11 @@ from .types import (
 )
 
 if TYPE_CHECKING:
-    from django.db.models.manager import ManyToManyRelatedManager, RelatedManager
+    from django.db.models.manager import (
+        BaseManager,
+        ManyToManyRelatedManager,
+        RelatedManager,
+    )
     from strawberry.types.info import Info
 
 
