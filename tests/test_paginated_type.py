@@ -196,6 +196,7 @@ async def test_pagination_query_async():
 
 
 from typing import Annotated
+
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 
@@ -209,7 +210,10 @@ class FruitTest:
 class ColorTest:
     id: int
     name: str
-    fruits: OffsetPaginated[Annotated["FruitTest", strawberry.lazy("tests.test_paginated_type")]] = strawberry_django.offset_paginated()
+    fruits: OffsetPaginated[
+        Annotated["FruitTest", strawberry.lazy("tests.test_paginated_type")]
+    ] = strawberry_django.offset_paginated()
+
 
 @pytest.mark.django_db(transaction=True)
 def test_pagination_nested_query():
