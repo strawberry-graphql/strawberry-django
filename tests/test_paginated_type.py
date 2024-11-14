@@ -1,5 +1,5 @@
-from typing import Annotated
 import textwrap
+from typing import Annotated
 
 import pytest
 import strawberry
