@@ -1,3 +1,4 @@
+from typing import Annotated
 import textwrap
 
 import pytest
@@ -5,6 +6,7 @@ import strawberry
 from django.db.models import QuerySet
 
 import strawberry_django
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated, OffsetPaginationInput
 from tests import models
 
@@ -193,11 +195,6 @@ async def test_pagination_query_async():
             "results": [{"name": "Banana"}],
         }
     }
-
-
-from typing import Annotated
-
-from strawberry_django.optimizer import DjangoOptimizerExtension
 
 
 @strawberry_django.type(models.Fruit)
