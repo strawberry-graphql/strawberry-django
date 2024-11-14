@@ -195,22 +195,27 @@ async def test_pagination_query_async():
     }
 
 
+from typing import Annotated
+from strawberry_django.optimizer import DjangoOptimizerExtension
+
+
+@strawberry_django.type(models.Fruit)
+class FruitTest:
+    id: int
+    name: str
+
+
+@strawberry_django.type(models.Color)
+class ColorTest:
+    id: int
+    name: str
+    fruits: OffsetPaginated[Annotated["FruitTest", strawberry.lazy("tests.test_paginated_type")]] = strawberry_django.offset_paginated()
+
 @pytest.mark.django_db(transaction=True)
 def test_pagination_nested_query():
-    @strawberry_django.type(models.Fruit)
-    class Fruit:
-        id: int
-        name: str
-
-    @strawberry_django.type(models.Color)
-    class Color:
-        id: int
-        name: str
-        fruits: OffsetPaginated[Fruit] = strawberry_django.offset_paginated()
-
     @strawberry.type
     class Query:
-        colors: OffsetPaginated[Color] = strawberry_django.offset_paginated()
+        colors: OffsetPaginated[ColorTest] = strawberry_django.offset_paginated()
 
     red = models.Color.objects.create(name="Red")
     yellow = models.Color.objects.create(name="Yellow")
@@ -219,7 +224,7 @@ def test_pagination_nested_query():
     models.Fruit.objects.create(name="Banana", color=yellow)
     models.Fruit.objects.create(name="Strawberry", color=red)
 
-    schema = strawberry.Schema(query=Query)
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
 
     query = """\
     query GetColors ($pagination: OffsetPaginationInput) {
