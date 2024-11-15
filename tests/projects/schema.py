@@ -526,6 +526,11 @@ class Mutation:
         argument_name="input",
         key_attr="name",
     )
+    create_project_with_milestones: ProjectType = mutations.create(
+        ProjectInputPartial,
+        handle_django_errors=True,
+        argument_name="input",
+    )
     update_project: ProjectType = mutations.update(
         ProjectInputPartial,
         handle_django_errors=True,

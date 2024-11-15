@@ -95,6 +95,8 @@ input CreateProjectInput {
 
 union CreateProjectPayload = ProjectType | OperationInfo
 
+union CreateProjectWithMilestonesPayload = ProjectType | OperationInfo
+
 input CreateQuizInput {
   title: String!
   fullCleanOptions: Boolean! = false
@@ -437,6 +439,7 @@ type Mutation {
   updateIssueWithKeyAttr(input: IssueInputPartialWithoutId!): UpdateIssueWithKeyAttrPayload!
   deleteIssue(input: NodeInput!): DeleteIssuePayload!
   deleteIssueWithKeyAttr(input: MilestoneIssueInput!): DeleteIssueWithKeyAttrPayload!
+  createProjectWithMilestones(input: ProjectInputPartial!): CreateProjectWithMilestonesPayload!
   updateProject(input: ProjectInputPartial!): UpdateProjectPayload!
   createMilestone(input: MilestoneInput!): CreateMilestonePayload!
   createProject(
