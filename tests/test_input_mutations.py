@@ -378,6 +378,142 @@ def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_multiple_level_nested_creation(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateProject ($input: ProjectInputPartial!) {
+      updateProject (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          milestones {
+            id
+            name
+            issues {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+    """
+
+    project = ProjectFactory.create(name="Some Project")
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("ProjectType", project.pk),
+                "milestones": [
+                    {
+                        "name": "Some Milestone",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                            }
+                        ],
+                    },
+                    {
+                        "name": "Another Milestone",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                            },
+                            {
+                                "name": "Another Issue",
+                            },
+                            {
+                                "name": "Third issue",
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+    )
+
+    assert res.data
+    assert isinstance(res.data["updateProject"], dict)
+
+    project_typename, project_pk = from_base64(res.data["updateProject"].pop("id"))
+    assert project_typename == "ProjectType"
+    assert project.pk == int(project_pk)
+
+    milestones = Milestone.objects.all()
+    assert len(milestones) == 2
+    assert len(res.data["updateProject"]["milestones"]) == 2
+
+    some_milestone = res.data["updateProject"]["milestones"][0]
+    milestone_typename, milestone_pk = from_base64(some_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[0] == Milestone.objects.get(pk=milestone_pk)
+
+    another_milestone = res.data["updateProject"]["milestones"][1]
+    milestone_typename, milestone_pk = from_base64(another_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[1] == Milestone.objects.get(pk=milestone_pk)
+
+    issues = Issue.objects.all()
+    assert len(issues) == 4
+    assert len(some_milestone["issues"]) == 1
+    assert len(another_milestone["issues"]) == 3
+
+    # Issues for first milestone
+    fetched_issue = some_milestone["issues"][0]
+    issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+    assert issue_typename == "IssueType"
+    assert issues[0] == Issue.objects.get(pk=issue_pk)
+    # Issues for second milestone
+    for i in range(3):
+        fetched_issue = another_milestone["issues"][i]
+        issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+        assert issue_typename == "IssueType"
+        assert issues[i + 1] == Issue.objects.get(pk=issue_pk)
+
+    assert res.data == {
+        "updateProject": {
+            "__typename": "ProjectType",
+            "name": "Some Project",
+            "milestones": [
+                {
+                    "name": "Some Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                        }
+                    ],
+                },
+                {
+                    "name": "Another Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                        },
+                        {
+                            "name": "Another Issue",
+                        },
+                        {
+                            "name": "Third issue",
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_input_update_mutation(db, gql_client: GraphQLTestClient):
     query = """
     mutation UpdateIssue ($input: IssueInputPartial!) {
