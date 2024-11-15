@@ -10,7 +10,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Issue, Milestone, Project
+from .projects.models import Issue, Milestone, Project, Tag
 
 
 @pytest.mark.django_db(transaction=True)
@@ -401,6 +401,9 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
             issues {
               id
               name
+              tags {
+                name
+              }
             }
           }
         }
@@ -409,6 +412,9 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
     """
 
     project = ProjectFactory.create(name="Some Project")
+
+    shared_tag = TagFactory.create(name="Shared Tag")
+    shared_tag_id = to_base64("TagType", shared_tag.pk)
 
     res = gql_client.query(
         query,
@@ -421,6 +427,12 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
                         "issues": [
                             {
                                 "name": "Some Issue",
+                                "tags": [
+                                    {"name": "Tag 1"},
+                                    {"name": "Tag 2"},
+                                    {"name": "Tag 3"},
+                                    {"id": shared_tag_id},
+                                ],
                             }
                         ],
                     },
@@ -429,12 +441,24 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
                         "issues": [
                             {
                                 "name": "Some Issue",
+                                "tags": [
+                                    {"name": "Tag 4"},
+                                    {"id": shared_tag_id},
+                                ],
                             },
                             {
                                 "name": "Another Issue",
+                                "tags": [
+                                    {"name": "Tag 5"},
+                                    {"id": shared_tag_id},
+                                ],
                             },
                             {
                                 "name": "Third issue",
+                                "tags": [
+                                    {"name": "Tag 6"},
+                                    {"id": shared_tag_id},
+                                ],
                             },
                         ],
                     },
@@ -481,6 +505,13 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
         assert issue_typename == "IssueType"
         assert issues[i + 1] == Issue.objects.get(pk=issue_pk)
 
+    tags = Tag.objects.all()
+    assert len(tags) == 7
+    assert len(issues[0].tags.all()) == 4  # 3 new tags + shared tag
+    assert len(issues[1].tags.all()) == 2  # 1 new tag + shared tag
+    assert len(issues[2].tags.all()) == 2  # 1 new tag + shared tag
+    assert len(issues[3].tags.all()) == 2  # 1 new tag + shared tag
+
     assert res.data == {
         "updateProject": {
             "__typename": "ProjectType",
@@ -491,6 +522,12 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
                     "issues": [
                         {
                             "name": "Some Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 1"},
+                                {"name": "Tag 2"},
+                                {"name": "Tag 3"},
+                            ],
                         }
                     ],
                 },
@@ -499,12 +536,24 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
                     "issues": [
                         {
                             "name": "Some Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 4"},
+                            ],
                         },
                         {
                             "name": "Another Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 5"},
+                            ],
                         },
                         {
                             "name": "Third issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 6"},
+                            ],
                         },
                     ],
                 },

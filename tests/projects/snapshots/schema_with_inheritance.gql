@@ -164,6 +164,7 @@ input MilestoneInputPartial {
 
 input MilestoneIssueInputPartial {
   name: String
+  tags: [TagInputPartial!]
 }
 
 input MilestoneOrder {
@@ -404,6 +405,11 @@ input StrFilterLookup {
   Case-insensitive regular expression match. Filter will be skipped on `null` value
   """
   iRegex: String
+}
+
+input TagInputPartial {
+  id: GlobalID
+  name: String
 }
 
 type TagType implements Node & Named {
