@@ -116,7 +116,7 @@ You can use that `info` parameter to, for example,
 limit access to results based on the current user in the request:
 
 ```python title="types.py"
-from stawberry_django.auth.utils import get_current_user
+from strawberry_django.auth.utils import get_current_user
 
 @strawberry_django.type(models.Fruit)
 class Berry:
