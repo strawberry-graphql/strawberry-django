@@ -30,7 +30,7 @@ graph TD
   D -->|No| E;
   E[Field is a 'List'] -->|Yes| EF[Return an empty 'List'];
   E -->|No| F;
-  F[Field is a relay `Connection`] -->|Yes| FF[Return an empty relay 'Connection'];
+  F[Field is a relay 'Connection'] -->|Yes| FF[Return an empty relay 'Connection'];
   F -->|No| GF[Raises 'PermissionDenied' error];
 ```
 
