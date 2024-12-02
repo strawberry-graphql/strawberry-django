@@ -367,6 +367,7 @@ def _process_type(
                 permission_classes=getattr(f, "permission_classes", ()),
                 default=getattr(f, "default", dataclasses.MISSING),
                 default_factory=getattr(f, "default_factory", dataclasses.MISSING),
+                metadata=getattr(f, "metadata", None),
                 deprecation_reason=getattr(f, "deprecation_reason", None),
                 directives=getattr(f, "directives", ()),
                 pagination=getattr(f, "pagination", UNSET),
