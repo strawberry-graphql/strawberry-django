@@ -111,7 +111,7 @@ async def test_sync_resolver(user, group):
     class MyUser:
         @strawberry_django.field
         def my_group(self, info) -> types.Group:
-            return cast(types.Group, models.Group.objects.get())
+            return cast("types.Group", models.Group.objects.get())
 
     query = generate_query(MyUser)
 
@@ -131,7 +131,7 @@ async def test_async_resolver(user, group):
         async def my_group(self, info) -> types.Group:
             from asgiref.sync import sync_to_async
 
-            return cast(types.Group, await sync_to_async(models.Group.objects.get)())
+            return cast("types.Group", await sync_to_async(models.Group.objects.get)())
 
     query = generate_query(MyUser)
 

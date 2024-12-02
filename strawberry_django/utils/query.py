@@ -80,7 +80,7 @@ def filter_for_user_q(
     if isinstance(perms, str):
         perms = [perms]
 
-    model = cast(type[Model], qs.model)
+    model = cast("type[Model]", qs.model)
     if model._meta.concrete_model:
         model = model._meta.concrete_model
 
@@ -95,7 +95,7 @@ def filter_for_user_q(
             # will query it through the queryset
             meta = model._meta
             ctype = cast(
-                ContentType,
+                "ContentType",
                 ContentType.objects._get_from_cache(meta),  # type: ignore
             )
         except KeyError:  # pragma:nocover
@@ -179,7 +179,7 @@ def filter_for_user_q(
             user_qs = user_qs.annotate(object_pk=F("content_object"))
 
         obj_qs = user_qs.values_list(
-            Cast("object_pk", cast(str, model._meta.pk)),
+            Cast("object_pk", cast("str", model._meta.pk)),
             flat=True,
         ).distinct()
 
@@ -201,7 +201,7 @@ def filter_for_user_q(
 
             obj_qs = obj_qs.union(
                 group_qs.values_list(
-                    Cast("object_pk", cast(str, model._meta.pk)),
+                    Cast("object_pk", cast("str", model._meta.pk)),
                     flat=True,
                 ).distinct(),
             )

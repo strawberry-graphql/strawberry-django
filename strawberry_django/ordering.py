@@ -187,7 +187,7 @@ def apply(
             parse_and_fill(arg.value, sequence)
 
     queryset, args = process_order(
-        cast(WithStrawberryObjectDefinition, order), info, queryset, sequence=sequence
+        cast("WithStrawberryObjectDefinition", order), info, queryset, sequence=sequence
     )
     if not args:
         return queryset

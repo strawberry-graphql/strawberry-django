@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.conf import settings
-from strawberry import auto  # noqa: TCH002
+from strawberry import auto  # noqa: TC002
 
 import strawberry_django
 

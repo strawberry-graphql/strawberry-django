@@ -22,8 +22,8 @@ def get_object_permission_models(
     model: Union[models.Model, type[models.Model]],
 ) -> ObjectPermissionModels:
     return ObjectPermissionModels(
-        user=cast(UserObjectPermissionBase, get_user_obj_perms_model(model)),
-        group=cast(GroupObjectPermissionBase, get_group_obj_perms_model(model)),
+        user=cast("UserObjectPermissionBase", get_user_obj_perms_model(model)),
+        group=cast("GroupObjectPermissionBase", get_group_obj_perms_model(model)),
     )
 
 
@@ -31,5 +31,5 @@ def get_user_or_anonymous(user: UserType) -> UserType:
     username = guardian_settings.ANONYMOUS_USER_NAME or ""
     if user.is_anonymous and user.get_username() != username:
         with contextlib.suppress(get_user_model().DoesNotExist):
-            return cast(UserType, _get_anonymous_user())
+            return cast("UserType", _get_anonymous_user())
     return user

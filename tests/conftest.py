@@ -32,7 +32,7 @@ def _cleanup(request):
 @pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])
 def gql_client(request):
     client, path, with_optimizer = cast(
-        dict[str, tuple[Union[type[Client], type[AsyncClient]], str, bool]],
+        "dict[str, tuple[type[Union[Client, AsyncClient]], str, bool]]",
         {
             "sync": (Client, "/graphql/", True),
             "async": (AsyncClient, "/graphql_async/", True),

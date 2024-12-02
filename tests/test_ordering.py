@@ -325,7 +325,7 @@ def test_order_field_method():
             assert queryset == _queryset, "Unexpected queryset passed"
             raise Exception("WAS CALLED")
 
-    _order = cast(WithStrawberryObjectDefinition, Order(custom_order=Ordering.ASC))  # type: ignore
+    _order = cast("WithStrawberryObjectDefinition", Order(custom_order=Ordering.ASC))  # type: ignore
     schema = strawberry.Schema(query=Query)
     _info: Any = type("FakeInfo", (), {"schema": schema})
     _queryset: Any = object()
@@ -345,7 +345,7 @@ def test_order_method_not_called_when_not_decorated(mocker: MockFixture):
     mock_order_method = mocker.spy(Order, "order")
 
     process_order(
-        cast(WithStrawberryObjectDefinition, Order()), mock.Mock(), mock.Mock()
+        cast("WithStrawberryObjectDefinition", Order()), mock.Mock(), mock.Mock()
     )
 
     mock_order_method.assert_not_called()
@@ -359,7 +359,7 @@ def test_order_field_not_called(mocker: MockFixture):
     # Calling this and no error being raised is the test, as the wrong behavior would
     # be for the field to be called like a method
     process_order(
-        cast(WithStrawberryObjectDefinition, Order()), mock.Mock(), mock.Mock()
+        cast("WithStrawberryObjectDefinition", Order()), mock.Mock(), mock.Mock()
     )
 
 
@@ -376,7 +376,7 @@ def test_order_object_method():
             assert queryset == _queryset, "Unexpected queryset passed"
             return queryset, ["name"]
 
-    _order = cast(WithStrawberryObjectDefinition, Order())
+    _order = cast("WithStrawberryObjectDefinition", Order())
     schema = strawberry.Schema(query=Query)
     _info: Any = type("FakeInfo", (), {"schema": schema})
     _queryset: Any = object()

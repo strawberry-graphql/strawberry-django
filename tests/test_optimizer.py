@@ -130,7 +130,7 @@ def test_interface_query(db, gql_client: GraphQLTestClient):
     assert isinstance(res.data, dict)
     assert isinstance(res.data["node"], dict)
     assert {
-        frozenset(d.items()) for d in cast(list, res.data["node"].pop("tags"))
+        frozenset(d.items()) for d in cast("list", res.data["node"].pop("tags"))
     } == frozenset(
         {
             frozenset(

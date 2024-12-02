@@ -57,7 +57,7 @@ class OffsetPaginated(Generic[NodeType]):
         paginated_queryset = self.get_paginated_queryset()
 
         return cast(
-            list[NodeType], paginated_queryset if paginated_queryset is not None else []
+            "list[NodeType]", paginated_queryset if paginated_queryset is not None else []
         )
 
     @classmethod

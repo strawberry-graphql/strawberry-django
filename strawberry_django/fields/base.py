@@ -98,7 +98,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
             object_definition.origin, (relay.Connection, OffsetPaginated)
         ):
             origin_specialized_type_var_map = (
-                get_specialized_type_var_map(cast(type, origin)) or {}
+                get_specialized_type_var_map(cast("type", origin)) or {}
             )
             origin = origin_specialized_type_var_map.get("NodeType")
 

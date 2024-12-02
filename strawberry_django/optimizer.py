@@ -508,7 +508,7 @@ def _optimize_prefetch_queryset(
 
     mark_optimized = True
 
-    strawberry_schema = cast(Schema, info.schema._strawberry_schema)  # type: ignore
+    strawberry_schema = cast("Schema", info.schema._strawberry_schema)  # type: ignore
     field_name = strawberry_schema.config.name_converter.from_field(field)
     field_info = Info(
         _raw_info=info,
@@ -597,7 +597,7 @@ def _get_selections(
         info.schema,
         info.fragments,
         info.variable_values,
-        cast(GraphQLObjectType, parent_type),
+        cast("GraphQLObjectType", parent_type),
         info.field_nodes,
     )
 
@@ -613,7 +613,7 @@ def _generate_selection_resolve_info(
         field_name=field_node.name.value,
         field_nodes=field_nodes,
         return_type=return_type,
-        parent_type=cast(GraphQLObjectType, parent_type),
+        parent_type=cast("GraphQLObjectType", parent_type),
         path=info.path.add_key(0).add_key(field_node.name.value, parent_type.name),
         schema=info.schema,
         fragments=info.fragments,
@@ -1133,7 +1133,7 @@ def _get_model_hints_from_connection(
 
         e_definition = get_object_definition(relay.Edge, strict=True)
         e_type = e_definition.resolve_generic(
-            relay.Edge[cast(type[relay.Node], n_type)],
+            relay.Edge[cast("type[relay.Node]", n_type)],
         )
         e_gql_definition = _get_gql_definition(
             schema,
@@ -1268,7 +1268,7 @@ def optimize(
 
     """
     if isinstance(qs, BaseManager):
-        qs = cast(QuerySet[_M], qs.all())
+        qs = cast("QuerySet[_M]", qs.all())
 
     if isinstance(qs, list):
         # return sliced queryset as-is
@@ -1283,7 +1283,7 @@ def optimize(
 
     config = config or OptimizerConfig()
     store = store or OptimizerStore()
-    schema = cast(Schema, info.schema._strawberry_schema)  # type: ignore
+    schema = cast("Schema", info.schema._strawberry_schema)  # type: ignore
 
     gql_type = get_named_type(info.return_type)
     strawberry_type = schema.get_type_by_name(gql_type.name)

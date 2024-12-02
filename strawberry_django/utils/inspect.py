@@ -48,7 +48,7 @@ def get_model_fields(
     fields = {}
     for f in model._meta.get_fields():
         name = cast(
-            str,
+            "str",
             resolve_model_field_name(f, is_input=is_input, is_filter=is_filter),
         )
         if camel_case:
@@ -152,7 +152,7 @@ class PrefetchInspector:
     query: Query = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
-        self.qs = cast(QuerySet, self.prefetch.queryset)  # type: ignore
+        self.qs = cast("QuerySet", self.prefetch.queryset)  # type: ignore
         self.query = self.qs.query
 
     @property

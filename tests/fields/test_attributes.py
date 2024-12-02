@@ -32,7 +32,7 @@ def test_default_django_name():
         field2: auto = strawberry_django.field(field_name="field")
 
     assert [
-        (f.name, cast(StrawberryDjangoField, f).django_name)
+        (f.name, cast("StrawberryDjangoField", f).django_name)
         for f in get_object_definition(Type, strict=True).fields
     ] == [
         ("field", "field"),

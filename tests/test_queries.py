@@ -285,7 +285,7 @@ def test_field_name():
         def fruit(self) -> Fruit:
             color = models.Color.objects.create(name="Yellow")
             return cast(
-                Fruit,
+                "Fruit",
                 models.Fruit.objects.create(
                     name="Banana",
                     color=color,

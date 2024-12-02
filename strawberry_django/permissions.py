@@ -579,7 +579,7 @@ def _default_perm_checker(info: Info, user: UserType):
         return (
             user.has_perm(perm.perm)  # type: ignore
             if perm.permission
-            else user.has_module_perms(cast(str, perm.app))  # type: ignore
+            else user.has_module_perms(cast("str", perm.app))  # type: ignore
         )
 
     return perm_checker

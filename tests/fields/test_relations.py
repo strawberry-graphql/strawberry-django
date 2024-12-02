@@ -57,7 +57,7 @@ class Child:
 
 def test_relation():
     assert [
-        (f.name, f.type, cast(StrawberryDjangoField, f).is_list)
+        (f.name, f.type, cast("StrawberryDjangoField", f).is_list)
         for f in get_object_definition(Parent, strict=True).fields
     ] == [
         ("id", strawberry.ID, False),
@@ -69,7 +69,7 @@ def test_relation():
 
 def test_reversed_relation():
     assert [
-        (f.name, f.type, cast(StrawberryDjangoField, f).is_list)
+        (f.name, f.type, cast("StrawberryDjangoField", f).is_list)
         for f in get_object_definition(Child, strict=True).fields
     ] == [
         ("id", strawberry.ID, False),

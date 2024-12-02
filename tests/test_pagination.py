@@ -91,7 +91,7 @@ def test_resolver_pagination(fruits):
         @strawberry.field
         def fruits(self, pagination: OffsetPaginationInput) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
-            return cast(list[Fruit], apply(pagination, queryset))
+            return cast("list[Fruit]", apply(pagination, queryset))
 
     query = utils.generate_query(Query)
     result = query("{ fruits(pagination: { limit: 1 }) { id name } }")

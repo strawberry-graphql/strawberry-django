@@ -198,7 +198,7 @@ def process_filters(
             assert has_object_definition(field_value)
 
             queryset, sub_q = process_filters(
-                cast(WithStrawberryObjectDefinition, field_value),
+                cast("WithStrawberryObjectDefinition", field_value),
                 queryset,
                 info,
                 prefix,
@@ -231,7 +231,7 @@ def process_filters(
             queryset = _process_deprecated_filter(filter_method, info, queryset)
         elif has_object_definition(field_value):
             queryset, sub_q = process_filters(
-                cast(WithStrawberryObjectDefinition, field_value),
+                cast("WithStrawberryObjectDefinition", field_value),
                 queryset,
                 info,
                 f"{prefix}{field_name}__",
@@ -264,7 +264,7 @@ def apply(
         return queryset
 
     queryset, q = process_filters(
-        cast(WithStrawberryObjectDefinition, filters), queryset, info
+        cast("WithStrawberryObjectDefinition", filters), queryset, info
     )
     if q:
         queryset = queryset.filter(q)
@@ -289,7 +289,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         arguments = []
         if self.base_resolver is None:
             filters = self.get_filters()
-            origin = cast(WithStrawberryObjectDefinition, self.origin)
+            origin = cast("WithStrawberryObjectDefinition", self.origin)
             is_root_query = origin.__strawberry_definition__.name == "Query"
 
             if (

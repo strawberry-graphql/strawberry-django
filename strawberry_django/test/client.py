@@ -64,7 +64,7 @@ class AsyncTestClient(TestClient):
     ) -> Response:
         body = self._build_body(query, variables, files)
 
-        resp = await cast(Awaitable, self.request(body, headers, files))
+        resp = await cast("Awaitable", self.request(body, headers, files))
         data = self._decode(resp, type="multipart" if files else "json")
 
         response = Response(

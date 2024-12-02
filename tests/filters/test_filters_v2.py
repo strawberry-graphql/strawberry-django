@@ -67,7 +67,7 @@ class FruitFilter:
         value: filter_types.ComparisonFilterLookup[int],
     ):
         return process_filters(
-            cast(WithStrawberryObjectDefinition, value),
+            cast("WithStrawberryObjectDefinition", value),
             queryset.annotate(
                 count=Count(f"{prefix}types__id"),
                 count_nulls=Case(
@@ -91,7 +91,7 @@ class FruitFilter:
     @strawberry_django.filter_field
     def filter(self, info, queryset: QuerySet, prefix):
         return process_filters(
-            cast(WithStrawberryObjectDefinition, self),
+            cast("WithStrawberryObjectDefinition", self),
             queryset.filter(~Q(**{f"{prefix}name": "DARK_BERRY"})),
             info,
             prefix,
@@ -428,7 +428,7 @@ def test_empty_resolver_filter():
             queryset = models.Fruit.objects.none()
             _info: Any = object()
             return cast(
-                list[Fruit], strawberry_django.filters.apply(filters, queryset, _info)
+                "list[Fruit]", strawberry_django.filters.apply(filters, queryset, _info)
             )
 
     query = utils.generate_query(Query)
@@ -450,7 +450,7 @@ async def test_async_resolver_filter(fruits):
             _info: Any = object()
             queryset = strawberry_django.filters.apply(filters, queryset, _info)
             # cast fixes funny typing issue between list and List
-            return cast(list[Fruit], [fruit async for fruit in queryset])
+            return cast("list[Fruit]", [fruit async for fruit in queryset])
 
     query = utils.generate_query(Query)
     result = await query(  # type: ignore

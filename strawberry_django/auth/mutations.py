@@ -77,7 +77,7 @@ def resolve_logout(info: Info) -> bool:
 
 class DjangoRegisterMutation(DjangoCreateMutation):
     def create(self, data: dict[str, Any], *, info: Info):
-        model = cast(type["AbstractBaseUser"], self.django_model)
+        model = cast("type[AbstractBaseUser]", self.django_model)
         assert model is not None
 
         password = data.pop("password")
