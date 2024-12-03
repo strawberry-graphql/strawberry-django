@@ -146,7 +146,7 @@ Some things to note here:
 - Take note that inputs using `partial` will _not_ automatically mark non-auto fields optional
   and instead will respect explicit type annotations;
   see [partial input types](./types.md#input-types) documentation for examples.
-- It's also possible to update or delete model by using unique identifier other than id by providing `key_attr` property :
+- It's also possible to update or delete a model by using a unique identifier other than `id` by passing a `key_attr` argument:
 
 ```python
 @strawberry_django.partial(SomeModel)
