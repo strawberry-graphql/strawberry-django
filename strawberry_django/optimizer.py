@@ -1193,6 +1193,10 @@ def _get_model_hints_from_paginated(
     store = None
 
     n_type = object_definition.type_var_map.get("NodeType")
+
+    if isinstance(n_type, LazyType):
+        n_type = n_type.resolve_type()
+
     n_definition = get_object_definition(n_type, strict=True)
     n_gql_definition = _get_gql_definition(
         schema,
