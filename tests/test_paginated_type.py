@@ -1,10 +1,12 @@
 import textwrap
+from typing import Annotated
 
 import pytest
 import strawberry
 from django.db.models import QuerySet
 
 import strawberry_django
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated, OffsetPaginationInput
 from tests import models
 
@@ -191,6 +193,75 @@ async def test_pagination_query_async():
         "fruits": {
             "totalCount": 3,
             "results": [{"name": "Banana"}],
+        }
+    }
+
+
+@strawberry_django.type(models.Fruit)
+class FruitLazyTest:
+    id: int
+    name: str
+
+
+@strawberry_django.type(models.Color)
+class ColorLazyTest:
+    id: int
+    name: str
+    fruits: OffsetPaginated[
+        Annotated["FruitLazyTest", strawberry.lazy("tests.test_paginated_type")]
+    ] = strawberry_django.offset_paginated()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_pagination_with_lazy_type_and_django_query_optimizer():
+    @strawberry.type
+    class Query:
+        colors: OffsetPaginated[ColorLazyTest] = strawberry_django.offset_paginated()
+
+    red = models.Color.objects.create(name="Red")
+    yellow = models.Color.objects.create(name="Yellow")
+
+    models.Fruit.objects.create(name="Apple", color=red)
+    models.Fruit.objects.create(name="Banana", color=yellow)
+    models.Fruit.objects.create(name="Strawberry", color=red)
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    query = """\
+    query GetColors ($pagination: OffsetPaginationInput) {
+      colors {
+        totalCount
+        results {
+          fruits (pagination: $pagination) {
+            totalCount
+            results {
+              name
+            }
+          }
+        }
+      }
+    }
+    """
+
+    res = schema.execute_sync(query)
+    assert res.errors is None
+    assert res.data == {
+        "colors": {
+            "totalCount": 2,
+            "results": [
+                {
+                    "fruits": {
+                        "totalCount": 2,
+                        "results": [{"name": "Apple"}, {"name": "Strawberry"}],
+                    }
+                },
+                {
+                    "fruits": {
+                        "totalCount": 1,
+                        "results": [{"name": "Banana"}],
+                    }
+                },
+            ],
         }
     }
 
