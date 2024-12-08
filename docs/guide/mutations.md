@@ -184,3 +184,20 @@ class Mutation:
 
 schema = strawberry.Schema(mutation=Mutation)
 ```
+
+## Batching
+
+If you need to make multiple creates, updates, or deletes as part of one atomic mutation you can use batching. Batching has a similar syntax except that the mutations take and return a list.
+
+```python title="schema.py"
+import strawberry
+from strawberry_django import mutations
+
+@strawberry.type
+class Mutation:
+    createFruits: list[Fruit] = mutations.create(list[FruitPartialInput])
+    updateFruits: list[Fruit] = mutations.update(list[FruitPartialInput])
+    deleteFruits: list[Fruit] = mutations.delete(list[FruitPartialInput])
+
+schema = strawberry.Schema(mutation=Mutation)
+```
