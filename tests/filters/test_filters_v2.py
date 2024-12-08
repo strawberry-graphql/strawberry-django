@@ -21,6 +21,7 @@ from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.fields.filter_order import (
     FilterOrderField,
     FilterOrderFieldResolver,
+    filter_field,
 )
 from strawberry_django.filters import process_filters, resolve_value
 from tests import models, utils
@@ -55,8 +56,8 @@ class FruitFilter:
     color_id: auto
     name: auto
     sweetness: auto
-    color: Optional[ColorFilter]
     types: Optional[FruitTypeFilter]
+    color: Optional[ColorFilter] = filter_field(filter_none=True)
 
     @strawberry_django.filter_field
     def types_number(
@@ -418,6 +419,26 @@ def test_filter_distinct(query, db, fruits):
     """)
     assert not result.errors
     assert len(result.data["fruits"]) == 1
+
+
+def test_filter_none(query, db):
+    yellow = models.Color.objects.create(name="yellow")
+    models.Fruit.objects.create(name="banana", color=yellow)
+
+    f1 = models.Fruit.objects.create(name="unknown")
+    f2 = models.Fruit.objects.create(name="unknown2")
+
+    result = query("""
+    {
+        fruits(filters: {color: null}) { id }
+    }
+    """)
+
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": str(f1.id)},
+        {"id": str(f2.id)},
+    ]
 
 
 def test_empty_resolver_filter():
