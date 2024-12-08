@@ -9,7 +9,7 @@ title: Frequently Asked Questions
 The request object is accessible via the `get_request` method.
 
 ```python
-from strawberry_django.auth.utils import get_request
+from strawberry_django.utils.requests import get_request
 
 def resolver(root, info: Info):
     request = get_request(info)
@@ -20,7 +20,7 @@ def resolver(root, info: Info):
 The current user object is accessible via the `get_current_user` method.
 
 ```python
-from strawberry_django.auth.queries import get_current_user
+from strawberry_django.auth.utils import get_current_user
 
 def resolver(root, info: Info):
     current_user = get_current_user(info)
