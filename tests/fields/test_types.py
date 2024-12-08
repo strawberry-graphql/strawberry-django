@@ -295,7 +295,7 @@ def test_related_fields():
 
     object_definition = get_object_definition(Type, strict=True)
     assert [
-        (f.name, f.type, cast(StrawberryDjangoField, f).is_list)
+        (f.name, f.type, cast("StrawberryDjangoField", f).is_list)
         for f in object_definition.fields
     ] == [
         ("foreign_key", strawberry_django.DjangoModelType, False),
@@ -390,7 +390,7 @@ def test_geos_fields():
 
     object_definition = get_object_definition(GeoFieldType, strict=True)
     assert [
-        (f.name, cast(StrawberryOptional, f.type).of_type)
+        (f.name, cast("StrawberryOptional", f.type).of_type)
         for f in object_definition.fields
     ] == [
         ("point", types.Point),
@@ -467,7 +467,7 @@ def test_inherit_partial_input():
 
     object_definition = get_object_definition(PartialInput, strict=True)
     assert [
-        (f.name, f.type, cast(StrawberryDjangoField, f).is_optional)
+        (f.name, f.type, cast("StrawberryDjangoField", f).is_optional)
         for f in object_definition.fields
     ] == [
         ("char", StrawberryOptional(str), True),

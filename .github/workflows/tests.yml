@@ -34,7 +34,7 @@ jobs:
       - id: venv
         run: echo "python-path=$(poetry env info --path)/bin/python3" >> "$GITHUB_OUTPUT"
       - name: Check for pyright errors
-        uses: jakebailey/pyright-action@v1
+        uses: jakebailey/pyright-action@v2
         with:
           python-path: ${{ steps.venv.outputs.python-path }}
   tests:
@@ -46,18 +46,18 @@ jobs:
           - 4.2.*
           - 5.0.*
         python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
+          - '3.9'
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         mode:
           - std
           - geos
         exclude:
           # Django 5.0 only supports python 3.10+
           - django-version: 5.0.*
-            python-version: "3.9"
+            python-version: '3.9'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,6 +81,6 @@ jobs:
       - name: Test with pytest
         run: poetry run pytest --showlocals -vvv --cov-report=xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

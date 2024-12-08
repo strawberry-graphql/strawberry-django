@@ -51,7 +51,7 @@ class Mutation:
     def update_lazy_fruit(self, info, data: FruitPartialInput) -> Fruit:
         fruit = SimpleLazyObject(models.Fruit.objects.get)
         return cast(
-            Fruit,
+            "Fruit",
             resolvers.update(
                 info,
                 fruit,
@@ -64,7 +64,7 @@ class Mutation:
     def delete_lazy_fruit(self, info) -> Fruit:
         fruit = SimpleLazyObject(models.Fruit.objects.get)
         return cast(
-            Fruit,
+            "Fruit",
             resolvers.delete(
                 info,
                 fruit,

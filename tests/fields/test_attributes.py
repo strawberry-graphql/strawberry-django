@@ -1,5 +1,5 @@
 import textwrap
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import strawberry
 from django.db import models
@@ -8,8 +8,10 @@ from strawberry import BasePermission, auto, relay
 from strawberry.types import get_object_definition
 
 import strawberry_django
-from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.settings import strawberry_django_settings
+
+if TYPE_CHECKING:
+    from strawberry_django.fields.field import StrawberryDjangoField
 
 _global_id_desc = (
     "The `ID` scalar type represents a unique identifier, "
@@ -32,7 +34,7 @@ def test_default_django_name():
         field2: auto = strawberry_django.field(field_name="field")
 
     assert [
-        (f.name, cast(StrawberryDjangoField, f).django_name)
+        (f.name, cast("StrawberryDjangoField", f).django_name)
         for f in get_object_definition(Type, strict=True).fields
     ] == [
         ("field", "field"),

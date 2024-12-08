@@ -130,7 +130,7 @@ def test_interface_query(db, gql_client: GraphQLTestClient):
     assert isinstance(res.data, dict)
     assert isinstance(res.data["node"], dict)
     assert {
-        frozenset(d.items()) for d in cast(list, res.data["node"].pop("tags"))
+        frozenset(d.items()) for d in cast("list", res.data["node"].pop("tags"))
     } == frozenset(
         {
             frozenset(
@@ -498,7 +498,7 @@ def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
                 res = gql_client.query(
                     query,
                     {"node_id": e["id"]},
-                    asserts_errors=False,
+                    assert_no_errors=False,
                 )
                 assert res.errors
 
@@ -828,7 +828,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
             res = gql_client.query(
                 query,
                 {"node_id": e["id"]},
-                asserts_errors=False,
+                assert_no_errors=False,
             )
             assert res.errors
 
@@ -890,7 +890,7 @@ def test_query_annotate_with_callable(db, gql_client: GraphQLTestClient):
                 res = gql_client.query(
                     query,
                     {"node_id": e["id"]},
-                    asserts_errors=False,
+                    assert_no_errors=False,
                 )
                 assert res.errors
 

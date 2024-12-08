@@ -68,7 +68,7 @@ class FruitFilter:
         value: filter_types.ComparisonFilterLookup[int],
     ):
         return process_filters(
-            cast(WithStrawberryObjectDefinition, value),
+            cast("WithStrawberryObjectDefinition", value),
             queryset.annotate(
                 count=Count(f"{prefix}types__id"),
                 count_nulls=Case(
@@ -92,7 +92,7 @@ class FruitFilter:
     @strawberry_django.filter_field
     def filter(self, info, queryset: QuerySet, prefix):
         return process_filters(
-            cast(WithStrawberryObjectDefinition, self),
+            cast("WithStrawberryObjectDefinition", self),
             queryset.filter(~Q(**{f"{prefix}name": "DARK_BERRY"})),
             info,
             prefix,
@@ -241,19 +241,19 @@ def test_filter_field_method():
     class Filter:
         @strawberry_django.order_field
         def custom_filter(self, root, info, prefix, value: auto, queryset):
-            assert self == _filter, "Unexpected self passed"
-            assert root == _filter, "Unexpected root passed"
-            assert info == _info, "Unexpected info passed"
+            assert self == filter_, "Unexpected self passed"
+            assert root == filter_, "Unexpected root passed"
+            assert info == fake_info, "Unexpected info passed"
             assert prefix == "ROOT", "Unexpected prefix passed"
             assert value == "SOMETHING", "Unexpected value passed"
-            assert queryset == _queryset, "Unexpected queryset passed"
+            assert queryset == qs, "Unexpected queryset passed"
             return Q(name=1)
 
-    _filter: Any = Filter(custom_filter="SOMETHING")  # type: ignore
-    _info: Any = object()
-    _queryset: Any = object()
+    filter_: Any = Filter(custom_filter="SOMETHING")  # type: ignore
+    fake_info: Any = object()
+    qs: Any = object()
 
-    q_object = process_filters(_filter, _queryset, _info, prefix="ROOT")[1]
+    q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
     assert q_object, "Filter was not called"
 
 
@@ -266,18 +266,18 @@ def test_filter_object_method():
 
         @strawberry_django.filter_field
         def filter(self, root, info, prefix, queryset):
-            assert self == _filter, "Unexpected self passed"
-            assert root == _filter, "Unexpected root passed"
-            assert info == _info, "Unexpected info passed"
+            assert self == filter_, "Unexpected self passed"
+            assert root == filter_, "Unexpected root passed"
+            assert info == fake_info, "Unexpected info passed"
             assert prefix == "ROOT", "Unexpected prefix passed"
-            assert queryset == _queryset, "Unexpected queryset passed"
+            assert queryset == qs, "Unexpected queryset passed"
             return queryset, Q(name=1)
 
-    _filter: Any = Filter()
-    _info: Any = object()
-    _queryset: Any = object()
+    filter_: Any = Filter()
+    fake_info: Any = object()
+    qs: Any = object()
 
-    q_object = process_filters(_filter, _queryset, _info, prefix="ROOT")[1]
+    q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
     assert q_object, "Filter was not called"
 
 
@@ -287,13 +287,13 @@ def test_filter_value_resolution():
         id: Optional[strawberry_django.ComparisonFilterLookup[GlobalID]]
 
     gid = GlobalID("FruitNode", "125")
-    _filter: Any = Filter(
+    filter_: Any = Filter(
         id=strawberry_django.ComparisonFilterLookup(
             exact=gid, range=strawberry_django.RangeLookup(start=gid, end=gid)
         )
     )
-    _object: Any = object()
-    q = process_filters(_filter, _object, _object)[1]
+    object_: Any = object()
+    q = process_filters(filter_, object_, object_)[1]
     assert q == Q(id__exact="125", id__range=["125", "125"])
 
 
@@ -311,9 +311,9 @@ def test_filter_method_value_resolution():
             return Q()
 
     gid = GlobalID("FruitNode", "125")
-    _filter: Any = Filter(field_filter_resolved=gid, field_filter_skip_resolved=gid)  # type: ignore
-    _object: Any = object()
-    process_filters(_filter, _object, _object)
+    filter_: Any = Filter(field_filter_resolved=gid, field_filter_skip_resolved=gid)  # type: ignore
+    object_: Any = object()
+    process_filters(filter_, object_, object_)
 
 
 def test_filter_type():
@@ -447,9 +447,9 @@ def test_empty_resolver_filter():
         @strawberry.field
         def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.none()
-            _info: Any = object()
+            info: Any = object()
             return cast(
-                list[Fruit], strawberry_django.filters.apply(filters, queryset, _info)
+                "list[Fruit]", strawberry_django.filters.apply(filters, queryset, info)
             )
 
     query = utils.generate_query(Query)
@@ -468,10 +468,10 @@ async def test_async_resolver_filter(fruits):
         @strawberry.field
         async def fruits(self, filters: FruitFilter) -> list[Fruit]:
             queryset = models.Fruit.objects.all()
-            _info: Any = object()
-            queryset = strawberry_django.filters.apply(filters, queryset, _info)
+            info: Any = object()
+            queryset = strawberry_django.filters.apply(filters, queryset, info)
             # cast fixes funny typing issue between list and List
-            return cast(list[Fruit], [fruit async for fruit in queryset])
+            return cast("list[Fruit]", [fruit async for fruit in queryset])
 
     query = utils.generate_query(Query)
     result = await query(  # type: ignore

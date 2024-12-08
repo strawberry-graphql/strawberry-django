@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 import strawberry
 from django.db import models
@@ -10,7 +10,9 @@ from strawberry.types.base import (
 )
 
 import strawberry_django
-from strawberry_django.fields.field import StrawberryDjangoField
+
+if TYPE_CHECKING:
+    from strawberry_django.fields.field import StrawberryDjangoField
 
 
 class ParentModel(models.Model):
@@ -57,7 +59,7 @@ class Child:
 
 def test_relation():
     assert [
-        (f.name, f.type, cast(StrawberryDjangoField, f).is_list)
+        (f.name, f.type, cast("StrawberryDjangoField", f).is_list)
         for f in get_object_definition(Parent, strict=True).fields
     ] == [
         ("id", strawberry.ID, False),
@@ -69,7 +71,7 @@ def test_relation():
 
 def test_reversed_relation():
     assert [
-        (f.name, f.type, cast(StrawberryDjangoField, f).is_list)
+        (f.name, f.type, cast("StrawberryDjangoField", f).is_list)
         for f in get_object_definition(Child, strict=True).fields
     ] == [
         ("id", strawberry.ID, False),

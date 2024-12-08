@@ -91,7 +91,7 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
                     stacklevel=2,
                 )
             else:
-                conn = cast(Self, conn)
+                conn = cast("Self", conn)
                 conn.nodes = nodes
                 return conn
 
@@ -114,7 +114,7 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
 
             return wrapper()
 
-        conn = cast(Self, conn)
+        conn = cast("Self", conn)
         conn.nodes = nodes
         return conn
 
@@ -147,7 +147,7 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
         while isinstance(field, StrawberryContainer):
             field = field.of_type
 
-        edge_class = cast(relay.Edge[relay.NodeType], field)
+        edge_class = cast("relay.Edge[relay.NodeType]", field)
 
         edges: list[relay.Edge] = [
             edge_class.resolve_edge(
@@ -302,12 +302,12 @@ def resolve_model_nodes(
     else:
         origin = source
         django_type = get_django_definition(source, strict=True)
-        source = cast(type[_M], django_type.model)
+        source = cast("type[_M]", django_type.model)
 
-    qs = cast(models.QuerySet[_M], source._default_manager.all())
+    qs = cast("models.QuerySet[_M]", source._default_manager.all())
     qs = run_type_get_queryset(qs, origin, info)
 
-    id_attr = cast(relay.Node, origin).resolve_id_attr()
+    id_attr = cast("relay.Node", origin).resolve_id_attr()
     if node_ids is not None:
         qs = qs.filter(
             **{
@@ -334,7 +334,7 @@ def resolve_model_nodes(
             qs = ext.optimize(qs, info=info)
 
     retval = cast(
-        AwaitableOrValue[models.QuerySet[_M]],
+        "AwaitableOrValue[models.QuerySet[_M]]",
         django_resolver(lambda _qs: _qs, **extra_args)(qs),
     )
     if not node_ids:
@@ -429,12 +429,12 @@ def resolve_model_node(
     else:
         origin = source
         django_type = get_django_definition(source, strict=True)
-        source = cast(type[models.Model], django_type.model)
+        source = cast("type[models.Model]", django_type.model)
 
     if isinstance(node_id, relay.GlobalID):
         node_id = node_id.node_id
 
-    id_attr = cast(relay.Node, origin).resolve_id_attr()
+    id_attr = cast("relay.Node", origin).resolve_id_attr()
     qs = source._default_manager.all()
     qs = run_type_get_queryset(qs, origin, info)
 
@@ -497,7 +497,7 @@ def resolve_model_id(
         The resolved object id
 
     """
-    id_attr = cast(relay.Node, source).resolve_id_attr()
+    id_attr = cast("relay.Node", source).resolve_id_attr()
 
     assert isinstance(root, models.Model)
     if id_attr == "pk":

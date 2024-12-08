@@ -54,7 +54,7 @@ pytest-django = "^4.1.0"
 pytest-mock = "^3.5.1"
 pytest-snapshot = "^0.9.0"
 pytest-watch = "^4.2.0"
-ruff = "^0.7.3"
+ruff = "^0.8.2"
 django-polymorphic = "^3.1.0"
 setuptools = "^75.1.0"
 psycopg2 = "^2.9.9"
@@ -132,6 +132,7 @@ extend-ignore = [
     "TRY003",
     "PLR6301",
     "PLC0415",
+    "TCH002",
     # ruff formatter recommends to disable those
     "COM812",
     "COM819",

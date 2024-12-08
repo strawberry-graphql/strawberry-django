@@ -37,7 +37,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.extensions.field_extension import FieldExtension
 from strawberry.types.field import _RESOLVER_TYPE  # noqa: PLC2701
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.types.info import Info  # noqa: TCH002
+from strawberry.types.info import Info
 from strawberry.utils.await_maybe import await_maybe
 from typing_extensions import TypeAlias
 
@@ -376,7 +376,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     # If this is a nested field, call get_result instead because we want
                     # to retrieve the queryset from its RelatedManager
                     retval = cast(
-                        models.QuerySet,
+                        "models.QuerySet",
                         getattr(root, field.django_name or field.python_name).all(),
                     )
                 else:
@@ -394,7 +394,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                         required=True,
                     )
 
-                return cast(Iterable[Any], retval)
+                return cast("Iterable[Any]", retval)
 
             default_resolver.can_optimize = True  # type: ignore
 
@@ -415,7 +415,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
         **kwargs: Any,
     ) -> Any:
         assert self.connection_type is not None
-        nodes = cast(Iterable[relay.Node], next_(source, info, **kwargs))
+        nodes = cast("Iterable[relay.Node]", next_(source, info, **kwargs))
 
         # We have a single resolver for both sync and async, so we need to check if
         # nodes is awaitable or not and resolve it accordingly
@@ -457,7 +457,7 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             )
 
         field.arguments = _get_field_arguments_for_extensions(field)
-        self.paginated_type = cast(type[OffsetPaginated], field.type)
+        self.paginated_type = cast("type[OffsetPaginated]", field.type)
 
     def resolve(
         self,
@@ -471,10 +471,10 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
         **kwargs: Any,
     ) -> Any:
         assert self.paginated_type is not None
-        queryset = cast(models.QuerySet, next_(source, info, **kwargs))
+        queryset = cast("models.QuerySet", next_(source, info, **kwargs))
 
         def get_queryset(queryset):
-            return cast(StrawberryDjangoField, info._field).get_queryset(
+            return cast("StrawberryDjangoField", info._field).get_queryset(
                 queryset,
                 info,
                 pagination=pagination,
@@ -620,7 +620,7 @@ def field(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: bool | None = None,
 ) -> Any:
     """Annotate a method or property as a Django GraphQL field.
 
@@ -690,7 +690,7 @@ def node(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: bool | None = None,
 ) -> Any:
     """Annotate a property to create a relay query field.
 
@@ -812,7 +812,7 @@ def connection(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: bool | None = None,
 ) -> Any:
     """Annotate a property or a method to create a relay connection field.
 
@@ -993,7 +993,7 @@ def offset_paginated(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: bool | None = None,
 ) -> Any:
     """Annotate a property or a method to create a relay connection field.
 

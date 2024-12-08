@@ -35,7 +35,7 @@ def test_is_authenticated(db, gql_client: GraphQLTestClient):
     res = gql_client.query(
         query,
         {"id": to_base64("IssueType", issue.pk)},
-        asserts_errors=False,
+        assert_no_errors=False,
     )
     assert res.data is None
     assert res.errors == [
@@ -98,7 +98,7 @@ def test_staff_required(db, gql_client: GraphQLTestClient):
     res = gql_client.query(
         query,
         {"id": to_base64("IssueType", issue.pk)},
-        asserts_errors=False,
+        assert_no_errors=False,
     )
     assert res.data is None
     assert res.errors == [
@@ -177,7 +177,7 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
     res = gql_client.query(
         query,
         {"id": to_base64("IssueType", issue.pk)},
-        asserts_errors=False,
+        assert_no_errors=False,
     )
     assert res.data is None
     assert res.errors == [
@@ -193,7 +193,7 @@ def test_superuser_required(db, gql_client: GraphQLTestClient):
         res = gql_client.query(
             query,
             {"id": to_base64("IssueType", issue.pk)},
-            asserts_errors=False,
+            assert_no_errors=False,
         )
         assert res.data is None
         assert res.errors == [
@@ -228,7 +228,7 @@ def test_async_user_resolve(db, gql_client: GraphQLTestClient):
     with gql_client.login(user):
         res = gql_client.query(
             query,
-            asserts_errors=False,
+            assert_no_errors=False,
         )
         assert res.data is None
         assert res.errors == [
@@ -342,7 +342,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
     res = gql_client.query(
         query,
         {"id": to_base64("IssueType", issue.pk)},
-        asserts_errors=False,
+        assert_no_errors=False,
     )
     assert res.data is None
     assert res.errors == [
@@ -358,7 +358,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
         res = gql_client.query(
             query,
             {"id": to_base64("IssueType", issue.pk)},
-            asserts_errors=False,
+            assert_no_errors=False,
         )
         assert res.data is None
         assert res.errors == [
@@ -579,7 +579,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
         res = gql_client.query(
             query,
             {"id": to_base64("IssueType", issue.pk)},
-            asserts_errors=False,
+            assert_no_errors=False,
         )
         assert res.data is None
         assert res.errors == [
@@ -599,7 +599,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
             res = gql_client.query(
                 query,
                 {"id": to_base64("IssueType", issue_no_perm.pk)},
-                asserts_errors=False,
+                assert_no_errors=False,
             )
             assert res.data is None
             assert res.errors == [
@@ -658,7 +658,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
         res = gql_client.query(
             query,
             {"id": to_base64("IssueType", issue.pk)},
-            asserts_errors=False,
+            assert_no_errors=False,
         )
         assert res.data is None
         assert res.errors == [
@@ -673,7 +673,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
             res = gql_client.query(
                 query,
                 {"id": to_base64("IssueType", issue.pk)},
-                asserts_errors=False,
+                assert_no_errors=False,
             )
             assert res.data is None
             assert res.errors == [

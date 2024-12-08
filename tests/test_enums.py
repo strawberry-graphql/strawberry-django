@@ -101,7 +101,7 @@ def test_choices_field():
         @strawberry_django.field
         def obj(self) -> ChoicesType:
             return cast(
-                ChoicesType,
+                "ChoicesType",
                 ChoicesModel(
                     attr1=Choice.A,
                     attr2=IntegerChoice.X,
@@ -183,7 +183,7 @@ def test_no_choices_enum(mocker: MockerFixture):
         @strawberry_django.field
         def obj(self) -> ChoicesType:
             return cast(
-                ChoicesType,
+                "ChoicesType",
                 ChoicesModel(
                     attr1=Choice.A,
                     attr2=IntegerChoice.X,
@@ -249,7 +249,7 @@ def test_generate_choices_from_enum():
         @strawberry_django.field
         def obj(self) -> ChoicesType:
             return cast(
-                ChoicesType,
+                "ChoicesType",
                 ChoicesModel(
                     attr1=Choice.A,
                     attr2=IntegerChoice.X,
@@ -356,7 +356,7 @@ def test_generate_choices_from_enum_with_extra_fields():
         @strawberry_django.field
         def obj(self) -> ChoicesWithExtraFieldsType:
             return cast(
-                ChoicesWithExtraFieldsType,
+                "ChoicesWithExtraFieldsType",
                 ChoicesWithExtraFieldsModel(
                     attr1=Choice.A,
                     attr2=IntegerChoice.X,

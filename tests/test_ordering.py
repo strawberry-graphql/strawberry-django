@@ -316,24 +316,24 @@ def test_order_field_method():
     class Order:
         @strawberry_django.order_field
         def custom_order(self, root, info, prefix, value: auto, sequence, queryset):
-            assert self == _order, "Unexpected self passed"
-            assert root == _order, "Unexpected root passed"
-            assert info == _info, "Unexpected info passed"
+            assert self == order, "Unexpected self passed"
+            assert root == order, "Unexpected root passed"
+            assert info == fake_info, "Unexpected info passed"
             assert prefix == "ROOT", "Unexpected prefix passed"
             assert value == Ordering.ASC, "Unexpected value passed"
-            assert sequence == _sequence_inner, "Unexpected sequence passed"
-            assert queryset == _queryset, "Unexpected queryset passed"
+            assert sequence == sequence_inner, "Unexpected sequence passed"
+            assert queryset == qs, "Unexpected queryset passed"
             raise Exception("WAS CALLED")
 
-    _order = cast(WithStrawberryObjectDefinition, Order(custom_order=Ordering.ASC))  # type: ignore
+    order = cast("WithStrawberryObjectDefinition", Order(custom_order=Ordering.ASC))  # type: ignore
     schema = strawberry.Schema(query=Query)
-    _info: Any = type("FakeInfo", (), {"schema": schema})
-    _queryset: Any = object()
-    _sequence_inner: Any = object()
-    _sequence = {"customOrder": OrderSequence(0, children=_sequence_inner)}
+    fake_info: Any = type("FakeInfo", (), {"schema": schema})
+    qs: Any = object()
+    sequence_inner: Any = object()
+    sequence = {"customOrder": OrderSequence(0, children=sequence_inner)}
 
     with pytest.raises(Exception, match="WAS CALLED"):
-        process_order(_order, _info, _queryset, prefix="ROOT", sequence=_sequence)
+        process_order(order, fake_info, qs, prefix="ROOT", sequence=sequence)
 
 
 def test_order_method_not_called_when_not_decorated(mocker: MockFixture):
@@ -345,7 +345,7 @@ def test_order_method_not_called_when_not_decorated(mocker: MockFixture):
     mock_order_method = mocker.spy(Order, "order")
 
     process_order(
-        cast(WithStrawberryObjectDefinition, Order()), mock.Mock(), mock.Mock()
+        cast("WithStrawberryObjectDefinition", Order()), mock.Mock(), mock.Mock()
     )
 
     mock_order_method.assert_not_called()
@@ -359,7 +359,7 @@ def test_order_field_not_called(mocker: MockFixture):
     # Calling this and no error being raised is the test, as the wrong behavior would
     # be for the field to be called like a method
     process_order(
-        cast(WithStrawberryObjectDefinition, Order()), mock.Mock(), mock.Mock()
+        cast("WithStrawberryObjectDefinition", Order()), mock.Mock(), mock.Mock()
     )
 
 
@@ -368,23 +368,21 @@ def test_order_object_method():
     class Order:
         @strawberry_django.order_field
         def order(self, root, info, prefix, sequence, queryset):
-            assert self == _order, "Unexpected self passed"
-            assert root == _order, "Unexpected root passed"
-            assert info == _info, "Unexpected info passed"
+            assert self == order_, "Unexpected self passed"
+            assert root == order_, "Unexpected root passed"
+            assert info == fake_info, "Unexpected info passed"
             assert prefix == "ROOT", "Unexpected prefix passed"
-            assert sequence == _sequence, "Unexpected sequence passed"
-            assert queryset == _queryset, "Unexpected queryset passed"
+            assert sequence == sequence_, "Unexpected sequence passed"
+            assert queryset == qs, "Unexpected queryset passed"
             return queryset, ["name"]
 
-    _order = cast(WithStrawberryObjectDefinition, Order())
+    order_ = cast("WithStrawberryObjectDefinition", Order())
     schema = strawberry.Schema(query=Query)
-    _info: Any = type("FakeInfo", (), {"schema": schema})
-    _queryset: Any = object()
-    _sequence: Any = {"customOrder": OrderSequence(0)}
+    fake_info: Any = type("FakeInfo", (), {"schema": schema})
+    qs: Any = object()
+    sequence_: Any = {"customOrder": OrderSequence(0)}
 
-    order = process_order(_order, _info, _queryset, prefix="ROOT", sequence=_sequence)[
-        1
-    ]
+    order = process_order(order_, fake_info, qs, prefix="ROOT", sequence=sequence_)[1]
     assert "name" in order, "order was not called"
 
 

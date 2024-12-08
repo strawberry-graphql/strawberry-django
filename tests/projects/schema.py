@@ -52,7 +52,7 @@ from .models import (
     Tag,
 )
 
-UserModel = cast(type[AbstractUser], get_user_model())
+UserModel = cast("type[AbstractUser]", get_user_model())
 
 
 @strawberry_django.interface(NamedModel)
@@ -481,7 +481,7 @@ class Query:
         if not user.is_authenticated:
             return None
 
-        return cast(UserType, user)
+        return cast("UserType", user)
 
     @strawberry_django.connection(ProjectConnection)
     def project_conn_with_resolver(self, root: str, name: str) -> Iterable[Project]:
@@ -564,7 +564,7 @@ class Mutation:
         project.save()
 
         return cast(
-            ProjectType,
+            "ProjectType",
             project,
         )
 
@@ -576,7 +576,7 @@ class Mutation:
         full_clean_options: bool = False,
     ) -> QuizType:
         return cast(
-            QuizType,
+            "QuizType",
             resolvers.create(
                 info,
                 Quiz,

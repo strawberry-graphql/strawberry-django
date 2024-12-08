@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractUser, Group
 from .models import Favorite, Issue, Milestone, Project, Tag
 
 _T = TypeVar("_T")
-User = cast(type[AbstractUser], get_user_model())
+User = cast("type[AbstractUser]", get_user_model())
 
 
 class _BaseFactory(factory.django.DjangoModelFactory, Generic[_T]):

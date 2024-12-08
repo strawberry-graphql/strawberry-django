@@ -36,7 +36,7 @@ class DjangoCacheBase(SchemaExtension):
         *,
         execution_context: Optional[ExecutionContext] = None,
     ):
-        super().__init__(execution_context=cast(ExecutionContext, execution_context))
+        super().__init__(execution_context=cast("ExecutionContext", execution_context))
 
         self.cache = caches[cache_name]
         self.timeout = timeout or DEFAULT_TIMEOUT
@@ -44,7 +44,7 @@ class DjangoCacheBase(SchemaExtension):
         self.hash_fn = hash_fn or (lambda args, kwargs: _make_key(args, kwargs, False))
 
     def execute_cached(self, func, *args, **kwargs):
-        hash_key = cast(str, self.hash_fn(args, kwargs))
+        hash_key = cast("str", self.hash_fn(args, kwargs))
         cache_result = self.cache.get(hash_key)
         if cache_result is not None:
             return cache_result

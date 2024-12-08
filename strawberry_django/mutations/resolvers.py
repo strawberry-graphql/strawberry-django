@@ -161,7 +161,9 @@ def parse_input(
         return data.resolve_node_sync(info, required=True)
 
     if isinstance(data, NodeInput):
-        pk = cast(Any, parse_input(info, getattr(data, "id", UNSET), key_attr=key_attr))
+        pk = cast(
+            "Any", parse_input(info, getattr(data, "id", UNSET), key_attr=key_attr)
+        )
         parsed = {}
         for field in dataclasses.fields(data):
             if field.name == "id":
@@ -172,7 +174,7 @@ def parse_input(
 
         return ParsedObject(
             pk=pk,
-            data=parsed if len(parsed) else None,
+            data=parsed or None,
         )
 
     if isinstance(data, (OneToOneInput, OneToManyInput)):
@@ -190,13 +192,14 @@ def parse_input(
 
         return ParsedObjectList(
             add=cast(
-                list[InputListTypes], parse_input(info, data.add, key_attr=key_attr)
+                "list[InputListTypes]", parse_input(info, data.add, key_attr=key_attr)
             ),
             remove=cast(
-                list[InputListTypes], parse_input(info, data.remove, key_attr=key_attr)
+                "list[InputListTypes]",
+                parse_input(info, data.remove, key_attr=key_attr),
             ),
             set=cast(
-                list[InputListTypes], parse_input(info, data.set, key_attr=key_attr)
+                "list[InputListTypes]", parse_input(info, data.set, key_attr=key_attr)
             ),
         )
 
@@ -263,7 +266,7 @@ def prepare_create_update(
         ):
             value, value_data = _parse_data(  # noqa: PLW2901
                 info,
-                cast(type[Model], field.related_model),
+                cast("type[Model]", field.related_model),
                 value,
                 key_attr=key_attr,
             )
@@ -418,7 +421,7 @@ def update(
     # Unwrap lazy objects since they have a proxy __iter__ method that will make
     # them iterables even if the wrapped object isn't
     if isinstance(instance, LazyObject):
-        instance = cast(_M, instance.__reduce__()[1][0])
+        instance = cast("_M", instance.__reduce__()[1][0])
 
     if isinstance(instance, Iterable):
         instances = list(instance)
@@ -482,7 +485,7 @@ def delete(info: Info, instance: _M | Iterable[_M], *, data=None) -> _M | list[_
     # Unwrap lazy objects since they have a proxy __iter__ method that will make
     # them iterables even if the wrapped object isn't
     if isinstance(instance, LazyObject):
-        instance = cast(_M, instance.__reduce__()[1][0])
+        instance = cast("_M", instance.__reduce__()[1][0])
 
     if isinstance(instance, Iterable):
         many = True
@@ -511,7 +514,7 @@ def update_field(info: Info, instance: Model, field: models.Field, value: Any):
         and isinstance(field, models.ForeignObject)
         and not isinstance(value, Model)
     ):
-        value, data = _parse_pk(value, cast(type[Model], field.related_model))
+        value, data = _parse_pk(value, cast("type[Model]", field.related_model))
 
     field.save_form_data(instance, value)
     # If data was passed to the foreign key, update it recursively
@@ -578,7 +581,7 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
             obj, data = _parse_data(
-                info, cast(type[Model], manager.model), v, key_attr=key_attr
+                info, cast("type[Model]", manager.model), v, key_attr=key_attr
             )
             if obj:
                 data.pop(key_attr, None)
@@ -639,7 +642,7 @@ def update_m2m(
         for v in value.add or []:
             obj, data = _parse_data(
                 info,
-                cast(type[Model], manager.model),
+                cast("type[Model]", manager.model),
                 v,
                 key_attr=key_attr,
             )
@@ -664,7 +667,7 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
             obj, data = _parse_data(
-                info, cast(type[Model], manager.model), v, key_attr=key_attr
+                info, cast("type[Model]", manager.model), v, key_attr=key_attr
             )
             data.pop(key_attr, None)
             assert not data

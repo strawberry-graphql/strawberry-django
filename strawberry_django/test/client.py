@@ -1,7 +1,6 @@
 import contextlib
 import warnings
-from collections.abc import Awaitable
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -9,6 +8,9 @@ from django.test.client import AsyncClient, Client  # type: ignore
 from strawberry.test import BaseGraphQLTestClient
 from strawberry.test.client import Response
 from typing_extensions import override
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
 
 
 class TestClient(BaseGraphQLTestClient):
@@ -64,7 +66,7 @@ class AsyncTestClient(TestClient):
     ) -> Response:
         body = self._build_body(query, variables, files)
 
-        resp = await cast(Awaitable, self.request(body, headers, files))
+        resp = await cast("Awaitable", self.request(body, headers, files))
         data = self._decode(resp, type="multipart" if files else "json")
 
         response = Response(

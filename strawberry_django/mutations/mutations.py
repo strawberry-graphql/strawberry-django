@@ -107,7 +107,7 @@ def mutation(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: Optional[bool] = None,
 ) -> Any:
     """Annotate a property or a method to create a mutation field."""
     f = DjangoMutationBase(
@@ -213,7 +213,7 @@ def input_mutation(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: Optional[bool] = None,
 ) -> Any:
     """Annotate a property or a method to create an input mutation field."""
     extensions = [*list(extensions), InputMutationExtension()]

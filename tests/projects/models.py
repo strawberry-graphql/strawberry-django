@@ -224,8 +224,8 @@ class Quiz(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            _max = self.__class__.objects.aggregate(max=models.Max("sequence"))["max"]
+            max_ = self.__class__.objects.aggregate(max=models.Max("sequence"))["max"]
 
-            if _max is not None:
-                self.sequence = _max + 1
+            if max_ is not None:
+                self.sequence = max_ + 1
         super().save(*args, **kwargs)

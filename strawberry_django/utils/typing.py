@@ -105,7 +105,7 @@ def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
 
         namespace = sys.modules[c.__module__].__dict__
         for k, v in getattr(c, "__annotations__", {}).items():
-            if not is_classvar(cast(type, c), v):
+            if not is_classvar(cast("type", c), v):
                 annotations[k] = StrawberryAnnotation(v, namespace=namespace)
 
     return annotations

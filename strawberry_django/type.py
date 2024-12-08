@@ -125,7 +125,7 @@ def _process_type(
         )
 
     django_type = StrawberryDjangoDefinition(
-        origin=cast(builtins.type[WithStrawberryObjectDefinition], cls),
+        origin=cast("builtins.type[WithStrawberryObjectDefinition]", cls),
         model=model,
         field_cls=field_cls,
         is_partial=partial,
@@ -210,7 +210,7 @@ def _process_type(
                 setattr(
                     cls,
                     attr,
-                    types.MethodType(cast(classmethod, meth).__func__, cls),
+                    types.MethodType(cast("classmethod", meth).__func__, cls),
                 )
 
     settings = django_settings()
@@ -390,13 +390,13 @@ def _process_type(
     DeprecatedDescriptor(
         "_django_type is deprecated, use __strawberry_django_definition__ instead",
         cast(
-            WithStrawberryDjangoObjectDefinition,
+            "WithStrawberryDjangoObjectDefinition",
             cls,
         ).__strawberry_django_definition__,
         "_django_type",
     ).inject(cls)
 
-    return cast(_T, cls)
+    return cast("_T", cls)
 
 
 @dataclasses.dataclass

@@ -70,6 +70,6 @@ def strawberry_django_settings() -> StrawberryDjangoSettings:
     """
     defaults = DEFAULT_DJANGO_SETTINGS
     return cast(
-        StrawberryDjangoSettings,
+        "StrawberryDjangoSettings",
         {**defaults, **getattr(settings, "STRAWBERRY_DJANGO", {})},
     )

@@ -231,7 +231,7 @@ def filter_field(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: bool | None = None,
 ) -> Any:
     """Annotates a method or property as a Django filter field.
 
@@ -342,7 +342,7 @@ def order_field(
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
-    init: Literal[True, False, None] = None,
+    init: bool | None = None,
 ) -> Any:
     """Annotates a method or property as a Django filter field.
 

@@ -57,7 +57,8 @@ class OffsetPaginated(Generic[NodeType]):
         paginated_queryset = self.get_paginated_queryset()
 
         return cast(
-            list[NodeType], paginated_queryset if paginated_queryset is not None else []
+            "list[NodeType]",
+            paginated_queryset if paginated_queryset is not None else [],
         )
 
     @classmethod
@@ -322,7 +323,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         info: Info,
         *,
         pagination: Optional[OffsetPaginationInput] = None,
-        _strawberry_related_field_id: Optional[str] = None,
+        _strawberry_related_field_id: Optional[str] = None,  # noqa: RUF052
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
