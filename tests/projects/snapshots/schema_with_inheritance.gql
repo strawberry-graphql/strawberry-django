@@ -159,6 +159,11 @@ input MilestoneFilter {
 input MilestoneInputPartial {
   id: GlobalID
   name: String
+  issues: [MilestoneIssueInputPartial!]
+}
+
+input MilestoneIssueInputPartial {
+  name: String
 }
 
 input MilestoneOrder {
