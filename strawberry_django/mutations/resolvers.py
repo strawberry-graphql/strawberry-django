@@ -14,6 +14,7 @@ from typing import (
 
 import strawberry
 from django.db import models, transaction
+from django.db.models.manager import BaseManager
 from django.db.models.base import Model
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import (
@@ -222,6 +223,7 @@ def prepare_create_update(
     data: dict[str, Any],
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
+    exclude_m2m: list[str] | None = None,
 ) -> tuple[
     Model,
     dict[str, object],
@@ -237,6 +239,7 @@ def prepare_create_update(
     fields = get_model_fields(model)
     m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
     direct_field_values: dict[str, object] = {}
+    exclude_m2m = exclude_m2m or []
 
     if dataclasses.is_dataclass(data):
         data = vars(data)
@@ -256,6 +259,8 @@ def prepare_create_update(
                 # (but only if the instance is already saved and we are updating it)
                 value = False  # noqa: PLW2901
         elif isinstance(field, (ManyToManyField, ForeignObjectRel)):
+            if name in exclude_m2m:
+                continue
             # m2m will be processed later
             m2m.append((field, value))
             direct_field_value = False
@@ -309,6 +314,7 @@ def create(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
 ) -> _M: ...
 
 
@@ -321,6 +327,7 @@ def create(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
 ) -> list[_M]: ...
 
 
@@ -333,12 +340,43 @@ def create(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
 ) -> list[_M] | _M:
+    return _create(
+        info,
+        model._default_manager,
+        data,
+        key_attr=key_attr,
+        full_clean=full_clean,
+        pre_save_hook=pre_save_hook,
+        exclude_m2m=exclude_m2m,
+    )
+
+
+@transaction.atomic
+def _create(
+    info: Info,
+    manager: BaseManager,
+    data: dict[str, Any] | list[dict[str, Any]],
+    *,
+    key_attr: str | None = None,
+    full_clean: bool | FullCleanOptions = True,
+    pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
+) -> list[_M] | _M:
+    model = manager.model
     # Before creating your instance, verify this is not a bulk create
     # if so, add them one by one. Otherwise, get to work.
     if isinstance(data, list):
         return [
-            create(info, model, d, key_attr=key_attr, full_clean=full_clean)
+            create(
+                info,
+                model,
+                d,
+                key_attr=key_attr,
+                full_clean=full_clean,
+                exclude_m2m=exclude_m2m,
+            )
             for d in data
         ]
 
@@ -365,6 +403,7 @@ def create(
         data=data,
         full_clean=full_clean,
         key_attr=key_attr,
+        exclude_m2m=exclude_m2m,
     )
 
     # Creating the instance directly via create() without full-clean will
@@ -376,7 +415,7 @@ def create(
 
     # Create the instance using the manager create method to respect
     # manager create overrides. This also ensures support for proxy-models.
-    instance = model._default_manager.create(**create_kwargs)
+    instance = manager.create(**create_kwargs)
 
     for field, value in m2m:
         update_m2m(info, instance, field, value, key_attr)
@@ -393,6 +432,7 @@ def update(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
 ) -> _M: ...
 
 
@@ -405,6 +445,7 @@ def update(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
 ) -> list[_M]: ...
 
 
@@ -417,6 +458,7 @@ def update(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     pre_save_hook: Callable[[_M], None] | None = None,
+    exclude_m2m: list[str] | None = None,
 ) -> _M | list[_M]:
     # Unwrap lazy objects since they have a proxy __iter__ method that will make
     # them iterables even if the wrapped object isn't
@@ -433,6 +475,7 @@ def update(
                 key_attr=key_attr,
                 full_clean=full_clean,
                 pre_save_hook=pre_save_hook,
+                exclude_m2m=exclude_m2m,
             )
             for instance in instances
         ]
@@ -443,6 +486,7 @@ def update(
         data=data,
         key_attr=key_attr,
         full_clean=full_clean,
+        exclude_m2m=exclude_m2m,
     )
 
     if pre_save_hook is not None:
@@ -554,14 +598,21 @@ def update_m2m(
     use_remove = True
     if isinstance(field, ManyToManyField):
         manager = cast("RelatedManager", getattr(instance, field.attname))
+        reverse_field_name = field.remote_field.related_name  # type: ignore
     else:
         assert isinstance(field, (ManyToManyRel, ManyToOneRel))
         accessor_name = field.get_accessor_name()
+        reverse_field_name = field.field.name
         assert accessor_name
         manager = cast("RelatedManager", getattr(instance, accessor_name))
         if field.one_to_many:
             # remove if field is nullable, otherwise delete
             use_remove = field.remote_field.null is True
+
+    # Create a data dict containing the reference to the instance and exclude it from
+    # nested m2m creation (to break circular references)
+    ref_instance_data = {reverse_field_name: instance}
+    exclude_m2m = [reverse_field_name]
 
     to_add = []
     to_remove = []
@@ -621,14 +672,17 @@ def update_m2m(
 
                 existing.discard(obj)
             else:
-                if key_attr not in data:  # we have a Input Type
-                    obj, _ = manager.get_or_create(**data)
-                else:
-                    data.pop(key_attr)
-                    obj = manager.create(**data)
-
-                if full_clean:
-                    obj.full_clean(**full_clean_options)
+                # If we've reached here, the key_attr should be UNSET or missing. So
+                # let's remove it if it is there.
+                data.pop(key_attr, None)
+                obj = _create(
+                    info,
+                    manager,
+                    data | ref_instance_data,
+                    key_attr=key_attr,
+                    full_clean=full_clean,
+                    exclude_m2m=exclude_m2m,
+                )
                 existing.discard(obj)
 
         for remaining in existing:
@@ -656,11 +710,17 @@ def update_m2m(
                 data.pop(key_attr, None)
                 to_add.append(obj)
             elif data:
-                if key_attr not in data:
-                    manager.get_or_create(**data)
-                else:
-                    data.pop(key_attr)
-                    manager.create(**data)
+                # If we've reached here, the key_attr should be UNSET or missing. So
+                # let's remove it if it is there.
+                data.pop(key_attr, None)
+                _create(
+                    info,
+                    manager,
+                    data | ref_instance_data,
+                    key_attr=key_attr,
+                    full_clean=full_clean,
+                    exclude_m2m=exclude_m2m,
+                )
             else:
                 raise AssertionError
 
