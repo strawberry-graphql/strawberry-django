@@ -1,4 +1,7 @@
+from unittest.mock import patch
+
 import pytest
+from django.core.exceptions import ValidationError
 from strawberry.relay import from_base64, to_base64
 
 from tests.utils import GraphQLTestClient, assert_num_queries
@@ -746,6 +749,108 @@ def test_input_update_mutation_with_multiple_level_nested_creation(
             ],
         },
     }
+
+
+@pytest.mark.parametrize("mock_model", ["Milestone", "Issue", "Tag"])
+@pytest.mark.django_db(transaction=True)
+def test_input_create_mutation_with_nested_calls_nested_full_clean(
+    db, gql_client: GraphQLTestClient, mock_model: str
+):
+    query = """
+    mutation createProjectWithMilestones ($input: ProjectInputPartial!) {
+      createProjectWithMilestones (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          milestones {
+            id
+            name
+            issues {
+              id
+              name
+              tags {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    shared_tag = TagFactory.create(name="Shared Tag")
+    shared_tag_id = to_base64("TagType", shared_tag.pk)
+
+    with patch(
+        f"tests.projects.models.{mock_model}.clean",
+        side_effect=ValidationError({"name": ValidationError("Invalid name")}),
+    ) as mocked_full_clean:
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "name": "Some Project",
+                    "milestones": [
+                        {
+                            "name": "Some Milestone",
+                            "issues": [
+                                {
+                                    "name": "Some Issue",
+                                    "tags": [
+                                        {"name": "Tag 1"},
+                                        {"name": "Tag 2"},
+                                        {"name": "Tag 3"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "name": "Another Milestone",
+                            "issues": [
+                                {
+                                    "name": "Some Issue",
+                                    "tags": [
+                                        {"name": "Tag 4"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                },
+                                {
+                                    "name": "Another Issue",
+                                    "tags": [
+                                        {"name": "Tag 5"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                },
+                                {
+                                    "name": "Third issue",
+                                    "tags": [
+                                        {"name": "Tag 6"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        )
+
+    assert res.data
+    assert isinstance(res.data["createProjectWithMilestones"], dict)
+    assert res.data["createProjectWithMilestones"]["__typename"] == "OperationInfo"
+    assert mocked_full_clean.call_count == 1
+    assert res.data["createProjectWithMilestones"]["messages"] == [
+        {"field": "name", "kind": "VALIDATION", "message": "Invalid name"}
+    ]
 
 
 @pytest.mark.django_db(transaction=True)
