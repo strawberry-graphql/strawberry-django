@@ -334,7 +334,6 @@ def create(
 ) -> list[_M]: ...
 
 
-@transaction.atomic
 def create(
     info: Info,
     model: type[_M],
