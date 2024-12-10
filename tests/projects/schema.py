@@ -335,6 +335,12 @@ class MilestoneIssueInput:
     name: strawberry.auto
 
 
+@strawberry_django.partial(Issue)
+class MilestoneIssueInputPartial:
+    name: strawberry.auto
+    tags: Optional[list[TagInputPartial]]
+
+
 @strawberry_django.partial(Project)
 class ProjectInputPartial(NodeInputPartial):
     name: strawberry.auto
@@ -351,6 +357,7 @@ class MilestoneInput:
 @strawberry_django.partial(Milestone)
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
+    issues: Optional[list[MilestoneIssueInputPartial]]
 
 
 @strawberry.type
@@ -518,6 +525,11 @@ class Mutation:
         handle_django_errors=True,
         argument_name="input",
         key_attr="name",
+    )
+    create_project_with_milestones: ProjectType = mutations.create(
+        ProjectInputPartial,
+        handle_django_errors=True,
+        argument_name="input",
     )
     update_project: ProjectType = mutations.update(
         ProjectInputPartial,
