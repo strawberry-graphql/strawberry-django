@@ -399,6 +399,8 @@ type MilestoneType implements Node & Named {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): IssueTypeConnection!
+  firstIssue: IssueType
+  firstIssueRequired: IssueType!
   myIssues: [IssueType!]!
   myBugsCount: Int!
   asyncField(value: String!): String!
