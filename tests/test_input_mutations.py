@@ -541,6 +541,7 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
           id
           name
           dueDate
+          isDelayed
           milestones {
             id
             name
@@ -557,15 +558,17 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
     milestone_1_id = to_base64("MilestoneType", milestone_1.pk)
     MilestoneFactory.create(project=project)
 
-    res = gql_client.query(
-        query,
-        {
-            "input": {
-                "id": to_base64("ProjectType", project.pk),
-                "milestones": [{"id": milestone_1_id}],
+    with assert_num_queries(14):
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "id": to_base64("ProjectType", project.pk),
+                    "milestones": [{"id": milestone_1_id}],
+                },
             },
-        },
-    )
+        )
+
     assert res.data
     assert isinstance(res.data["updateProject"], dict)
 
