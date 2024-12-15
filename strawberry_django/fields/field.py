@@ -301,16 +301,11 @@ class StrawberryDjangoField(
                     )  # the queryset is already prefetched, no issue with just using len()
                     if qs_len == 0:
                         raise qs.model.DoesNotExist(
-                            "%s matching query does not exist."
-                            % qs.model._meta.object_name
+                            f"{qs.model._meta.object_name} matching query does not exist."
                         )
                     if qs_len != 1:
                         raise qs.model.MultipleObjectsReturned(
-                            "get() returned more than one %s -- it returned %s!"
-                            % (
-                                qs.model._meta.object_name,
-                                qs_len,
-                            )
+                            f"get() returned more than one {qs.model._meta.object_name} -- it returned {qs_len}!"
                         )
                     return qs[0]
                 return qs.get()
