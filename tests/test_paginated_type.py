@@ -1,10 +1,10 @@
 import textwrap
 from typing import Annotated
 
-from django.test.utils import override_settings
 import pytest
 import strawberry
 from django.db.models import QuerySet
+from django.test.utils import override_settings
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension

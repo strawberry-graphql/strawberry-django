@@ -13,9 +13,9 @@ from typing_extensions import Self
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.resolvers import django_resolver
-from .settings import strawberry_django_settings
 
 from .arguments import argument
+from .settings import strawberry_django_settings
 
 NodeType = TypeVar("NodeType")
 _QS = TypeVar("_QS", bound=QuerySet)
