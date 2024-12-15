@@ -6,12 +6,12 @@ import strawberry
 from django.db.models import Prefetch
 from django.utils import timezone
 from pytest_mock import MockerFixture
-from strawberry.relay import to_base64, GlobalID
+from strawberry.relay import GlobalID, to_base64
 from strawberry.types import ExecutionResult, get_object_definition
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from tests.projects.schema import StaffType, MilestoneType, IssueType
+from tests.projects.schema import IssueType, MilestoneType, StaffType
 
 from . import utils
 from .projects.faker import (
@@ -1608,18 +1608,19 @@ def test_query_paginated_nested(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_prefetch_multi_field_single_optional(
-        db, gql_client: GraphQLTestClient
-):
-
+def test_prefetch_multi_field_single_optional(db, gql_client: GraphQLTestClient):
     milestone1 = MilestoneFactory.create()
     milestone2 = MilestoneFactory.create()
 
     issue = IssueFactory.create(name="Foo", milestone=milestone1)
-    issue_id = str(GlobalID(get_object_definition(IssueType, strict=True).name, str(issue.id)))
+    issue_id = str(GlobalID(get_object_definition(IssueType).name, str(issue.id)))
 
-    milestone_id_1 = str(GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone1.id)))
-    milestone_id_2 = str(GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone2.id)))
+    milestone_id_1 = str(
+        GlobalID(get_object_definition(MilestoneType).name, str(milestone1.id))
+    )
+    milestone_id_2 = str(
+        GlobalID(get_object_definition(MilestoneType).name, str(milestone2.id))
+    )
 
     query = """\
       query TestQuery($id1: GlobalID!, $id2: GlobalID!) {
@@ -1637,7 +1638,9 @@ def test_prefetch_multi_field_single_optional(
     """
 
     with assert_num_queries(4):
-        res = gql_client.query(query, variables={"id1": milestone_id_1, "id2": milestone_id_2})
+        res = gql_client.query(
+            query, variables={"id1": milestone_id_1, "id2": milestone_id_2}
+        )
 
     assert res.errors is None
     assert res.data == {
@@ -1653,15 +1656,15 @@ def test_prefetch_multi_field_single_optional(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_prefetch_multi_field_single_required(
-        db, gql_client: GraphQLTestClient
-):
+def test_prefetch_multi_field_single_required(db, gql_client: GraphQLTestClient):
     milestone = MilestoneFactory.create()
 
     issue = IssueFactory.create(name="Foo", milestone=milestone)
-    issue_id = str(GlobalID(get_object_definition(IssueType, strict=True).name, str(issue.id)))
+    issue_id = str(GlobalID(get_object_definition(IssueType).name, str(issue.id)))
 
-    milestone_id = str(GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone.id)))
+    milestone_id = str(
+        GlobalID(get_object_definition(MilestoneType).name, str(milestone.id))
+    )
 
     query = """\
       query TestQuery($id: GlobalID!) {
@@ -1688,11 +1691,13 @@ def test_prefetch_multi_field_single_required(
 
 @pytest.mark.django_db(transaction=True)
 def test_prefetch_multi_field_single_required_missing(
-        db, gql_client: GraphQLTestClient
+    db, gql_client: GraphQLTestClient
 ):
     milestone1 = MilestoneFactory.create()
 
-    milestone_id = str(GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone1.id)))
+    milestone_id = str(
+        GlobalID(get_object_definition(MilestoneType).name, str(milestone1.id))
+    )
 
     query = """\
       query TestQuery($id: GlobalID!) {
@@ -1705,7 +1710,9 @@ def test_prefetch_multi_field_single_required_missing(
     """
 
     with assert_num_queries(2):
-        res = gql_client.query(query, variables={"id": milestone_id}, assert_no_errors=False)
+        res = gql_client.query(
+            query, variables={"id": milestone_id}, assert_no_errors=False
+        )
 
     assert res.errors is not None
     assert res.errors == [
@@ -1719,11 +1726,13 @@ def test_prefetch_multi_field_single_required_missing(
 
 @pytest.mark.django_db(transaction=True)
 def test_prefetch_multi_field_single_required_multiple_returned(
-        db, gql_client: GraphQLTestClient
+    db, gql_client: GraphQLTestClient
 ):
     milestone = MilestoneFactory.create()
 
-    milestone_id = str(GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone.id)))
+    milestone_id = str(
+        GlobalID(get_object_definition(MilestoneType).name, str(milestone.id))
+    )
     IssueFactory.create(name="Foo", milestone=milestone)
     IssueFactory.create(name="Bar", milestone=milestone)
 
@@ -1738,7 +1747,9 @@ def test_prefetch_multi_field_single_required_multiple_returned(
     """
 
     with assert_num_queries(2):
-        res = gql_client.query(query, variables={"id": milestone_id}, assert_no_errors=False)
+        res = gql_client.query(
+            query, variables={"id": milestone_id}, assert_no_errors=False
+        )
 
     assert res.errors is not None
     assert res.errors == [
