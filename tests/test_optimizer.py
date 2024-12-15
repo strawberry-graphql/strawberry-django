@@ -1613,13 +1613,13 @@ def test_prefetch_multi_field_single_optional(db, gql_client: GraphQLTestClient)
     milestone2 = MilestoneFactory.create()
 
     issue = IssueFactory.create(name="Foo", milestone=milestone1)
-    issue_id = str(GlobalID(get_object_definition(IssueType).name, str(issue.id)))
+    issue_id = str(GlobalID(get_object_definition(IssueType, strict=True).name, str(issue.id)))
 
     milestone_id_1 = str(
-        GlobalID(get_object_definition(MilestoneType).name, str(milestone1.id))
+        GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone1.id))
     )
     milestone_id_2 = str(
-        GlobalID(get_object_definition(MilestoneType).name, str(milestone2.id))
+        GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone2.id))
     )
 
     query = """\
@@ -1660,10 +1660,10 @@ def test_prefetch_multi_field_single_required(db, gql_client: GraphQLTestClient)
     milestone = MilestoneFactory.create()
 
     issue = IssueFactory.create(name="Foo", milestone=milestone)
-    issue_id = str(GlobalID(get_object_definition(IssueType).name, str(issue.id)))
+    issue_id = str(GlobalID(get_object_definition(IssueType, strict=True).name, str(issue.id)))
 
     milestone_id = str(
-        GlobalID(get_object_definition(MilestoneType).name, str(milestone.id))
+        GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone.id))
     )
 
     query = """\
@@ -1696,7 +1696,7 @@ def test_prefetch_multi_field_single_required_missing(
     milestone1 = MilestoneFactory.create()
 
     milestone_id = str(
-        GlobalID(get_object_definition(MilestoneType).name, str(milestone1.id))
+        GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone1.id))
     )
 
     query = """\
@@ -1731,7 +1731,7 @@ def test_prefetch_multi_field_single_required_multiple_returned(
     milestone = MilestoneFactory.create()
 
     milestone_id = str(
-        GlobalID(get_object_definition(MilestoneType).name, str(milestone.id))
+        GlobalID(get_object_definition(MilestoneType, strict=True).name, str(milestone.id))
     )
     IssueFactory.create(name="Foo", milestone=milestone)
     IssueFactory.create(name="Bar", milestone=milestone)
