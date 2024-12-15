@@ -296,12 +296,15 @@ class StrawberryDjangoField(
                 # See comment above about qs.first(), the same applies for get()
                 if is_optimized_by_prefetching(qs):
                     # mimic behavior of get()
-                    qs_len = len(qs)  # the queryset is already prefetched, no issue with just using len()
+                    qs_len = len(
+                        qs
+                    )  # the queryset is already prefetched, no issue with just using len()
                     if qs_len == 0:
                         raise qs.model.DoesNotExist(
-                            "%s matching query does not exist." % qs.model._meta.object_name
+                            "%s matching query does not exist."
+                            % qs.model._meta.object_name
                         )
-                    elif qs_len != 1:
+                    if qs_len != 1:
                         raise qs.model.MultipleObjectsReturned(
                             "get() returned more than one %s -- it returned %s!"
                             % (
@@ -309,8 +312,7 @@ class StrawberryDjangoField(
                                 qs_len,
                             )
                         )
-                    else:
-                        return qs[0]
+                    return qs[0]
                 return qs.get()
 
         return qs_hook
