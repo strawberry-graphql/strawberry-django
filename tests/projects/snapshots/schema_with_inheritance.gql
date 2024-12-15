@@ -248,7 +248,7 @@ type OffsetPaginationInfo {
 
 input OffsetPaginationInput {
   offset: Int! = 0
-  limit: Int = null
+  limit: Int
 }
 
 type OperationInfo {

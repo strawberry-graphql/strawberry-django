@@ -1,6 +1,7 @@
 import textwrap
 from typing import Annotated
 
+from django.test.utils import override_settings
 import pytest
 import strawberry
 from django.db.models import QuerySet
@@ -8,6 +9,7 @@ from django.db.models import QuerySet
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated, OffsetPaginationInput
+from strawberry_django.settings import StrawberryDjangoSettings
 from tests import models
 
 
@@ -69,7 +71,7 @@ def test_paginated_schema():
 
     input OffsetPaginationInput {
       offset: Int! = 0
-      limit: Int = null
+      limit: Int
     }
 
     type Query {
@@ -630,7 +632,7 @@ def test_pagination_query_with_resolver_schema():
 
     input OffsetPaginationInput {
       offset: Int! = 0
-      limit: Int = null
+      limit: Int
     }
 
     type Query {
@@ -899,4 +901,72 @@ def test_pagination_query_with_resolver_arguments():
                 {"name": "Strawberry"},
             ],
         },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@override_settings(
+    STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
+        PAGINATION_DEFAULT_LIMIT=2,
+    ),
+)
+def test_pagination_default_limit():
+    @strawberry_django.type(models.Fruit)
+    class Fruit:
+        id: int
+        name: str
+
+    @strawberry.type
+    class Query:
+        fruits: OffsetPaginated[Fruit] = strawberry_django.offset_paginated()
+
+    models.Fruit.objects.create(name="Apple")
+    models.Fruit.objects.create(name="Banana")
+    models.Fruit.objects.create(name="Strawberry")
+    models.Fruit.objects.create(name="Watermelon")
+
+    schema = strawberry.Schema(query=Query)
+
+    query = """\
+    query GetFruits ($pagination: OffsetPaginationInput) {
+      fruits (pagination: $pagination) {
+        totalCount
+        results {
+          name
+        }
+      }
+    }
+    """
+
+    res = schema.execute_sync(query)
+    assert res.errors is None
+    assert res.data == {
+        "fruits": {
+            "totalCount": 4,
+            "results": [{"name": "Apple"}, {"name": "Banana"}],
+        }
+    }
+
+    res = schema.execute_sync(query, variable_values={"pagination": {"offset": 1}})
+    assert res.errors is None
+    assert res.data == {
+        "fruits": {
+            "totalCount": 4,
+            "results": [{"name": "Banana"}, {"name": "Strawberry"}],
+        }
+    }
+
+    # Setting limit to None should return all results
+    res = schema.execute_sync(query, variable_values={"pagination": {"limit": None}})
+    assert res.errors is None
+    assert res.data == {
+        "fruits": {
+            "totalCount": 4,
+            "results": [
+                {"name": "Apple"},
+                {"name": "Banana"},
+                {"name": "Strawberry"},
+                {"name": "Watermelon"},
+            ],
+        }
     }
