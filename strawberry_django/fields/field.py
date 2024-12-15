@@ -282,12 +282,35 @@ class StrawberryDjangoField(
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
                 qs = self.get_queryset(qs, info, **kwargs)
+                # Don't use qs.first() if the queryset is optimized by prefetching.
+                # Calling first in that case would disregard the prefetched results, because first implicitly
+                # adds a limit to the query
+                if is_optimized_by_prefetching(qs):
+                    return next(iter(qs), None)
                 return qs.first()
 
         else:
 
             def qs_hook(qs: models.QuerySet):
                 qs = self.get_queryset(qs, info, **kwargs)
+                # See comment above about qs.first(), the same applies for get()
+                if is_optimized_by_prefetching(qs):
+                    # mimic behavior of get()
+                    qs_len = len(qs)  # the queryset is already prefetched, no issue with just using len()
+                    if qs_len == 0:
+                        raise qs.model.DoesNotExist(
+                            "%s matching query does not exist." % qs.model._meta.object_name
+                        )
+                    elif qs_len != 1:
+                        raise qs.model.MultipleObjectsReturned(
+                            "get() returned more than one %s -- it returned %s!"
+                            % (
+                                qs.model._meta.object_name,
+                                qs_len,
+                            )
+                        )
+                    else:
+                        return qs[0]
                 return qs.get()
 
         return qs_hook

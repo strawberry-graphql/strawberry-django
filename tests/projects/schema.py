@@ -169,6 +169,8 @@ class MilestoneType(relay.Node, Named):
             filters=IssueFilter,
         )
     )
+    first_issue: Optional["IssueType"] = strawberry_django.field(field_name="issues")
+    first_issue_required: "IssueType" = strawberry_django.field(field_name="issues")
 
     @strawberry_django.field(
         prefetch_related=[
