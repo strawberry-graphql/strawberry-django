@@ -368,6 +368,7 @@ input MilestoneInputPartial {
   id: GlobalID
   name: String
   issues: [MilestoneIssueInputPartial!]
+  project: ProjectInputPartial
 }
 
 input MilestoneIssueInput {

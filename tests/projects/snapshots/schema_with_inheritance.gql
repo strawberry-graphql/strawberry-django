@@ -160,6 +160,7 @@ input MilestoneInputPartial {
   id: GlobalID
   name: String
   issues: [MilestoneIssueInputPartial!]
+  project: ProjectInputPartial
 }
 
 input MilestoneIssueInputPartial {
@@ -308,6 +309,12 @@ type PageInfo {
 
   """When paginating forwards, the cursor to continue."""
   endCursor: String
+}
+
+input ProjectInputPartial {
+  id: GlobalID
+  name: String
+  milestones: [MilestoneInputPartial!]
 }
 
 input ProjectOrder {

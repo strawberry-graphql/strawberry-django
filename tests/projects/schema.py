@@ -358,6 +358,7 @@ class MilestoneInput:
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
     issues: Optional[list[MilestoneIssueInputPartial]]
+    project: Optional[ProjectInputPartial]
 
 
 @strawberry.type

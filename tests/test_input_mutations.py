@@ -248,8 +248,8 @@ def test_input_create_mutation(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateMilestone ($input: MilestoneInput!) {
-      createMilestone (input: $input) {
+    mutation CreateIssue ($input: IssueInput!) {
+      createIssue (input: $input) {
         __typename
         ... on OperationInfo {
           messages {
@@ -258,45 +258,70 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
             message
           }
         }
-        ... on MilestoneType {
+        ... on IssueType {
           id
           name
-          project {
+          milestone {
             id
             name
+            project {
+              id
+              name
+            }
           }
         }
       }
     }
     """
     assert not Project.objects.filter(name="New Project").exists()
+    assert not Milestone.objects.filter(name="New Milestone").exists()
+    assert not Issue.objects.filter(name="New Issue").exists()
 
     res = gql_client.query(
         query,
         {
             "input": {
-                "name": "Some Milestone",
-                "project": {
-                    "name": "New Project",
+                "name": "New Issue",
+                "milestone": {
+                    "name": "New Milestone",
+                    "project": {
+                        "name": "New Project",
+                    },
                 },
             },
         },
     )
-    assert res.data
-    assert isinstance(res.data["createMilestone"], dict)
 
-    typename, _pk = from_base64(res.data["createMilestone"].pop("id"))
-    assert typename == "MilestoneType"
+    assert res.data
+    assert isinstance(res.data["createIssue"], dict)
+
+    typename, pk = from_base64(res.data["createIssue"].get("id"))
+
+    assert typename == "IssueType"
+    issue = Issue.objects.get(pk=pk)
+    assert issue.name == "New Issue"
+
+    milestone = Milestone.objects.get(name="New Milestone")
+    assert milestone.name == "New Milestone"
 
     project = Project.objects.get(name="New Project")
+    assert project.name == "New Project"
+
+    assert milestone.project_id == project.pk
+    assert issue.milestone_id == milestone.pk
 
     assert res.data == {
-        "createMilestone": {
-            "__typename": "MilestoneType",
-            "name": "Some Milestone",
-            "project": {
-                "id": to_base64("ProjectType", project.pk),
-                "name": project.name,
+        "createIssue": {
+            "__typename": "IssueType",
+            "id": to_base64("IssueType", issue.pk),
+            "name": "New Issue",
+            "milestone": {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "name": "New Milestone",
+                "project": {
+                    "id": to_base64("ProjectType", project.pk),
+                    "name": "New Project",
+                },
             },
         },
     }

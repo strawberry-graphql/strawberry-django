@@ -15,6 +15,7 @@ from typing import (
 import strawberry
 from django.db import models, transaction
 from django.db.models.base import Model
+from django.db.models.fields import Field
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import (
     ForeignObjectRel,
@@ -92,6 +93,7 @@ def _parse_data(
     value: Any,
     *,
     key_attr: str | None = None,
+    full_clean: bool | FullCleanOptions = True,
 ):
     obj, data = _parse_pk(value, model, key_attr=key_attr)
     parsed_data = {}
@@ -101,10 +103,21 @@ def _parse_data(
                 continue
 
             if isinstance(v, ParsedObject):
-                if v.pk is None:
-                    v = create(info, model, v.data or {})  # noqa: PLW2901
+                if v.pk in {None, UNSET}:
+                    related_field = cast("Field", get_model_fields(model).get(k))
+                    related_model = related_field.related_model
+                    v = create(  # noqa: PLW2901
+                        info,
+                        cast("type[Model]", related_model),
+                        v.data or {},
+                        key_attr=key_attr,
+                        full_clean=full_clean,
+                        exclude_m2m=[related_field.name],
+                    )
                 elif isinstance(v.pk, models.Model) and v.data:
-                    v = update(info, v.pk, v.data, key_attr=key_attr)  # noqa: PLW2901
+                    v = update(  # noqa: PLW2901
+                        info, v.pk, v.data, key_attr=key_attr, full_clean=full_clean
+                    )
                 else:
                     v = v.pk  # noqa: PLW2901
 
@@ -277,14 +290,19 @@ def prepare_create_update(
                 cast("type[Model]", field.related_model),
                 value,
                 key_attr=key_attr,
+                full_clean=full_clean,
             )
             if value is None and not value_data:
                 value = None  # noqa: PLW2901
 
             # If foreign object is not found, then create it
-            elif value is None:
-                value = field.related_model._default_manager.create(  # noqa: PLW2901
-                    **value_data,
+            elif value in {None, UNSET}:
+                value = create(  # noqa: PLW2901
+                    info,
+                    field.related_model,
+                    value_data,
+                    key_attr=key_attr,
+                    full_clean=full_clean,
                 )
 
             # If foreign object does not need updating, then skip it
@@ -634,7 +652,11 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(values)
         for v in values:
             obj, data = _parse_data(
-                info, cast("type[Model]", manager.model), v, key_attr=key_attr
+                info,
+                cast("type[Model]", manager.model),
+                v,
+                key_attr=key_attr,
+                full_clean=full_clean,
             )
             if obj:
                 data.pop(key_attr, None)
@@ -701,6 +723,7 @@ def update_m2m(
                 cast("type[Model]", manager.model),
                 v,
                 key_attr=key_attr,
+                full_clean=full_clean,
             )
             if obj and data:
                 data.pop(key_attr, None)
@@ -729,7 +752,11 @@ def update_m2m(
         need_remove_cache = need_remove_cache or bool(value.remove)
         for v in value.remove or []:
             obj, data = _parse_data(
-                info, cast("type[Model]", manager.model), v, key_attr=key_attr
+                info,
+                cast("type[Model]", manager.model),
+                v,
+                key_attr=key_attr,
+                full_clean=full_clean,
             )
             data.pop(key_attr, None)
             assert not data
