@@ -31,6 +31,7 @@ from django.db.models.fields.related import (
     ReverseOneToOneDescriptor,
 )
 from django.db.models.manager import BaseManager
+from django.db.models.query import MAX_GET_RESULTS
 from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
@@ -282,30 +283,27 @@ class StrawberryDjangoField(
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
                 qs = self.get_queryset(qs, info, **kwargs)
-                # Don't use qs.first() if the queryset is optimized by prefetching.
-                # Calling first in that case would disregard the prefetched results, because first implicitly
-                # adds a limit to the query
-                if is_optimized_by_prefetching(qs):
-                    return next(iter(qs), None)
                 return qs.first()
 
         else:
 
             def qs_hook(qs: models.QuerySet):
                 qs = self.get_queryset(qs, info, **kwargs)
-                # See comment above about qs.first(), the same applies for get()
+                # Don't use qs.get() if the queryset is optimized by prefetching.
+                # Calling first in that case would disregard the prefetched results, because first implicitly
+                # adds a limit to the query
                 if is_optimized_by_prefetching(qs):
                     # mimic behavior of get()
-                    qs_len = len(
-                        qs
-                    )  # the queryset is already prefetched, no issue with just using len()
+                    # the queryset is already prefetched, no issue with just using len()
+                    qs_len = len(qs)
                     if qs_len == 0:
                         raise qs.model.DoesNotExist(
                             f"{qs.model._meta.object_name} matching query does not exist."
                         )
                     if qs_len != 1:
                         raise qs.model.MultipleObjectsReturned(
-                            f"get() returned more than one {qs.model._meta.object_name} -- it returned {qs_len}!"
+                            f"get() returned more than one {qs.model._meta.object_name} -- it returned "
+                            f"{qs_len if qs_len < MAX_GET_RESULTS else f'more than {qs_len - 1}'}!"
                         )
                     return qs[0]
                 return qs.get()

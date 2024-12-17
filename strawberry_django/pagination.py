@@ -6,6 +6,7 @@ import strawberry
 from django.db import DEFAULT_DB_ALIAS
 from django.db.models import Count, QuerySet, Window
 from django.db.models.functions import RowNumber
+from django.db.models.query import MAX_GET_RESULTS
 from strawberry.types import Info
 from strawberry.types.arguments import StrawberryArgument
 from strawberry.types.unset import UNSET, UnsetType
@@ -342,6 +343,19 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         # Check `get_wrapped_result` below for more details.
         if self.is_paginated:
             return queryset
+
+        # Add implicit pagination if this field is not a list
+        # that way when first() / get() is called on the QuerySet it does not cause extra queries
+        if not pagination and not (
+            self.is_list or self.is_paginated or self.is_connection
+        ):
+            if self.is_optional:
+                # first() applies order by pk if not ordered
+                if not queryset.ordered:
+                    queryset = queryset.order_by("pk")
+                pagination = OffsetPaginationInput(offset=0, limit=1)
+            else:
+                pagination = OffsetPaginationInput(offset=0, limit=MAX_GET_RESULTS)
 
         return self.apply_pagination(
             queryset,
