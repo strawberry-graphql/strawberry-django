@@ -331,7 +331,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         info: Info,
         *,
         pagination: Optional[OffsetPaginationInput] = None,
-        _strawberry_related_field_id: Optional[str] = None,  # noqa: RUF052
+        _strawberry_related_field_id: Optional[str] = None,
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
