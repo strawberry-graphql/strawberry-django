@@ -290,7 +290,7 @@ class StrawberryDjangoField(
             def qs_hook(qs: models.QuerySet):
                 qs = self.get_queryset(qs, info, **kwargs)
                 # Don't use qs.get() if the queryset is optimized by prefetching.
-                # Calling first in that case would disregard the prefetched results, because first implicitly
+                # Calling get in that case would disregard the prefetched results, because get implicitly
                 # adds a limit to the query
                 if is_optimized_by_prefetching(qs):
                     # mimic behavior of get()
