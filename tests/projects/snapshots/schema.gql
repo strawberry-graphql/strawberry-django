@@ -383,6 +383,8 @@ type MilestoneType implements Node & Named {
   dueDate: Date
   project: ProjectType!
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
+  firstIssue: IssueType
+  firstIssueRequired: IssueType!
   issuesPaginated(pagination: OffsetPaginationInput, order: IssueOrder): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter

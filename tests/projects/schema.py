@@ -159,6 +159,8 @@ class MilestoneType(relay.Node, Named):
         order=IssueOrder,
         pagination=True,
     )
+    first_issue: Optional["IssueType"] = strawberry_django.field(field_name="issues")
+    first_issue_required: "IssueType" = strawberry_django.field(field_name="issues")
     issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
         field_name="issues",
         order=IssueOrder,
