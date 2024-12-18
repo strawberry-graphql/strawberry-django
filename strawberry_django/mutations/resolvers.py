@@ -296,7 +296,7 @@ def prepare_create_update(
                 value = None  # noqa: PLW2901
 
             # If foreign object is not found, then create it
-            elif value in {None, UNSET}:
+            elif value in (None, UNSET):  # noqa: PLR6201
                 value = create(  # noqa: PLW2901
                     info,
                     field.related_model,
@@ -311,7 +311,11 @@ def prepare_create_update(
 
             else:
                 update(
-                    info, value, value_data, full_clean=full_clean, key_attr=key_attr
+                    info,
+                    value,
+                    value_data,
+                    full_clean=full_clean,
+                    key_attr=key_attr,
                 )
 
         if direct_field_value:
@@ -431,7 +435,7 @@ def _create(
     # full-clean() to trigger form-validation style error messages.
     full_clean_options = full_clean if isinstance(full_clean, dict) else {}
     if full_clean:
-        dummy_instance.full_clean(**full_clean_options)  # type: ignore
+        dummy_instance.full_clean(**full_clean_options)
 
     # Create the instance using the manager create method to respect
     # manager create overrides. This also ensures support for proxy-models.

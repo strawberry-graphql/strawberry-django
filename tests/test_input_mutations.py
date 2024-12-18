@@ -295,7 +295,7 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
     assert res.data
     assert isinstance(res.data["createIssue"], dict)
 
-    typename, pk = from_base64(res.data["createIssue"].get("id"))
+    typename, pk = from_base64(res.data["createIssue"]["id"])
 
     assert typename == "IssueType"
     issue = Issue.objects.get(pk=pk)
