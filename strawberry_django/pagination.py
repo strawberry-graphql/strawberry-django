@@ -6,7 +6,7 @@ import strawberry
 from django.db import DEFAULT_DB_ALIAS
 from django.db.models import Count, QuerySet, Window
 from django.db.models.functions import RowNumber
-from django.db.models.query import MAX_GET_RESULTS
+from django.db.models.query import MAX_GET_RESULTS  # type: ignore
 from strawberry.types import Info
 from strawberry.types.arguments import StrawberryArgument
 from strawberry.types.unset import UNSET, UnsetType

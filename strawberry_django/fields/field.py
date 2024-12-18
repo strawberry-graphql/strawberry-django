@@ -31,7 +31,7 @@ from django.db.models.fields.related import (
     ReverseOneToOneDescriptor,
 )
 from django.db.models.manager import BaseManager
-from django.db.models.query import MAX_GET_RESULTS
+from django.db.models.query import MAX_GET_RESULTS  # type: ignore
 from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
@@ -292,10 +292,10 @@ class StrawberryDjangoField(
                 # Don't use qs.get() if the queryset is optimized by prefetching.
                 # Calling get in that case would disregard the prefetched results, because get implicitly
                 # adds a limit to the query
-                if is_optimized_by_prefetching(qs):
+                if (result_cache := qs._result_cache) is not None:  # type: ignore
                     # mimic behavior of get()
                     # the queryset is already prefetched, no issue with just using len()
-                    qs_len = len(qs)
+                    qs_len = len(result_cache)
                     if qs_len == 0:
                         raise qs.model.DoesNotExist(
                             f"{qs.model._meta.object_name} matching query does not exist."
@@ -305,7 +305,8 @@ class StrawberryDjangoField(
                             f"get() returned more than one {qs.model._meta.object_name} -- it returned "
                             f"{qs_len if qs_len < MAX_GET_RESULTS else f'more than {qs_len - 1}'}!"
                         )
-                    return qs[0]
+                    return result_cache[0]
+
                 return qs.get()
 
         return qs_hook
