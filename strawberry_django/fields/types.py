@@ -12,6 +12,7 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    cast,
 )
 
 import django
@@ -48,6 +49,8 @@ else:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from strawberry_django.type import StrawberryDjangoDefinition
 
 K = TypeVar("K")
@@ -463,7 +466,7 @@ def resolve_model_field_type(
             meta = model_field.model._meta
 
             enum_choices = {}
-            for c in model_field.choices:
+            for c in cast("Iterable[tuple[str, str]]", model_field.choices):
                 # replace chars not compatible with GraphQL naming convention
                 choice_name = re.sub(r"^[^_a-zA-Z]|[^_a-zA-Z0-9]", "_", c[0])
                 # use str() to trigger eventual django's gettext_lazy string

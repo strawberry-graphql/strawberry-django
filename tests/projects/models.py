@@ -16,7 +16,7 @@ User = get_user_model()
 
 
 class NamedModel(models.Model):
-    class Meta:  # type: ignore
+    class Meta:
         abstract = True
 
     name = models.CharField(
@@ -91,7 +91,7 @@ class FavoriteQuerySet(QuerySet):
 class Favorite(models.Model):
     """A user's favorite issues."""
 
-    class Meta:  # type: ignore
+    class Meta:
         # Needed to allow type's get_queryset() to access a model's custom QuerySet
         base_manager_name = "objects"
 
@@ -172,7 +172,7 @@ class Issue(NamedModel):
 
 
 class Assignee(models.Model):
-    class Meta:  # type: ignore
+    class Meta:
         unique_together = [  # noqa: RUF012
             ("issue", "user"),
         ]

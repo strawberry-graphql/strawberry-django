@@ -6,10 +6,7 @@ from typing import Union, cast
 import pytest
 import strawberry
 from django.conf import settings
-from django.test.client import (
-    AsyncClient,  # type: ignore
-    Client,
-)
+from django.test.client import AsyncClient, Client
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension

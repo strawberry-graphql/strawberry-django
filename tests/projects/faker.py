@@ -1,14 +1,14 @@
-from typing import Any, ClassVar, Generic, TypeVar, cast
+from typing import Any, ClassVar, Generic, TypeVar
 
 import factory
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import AbstractUser, Group
+from django.contrib.auth.models import Group
 
 from .models import Favorite, Issue, Milestone, Project, Tag
 
 _T = TypeVar("_T")
-User = cast("type[AbstractUser]", get_user_model())
+User = get_user_model()
 
 
 class _BaseFactory(factory.django.DjangoModelFactory, Generic[_T]):

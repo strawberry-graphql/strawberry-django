@@ -52,7 +52,7 @@ from .models import (
     Tag,
 )
 
-UserModel = cast("type[AbstractUser]", get_user_model())
+UserModel = get_user_model()
 
 
 @strawberry_django.interface(NamedModel)
@@ -546,7 +546,7 @@ class Mutation:
         """Create project documentation."""
         if cost > 500:
             # Field error without error code:
-            raise ValidationError({"cost": "Cost cannot be higher than 500"})
+            raise ValidationError({"cost": ["Cost cannot be higher than 500"]})
         if cost < 0:
             # Field error with error code:
             raise ValidationError(

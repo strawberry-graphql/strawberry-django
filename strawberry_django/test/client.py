@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.test.client import AsyncClient, Client  # type: ignore
+from django.test.client import AsyncClient, Client
 from strawberry.test import BaseGraphQLTestClient
 from strawberry.test.client import Response
 from typing_extensions import override
@@ -48,10 +48,13 @@ class TestClient(BaseGraphQLTestClient):
 
 class AsyncTestClient(TestClient):
     def __init__(self, path: str, client: Optional[AsyncClient] = None):
-        super().__init__(path, client or AsyncClient())
+        super().__init__(
+            path,
+            client or AsyncClient(),  # type: ignore
+        )
 
     @property
-    def client(self) -> AsyncClient:
+    def client(self) -> AsyncClient:  # type: ignore[reportIncompatibleMethodOverride]
         return self._client
 
     @override

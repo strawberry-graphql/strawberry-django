@@ -49,7 +49,7 @@ def test_non_dataclass_annotations_are_ignored_on_type():
 
 
 def test_non_dataclass_annotations_are_ignored_on_input():
-    class SomeModel(models.Model):
+    class SomeModel2(models.Model):
         name = models.CharField(max_length=255)
 
     class NonDataclass:
@@ -63,7 +63,7 @@ def test_non_dataclass_annotations_are_ignored_on_input():
     class SomeStrawberryInput:
         some_strawberry_attr: str
 
-    @strawberry_django.input(SomeModel)
+    @strawberry_django.input(SomeModel2)
     class SomeModelInput(SomeStrawberryInput, SomeDataclass, NonDataclass):
         name: str
 
@@ -91,12 +91,12 @@ def test_optimizer_hints_on_type():
     class OtherModel(models.Model):
         name = models.CharField(max_length=255)
 
-    class SomeModel(models.Model):
+    class SomeModel3(models.Model):
         name = models.CharField(max_length=255)
         other = models.ForeignKey(OtherModel, on_delete=models.CASCADE)
 
     @strawberry_django.type(
-        SomeModel,
+        SomeModel3,
         only=["name", "other", "other_name"],
         select_related=["other"],
         prefetch_related=["other"],
@@ -114,16 +114,16 @@ def test_optimizer_hints_on_type():
 
 
 def test_custom_field_kept_on_inheritance():
-    class SomeModel(models.Model):
+    class SomeModel4(models.Model):
         foo = models.CharField(max_length=255)
 
     class CustomField(StrawberryDjangoField): ...
 
-    @strawberry_django.type(SomeModel)
+    @strawberry_django.type(SomeModel4)
     class SomeModelType:
         foo: strawberry.auto = CustomField()
 
-    @strawberry_django.type(SomeModel)
+    @strawberry_django.type(SomeModel4)
     class SomeModelSubclassType(SomeModelType): ...
 
     for type_ in [SomeModelType, SomeModelSubclassType]:

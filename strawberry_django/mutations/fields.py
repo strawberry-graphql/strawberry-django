@@ -48,6 +48,13 @@ if TYPE_CHECKING:
 _T = TypeVar("_T", bound="models.Model | list[models.Model]")
 
 
+def _get_validaton_error_message(error: ValidationError):
+    if not error.message:
+        return "Unknown error"
+
+    return error.message % error.params if error.params else error.message
+
+
 def _get_validation_errors(error: Exception):
     if isinstance(error, PermissionDenied):
         kind = OperationMessage.Kind.PERMISSION
@@ -60,20 +67,20 @@ def _get_validation_errors(error: Exception):
 
     if isinstance(error, ValidationError) and hasattr(error, "error_dict"):
         # convert field errors
-        for field, field_errors in error.error_dict.items():
+        for field, field_errors in (error.error_dict or {}).items():
             for e in field_errors:
                 yield OperationMessage(
                     kind=kind,
                     field=to_camel_case(field) if field != NON_FIELD_ERRORS else None,
-                    message=e.message % e.params if e.params else e.message,
+                    message=_get_validaton_error_message(e),
                     code=getattr(e, "code", None),
                 )
     elif isinstance(error, ValidationError) and hasattr(error, "error_list"):
         # convert non-field errors
-        for e in error.error_list:
+        for e in error.error_list or []:
             yield OperationMessage(
                 kind=kind,
-                message=e.message % e.params if e.params else e.message,
+                message=_get_validaton_error_message(e),
                 code=getattr(error, "code", None),
             )
     else:

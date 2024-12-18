@@ -18,7 +18,7 @@ class NameDescriptionMixin(models.Model):
     name = models.CharField(max_length=20)
     description = models.TextField()
 
-    class Meta:  # type: ignore
+    class Meta:
         abstract = True
 
 

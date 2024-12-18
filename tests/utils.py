@@ -4,14 +4,11 @@ import contextvars
 import dataclasses
 import inspect
 import warnings
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS, connections
-from django.test.client import (
-    AsyncClient,  # type: ignore
-    Client,
-)
+from django.test.client import AsyncClient, Client
 from django.test.utils import CaptureQueriesContext
 from strawberry.test.client import Response
 from strawberry.utils.inspect import in_async_context
@@ -120,7 +117,7 @@ class GraphQLTestClient(TestClient):
         path: str,
         client: Union[Client, AsyncClient],
     ):
-        super().__init__(path, client=client)
+        super().__init__(path, client=cast("Client", client))
         self._token: Optional[contextvars.Token] = None
         self.is_async = isinstance(client, AsyncClient)
 

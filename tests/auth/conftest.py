@@ -23,7 +23,7 @@ def context(mocker):
 
 @pytest.fixture
 def user(db, group, tag):
-    return UserModel.objects.create_user(  # type: ignore
+    return UserModel.objects.create_user(
         username="user",
         password="password",
     )

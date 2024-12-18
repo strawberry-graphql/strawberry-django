@@ -17,7 +17,7 @@ from strawberry_django.relay import ListConnectionWithTotalCount
 
 
 class FruitModel(models.Model):
-    class Meta:  # type: ignore
+    class Meta:
         ordering: ClassVar[list[str]] = ["id"]
 
     name = models.CharField(max_length=255)
