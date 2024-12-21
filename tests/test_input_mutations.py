@@ -1,4 +1,7 @@
+from unittest.mock import patch
+
 import pytest
+from django.core.exceptions import ValidationError
 from strawberry.relay import from_base64, to_base64
 
 from tests.utils import GraphQLTestClient, assert_num_queries
@@ -10,7 +13,7 @@ from .projects.faker import (
     TagFactory,
     UserFactory,
 )
-from .projects.models import Issue, Milestone, Project
+from .projects.models import Issue, Milestone, Project, Tag
 
 
 @pytest.mark.django_db(transaction=True)
@@ -245,8 +248,8 @@ def test_input_create_mutation(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation CreateMilestone ($input: MilestoneInput!) {
-      createMilestone (input: $input) {
+    mutation CreateIssue ($input: IssueInput!) {
+      createIssue (input: $input) {
         __typename
         ... on OperationInfo {
           messages {
@@ -255,45 +258,70 @@ def test_input_create_mutation_nested_creation(db, gql_client: GraphQLTestClient
             message
           }
         }
-        ... on MilestoneType {
+        ... on IssueType {
           id
           name
-          project {
+          milestone {
             id
             name
+            project {
+              id
+              name
+            }
           }
         }
       }
     }
     """
     assert not Project.objects.filter(name="New Project").exists()
+    assert not Milestone.objects.filter(name="New Milestone").exists()
+    assert not Issue.objects.filter(name="New Issue").exists()
 
     res = gql_client.query(
         query,
         {
             "input": {
-                "name": "Some Milestone",
-                "project": {
-                    "name": "New Project",
+                "name": "New Issue",
+                "milestone": {
+                    "name": "New Milestone",
+                    "project": {
+                        "name": "New Project",
+                    },
                 },
             },
         },
     )
-    assert res.data
-    assert isinstance(res.data["createMilestone"], dict)
 
-    typename, _pk = from_base64(res.data["createMilestone"].pop("id"))
-    assert typename == "MilestoneType"
+    assert res.data
+    assert isinstance(res.data["createIssue"], dict)
+
+    typename, pk = from_base64(res.data["createIssue"].get("id"))
+
+    assert typename == "IssueType"
+    issue = Issue.objects.get(pk=pk)
+    assert issue.name == "New Issue"
+
+    milestone = Milestone.objects.get(name="New Milestone")
+    assert milestone.name == "New Milestone"
 
     project = Project.objects.get(name="New Project")
+    assert project.name == "New Project"
+
+    assert milestone.project_id == project.pk
+    assert issue.milestone_id == milestone.pk
 
     assert res.data == {
-        "createMilestone": {
-            "__typename": "MilestoneType",
-            "name": "Some Milestone",
-            "project": {
-                "id": to_base64("ProjectType", project.pk),
-                "name": project.name,
+        "createIssue": {
+            "__typename": "IssueType",
+            "id": to_base64("IssueType", issue.pk),
+            "name": "New Issue",
+            "milestone": {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "name": "New Milestone",
+                "project": {
+                    "id": to_base64("ProjectType", project.pk),
+                    "name": "New Project",
+                },
             },
         },
     }
@@ -375,6 +403,479 @@ def test_input_create_with_m2m_mutation(db, gql_client: GraphQLTestClient):
         "Milestone Issue 1",
         "Milestone Issue 2",
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_create_mutation_with_multiple_level_nested_creation(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation createProjectWithMilestones ($input: ProjectInputPartial!) {
+      createProjectWithMilestones (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          milestones {
+            id
+            name
+            issues {
+              id
+              name
+              tags {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    shared_tag = TagFactory.create(name="Shared Tag")
+    shared_tag_id = to_base64("TagType", shared_tag.pk)
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "name": "Some Project",
+                "milestones": [
+                    {
+                        "name": "Some Milestone",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                                "tags": [
+                                    {"name": "Tag 1"},
+                                    {"name": "Tag 2"},
+                                    {"name": "Tag 3"},
+                                    {"id": shared_tag_id},
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "name": "Another Milestone",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                                "tags": [
+                                    {"name": "Tag 4"},
+                                    {"id": shared_tag_id},
+                                ],
+                            },
+                            {
+                                "name": "Another Issue",
+                                "tags": [
+                                    {"name": "Tag 5"},
+                                    {"id": shared_tag_id},
+                                ],
+                            },
+                            {
+                                "name": "Third issue",
+                                "tags": [
+                                    {"name": "Tag 6"},
+                                    {"id": shared_tag_id},
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+    )
+
+    assert res.data
+    assert isinstance(res.data["createProjectWithMilestones"], dict)
+
+    projects = Project.objects.all()
+    project_typename, project_pk = from_base64(
+        res.data["createProjectWithMilestones"].pop("id")
+    )
+    assert project_typename == "ProjectType"
+    assert projects[0] == Project.objects.get(pk=project_pk)
+
+    milestones = Milestone.objects.all()
+    assert len(milestones) == 2
+    assert len(res.data["createProjectWithMilestones"]["milestones"]) == 2
+
+    some_milestone = res.data["createProjectWithMilestones"]["milestones"][0]
+    milestone_typename, milestone_pk = from_base64(some_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[0] == Milestone.objects.get(pk=milestone_pk)
+
+    another_milestone = res.data["createProjectWithMilestones"]["milestones"][1]
+    milestone_typename, milestone_pk = from_base64(another_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[1] == Milestone.objects.get(pk=milestone_pk)
+
+    issues = Issue.objects.all()
+    assert len(issues) == 4
+    assert len(some_milestone["issues"]) == 1
+    assert len(another_milestone["issues"]) == 3
+
+    # Issues for first milestone
+    fetched_issue = some_milestone["issues"][0]
+    issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+    assert issue_typename == "IssueType"
+    assert issues[0] == Issue.objects.get(pk=issue_pk)
+    # Issues for second milestone
+    for i in range(3):
+        fetched_issue = another_milestone["issues"][i]
+        issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+        assert issue_typename == "IssueType"
+        assert issues[i + 1] == Issue.objects.get(pk=issue_pk)
+
+    tags = Tag.objects.all()
+    assert len(tags) == 7
+    assert len(issues[0].tags.all()) == 4  # 3 new tags + shared tag
+    assert len(issues[1].tags.all()) == 2  # 1 new tag + shared tag
+    assert len(issues[2].tags.all()) == 2  # 1 new tag + shared tag
+    assert len(issues[3].tags.all()) == 2  # 1 new tag + shared tag
+
+    assert res.data == {
+        "createProjectWithMilestones": {
+            "__typename": "ProjectType",
+            "name": "Some Project",
+            "milestones": [
+                {
+                    "name": "Some Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 1"},
+                                {"name": "Tag 2"},
+                                {"name": "Tag 3"},
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "name": "Another Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 4"},
+                            ],
+                        },
+                        {
+                            "name": "Another Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 5"},
+                            ],
+                        },
+                        {
+                            "name": "Third issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 6"},
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_multiple_level_nested_creation(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateProject ($input: ProjectInputPartial!) {
+      updateProject (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          milestones {
+            id
+            name
+            issues {
+              id
+              name
+              tags {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    project = ProjectFactory.create(name="Some Project")
+
+    shared_tag = TagFactory.create(name="Shared Tag")
+    shared_tag_id = to_base64("TagType", shared_tag.pk)
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("ProjectType", project.pk),
+                "milestones": [
+                    {
+                        "name": "Some Milestone",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                                "tags": [
+                                    {"name": "Tag 1"},
+                                    {"name": "Tag 2"},
+                                    {"name": "Tag 3"},
+                                    {"id": shared_tag_id},
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "name": "Another Milestone",
+                        "issues": [
+                            {
+                                "name": "Some Issue",
+                                "tags": [
+                                    {"name": "Tag 4"},
+                                    {"id": shared_tag_id},
+                                ],
+                            },
+                            {
+                                "name": "Another Issue",
+                                "tags": [
+                                    {"name": "Tag 5"},
+                                    {"id": shared_tag_id},
+                                ],
+                            },
+                            {
+                                "name": "Third issue",
+                                "tags": [
+                                    {"name": "Tag 6"},
+                                    {"id": shared_tag_id},
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+    )
+
+    assert res.data
+    assert isinstance(res.data["updateProject"], dict)
+
+    project_typename, project_pk = from_base64(res.data["updateProject"].pop("id"))
+    assert project_typename == "ProjectType"
+    assert project.pk == int(project_pk)
+
+    milestones = Milestone.objects.all()
+    assert len(milestones) == 2
+    assert len(res.data["updateProject"]["milestones"]) == 2
+
+    some_milestone = res.data["updateProject"]["milestones"][0]
+    milestone_typename, milestone_pk = from_base64(some_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[0] == Milestone.objects.get(pk=milestone_pk)
+
+    another_milestone = res.data["updateProject"]["milestones"][1]
+    milestone_typename, milestone_pk = from_base64(another_milestone.pop("id"))
+    assert milestone_typename == "MilestoneType"
+    assert milestones[1] == Milestone.objects.get(pk=milestone_pk)
+
+    issues = Issue.objects.all()
+    assert len(issues) == 4
+    assert len(some_milestone["issues"]) == 1
+    assert len(another_milestone["issues"]) == 3
+
+    # Issues for first milestone
+    fetched_issue = some_milestone["issues"][0]
+    issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+    assert issue_typename == "IssueType"
+    assert issues[0] == Issue.objects.get(pk=issue_pk)
+    # Issues for second milestone
+    for i in range(3):
+        fetched_issue = another_milestone["issues"][i]
+        issue_typename, issue_pk = from_base64(fetched_issue.pop("id"))
+        assert issue_typename == "IssueType"
+        assert issues[i + 1] == Issue.objects.get(pk=issue_pk)
+
+    tags = Tag.objects.all()
+    assert len(tags) == 7
+    assert len(issues[0].tags.all()) == 4  # 3 new tags + shared tag
+    assert len(issues[1].tags.all()) == 2  # 1 new tag + shared tag
+    assert len(issues[2].tags.all()) == 2  # 1 new tag + shared tag
+    assert len(issues[3].tags.all()) == 2  # 1 new tag + shared tag
+
+    assert res.data == {
+        "updateProject": {
+            "__typename": "ProjectType",
+            "name": "Some Project",
+            "milestones": [
+                {
+                    "name": "Some Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 1"},
+                                {"name": "Tag 2"},
+                                {"name": "Tag 3"},
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "name": "Another Milestone",
+                    "issues": [
+                        {
+                            "name": "Some Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 4"},
+                            ],
+                        },
+                        {
+                            "name": "Another Issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 5"},
+                            ],
+                        },
+                        {
+                            "name": "Third issue",
+                            "tags": [
+                                {"name": "Shared Tag"},
+                                {"name": "Tag 6"},
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+
+
+@pytest.mark.parametrize("mock_model", ["Milestone", "Issue", "Tag"])
+@pytest.mark.django_db(transaction=True)
+def test_input_create_mutation_with_nested_calls_nested_full_clean(
+    db, gql_client: GraphQLTestClient, mock_model: str
+):
+    query = """
+    mutation createProjectWithMilestones ($input: ProjectInputPartial!) {
+      createProjectWithMilestones (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on ProjectType {
+          id
+          name
+          milestones {
+            id
+            name
+            issues {
+              id
+              name
+              tags {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    shared_tag = TagFactory.create(name="Shared Tag")
+    shared_tag_id = to_base64("TagType", shared_tag.pk)
+
+    with patch(
+        f"tests.projects.models.{mock_model}.clean",
+        side_effect=ValidationError({"name": ValidationError("Invalid name")}),
+    ) as mocked_full_clean:
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "name": "Some Project",
+                    "milestones": [
+                        {
+                            "name": "Some Milestone",
+                            "issues": [
+                                {
+                                    "name": "Some Issue",
+                                    "tags": [
+                                        {"name": "Tag 1"},
+                                        {"name": "Tag 2"},
+                                        {"name": "Tag 3"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "name": "Another Milestone",
+                            "issues": [
+                                {
+                                    "name": "Some Issue",
+                                    "tags": [
+                                        {"name": "Tag 4"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                },
+                                {
+                                    "name": "Another Issue",
+                                    "tags": [
+                                        {"name": "Tag 5"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                },
+                                {
+                                    "name": "Third issue",
+                                    "tags": [
+                                        {"name": "Tag 6"},
+                                        {"id": shared_tag_id},
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        )
+
+    assert res.data
+    assert isinstance(res.data["createProjectWithMilestones"], dict)
+    assert res.data["createProjectWithMilestones"]["__typename"] == "OperationInfo"
+    assert mocked_full_clean.call_count == 1
+    assert res.data["createProjectWithMilestones"]["messages"] == [
+        {"field": "name", "kind": "VALIDATION", "message": "Invalid name"}
+    ]
 
 
 @pytest.mark.django_db(transaction=True)

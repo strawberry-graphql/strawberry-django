@@ -159,6 +159,13 @@ input MilestoneFilter {
 input MilestoneInputPartial {
   id: GlobalID
   name: String
+  issues: [MilestoneIssueInputPartial!]
+  project: ProjectInputPartial
+}
+
+input MilestoneIssueInputPartial {
+  name: String
+  tags: [TagInputPartial!]
 }
 
 input MilestoneOrder {
@@ -308,6 +315,12 @@ type PageInfo {
   endCursor: String
 }
 
+input ProjectInputPartial {
+  id: GlobalID
+  name: String
+  milestones: [MilestoneInputPartial!]
+}
+
 input ProjectOrder {
   id: Ordering
   name: Ordering
@@ -403,6 +416,11 @@ input StrFilterLookup {
   Case-insensitive regular expression match. Filter will be skipped on `null` value
   """
   iRegex: String
+}
+
+input TagInputPartial {
+  id: GlobalID
+  name: String
 }
 
 type TagType implements Node & Named {
