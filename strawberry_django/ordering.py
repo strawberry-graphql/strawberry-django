@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import functools
 from typing import (
     TYPE_CHECKING,
     Optional,
     TypeVar,
     cast,
+    Any,
+    Mapping,
 )
 
 import strawberry
 from django.db.models import F, OrderBy, QuerySet
+from graphql import VariableNode
 from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
 from strawberry.types import has_object_definition
-from strawberry.types.base import WithStrawberryObjectDefinition
+from strawberry.types.base import WithStrawberryObjectDefinition, StrawberryOptional
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
@@ -29,6 +33,7 @@ from strawberry_django.fields.filter_order import (
 from strawberry_django.utils.typing import is_auto
 
 from .arguments import argument
+from .settings import strawberry_django_settings
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Sequence
@@ -193,17 +198,103 @@ def apply(
     return queryset.order_by(*args)
 
 
+def process_ordering_default(
+    ordering: Collection[WithStrawberryObjectDefinition] | None,
+    info: Info | None,
+    queryset: _QS,
+    prefix: str = "",
+) -> tuple[_QS, Collection[F | OrderBy | str]]:
+    args = []
+
+    for o in ordering:
+        for f in o.__strawberry_definition__.fields:
+            f_value = getattr(o, f.name, UNSET)
+            if f_value is UNSET or (
+                f_value is None and not f.metadata.get(WITH_NONE_META)
+            ):
+                continue
+
+            if isinstance(f, FilterOrderField) and f.base_resolver:
+                res = f.base_resolver(
+                    o,
+                    info,
+                    value=f_value,
+                    queryset=queryset,
+                    prefix=prefix,
+                )
+                if isinstance(res, tuple):
+                    queryset, subargs = res
+                else:
+                    subargs = res
+                args.extend(subargs)
+            elif isinstance(f_value, Ordering):
+                args.append(f_value.resolve(f"{prefix}{f.name}"))
+            else:
+                ordering_cls = f.type
+                if isinstance(ordering_cls, StrawberryOptional):
+                    ordering_cls = ordering_cls.of_type
+                assert isinstance(ordering_cls, type) and has_object_definition(
+                    ordering_cls
+                )
+                queryset, subargs = process_ordering(
+                    ordering_cls,
+                    (f_value,),
+                    info,
+                    queryset,
+                    prefix=f"{prefix}{f.name}__",
+                )
+                args.extend(subargs)
+
+    return queryset, args
+
+
+def process_ordering(
+    ordering_cls: type[WithStrawberryObjectDefinition],
+    ordering: Collection[WithStrawberryObjectDefinition] | None,
+    info: Info | None,
+    queryset: _QS,
+    prefix: str = "",
+) -> tuple[_QS, Collection[F | OrderBy | str]]:
+    if callable(
+        order_method := getattr(ordering_cls, "process_ordering", None),
+    ):
+        return order_method(order, info, queryset=queryset, prefix=prefix)
+    else:
+        return process_ordering_default(ordering, info, queryset, prefix)
+
+
+def apply_ordering(
+    ordering_cls: type[WithStrawberryObjectDefinition],
+    ordering: Collection[WithStrawberryObjectDefinition] | None,
+    info: Info | None,
+    queryset: _QS,
+) -> _QS:
+    queryset, args = process_ordering(ordering_cls, ordering, info, queryset)
+    if args:
+        queryset = queryset.order_by(*args)
+    return queryset
+
+
 class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
-    def __init__(self, order: type | UnsetType | None = UNSET, **kwargs):
+    def __init__(
+        self,
+        order: type | UnsetType | None = UNSET,
+        ordering: type | UnsetType | None = UNSET,
+        **kwargs,
+    ):
         if order and not has_object_definition(order):
             raise TypeError("order needs to be a strawberry type")
+        if ordering and not has_object_definition(ordering):
+            raise TypeError("ordering needs to be a strawberry type")
 
         self.order = order
+        self.ordering = ordering
         super().__init__(**kwargs)
 
     def __copy__(self) -> Self:
         new_field = super().__copy__()
         new_field.order = self.order
+        new_field.ordering = self.ordering
         return new_field
 
     @property
@@ -213,6 +304,12 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
             order = self.get_order()
             if order and order is not UNSET:
                 arguments.append(argument("order", order, is_optional=True))
+        if self.base_resolver is None:
+            ordering = self.get_ordering()
+            if ordering is not None:
+                arguments.append(
+                    argument("ordering", ordering, is_list=True, default=[])
+                )
         return super().arguments + arguments
 
     @arguments.setter
@@ -235,16 +332,82 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
 
         return order if order is not UNSET else None
 
+    def get_ordering(self) -> type[WithStrawberryObjectDefinition] | None:
+        ordering = self.ordering
+        if ordering is None:
+            return None
+
+        if ordering is UNSET:
+            django_type = self.django_type
+            ordering = (
+                django_type.__strawberry_django_definition__.ordering
+                if django_type not in (None, UNSET)
+                else None
+            )
+
+        return ordering
+
     def get_queryset(
         self,
         queryset: _QS,
         info: Info,
         *,
         order: WithStrawberryObjectDefinition | None = None,
+        ordering: list[WithStrawberryObjectDefinition] | None = None,
         **kwargs,
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return apply(order, queryset, info=info)
+        queryset = apply(order, queryset, info=info)
+        if ordering_cls := self.get_ordering():
+            queryset = apply_ordering(ordering_cls, ordering, info, queryset)
+        return queryset
+
+
+@dataclass_transform(
+    order_default=True,
+    field_specifiers=(
+        StrawberryField,
+        field,
+    ),
+)
+def ordering(
+    model: type[Model],
+    *,
+    name: str | None = None,
+    one_of: bool | None = None,
+    description: str | None = None,
+    directives: Sequence[object] | None = (),
+) -> Callable[[_T], _T]:
+    def wrapper(cls):
+        nonlocal one_of
+        try:
+            cls.__annotations__  # noqa: B018
+        except AttributeError:
+            # FIXME: Manual creation for python 3.9 (remove when 3.9 is dropped)
+            cls.__annotations__ = {}
+
+        for fname, type_ in cls.__annotations__.items():
+            if is_auto(type_):
+                type_ = Ordering  # noqa: PLW2901
+
+            cls.__annotations__[fname] = Optional[type_]
+
+            field_ = cls.__dict__.get(fname)
+            if not isinstance(field_, StrawberryField):
+                setattr(cls, fname, UNSET)
+
+        if one_of is None:
+            one_of = strawberry_django_settings()["ORDERING_DEFAULT_ONE_OF"]
+
+        return strawberry.input(
+            cls,
+            name=name,
+            one_of=one_of,
+            description=description,
+            directives=directives,
+        )
+
+    return wrapper
 
 
 @dataclass_transform(
