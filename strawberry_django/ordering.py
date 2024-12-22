@@ -2,23 +2,19 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-import functools
 from typing import (
     TYPE_CHECKING,
     Optional,
     TypeVar,
     cast,
-    Any,
-    Mapping,
 )
 
 import strawberry
 from django.db.models import F, OrderBy, QuerySet
-from graphql import VariableNode
 from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
 from strawberry.types import has_object_definition
-from strawberry.types.base import WithStrawberryObjectDefinition, StrawberryOptional
+from strawberry.types.base import StrawberryOptional, WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
@@ -259,8 +255,7 @@ def process_ordering(
         order_method := getattr(ordering_cls, "process_ordering", None),
     ):
         return order_method(order, info, queryset=queryset, prefix=prefix)
-    else:
-        return process_ordering_default(ordering, info, queryset, prefix)
+    return process_ordering_default(ordering, info, queryset, prefix)
 
 
 def apply_ordering(

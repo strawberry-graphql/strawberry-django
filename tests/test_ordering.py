@@ -13,7 +13,6 @@ from strawberry.types.base import (
 from strawberry.types.field import StrawberryField
 
 import strawberry_django
-
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.fields.filter_order import (
     FilterOrderField,
