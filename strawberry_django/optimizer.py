@@ -1421,6 +1421,11 @@ class DjangoOptimizerExtension(SchemaExtension):
         self.enable_nested_relations_prefetch = enable_nested_relations_prefetch
         self.prefetch_custom_queryset = prefetch_custom_queryset
 
+        if enable_nested_relations_prefetch:
+            from strawberry_django.utils.patches import apply_pagination_fix
+
+            apply_pagination_fix()
+
     def on_execute(self) -> Generator[None]:
         token = optimizer.set(self)
         try:
