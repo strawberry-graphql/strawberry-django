@@ -72,7 +72,7 @@ jobs:
             python-version: '3.9'
           - django-version: 5.0.*
             python-version: '3.13'
-          # Django 5.1 only supports python 3.9+
+          # Django 5.1 only supports python 3.10+
           - django-version: 5.1.*
             python-version: '3.9'
     steps:
