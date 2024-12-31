@@ -67,7 +67,7 @@ jobs:
           # Django 4.2 only supports python 3.8-3.12
           - django-version: 4.2.*
             python-version: '3.13'
-          # Django 5.0 only supports python 3.10-3.13
+          # Django 5.0 only supports python 3.10-3.12
           - django-version: 5.0.*
             python-version: '3.9'
           - django-version: 5.0.*
