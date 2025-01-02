@@ -178,7 +178,7 @@ max-nested-blocks = 7
 [tool.pyright]
 pythonVersion = "3.9"
 useLibraryCodeForTypes = true
-exclude = [".venv", "**/migrations", "dist", "docs", "tests/relay/mptt/models.py"]
+exclude = [".venv", "**/migrations", "dist", "docs"]
 reportCallInDefaultInitializer = "warning"
 reportMatchNotExhaustive = "warning"
 reportMissingSuperCall = "warning"
