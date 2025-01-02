@@ -237,6 +237,20 @@ files = [
 Django = ">=2.1"
 
 [[package]]
+name = "django-tree-queries"
+version = "0.19.0"
+description = "Tree queries with explicit opt-in, without configurability"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "django_tree_queries-0.19.0-py3-none-any.whl", hash = "sha256:05b9e3158e31612528f136b4704a8d807e14edc0b4a607a45377e6132517ba2c"},
+    {file = "django_tree_queries-0.19.0.tar.gz", hash = "sha256:d1325e75f96e90b86c4316a3d63498101ec05703f4e629786b561e8aaab0e4a7"},
+]
+
+[package.extras]
+tests = ["coverage"]
+
+[[package]]
 name = "django-types"
 version = "0.20.0"
 description = "Type stubs for Django"
@@ -911,4 +925,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "56e83e063c18200cdc6cceb33afa4686060eea914fca7182f2ca5ff73755f4ca"
+content-hash = "a4566912e06f3adf657c3a4f3fab14b4cfe546f7e445c985231b35130e82289b"
