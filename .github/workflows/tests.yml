@@ -63,9 +63,21 @@ jobs:
           - django-version: 4.2.*
             python-version: "3.8"
             mode: std
+            psycopg: psycopg2
           - django-version: 4.2.*
             python-version: "3.8"
             mode: geos
+            psycopg: psycopg2
+          # Python 3.8 requires psycopg<3.3
+          # Ref: https://www.psycopg.org/psycopg3/docs/basic/install.html#supported-systems
+          - django-version: 4.2.*
+            python-version: "3.8"
+            mode: std
+            psycopg: "psycopg==3.2"
+          - django-version: 4.2.*
+            python-version: "3.8"
+            mode: geos
+            psycopg: "psycopg==3.2"
         exclude:
           # Django 4.2 only supports python 3.8-3.12
           - django-version: 4.2.*
@@ -103,8 +115,7 @@ jobs:
 
       - name: Install ${{ matrix.psycopg }}
         run: |
-          poetry run pip install ${{ matrix.psycopg }}
-          poetry run pip install ${{ matrix.psycopg }}-binary
+          poetry run pip install "${{ matrix.psycopg }}"
 
       - name: Install Django ${{ matrix.django-version }}
         run: poetry run pip install "django==${{ matrix.django-version }}"
