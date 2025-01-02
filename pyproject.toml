@@ -133,7 +133,7 @@ extend-ignore = [
     "TRY003",
     "PLR6301",
     "PLC0415",
-    "TCH002",
+    "TC002",
     # ruff formatter recommends to disable those
     "COM812",
     "COM819",
