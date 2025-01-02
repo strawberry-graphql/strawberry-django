@@ -39,7 +39,7 @@ except ImportError:  # pragma: no cover
 try:
     from django.contrib.postgres.fields import ArrayField
 except (ImportError, ModuleNotFoundError):  # pragma: no cover
-    # ArrayField will not be importable if psycopg2 is not installed
+    # ArrayField will not be importable if psycopg or psycopg2 is not installed
     ArrayField = None
 
 if django.VERSION >= (5, 0):

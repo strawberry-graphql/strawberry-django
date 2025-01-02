@@ -47,56 +47,71 @@ jobs:
           - 5.0.*
           - 5.1.*
         python-version:
-          - '3.9'
-          - '3.10'
-          - '3.11'
-          - '3.12'
-          - '3.13'
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
         mode:
           - std
           - geos
+        psycopg:
+          - "psycopg2"
+          - "psycopg" # v3
         include:
           # Django 4.2 only supports python 3.8-3.12
           - django-version: 4.2.*
-            python-version: '3.8'
+            python-version: "3.8"
             mode: std
           - django-version: 4.2.*
-            python-version: '3.8'
+            python-version: "3.8"
             mode: geos
         exclude:
           # Django 4.2 only supports python 3.8-3.12
           - django-version: 4.2.*
-            python-version: '3.13'
+            python-version: "3.13"
           # Django 5.0 only supports python 3.10-3.12
           - django-version: 5.0.*
-            python-version: '3.9'
+            python-version: "3.9"
           - django-version: 5.0.*
-            python-version: '3.13'
+            python-version: "3.13"
           # Django 5.1 only supports python 3.10+
           - django-version: 5.1.*
-            python-version: '3.9'
+            python-version: "3.9"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install OS Dependencies
         if: ${{ matrix.mode == 'geos' }}
         uses: daaku/gh-action-apt-install@v4
         with:
           packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+
       - name: Install Poetry
         run: pipx install poetry
+
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
         uses: actions/setup-python@v5
         with:
           cache: poetry
           python-version: ${{ matrix.python-version }}
+
       - name: Install Deps
         run: poetry install
+
+      - name: Install ${{ matrix.psycopg }}
+        run: |
+          poetry run pip install ${{ matrix.psycopg }}
+          poetry run pip install ${{ matrix.psycopg }}-binary
+
       - name: Install Django ${{ matrix.django-version }}
         run: poetry run pip install "django==${{ matrix.django-version }}"
+
       - name: Test with pytest
         run: poetry run pytest --showlocals -vvv --cov-report=xml
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:
