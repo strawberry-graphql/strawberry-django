@@ -3,13 +3,13 @@ The `ID` scalar type represents a unique identifier, often used to refetch an ob
 """
 scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
 
-type MPTTAuthorType implements Node {
+type TreeNodeAuthorType implements Node {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
   books(
-    filters: MPTTBookFilter
-    order: MPTTBookOrder
+    filters: TreeNodeBookFilter
+    order: TreeNodeBookOrder
 
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -22,7 +22,7 @@ type MPTTAuthorType implements Node {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): MPTTBookTypeConnection!
+  ): TreeNodeBookTypeConnection!
   children(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -35,68 +35,68 @@ type MPTTAuthorType implements Node {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): MPTTAuthorTypeConnection!
+  ): TreeNodeAuthorTypeConnection!
 }
 
 """A connection to a list of items."""
-type MPTTAuthorTypeConnection {
+type TreeNodeAuthorTypeConnection {
   """Pagination data for this connection"""
   pageInfo: PageInfo!
 
   """Contains the nodes in this connection"""
-  edges: [MPTTAuthorTypeEdge!]!
+  edges: [TreeNodeAuthorTypeEdge!]!
 
   """Total quantity of existing nodes."""
   totalCount: Int
 }
 
 """An edge in a connection."""
-type MPTTAuthorTypeEdge {
+type TreeNodeAuthorTypeEdge {
   """A cursor for use in pagination"""
   cursor: String!
 
   """The item at the end of the edge"""
-  node: MPTTAuthorType!
+  node: TreeNodeAuthorType!
 }
 
-input MPTTBookFilter {
+input TreeNodeBookFilter {
   name: String!
-  AND: MPTTBookFilter
-  OR: MPTTBookFilter
-  NOT: MPTTBookFilter
+  AND: TreeNodeBookFilter
+  OR: TreeNodeBookFilter
+  NOT: TreeNodeBookFilter
   DISTINCT: Boolean
 }
 
-input MPTTBookOrder {
+input TreeNodeBookOrder {
   name: String
 }
 
-type MPTTBookType implements Node {
+type TreeNodeBookType implements Node {
   """The Globally Unique ID of this object"""
   id: GlobalID!
   name: String!
-  author: MPTTAuthorType!
+  author: TreeNodeAuthorType!
 }
 
 """A connection to a list of items."""
-type MPTTBookTypeConnection {
+type TreeNodeBookTypeConnection {
   """Pagination data for this connection"""
   pageInfo: PageInfo!
 
   """Contains the nodes in this connection"""
-  edges: [MPTTBookTypeEdge!]!
+  edges: [TreeNodeBookTypeEdge!]!
 
   """Total quantity of existing nodes."""
   totalCount: Int
 }
 
 """An edge in a connection."""
-type MPTTBookTypeEdge {
+type TreeNodeBookTypeEdge {
   """A cursor for use in pagination"""
   cursor: String!
 
   """The item at the end of the edge"""
-  node: MPTTBookType!
+  node: TreeNodeBookType!
 }
 
 """An object with a Globally Unique ID"""
@@ -122,8 +122,8 @@ type PageInfo {
 
 type Query {
   booksConn(
-    filters: MPTTBookFilter
-    order: MPTTBookOrder
+    filters: TreeNodeBookFilter
+    order: TreeNodeBookOrder
 
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -136,10 +136,10 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): MPTTBookTypeConnection!
+  ): TreeNodeBookTypeConnection!
   booksConn2(
-    filters: MPTTBookFilter
-    order: MPTTBookOrder
+    filters: TreeNodeBookFilter
+    order: TreeNodeBookOrder
 
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -152,7 +152,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): MPTTBookTypeConnection!
+  ): TreeNodeBookTypeConnection!
   authorsConn(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -165,7 +165,7 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): MPTTAuthorTypeConnection!
+  ): TreeNodeAuthorTypeConnection!
   authorsConn2(
     """Returns the items in the list that come before the specified cursor."""
     before: String = null
@@ -178,5 +178,5 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
-  ): MPTTAuthorTypeConnection!
+  ): TreeNodeAuthorTypeConnection!
 }
