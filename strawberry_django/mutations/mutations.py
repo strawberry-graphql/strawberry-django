@@ -1,8 +1,7 @@
 import dataclasses
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import (
     Any,
-    Callable,
     Optional,
     TypeVar,
     Union,

@@ -1,6 +1,6 @@
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from functools import _make_key  # noqa: PLC2701
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
 from django.core.cache import caches
 from django.core.cache.backends.base import DEFAULT_TIMEOUT

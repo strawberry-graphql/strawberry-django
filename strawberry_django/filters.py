@@ -8,7 +8,6 @@ from types import FunctionType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     TypeVar,
     cast,
@@ -40,7 +39,7 @@ from .fields.base import StrawberryDjangoFieldBase
 from .settings import strawberry_django_settings
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from types import FunctionType
 
     from django.db.models import Model
