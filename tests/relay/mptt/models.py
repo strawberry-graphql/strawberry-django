@@ -1,11 +1,11 @@
 from django.db import models
-from mptt.fields import TreeForeignKey
-from mptt.models import MPTTModel
+from tree_queries.fields import TreeNodeForeignKey
+from tree_queries.models import TreeNode
 
 
-class MPTTAuthor(MPTTModel):
+class MPTTAuthor(TreeNode):
     name = models.CharField(max_length=100)
-    parent = TreeForeignKey(
+    parent = TreeNodeForeignKey(
         to="self",
         on_delete=models.CASCADE,
         null=True,

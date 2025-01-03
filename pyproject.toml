@@ -37,6 +37,7 @@ asgiref = ">=3.8"
 django-choices-field = { version = ">=2.2.2", optional = true }
 django-debug-toolbar = { version = ">=3.4", optional = true }
 strawberry-graphql = ">=0.236.0"
+django-tree-queries = "^0.19.0"
 
 [tool.poetry.group.dev.dependencies]
 channels = { version = ">=3.0.5" }
@@ -132,7 +133,7 @@ extend-ignore = [
     "TRY003",
     "PLR6301",
     "PLC0415",
-    "TCH002",
+    "TC002",
     # ruff formatter recommends to disable those
     "COM812",
     "COM819",
