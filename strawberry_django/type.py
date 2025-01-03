@@ -74,6 +74,7 @@ def _process_type(
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField,
     filters: Optional[type] = None,
     order: Optional[type] = None,
+    ordering: Optional[type] = None,
     pagination: bool = False,
     partial: bool = False,
     is_filter: Union[Literal["lookups"], bool] = False,
@@ -132,6 +133,7 @@ def _process_type(
         is_filter=is_filter,
         filters=filters,
         order=order,
+        ordering=ordering,
         pagination=pagination,
         disable_optimization=disable_optimization,
         store=OptimizerStore.with_hints(
@@ -408,6 +410,7 @@ class StrawberryDjangoDefinition(Generic[_O, _M]):
     is_filter: Union[Literal["lookups"], bool] = False
     filters: Optional[type] = None
     order: Optional[type] = None
+    ordering: Optional[type] = None
     pagination: bool = False
     field_cls: type[StrawberryDjangoField] = StrawberryDjangoField
     disable_optimization: bool = False
@@ -433,6 +436,7 @@ def type(  # noqa: A001
     extend: bool = False,
     filters: Optional[type] = None,
     order: Optional[type] = None,
+    ordering: Optional[type] = None,
     pagination: bool = False,
     only: Optional[TypeOrSequence[str]] = None,
     select_related: Optional[TypeOrSequence[str]] = None,
@@ -470,6 +474,7 @@ def type(  # noqa: A001
             filters=filters,
             pagination=pagination,
             order=order,
+            ordering=ordering,
             only=only,
             select_related=select_related,
             prefetch_related=prefetch_related,
