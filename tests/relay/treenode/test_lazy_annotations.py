@@ -6,8 +6,8 @@ from pytest_snapshot.plugin import Snapshot
 import strawberry_django
 from strawberry_django.relay import ListConnectionWithTotalCount
 
-from .a import MPTTAuthorConnection, MPTTAuthorType
-from .b import MPTTBookConnection, MPTTBookType
+from .a import TreeNodeAuthorConnection, TreeNodeAuthorType
+from .b import TreeNodeBookConnection, TreeNodeBookType
 
 SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 
@@ -15,12 +15,12 @@ SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 def test_lazy_type_annotations_in_schema(snapshot: Snapshot):
     @strawberry.type
     class Query:
-        books_conn: MPTTBookConnection = strawberry_django.connection()
-        books_conn2: ListConnectionWithTotalCount[MPTTBookType] = (
+        books_conn: TreeNodeBookConnection = strawberry_django.connection()
+        books_conn2: ListConnectionWithTotalCount[TreeNodeBookType] = (
             strawberry_django.connection()
         )
-        authors_conn: MPTTAuthorConnection = strawberry_django.connection()
-        authors_conn2: ListConnectionWithTotalCount[MPTTAuthorType] = (
+        authors_conn: TreeNodeAuthorConnection = strawberry_django.connection()
+        authors_conn2: ListConnectionWithTotalCount[TreeNodeAuthorType] = (
             strawberry_django.connection()
         )
 

@@ -5,13 +5,13 @@ from strawberry.relay.utils import to_base64
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
-from .a import MPTTAuthorConnection
-from .models import MPTTAuthor
+from .a import TreeNodeAuthorConnection
+from .models import TreeNodeAuthor
 
 
 @strawberry.type
 class Query:
-    authors: MPTTAuthorConnection = strawberry_django.connection()
+    authors: TreeNodeAuthorConnection = strawberry_django.connection()
 
 
 schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
@@ -19,9 +19,9 @@ schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
 
 @pytest.mark.django_db(transaction=True)
 def test_nested_children_total_count():
-    parent = MPTTAuthor.objects.create(name="Parent")
-    child1 = MPTTAuthor.objects.create(name="Child1", parent=parent)
-    child2 = MPTTAuthor.objects.create(name="Child2", parent=parent)
+    parent = TreeNodeAuthor.objects.create(name="Parent")
+    child1 = TreeNodeAuthor.objects.create(name="Child1", parent=parent)
+    child2 = TreeNodeAuthor.objects.create(name="Child2", parent=parent)
     query = """\
     query {
       authors(first: 1) {
@@ -53,20 +53,24 @@ def test_nested_children_total_count():
             "edges": [
                 {
                     "node": {
-                        "id": to_base64("MPTTAuthorType", parent.pk),
+                        "id": to_base64("TreeNodeAuthorType", parent.pk),
                         "name": "Parent",
                         "children": {
                             "totalCount": 2,
                             "edges": [
                                 {
                                     "node": {
-                                        "id": to_base64("MPTTAuthorType", child1.pk),
+                                        "id": to_base64(
+                                            "TreeNodeAuthorType", child1.pk
+                                        ),
                                         "name": "Child1",
                                     }
                                 },
                                 {
                                     "node": {
-                                        "id": to_base64("MPTTAuthorType", child2.pk),
+                                        "id": to_base64(
+                                            "TreeNodeAuthorType", child2.pk
+                                        ),
                                         "name": "Child2",
                                     }
                                 },
@@ -81,7 +85,7 @@ def test_nested_children_total_count():
 
 @pytest.mark.django_db(transaction=True)
 def test_nested_children_total_count_no_children():
-    parent = MPTTAuthor.objects.create(name="Parent")
+    parent = TreeNodeAuthor.objects.create(name="Parent")
     query = """\
     query {
       authors {
@@ -113,7 +117,7 @@ def test_nested_children_total_count_no_children():
             "edges": [
                 {
                     "node": {
-                        "id": to_base64("MPTTAuthorType", parent.pk),
+                        "id": to_base64("TreeNodeAuthorType", parent.pk),
                         "name": "Parent",
                         "children": {
                             "totalCount": 0,
