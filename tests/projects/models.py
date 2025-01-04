@@ -115,14 +115,17 @@ class Favorite(models.Model):
 
 
 class Issue(NamedModel):
-    comments: "RelatedManager[Issue]"
-    issue_assignees: "RelatedManager[Assignee]"
+    class Meta:  # type: ignore
+        ordering = ("id",)
 
     class Kind(models.TextChoices):
         """Issue kind options."""
 
         BUG = "b", "Bug"
         FEATURE = "f", "Feature"
+
+    comments: "RelatedManager[Issue]"
+    issue_assignees: "RelatedManager[Assignee]"
 
     id = models.BigAutoField(
         verbose_name="ID",
@@ -203,6 +206,9 @@ class Assignee(models.Model):
 
 
 class Tag(NamedModel):
+    class Meta:  # type: ignore
+        ordering = ("id",)
+
     issues: "RelatedManager[Issue]"
 
     id = models.BigAutoField(

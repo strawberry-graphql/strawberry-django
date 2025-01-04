@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     TypeVar,
     Union,

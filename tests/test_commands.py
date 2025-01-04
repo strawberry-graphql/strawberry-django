@@ -28,7 +28,7 @@ def test_django_export_schema():
 def test_django_export_schema_exception_handle():
     with pytest.raises(
         CommandError,
-        match="No module named 'tests.fake_schema'",
+        match=r"No module named 'tests.fake_schema'",
     ):
         call_command("export_schema", "tests.fake_schema")
 
@@ -40,7 +40,7 @@ def test_django_export_schema_exception_handle():
         mock_import_module,
         pytest.raises(
             CommandError,
-            match="The `schema` must be an instance of strawberry.Schema",
+            match=r"The `schema` must be an instance of strawberry.Schema",
         ),
     ):
         call_command("export_schema", "tests.schema")

@@ -7,13 +7,19 @@ from strawberry import auto
 from strawberry.types import ExecutionResult
 
 import strawberry_django
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import (
     OffsetPaginationInput,
     apply,
     apply_window_pagination,
 )
 from tests import models, utils
-from tests.projects.faker import MilestoneFactory, ProjectFactory
+from tests.projects.faker import (
+    IssueFactory,
+    MilestoneFactory,
+    ProjectFactory,
+    TagFactory,
+)
 
 
 @strawberry_django.type(models.Fruit, pagination=True)
@@ -145,3 +151,71 @@ def test_apply_window_pagination_with_no_limites(limit):
     assert first_fruit.name == "fruit2"
     assert first_fruit._strawberry_row_number == 3  # type: ignore
     assert first_fruit._strawberry_total_count == 10  # type: ignore
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_pagination_m2m(gql_client: utils.GraphQLTestClient):
+    # Create 2 tags and 3 issues
+    tags = [TagFactory(name=f"Tag {i + 1}") for i in range(2)]
+    issues = [IssueFactory(name=f"Issue {i + 1}") for i in range(3)]
+    # Assign issues 1 and 2 to the 1st tag
+    # Assign issues 2 and 3 to the 2nd tag
+    # This means that both tags share the 2nd issue
+    tags[0].issues.set(issues[:2])
+    tags[1].issues.set(issues[1:])
+    with utils.assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 6):
+        result = gql_client.query(
+            """
+            query {
+              tagConn {
+                totalCount
+                edges {
+                  node {
+                    name
+                    issues {
+                      totalCount
+                      edges {
+                        node {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+        )
+    # Check the results
+    assert not result.errors
+    assert result.data == {
+        "tagConn": {
+            "totalCount": 2,
+            "edges": [
+                {
+                    "node": {
+                        "name": "Tag 1",
+                        "issues": {
+                            "totalCount": 2,
+                            "edges": [
+                                {"node": {"name": "Issue 1"}},
+                                {"node": {"name": "Issue 2"}},
+                            ],
+                        },
+                    }
+                },
+                {
+                    "node": {
+                        "name": "Tag 2",
+                        "issues": {
+                            "totalCount": 2,
+                            "edges": [
+                                {"node": {"name": "Issue 2"}},
+                                {"node": {"name": "Issue 3"}},
+                            ],
+                        },
+                    }
+                },
+            ],
+        }
+    }

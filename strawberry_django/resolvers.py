@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextvars
 import functools
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from asgiref.sync import sync_to_async
 from django.db import models
@@ -13,6 +13,8 @@ from strawberry.utils.inspect import in_async_context
 from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from graphql.pyutils import AwaitableOrValue
 
 _SENTINEL = object()
