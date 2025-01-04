@@ -44,7 +44,6 @@ channels = { version = ">=3.0.5" }
 django-choices-field = "^2.2.2"
 django-debug-toolbar = "^4.4.6"
 django-guardian = "^2.4.0"
-django-mptt = "^0.14.0"
 django-types = "^0.20.0"
 factory-boy = "^3.2.1"
 pillow = "^11.0.0"
