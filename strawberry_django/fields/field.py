@@ -5,6 +5,7 @@ import inspect
 from collections.abc import (
     AsyncIterable,
     AsyncIterator,
+    Callable,
     Iterable,
     Iterator,
     Mapping,
@@ -14,7 +15,6 @@ from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     TypeVar,
     Union,
     cast,

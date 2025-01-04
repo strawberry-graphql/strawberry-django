@@ -5,9 +5,8 @@ import functools
 import inspect
 import sys
 import types
-from collections.abc import Collection, Sequence
+from collections.abc import Callable, Collection, Sequence
 from typing import (
-    Callable,
     Generic,
     Optional,
     TypeVar,

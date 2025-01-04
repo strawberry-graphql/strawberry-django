@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     TypeVar,
     cast,
     overload,

@@ -4,7 +4,6 @@ import dataclasses
 import enum
 from typing import (
     TYPE_CHECKING,
-    Callable,
     Optional,
     TypeVar,
     cast,
@@ -32,7 +31,7 @@ from strawberry_django.utils.typing import is_auto
 from .arguments import argument
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Sequence
+    from collections.abc import Callable, Collection, Sequence
 
     from django.db.models import Model
     from strawberry.types import Info
