@@ -24,6 +24,7 @@ class Choice(models.TextChoices):
     C = "c", gettext_lazy("C description")
     D = "12d-d'éléphant_🐘", "D description"
     E = "_2d_d__l_phant__", "E description"
+    __empty__ = "Empty"
 
 
 class IntegerChoice(models.IntegerChoices):
