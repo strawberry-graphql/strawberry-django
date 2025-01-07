@@ -4,6 +4,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from strawberry.relay import from_base64, to_base64
 
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from tests.utils import GraphQLTestClient, assert_num_queries
 
 from .projects.faker import (
@@ -1028,7 +1029,7 @@ def test_input_nested_update_mutation(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClient):
     query = """
-    mutation UpdateProject ($input: ProjectInputPartial!) {
+    mutation UpdateProject ($input: ProjectInputPartial!, $optimizerEnabled: Boolean!) {
       updateProject (input: $input) {
         __typename
         ... on OperationInfo {
@@ -1042,7 +1043,7 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
           id
           name
           dueDate
-          isDelayed
+          isDelayed @include(if: $optimizerEnabled)
           milestones {
             id
             name
@@ -1059,7 +1060,9 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
     milestone_1_id = to_base64("MilestoneType", milestone_1.pk)
     MilestoneFactory.create(project=project)
 
-    with assert_num_queries(14):
+    # For mutations, having the optimizer enabled is expected to generate one extra
+    # query for the refetch of the object
+    with assert_num_queries(14 if DjangoOptimizerExtension.enabled.get() else 13):
         res = gql_client.query(
             query,
             {
@@ -1067,6 +1070,7 @@ def test_input_update_m2m_set_not_null_mutation(db, gql_client: GraphQLTestClien
                     "id": to_base64("ProjectType", project.pk),
                     "milestones": [{"id": milestone_1_id}],
                 },
+                "optimizerEnabled": DjangoOptimizerExtension.enabled.get(),
             },
         )
 

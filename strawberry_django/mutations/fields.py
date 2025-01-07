@@ -235,7 +235,7 @@ class DjangoMutationCUD(DjangoMutationBase):
         return args_prop.fset(self, value)  # type: ignore
 
     def refetch(self, resolved: _T, *, info: Info | None) -> _T:
-        if not DjangoOptimizerExtension.enabled or info is None:
+        if not DjangoOptimizerExtension.enabled.get() or info is None:
             return resolved
 
         if isinstance(resolved, list) and resolved:
