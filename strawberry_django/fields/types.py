@@ -466,7 +466,11 @@ def resolve_model_field_type(
             meta = model_field.model._meta
 
             enum_choices = {}
-            for c in cast("Iterable[tuple[str, str]]", model_field.choices):
+            for c in cast("Iterable[tuple[str | None, str]]", model_field.choices):
+                # Skip empty choice (__empty__)
+                if not c[0]:
+                    continue
+
                 # replace chars not compatible with GraphQL naming convention
                 choice_name = re.sub(r"^[^_a-zA-Z]|[^_a-zA-Z0-9]", "_", c[0])
                 # use str() to trigger eventual django's gettext_lazy string
