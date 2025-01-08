@@ -26,6 +26,7 @@ from strawberry.exceptions import (
 )
 from strawberry.types import get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
+from strawberry.types.cast import is_strawberry_cast_obj
 from strawberry.types.field import StrawberryField
 from strawberry.types.private import is_private
 from strawberry.utils.deprecations import DeprecatedDescriptor
@@ -185,7 +186,14 @@ def _process_type(
 
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
-        cls.is_type_of = lambda obj, info: isinstance(obj, (cls, model))
+
+        def is_type_of(obj, info):
+            # XXX: Check if this is required even with the strawberry upstream changes
+            if is_strawberry_cast_obj(obj):
+                return obj.__as_strawberry_type__ is cls
+            return isinstance(obj, (cls, model))
+
+        cls.is_type_of = is_type_of
 
     # Default querying methods for relay
     if issubclass(cls, relay.Node):

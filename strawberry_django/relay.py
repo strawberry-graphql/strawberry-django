@@ -1,8 +1,10 @@
+import functools
 import inspect
 import warnings
 from collections.abc import Iterable, Sized
 from typing import (
     Any,
+    Callable,
     Optional,
     TypeVar,
     Union,
@@ -30,6 +32,7 @@ from strawberry_django.utils.typing import (
     get_django_definition,
 )
 
+_T = TypeVar("_T")
 _M = TypeVar("_M", bound=models.Model)
 
 
@@ -172,6 +175,13 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
                 has_next_page=has_next_page,
             ),
         )
+
+
+def get_node_caster(origin: Optional[type]) -> Callable[[_T], _T]:
+    if origin is None:
+        return lambda node: node
+
+    return functools.partial(strawberry.cast, origin)
 
 
 @overload
@@ -341,7 +351,8 @@ def resolve_model_nodes(
         return retval
 
     def map_results(results: models.QuerySet[_M]) -> list[_M]:
-        results_map = {str(getattr(obj, id_attr)): obj for obj in results}
+        node_caster = get_node_caster(origin)
+        results_map = {str(getattr(obj, id_attr)): node_caster(obj) for obj in results}
         retval: list[Optional[_M]] = []
         for node_id in node_ids:
             if required:
@@ -449,7 +460,8 @@ def resolve_model_node(
             # If optimizer extension is enabled, optimize this queryset
             qs = ext.optimize(qs, info=info)
 
-    return django_resolver(lambda: qs.get() if required else qs.first())()
+    node_caster = get_node_caster(origin)
+    return django_resolver(lambda: node_caster(qs.get() if required else qs.first()))()
 
 
 def resolve_model_id_attr(source: type) -> str:
