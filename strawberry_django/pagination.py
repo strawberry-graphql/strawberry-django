@@ -171,6 +171,7 @@ def apply_window_pagination(
     related_field_id: str,
     offset: int = 0,
     limit: Optional[int] = UNSET,
+    max_results: Optional[int] = None,
 ) -> _QS:
     """Apply pagination using window functions.
 
@@ -211,7 +212,11 @@ def apply_window_pagination(
 
     if limit is UNSET:
         settings = strawberry_django_settings()
-        limit = settings["PAGINATION_DEFAULT_LIMIT"]
+        limit = (
+            max_results
+            if max_results is not None
+            else settings["PAGINATION_DEFAULT_LIMIT"]
+        )
 
     # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
     # from the end to as a way to mimic a "not limit" as well

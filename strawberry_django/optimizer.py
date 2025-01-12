@@ -570,6 +570,7 @@ def _optimize_prefetch_queryset(
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
                     limit=slice_metadata.end - slice_metadata.start,
+                    max_results=connection_extension.max_results,
                 )
             else:
                 mark_optimized = False

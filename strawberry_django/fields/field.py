@@ -767,6 +767,7 @@ def connection(
     metadata: Mapping[Any, Any] | None = None,
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
+    max_results: int | None = None,
     filters: type | None = UNSET,
     order: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
@@ -795,6 +796,7 @@ def connection(
     metadata: Mapping[Any, Any] | None = None,
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
+    max_results: int | None = None,
     filters: type | None = UNSET,
     order: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
@@ -821,6 +823,7 @@ def connection(
     metadata: Mapping[Any, Any] | None = None,
     directives: Sequence[object] | None = (),
     extensions: Sequence[FieldExtension] = (),
+    max_results: int | None = None,
     filters: type | None = UNSET,
     order: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
@@ -892,7 +895,10 @@ def connection(
         https://relay.dev/graphql/connections.htm
 
     """
-    extensions = [*extensions, StrawberryDjangoConnectionExtension()]
+    extensions = [
+        *extensions,
+        StrawberryDjangoConnectionExtension(max_results=max_results),
+    ]
     f = field_cls(
         python_name=None,
         django_name=field_name,
