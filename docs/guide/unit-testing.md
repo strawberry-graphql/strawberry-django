@@ -60,4 +60,4 @@ def test_me_authenticated(db):
     }
 ```
 
-For more information how to apply these tests, take a look at the (source)[https://github.com/strawberry-graphql/strawberry-django/blob/main/strawberry_django/test/client.py] and (this example)[https://github.com/strawberry-graphql/strawberry-django/blob/main/tests/test_permissions.py#L49]
+For more information how to apply these tests, take a look at the [source](https://github.com/strawberry-graphql/strawberry-django/blob/main/strawberry_django/test/client.py) and [this example](https://github.com/strawberry-graphql/strawberry-django/blob/main/tests/test_permissions.py#L49)
