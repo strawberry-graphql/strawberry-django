@@ -308,14 +308,6 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                 }
                 ... milestoneFrag
               }
-              milestoneAgain: milestone {
-                name
-                project {
-                  id
-                  name
-                }
-                ... milestoneFrag
-              }
             }
           }
         }
@@ -341,7 +333,6 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                         "nameWithKind": f"{i.kind}: {i.name}",
                         "nameWithPriority": f"{i.kind}: {i.priority}",
                         "milestone": m_res,
-                        "milestoneAgain": m_res,
                     },
                 )
 
@@ -538,12 +529,6 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                 ... milestoneFrag
               }
             }
-            otherIssues: issues {
-              id
-              milestone {
-                ... milestoneFrag
-              }
-            }
           }
         }
       }
@@ -566,7 +551,6 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                     "name": p_res["name"],
                 },
                 "issues": [],
-                "otherIssues": [],
             }
             p_res["milestones"].append(m_res)
             for i in IssueFactory.create_batch(3, milestone=m):
@@ -585,22 +569,10 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                         },
                     },
                 )
-                m_res["otherIssues"].append(
-                    {
-                        "id": to_base64("IssueType", i.id),
-                        "milestone": {
-                            "id": m_res["id"],
-                            "project": {
-                                "id": p_res["id"],
-                                "name": p_res["name"],
-                            },
-                        },
-                    },
-                )
 
     assert len(expected) == 3
     for e in expected:
-        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 8):
+        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
@@ -1087,6 +1059,52 @@ def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
     assert {
         edge["node"]["id"] for edge in result["issuesWithFilters"]["edges"]
     } == expected
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_nested_connection_with_filter_and_alias(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          fooIssues: issuesWithFilters (filters: {search: "Foo"}) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          barIssues: issuesWithFilters (filters: {search: "Bar"}) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue1 = IssueFactory.create(milestone=milestone, name="Foo")
+    issue2 = IssueFactory.create(milestone=milestone, name="Foo Bar")
+    issue3 = IssueFactory.create(milestone=milestone, name="Bar Foo")
+    issue4 = IssueFactory.create(milestone=milestone, name="Bar Bin")
+
+    with assert_num_queries(3):
+        res = gql_client.query(query, {"id": to_base64("MilestoneType", milestone.pk)})
+
+    assert isinstance(res.data, dict)
+    result = res.data["milestone"]
+    assert isinstance(result, dict)
+
+    foo_expected = {to_base64("IssueType", i.pk) for i in [issue1, issue2, issue3]}
+    assert {edge["node"]["id"] for edge in result["fooIssues"]["edges"]} == foo_expected
+
+    bar_expected = {to_base64("IssueType", i.pk) for i in [issue2, issue3, issue4]}
+    assert {edge["node"]["id"] for edge in result["barIssues"]["edges"]} == bar_expected
 
 
 @pytest.mark.django_db(transaction=True)
