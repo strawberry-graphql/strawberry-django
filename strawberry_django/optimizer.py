@@ -5,7 +5,7 @@ import contextvars
 import copy
 import dataclasses
 import itertools
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
@@ -58,6 +58,7 @@ from .descriptors import ModelProperty
 from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
+    get_model_fields,
     get_possible_type_definitions,
 )
 from .utils.typing import (
@@ -1035,18 +1036,28 @@ def _get_model_hints(
     if pk is not None:
         store.only.append(pk.attname)
 
-    for f_selections in _get_selections(info, parent_type).values():
-        field_data = _get_field_data(
-            f_selections,
-            object_definition,
-            schema,
-            parent_type=parent_type,
-            info=info,
+    selections = [
+        field_data
+        for f_selection in _get_selections(info, parent_type).values()
+        if (
+            field_data := _get_field_data(
+                f_selection,
+                object_definition,
+                schema,
+                parent_type=parent_type,
+                info=info,
+            )
         )
-        if field_data is None:
-            continue
+        is not None
+    ]
+    fields_counter = Counter(field_data[0] for field_data in selections)
 
-        field, f_definition, f_selection, f_info = field_data
+    for field, f_definition, f_selection, f_info in selections:
+        # If a field is selected more than once in the query, that means it is being
+        # aliased. In this case, optimizing it would make one query to affect the other,
+        # resulting in wrong results for both.
+        if fields_counter[field] > 1:
+            continue
 
         # Add annotations from the field if they exist
         if field_store := _get_hints_from_field(field, f_info=f_info, prefix=prefix):
@@ -1088,6 +1099,30 @@ def _get_model_hints(
             # something else
             store.only.extend(inner_store.only)
             store.select_related.extend(inner_store.select_related)
+
+    # In case we skipped optimization for a relation, we might end up with a new QuerySet
+    # which would not select its parent relation field on `.only()`, causing n+1 issues.
+    # Make sure that in this case we also select it.
+    if level == 0 and store.only and info.path.prev:
+        own_fk_fields = [
+            field
+            for field in get_model_fields(model).values()
+            if isinstance(field, models.ForeignKey)
+        ]
+
+        path = info.path
+        while path := path.prev:
+            type_ = schema.get_type_by_name(path.typename)
+            if not isinstance(type_, StrawberryObjectDefinition):
+                continue
+
+            if not (strawberry_django_type := get_django_definition(type_.origin)):
+                continue
+
+            for field in own_fk_fields:
+                if field.related_model is strawberry_django_type.model:
+                    store.only.append(field.attname)
+                    break
 
     return store
 
