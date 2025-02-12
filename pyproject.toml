@@ -37,7 +37,6 @@ asgiref = ">=3.8"
 django-choices-field = { version = ">=2.2.2", optional = true }
 django-debug-toolbar = { version = ">=3.4", optional = true }
 strawberry-graphql = ">=0.258.0"
-django-tree-queries = "^0.19.0"
 
 [tool.poetry.group.dev.dependencies]
 channels = { version = ">=3.0.5" }
@@ -59,6 +58,7 @@ django-polymorphic = "^3.1.0"
 setuptools = "^75.1.0"
 psycopg2 = "^2.9.9"
 psycopg2-binary = "^2.9.9"
+django-tree-queries = "^0.19.0"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]
