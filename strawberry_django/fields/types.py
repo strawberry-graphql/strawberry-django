@@ -346,10 +346,27 @@ else:
     )
 
     Geometry = strawberry.scalar(
-        NewType("Geometry", Union[Point, LineString, LinearRing, Polygon, MultiPoint, MultiLineString, MultiPolygon]),
-        serialize=lambda v: v.tuple if isinstance(v, geos.Point) or isinstance(v, geos.LineString) or
-        isinstance(v, geos.LinearRing) or isinstance(v, geos.Polygon) or isinstance(v, geos.MultiPoint) or
-        isinstance(v, geos.MultiLineString) or isinstance(v, geos.MultiPolygon) else v,
+        NewType(
+            "Geometry",
+            Union[
+                Point,
+                LineString,
+                LinearRing,
+                Polygon,
+                MultiPoint,
+                MultiLineString,
+                MultiPolygon,
+            ],
+        ),
+        serialize=lambda v: v.tuple
+        if isinstance(v, geos.Point)
+        or isinstance(v, geos.LineString)
+        or isinstance(v, geos.LinearRing)
+        or isinstance(v, geos.Polygon)
+        or isinstance(v, geos.MultiPoint)
+        or isinstance(v, geos.MultiLineString)
+        or isinstance(v, geos.MultiPolygon)
+        else v,
         parse_value=lambda v: geos.GeometryCollection,
         description="An arbitrary geographical object. One of Point, LineString, LinearRing, Polygon, MultiPoint, MultiLineString, MultiPolygon.",
     )
