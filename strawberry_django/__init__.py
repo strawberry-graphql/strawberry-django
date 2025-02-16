@@ -9,6 +9,7 @@ from .fields.filter_types import (
     FilterLookup,
     RangeLookup,
     TimeFilterLookup,
+    GeometryFilterLookup,
 )
 from .fields.types import (
     DjangoFileType,
@@ -47,6 +48,7 @@ __all__ = [
     "Ordering",
     "RangeLookup",
     "TimeFilterLookup",
+    "GeometryFilterLookup",
     "auth",
     "connection",
     "django_resolver",

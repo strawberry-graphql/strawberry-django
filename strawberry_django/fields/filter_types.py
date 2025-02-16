@@ -5,15 +5,20 @@ from typing import (
     Generic,
     Optional,
     TypeVar,
+    Annotated,
+    TYPE_CHECKING,
 )
 
 import strawberry
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 from strawberry import UNSET
 
 from strawberry_django.filters import resolve_value
 
 from .filter_order import filter_field
+if TYPE_CHECKING:
+    from .types import Geometry
 
 T = TypeVar("T")
 
@@ -123,3 +128,28 @@ type_filter_map = {
     str: FilterLookup,
     uuid.UUID: FilterLookup,
 }
+
+
+try:
+    from django.contrib.gis import geos
+    from django.contrib.gis.db import models as geos_fields
+
+except ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass
+else:
+    @strawberry.input
+    class GeometryFilterLookup(Generic[T]):
+        intersects: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+
+    type_filter_map.update(
+        {
+            geos_fields.PointField: GeometryFilterLookup,
+            geos_fields.LineStringField: GeometryFilterLookup,
+            geos_fields.PolygonField: GeometryFilterLookup,
+            geos_fields.MultiPointField: GeometryFilterLookup,
+            geos_fields.MultiLineStringField: GeometryFilterLookup,
+            geos_fields.MultiPolygonField: GeometryFilterLookup,
+            Geometry: GeometryFilterLookup,
+        },
+    )
