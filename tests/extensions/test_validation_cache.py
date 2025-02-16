@@ -8,7 +8,7 @@ from strawberry_django.extensions.django_validation_cache import DjangoValidatio
 
 
 @pytest.mark.filterwarnings("ignore::django.core.cache.backends.base.CacheKeyWarning")
-@patch("strawberry.schema.execute.validate", wraps=validate)
+@patch("strawberry_django.extensions.django_validation_cache.validate", wraps=validate)
 def test_validation_cache_extension(mock_validate):
     @strawberry.type
     class Query:
