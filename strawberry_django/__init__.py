@@ -9,7 +9,6 @@ from .fields.filter_types import (
     FilterLookup,
     RangeLookup,
     TimeFilterLookup,
-    GeometryFilterLookup,
 )
 from .fields.types import (
     DjangoFileType,
@@ -28,6 +27,7 @@ from .mutations.mutations import input_mutation, mutation
 from .ordering import Ordering, order, process_order
 from .resolvers import django_resolver
 from .type import input, interface, partial, type  # noqa: A004
+
 
 __all__ = [
     "BaseFilterLookup",
@@ -48,7 +48,6 @@ __all__ = [
     "Ordering",
     "RangeLookup",
     "TimeFilterLookup",
-    "GeometryFilterLookup",
     "auth",
     "connection",
     "django_resolver",
@@ -73,3 +72,12 @@ __all__ = [
     "relay",
     "type",
 ]
+
+from django.core.exceptions import ImproperlyConfigured
+
+try:
+    from .fields.filter_types import GeometryFilterLookup
+    __all__.extend(["GeometryFilterLookup"])
+except ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass

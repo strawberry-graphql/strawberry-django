@@ -24,6 +24,7 @@ from strawberry import UNSET, relay
 from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
 from strawberry.types.enum import EnumValueDefinition
+from strawberry.types.scalar import ScalarWrapper
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django import filters
@@ -355,18 +356,6 @@ else:
         ),
     )
 
-    field_type_map.update(
-        {
-            geos_fields.PointField: Point,
-            geos_fields.LineStringField: LineString,
-            geos_fields.PolygonField: Polygon,
-            geos_fields.MultiPointField: MultiPoint,
-            geos_fields.MultiLineStringField: MultiLineString,
-            geos_fields.MultiPolygonField: MultiPolygon,
-            geos_fields.GeometryField: Geometry,
-        },
-    )
-
 
 input_field_type_map: dict[
     Union[
@@ -557,6 +546,8 @@ def resolve_model_field_type(
     ):
         if using_old_filters:
             field_type = filters.FilterLookup[field_type]
+        elif type(field_type) is ScalarWrapper and field_type._scalar_definition.name in ("Point", "LineString", "LinearRing", "Polygon", "MultiPoint", "MultilineString", "MultiPolygon", "Geometry"):
+            field_type = filter_types.GeometryFilterLookup[field_type]
         else:
             field_type = filter_types.type_filter_map.get(  # type: ignore
                 field_type, filter_types.FilterLookup
