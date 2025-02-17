@@ -4,6 +4,7 @@ import uuid
 from typing import (
     Generic,
     Optional,
+    Union,
     TypeVar,
     Annotated,
     TYPE_CHECKING,
@@ -138,4 +139,4 @@ except ImproperlyConfigured:
 else:
     @strawberry.input
     class GeometryFilterLookup(Generic[T]):
-        intersects: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        intersects: Optional[Union[Annotated["Point", strawberry.lazy(".types")], Annotated["MultiPoint", strawberry.lazy(".types")]]] = UNSET
