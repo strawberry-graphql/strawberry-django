@@ -356,6 +356,18 @@ else:
         ),
     )
 
+    field_type_map.update(
+        {
+            geos_fields.PointField: Point,
+            geos_fields.LineStringField: LineString,
+            geos_fields.PolygonField: Polygon,
+            geos_fields.MultiPointField: MultiPoint,
+            geos_fields.MultiLineStringField: MultiLineString,
+            geos_fields.MultiPolygonField: MultiPolygon,
+            geos_fields.GeometryField: Geometry,
+        },
+    )
+
 
 input_field_type_map: dict[
     Union[
