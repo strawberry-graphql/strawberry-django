@@ -28,7 +28,6 @@ from .ordering import Ordering, order, process_order
 from .resolvers import django_resolver
 from .type import input, interface, partial, type  # noqa: A004
 
-
 __all__ = [
     "BaseFilterLookup",
     "ComparisonFilterLookup",

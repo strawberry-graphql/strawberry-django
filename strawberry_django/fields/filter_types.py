@@ -4,7 +4,6 @@ import uuid
 from typing import (
     Generic,
     Optional,
-    Union,
     TypeVar,
     Annotated,
     TYPE_CHECKING,
@@ -151,8 +150,8 @@ else:
         equals: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
         exacts: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
         intersects: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
-        isempty: Optional[bool] = filter_field(description=f"Assignment test. {_SKIP_MSG}")
-        isvalid: Optional[bool] = filter_field(description=f"Assignment test. {_SKIP_MSG}")
+        isempty: Optional[bool] = filter_field(description=f"Test whether it's empty. {_SKIP_MSG}")
+        isvalid: Optional[bool] = filter_field(description=f"Test whether it's valid. {_SKIP_MSG}")
         overlaps: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
         touches: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
         within: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
