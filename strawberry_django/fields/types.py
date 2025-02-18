@@ -349,7 +349,7 @@ else:
     Geometry = strawberry.scalar(
         NewType("Geometry", geos.GEOSGeometry),
         serialize=lambda v: v.tuple if isinstance(v, geos.GEOSGeometry) else v,  # type: ignore
-        parse_value=lambda v: geos.GeometryCollection,
+        parse_value=lambda v: geos.GEOSGeometry(v),
         description=(
             "An arbitrary geographical object. One of Point, "
             "LineString, LinearRing, Polygon, MultiPoint, MultiLineString, MultiPolygon."

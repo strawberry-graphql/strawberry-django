@@ -77,7 +77,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 try:
     from .fields.filter_types import GeometryFilterLookup
-    __all__.extend(["GeometryFilterLookup"])
+    __all__.append("GeometryFilterLookup")
 except ImproperlyConfigured:
     # If gdal is not available, skip.
     pass
