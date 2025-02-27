@@ -37,6 +37,7 @@ __all__ = [
     "DjangoImageType",
     "DjangoModelType",
     "FilterLookup",
+    "GeometryFilterLookup",
     "ListInput",
     "ManyToManyInput",
     "ManyToOneInput",
@@ -71,3 +72,13 @@ __all__ = [
     "relay",
     "type",
 ]
+
+from django.core.exceptions import ImproperlyConfigured
+
+try:
+    from .fields.filter_types import GeometryFilterLookup
+
+    __all__.append("GeometryFilterLookup")
+except ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass
