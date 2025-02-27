@@ -28,7 +28,7 @@ class UserInput:
 
 @strawberry.type
 class Mutation:
-    login: Optional[User] = auth.login()  # type: ignore
+    login: Optional[User] = auth.login()
     logout = auth.logout()
     register: User = auth.register(UserInput)
 

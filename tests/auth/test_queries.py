@@ -13,7 +13,7 @@ from .test_mutations import User
 
 @strawberry.type
 class Query:
-    current_user: Optional[User] = auth.current_user()  # type: ignore
+    current_user: Optional[User] = auth.current_user()
 
 
 @pytest.fixture
