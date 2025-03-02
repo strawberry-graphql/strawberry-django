@@ -436,6 +436,16 @@ type MilestoneTypeEdge {
   node: MilestoneType!
 }
 
+type MilestoneTypeOffsetPaginated {
+  pageInfo: OffsetPaginationInfo!
+
+  """Total count of existing results."""
+  totalCount: Int!
+
+  """List of paginated results."""
+  results: [MilestoneType!]!
+}
+
 type Mutation {
   createIssue(input: IssueInput!): CreateIssuePayload!
   updateIssue(input: IssueInputPartial!): UpdateIssuePayload!
@@ -574,11 +584,30 @@ type ProjectType implements Node & Named {
   id: GlobalID!
   name: String!
   dueDate: Date
-  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
-  milestonesCount: Int!
+  isSmall: Boolean!
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
-  isSmall: Boolean!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
+  milestonesCount: Int!
+  firstMilestone: MilestoneType
+  firstMilestoneRequired: MilestoneType!
+  milestoneConn(
+    filters: MilestoneFilter
+    order: MilestoneOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): MilestoneTypeConnection!
+  milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
 }
 
 """An edge in a connection."""
@@ -588,6 +617,16 @@ type ProjectTypeEdge {
 
   """The item at the end of the edge"""
   node: ProjectType!
+}
+
+type ProjectTypeOffsetPaginated {
+  pageInfo: OffsetPaginationInfo!
+
+  """Total count of existing results."""
+  totalCount: Int!
+
+  """List of paginated results."""
+  results: [ProjectType!]!
 }
 
 type Query {
@@ -621,6 +660,10 @@ type Query {
     """The ID of the object."""
     id: GlobalID!
   ): ProjectType
+  projectMandatory(
+    """The ID of the object."""
+    id: GlobalID!
+  ): ProjectType!
   projectLoginRequired(
     """The ID of the object."""
     id: GlobalID!
@@ -641,6 +684,7 @@ type Query {
   issuesPaginated(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated!
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   projectList(filters: ProjectFilter): [ProjectType!]!
+  projectsPaginated(pagination: OffsetPaginationInput, filters: ProjectFilter): ProjectTypeOffsetPaginated!
   tagList: [TagType!]!
   favoriteConn(
     """Returns the items in the list that come before the specified cursor."""
