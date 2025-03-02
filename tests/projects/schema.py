@@ -100,8 +100,7 @@ class ProjectFilter:
 @strawberry_django.type(Project, filters=ProjectFilter, pagination=True)
 class ProjectType(relay.Node, Named):
     due_date: strawberry.auto
-    milestones: list["MilestoneType"] = strawberry_django.field(pagination=True)
-    milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
+    is_small: strawberry.auto
     is_delayed: bool = strawberry_django.field(
         annotate=ExpressionWrapper(
             Q(due_date__lt=Now()),
@@ -109,7 +108,20 @@ class ProjectType(relay.Node, Named):
         ),
     )
     cost: strawberry.auto = strawberry_django.field(extensions=[IsAuthenticated()])
-    is_small: strawberry.auto
+    milestones: list["MilestoneType"] = strawberry_django.field(pagination=True)
+    milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
+    first_milestone: Optional["MilestoneType"] = strawberry_django.field(
+        field_name="milestones"
+    )
+    first_milestone_required: "MilestoneType" = strawberry_django.field(
+        field_name="milestones"
+    )
+    milestone_conn: ListConnectionWithTotalCount["MilestoneType"] = (
+        strawberry_django.connection(field_name="milestones")
+    )
+    milestones_paginated: OffsetPaginated["MilestoneType"] = (
+        strawberry_django.offset_paginated(field_name="milestones")
+    )
 
 
 @strawberry_django.filter(Milestone, lookups=True)
@@ -382,6 +394,7 @@ class Query:
     milestone_mandatory: MilestoneType = strawberry_django.node()
     milestones: list[MilestoneType] = strawberry_django.node()
     project: Optional[ProjectType] = strawberry_django.node()
+    project_mandatory: ProjectType = strawberry_django.node()
     project_login_required: Optional[ProjectType] = strawberry_django.node(
         extensions=[IsAuthenticated()],
     )
@@ -397,6 +410,9 @@ class Query:
         pagination=True,
     )
     project_list: list[ProjectType] = strawberry_django.field()
+    projects_paginated: OffsetPaginated[ProjectType] = (
+        strawberry_django.offset_paginated()
+    )
     tag_list: list[TagType] = strawberry_django.field()
 
     favorite_conn: ListConnectionWithTotalCount[FavoriteType] = (

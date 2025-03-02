@@ -342,6 +342,14 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
     ) -> _QS:
         queryset = super().get_queryset(queryset, info, **kwargs)
 
+        # If the queryset is not ordered, and this field is either going to return
+        # multiple records, or call `.first()`, then order by the primary key to ensure
+        # deterministic results.
+        if not queryset.ordered and (
+            self.is_list or self.is_paginated or self.is_connection or self.is_optional
+        ):
+            queryset = queryset.order_by("pk")
+
         # This is counter intuitive, but in case we are returning a `Paginated`
         # result, we want to set the original queryset _as is_ as it will apply
         # the pagination later on when resolving its `.results` field.
@@ -356,9 +364,6 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
             self.is_list or self.is_paginated or self.is_connection
         ):
             if self.is_optional:
-                # first() applies order by pk if not ordered
-                if not queryset.ordered:
-                    queryset = queryset.order_by("pk")
                 pagination = OffsetPaginationInput(offset=0, limit=1)
             else:
                 pagination = OffsetPaginationInput(offset=0, limit=MAX_GET_RESULTS)
