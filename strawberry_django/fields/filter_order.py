@@ -255,7 +255,7 @@ def filter_field(
     metadata[RESOLVE_VALUE_META] = resolve_value
     metadata[WITH_NONE_META] = filter_none
 
-    field_ = FilterOrderField(  # type: ignore
+    field_ = FilterOrderField(
         python_name=None,
         graphql_name=name,
         is_subscription=is_subscription,
@@ -365,7 +365,7 @@ def order_field(
     metadata["_FIELD_TYPE"] = OBJECT_ORDER_NAME
     metadata[WITH_NONE_META] = order_none
 
-    field_ = FilterOrderField(  # type: ignore
+    field_ = FilterOrderField(
         python_name=None,
         graphql_name=name,
         is_subscription=is_subscription,

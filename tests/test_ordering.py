@@ -170,8 +170,8 @@ def test_arguments_order_respected(query, db):
 
 
 def test_order_sequence():
-    f1 = StrawberryField(graphql_name="sOmEnAmE", python_name="some_name")  # type: ignore
-    f2 = StrawberryField(python_name="some_name")  # type: ignore
+    f1 = StrawberryField(graphql_name="sOmEnAmE", python_name="some_name")
+    f2 = StrawberryField(python_name="some_name")
 
     assert OrderSequence.get_graphql_name(None, f1) == "sOmEnAmE"
     assert OrderSequence.get_graphql_name(None, f2) == "someName"
