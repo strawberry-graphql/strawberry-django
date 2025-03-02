@@ -1,4 +1,3 @@
-
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -137,7 +136,8 @@ def test_list(gql_client: utils.GraphQLTestClient):
                 "name": project.name,
                 "milestones": [
                     {"name": milestone.name}
-                    for milestone in project.milestones.order_by("pk")],
+                    for milestone in project.milestones.order_by("pk")
+                ],
             }
             for project in Project.objects.order_by("pk")
         ]
