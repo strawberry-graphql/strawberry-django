@@ -93,6 +93,7 @@ class Favorite(models.Model):
 
     class Meta:
         # Needed to allow type's get_queryset() to access a model's custom QuerySet
+        ordering = ("name",)
         base_manager_name = "objects"
 
     id = models.BigAutoField(
