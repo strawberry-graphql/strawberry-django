@@ -2,18 +2,24 @@ import datetime
 import decimal
 import uuid
 from typing import (
+    TYPE_CHECKING,
+    Annotated,
     Generic,
     Optional,
     TypeVar,
 )
 
 import strawberry
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 from strawberry import UNSET
 
 from strawberry_django.filters import resolve_value
 
 from .filter_order import filter_field
+
+if TYPE_CHECKING:
+    from .types import Geometry
 
 T = TypeVar("T")
 
@@ -123,3 +129,57 @@ type_filter_map = {
     str: FilterLookup,
     uuid.UUID: FilterLookup,
 }
+
+
+try:
+    pass
+except ImproperlyConfigured:
+    # If gdal is not available, skip.
+    pass
+else:
+
+    @strawberry.input
+    class GeometryFilterLookup(Generic[T]):
+        bbcontains: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        bboverlaps: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        contained: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        contains: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        contains_properly: Optional[
+            Annotated["Geometry", strawberry.lazy(".types")]
+        ] = UNSET
+        coveredby: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        covers: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        crosses: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        disjoint: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        equals: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        exacts: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        intersects: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        isempty: Optional[bool] = filter_field(
+            description=f"Test whether it's empty. {_SKIP_MSG}"
+        )
+        isvalid: Optional[bool] = filter_field(
+            description=f"Test whether it's valid. {_SKIP_MSG}"
+        )
+        overlaps: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        touches: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        within: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        left: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        right: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = UNSET
+        overlaps_left: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = (
+            UNSET
+        )
+        overlaps_right: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = (
+            UNSET
+        )
+        overlaps_above: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = (
+            UNSET
+        )
+        overlaps_below: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = (
+            UNSET
+        )
+        strictly_above: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = (
+            UNSET
+        )
+        strictly_below: Optional[Annotated["Geometry", strawberry.lazy(".types")]] = (
+            UNSET
+        )
