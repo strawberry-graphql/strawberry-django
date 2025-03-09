@@ -7,7 +7,7 @@ from django.contrib.auth.models import Group
 from factory.declarations import Iterator, LazyFunction, Sequence, SubFactory
 from factory.faker import Faker
 
-from .models import Favorite, Issue, Milestone, Project, Tag
+from .models import Favorite, Issue, Milestone, Project, Quiz, Tag
 
 _T = TypeVar("_T")
 User = get_user_model()
@@ -91,3 +91,10 @@ class TagFactory(_BaseFactory[Tag]):
         model = Tag
 
     name = Sequence(lambda n: f"Tag {n}")
+
+
+class QuizFactory(_BaseFactory[Quiz]):
+    class Meta:
+        model = Quiz
+
+    title = Sequence(lambda n: f"Quiz {n}")

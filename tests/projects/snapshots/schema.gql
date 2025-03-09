@@ -769,6 +769,7 @@ type Query {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): StaffTypeConnection!
+  quizList: [QuizType!]!
   issueLoginRequired(
     """The ID of the object."""
     id: GlobalID!

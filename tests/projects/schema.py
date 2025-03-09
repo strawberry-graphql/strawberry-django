@@ -292,6 +292,15 @@ class QuizType(relay.Node):
     title: strawberry.auto
     sequence: strawberry.auto
 
+    @classmethod
+    def get_queryset(
+        cls,
+        queryset: QuerySet[Quiz],
+        info: Info,
+        **kwargs,
+    ) -> QuerySet[Quiz]:
+        return queryset.order_by("title")
+
 
 @strawberry_django.partial(Tag)
 class TagInputPartial(NodeInputPartial):
@@ -431,6 +440,8 @@ class Query:
     project_conn: ProjectConnection = strawberry_django.connection()
     tag_conn: ListConnectionWithTotalCount[TagType] = strawberry_django.connection()
     staff_conn: ListConnectionWithTotalCount[StaffType] = strawberry_django.connection()
+
+    quiz_list: list[QuizType] = strawberry_django.field()
 
     # Login required to resolve
     issue_login_required: IssueType = strawberry_django.node(
