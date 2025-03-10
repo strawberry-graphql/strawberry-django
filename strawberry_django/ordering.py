@@ -18,7 +18,7 @@ from strawberry.types.base import StrawberryOptional, WithStrawberryObjectDefini
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
-from typing_extensions import Self, dataclass_transform
+from typing_extensions import Self, dataclass_transform, deprecated
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.fields.filter_order import (
@@ -202,6 +202,9 @@ def process_ordering_default(
 ) -> tuple[_QS, Collection[F | OrderBy | str]]:
     args = []
 
+    if ordering is None:
+        return queryset, args
+
     for o in ordering:
         for f in o.__strawberry_definition__.fields:
             f_value = getattr(o, f.name, UNSET)
@@ -299,7 +302,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
             order = self.get_order()
             if order and order is not UNSET:
                 arguments.append(argument("order", order, is_optional=True))
-        if self.base_resolver is None:
+        if self.base_resolver is None and self.is_list:
             ordering = self.get_ordering()
             if ordering is not None:
                 arguments.append(
@@ -369,12 +372,11 @@ def ordering(
     model: type[Model],
     *,
     name: str | None = None,
-    one_of: bool | None = None,
+    one_of: bool = True,
     description: str | None = None,
     directives: Sequence[object] | None = (),
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
-        nonlocal one_of
         try:
             cls.__annotations__  # noqa: B018
         except AttributeError:
@@ -390,9 +392,6 @@ def ordering(
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):
                 setattr(cls, fname, UNSET)
-
-        if one_of is None:
-            one_of = strawberry_django_settings()["ORDERING_DEFAULT_ONE_OF"]
 
         return strawberry.input(
             cls,
@@ -411,6 +410,9 @@ def ordering(
         StrawberryField,
         field,
     ),
+)
+@deprecated(
+    "strawberry_django.order is deprecated in favor of strawberry_django.ordering."
 )
 def order(
     model: type[Model],
