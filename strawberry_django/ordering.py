@@ -254,8 +254,7 @@ def process_ordering(
     prefix: str = "",
 ) -> tuple[_QS, Collection[F | OrderBy | str]]:
     if ordering and isinstance(
-        order_method := getattr(ordering_cls, "order", None),
-        FilterOrderFieldResolver
+        order_method := getattr(ordering_cls, "order", None), FilterOrderFieldResolver
     ):
         args = []
         for o in ordering:

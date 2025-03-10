@@ -58,10 +58,8 @@ class CustomFruitOrder:
 
     @strawberry_django.order_field
     def order(self, info, queryset, prefix):
-        queryset = queryset.annotate(
-            reverse_name=Reverse(f'{prefix}name')
-        )
-        return queryset, (self.reverse_name.resolve('reverse_name'), )
+        queryset = queryset.annotate(reverse_name=Reverse(f"{prefix}name"))
+        return queryset, (self.reverse_name.resolve("reverse_name"),)
 
 
 @strawberry_django.type(models.Fruit, ordering=FruitOrder)
@@ -73,7 +71,9 @@ class FruitWithOrder:
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(ordering=FruitOrder)
-    custom_order_fruits: list[Fruit] = strawberry_django.field(ordering=CustomFruitOrder)
+    custom_order_fruits: list[Fruit] = strawberry_django.field(
+        ordering=CustomFruitOrder
+    )
 
 
 @pytest.fixture
@@ -82,7 +82,9 @@ def query():
 
 
 def test_custom_order_method(query, fruits):
-    result = query("{ customOrderFruits(ordering: [{ reverseName: ASC }]) { id name } }")
+    result = query(
+        "{ customOrderFruits(ordering: [{ reverseName: ASC }]) { id name } }"
+    )
     assert not result.errors
     assert result.data["customOrderFruits"] == [
         {"id": "3", "name": "banana"},
