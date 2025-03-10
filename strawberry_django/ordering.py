@@ -7,10 +7,11 @@ from typing import (
     Optional,
     TypeVar,
     cast,
+    Any,
 )
 
 import strawberry
-from django.db.models import F, OrderBy, QuerySet
+from django.db.models import F, OrderBy
 from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
 from strawberry.types import has_object_definition
@@ -194,53 +195,50 @@ def apply(
 
 
 def process_ordering_default(
-    ordering: Collection[WithStrawberryObjectDefinition] | None,
+    ordering: Any,
     info: Info | None,
     queryset: _QS,
     prefix: str = "",
 ) -> tuple[_QS, Collection[F | OrderBy | str]]:
+    if ordering is None or not has_object_definition(ordering):
+        return queryset, ()
     args = []
+    for f in ordering.__strawberry_definition__.fields:
+        f_value = getattr(ordering, f.name, UNSET)
+        if f_value is UNSET or (
+            f_value is None and not f.metadata.get(WITH_NONE_META)
+        ):
+            continue
 
-    if ordering is None:
-        return queryset, args
-
-    for o in ordering:
-        for f in o.__strawberry_definition__.fields:
-            f_value = getattr(o, f.name, UNSET)
-            if f_value is UNSET or (
-                f_value is None and not f.metadata.get(WITH_NONE_META)
-            ):
-                continue
-
-            if isinstance(f, FilterOrderField) and f.base_resolver:
-                res = f.base_resolver(
-                    o,
-                    info,
-                    value=f_value,
-                    queryset=queryset,
-                    prefix=prefix,
-                )
-                if isinstance(res, tuple):
-                    queryset, subargs = res
-                else:
-                    subargs = res
-                args.extend(subargs)
-            elif isinstance(f_value, Ordering):
-                args.append(f_value.resolve(f"{prefix}{f.name}"))
+        if isinstance(f, FilterOrderField) and f.base_resolver:
+            res = f.base_resolver(
+                ordering,
+                info,
+                value=f_value,
+                queryset=queryset,
+                prefix=prefix,
+            )
+            if isinstance(res, tuple):
+                queryset, subargs = res
             else:
-                ordering_cls = f.type
-                if isinstance(ordering_cls, StrawberryOptional):
-                    ordering_cls = ordering_cls.of_type
-                assert isinstance(ordering_cls, type)
-                assert has_object_definition(ordering_cls)
-                queryset, subargs = process_ordering(
-                    ordering_cls,
-                    (f_value,),
-                    info,
-                    queryset,
-                    prefix=f"{prefix}{f.name}__",
-                )
-                args.extend(subargs)
+                subargs = res
+            args.extend(subargs)
+        elif isinstance(f_value, Ordering):
+            args.append(f_value.resolve(f"{prefix}{f.name}"))
+        else:
+            ordering_cls = f.type
+            if isinstance(ordering_cls, StrawberryOptional):
+                ordering_cls = ordering_cls.of_type
+            assert isinstance(ordering_cls, type)
+            assert has_object_definition(ordering_cls)
+            queryset, subargs = process_ordering(
+                ordering_cls,
+                (f_value,),
+                info,
+                queryset,
+                prefix=f"{prefix}{f.name}__",
+            )
+            args.extend(subargs)
 
     return queryset, args
 
@@ -252,15 +250,20 @@ def process_ordering(
     queryset: _QS,
     prefix: str = "",
 ) -> tuple[_QS, Collection[F | OrderBy | str]]:
-    if ordering and isinstance(
-        order_method := getattr(ordering_cls, "order", None), FilterOrderFieldResolver
+    if not ordering:
+        return queryset, ()
+
+    if not isinstance(
+            order_method := getattr(ordering_cls, "order", None), FilterOrderFieldResolver
     ):
-        args = []
-        for o in ordering:
-            queryset, new_args = order_method(o, info, queryset=queryset, prefix=prefix)
-            args.extend(new_args)
-        return queryset, args
-    return process_ordering_default(ordering, info, queryset, prefix)
+        order_method = process_ordering_default
+
+    args = []
+    for o in ordering:
+        queryset, new_args = order_method(o, info, queryset=queryset, prefix=prefix)
+        args.extend(new_args)
+
+    return queryset, args
 
 
 def apply_ordering(
