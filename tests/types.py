@@ -15,6 +15,7 @@ class Fruit:
     color: Color | None
     types: list[FruitType]
     picture: auto
+    sweetness: auto
 
 
 @strawberry_django.type(models.Color)

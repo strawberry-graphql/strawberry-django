@@ -46,6 +46,9 @@ class StrawberryDjangoSettings(TypedDict):
     #: to set it to unlimited.
     PAGINATION_DEFAULT_LIMIT: Optional[int]
 
+    #: Whether ordering inputs are marked with oneOf directive by default.
+    ORDERING_DEFAULT_ONE_OF: bool
+
 
 DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     FIELD_DESCRIPTION_FROM_HELP_TEXT=False,
@@ -57,6 +60,7 @@ DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     DEFAULT_PK_FIELD_NAME="pk",
     USE_DEPRECATED_FILTERS=False,
     PAGINATION_DEFAULT_LIMIT=100,
+    ORDERING_DEFAULT_ONE_OF=False,
 )
 
 
