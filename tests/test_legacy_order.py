@@ -136,7 +136,8 @@ def test_error_when_ordering_and_order_given(query, fruits):
     result = query(
         "{ fruitsWithOrdering(ordering: [{ name: ASC }], order: { name: ASC }) { id name } }"
     )
-    assert result.errors is not None and len(result.errors) == 1
+    assert result.errors is not None
+    assert len(result.errors) == 1
     assert result.errors[0].message == "Only one of ordering, order must be given."
 
 

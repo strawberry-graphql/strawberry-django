@@ -42,7 +42,6 @@ class FruitOrder:
 
     @strawberry_django.order_field
     def types_number(self, queryset, prefix, value: auto):
-        print(f"TYPES NUMBER {type(value)}")
         return queryset.annotate(
             count=Count(f"{prefix}types__id"),
             count_nulls=Case(
