@@ -1,4 +1,5 @@
 # ruff: noqa: TRY002, B904, BLE001, F811, PT012
+import warnings
 from typing import Any, Optional, cast
 from unittest import mock
 
@@ -81,6 +82,34 @@ class Query:
 @pytest.fixture
 def query():
     return utils.generate_query(Query)
+
+
+def test_legacy_order_argument_is_deprecated():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always", DeprecationWarning)
+        strawberry_django.field(order=FruitOrder)
+        assert len(w) == 1
+        assert issubclass(w[-1].category, DeprecationWarning)
+        assert (
+            str(w[-1].message)
+            == "strawberry_django.order is deprecated in favor of strawberry_django.ordering."
+        )
+
+
+def test_legacy_order_type_is_deprecated():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always", DeprecationWarning)
+
+        @strawberry_django.ordering.order(models.Fruit)
+        class TestOrder:
+            name: auto
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, DeprecationWarning)
+        assert (
+            str(w[-1].message)
+            == "strawberry_django.order is deprecated in favor of strawberry_django.ordering."
+        )
 
 
 def test_legacy_order_works_when_ordering_is_present(query, fruits):
