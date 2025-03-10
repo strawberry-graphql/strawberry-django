@@ -1,4 +1,5 @@
 # ruff: noqa: TRY002, B904, BLE001, F811, PT012
+import textwrap
 from typing import Optional
 
 import pytest
@@ -78,6 +79,49 @@ class Query:
 @pytest.fixture
 def query():
     return utils.generate_query(Query)
+
+
+def test_correct_ordering_schema():
+    @strawberry_django.type(models.Fruit, name="Fruit")
+    class MiniFruit:
+        id: auto
+        name: auto
+
+    @strawberry_django.ordering.ordering(models.Fruit, name="FruitOrder")
+    class MiniFruitOrder:
+        name: auto
+
+    @strawberry.type(name="Query")
+    class MiniQuery:
+        fruits: list[MiniFruit] = strawberry_django.field(ordering=MiniFruitOrder)
+
+    schema = strawberry.Schema(query=MiniQuery)
+    expected = """\
+    directive @oneOf on INPUT_OBJECT
+
+    type Fruit {
+      id: ID!
+      name: String!
+    }
+
+    input FruitOrder @oneOf {
+      name: Ordering
+    }
+
+    enum Ordering {
+      ASC
+      ASC_NULLS_FIRST
+      ASC_NULLS_LAST
+      DESC
+      DESC_NULLS_FIRST
+      DESC_NULLS_LAST
+    }
+
+    type Query {
+      fruits(ordering: [FruitOrder!]! = []): [Fruit!]!
+    }
+    """
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
 
 def test_custom_order_method(query, fruits):
