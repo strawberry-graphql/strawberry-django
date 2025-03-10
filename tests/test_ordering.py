@@ -59,7 +59,9 @@ class CustomFruitOrder:
     @strawberry_django.order_field
     def order(self, info, queryset, prefix):
         queryset = queryset.annotate(reverse_name=Reverse(f"{prefix}name"))
-        return queryset, (self.reverse_name.resolve("reverse_name"),)
+        return strawberry_django.ordering.process_ordering_default(
+            self, info, queryset, prefix
+        )
 
 
 @strawberry_django.type(models.Fruit, ordering=FruitOrder)
