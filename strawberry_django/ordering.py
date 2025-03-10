@@ -4,10 +4,10 @@ import dataclasses
 import enum
 from typing import (
     TYPE_CHECKING,
+    Any,
     Optional,
     TypeVar,
     cast,
-    Any,
 )
 
 import strawberry
@@ -205,9 +205,7 @@ def process_ordering_default(
     args = []
     for f in ordering.__strawberry_definition__.fields:
         f_value = getattr(ordering, f.name, UNSET)
-        if f_value is UNSET or (
-            f_value is None and not f.metadata.get(WITH_NONE_META)
-        ):
+        if f_value is UNSET or (f_value is None and not f.metadata.get(WITH_NONE_META)):
             continue
 
         if isinstance(f, FilterOrderField) and f.base_resolver:
@@ -254,7 +252,7 @@ def process_ordering(
         return queryset, ()
 
     if not isinstance(
-            order_method := getattr(ordering_cls, "order", None), FilterOrderFieldResolver
+        order_method := getattr(ordering_cls, "order", None), FilterOrderFieldResolver
     ):
         order_method = process_ordering_default
 
