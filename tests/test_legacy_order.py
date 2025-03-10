@@ -41,6 +41,11 @@ class ColorOrder:
         return [value.resolve(f"{prefix}name")]
 
 
+@strawberry_django.ordering.ordering(models.Fruit)
+class FruitOrdering:
+    name: auto
+
+
 @strawberry_django.ordering.order(models.Fruit)
 class FruitOrder:
     color_id: auto
@@ -68,11 +73,42 @@ class FruitWithOrder:
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(order=FruitOrder)
+    fruits_with_ordering: list[Fruit] = strawberry_django.field(
+        order=FruitOrder, ordering=FruitOrdering
+    )
 
 
 @pytest.fixture
 def query():
     return utils.generate_query(Query)
+
+
+def test_legacy_order_works_when_ordering_is_present(query, fruits):
+    result = query("{ fruitsWithOrdering(order: { name: ASC }) { id name } }")
+    assert not result.errors
+    assert result.data["fruitsWithOrdering"] == [
+        {"id": "3", "name": "banana"},
+        {"id": "2", "name": "raspberry"},
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_ordering_works_when_legacy_order_is_present(query, fruits):
+    result = query("{ fruitsWithOrdering(ordering: [{ name: ASC }]) { id name } }")
+    assert not result.errors
+    assert result.data["fruitsWithOrdering"] == [
+        {"id": "3", "name": "banana"},
+        {"id": "2", "name": "raspberry"},
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_error_when_ordering_and_order_given(query, fruits):
+    result = query(
+        "{ fruitsWithOrdering(ordering: [{ name: ASC }], order: { name: ASC }) { id name } }"
+    )
+    assert result.errors is not None and len(result.errors) == 1
+    assert result.errors[0].message == "Only one of ordering, order must be given."
 
 
 def test_field_order_definition():
