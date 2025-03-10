@@ -29,7 +29,6 @@ from strawberry_django.fields.filter_order import (
 from strawberry_django.utils.typing import is_auto
 
 from .arguments import argument
-from .settings import strawberry_django_settings
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Sequence
