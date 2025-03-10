@@ -25,8 +25,6 @@ class FruitOrder:
 > In most cases order fields should have `Optional` annotations and default value `strawberry.UNSET`.
 > Above `auto` annotation is wrapped in `Optional` automatically.
 > `UNSET` is automatically used for fields without `field` or with `strawberry_django.order_field`.
-> 
-
 
 The code above generates the following schema:
 
@@ -84,15 +82,11 @@ class FruitOrder:
 > [!WARNING]
 > Do not use `queryset.order_by()` directly. Due to `order_by` not being chainable
 > operation, changes applied this way would be overriden later.
-> 
-
 
 > [!TIP]
 > The `strawberry_django.Ordering` type has convenient method `resolve` that can be used to
 > convert field's name to appropriate `F` object with correctly applied `asc()`, `desc()` method
 > with `nulls_first` and `nulls_last` arguments.
-> 
-
 
 The code above generates the following schema:
 
@@ -144,7 +138,7 @@ class ColorOrder:
 
 - `value` - represents graphql field type
   - **Required**, but forbidden for default `order` method
-  - *must* be annotated
+  - _must_ be annotated
   - used instead of field's return type
   - Using `auto` is the same as `strawberry_django.Ordering`.
 - `queryset` - can be used for more complex ordering
@@ -175,7 +169,7 @@ By default `null` values are ignored. This can be toggled as such `@strawberry_d
 Works similar to field order method, but:
 
 - is responsible for resolution of ordering for entire object
-- *must* be named `order`
+- _must_ be named `order`
 - argument `queryset` is **Required**
 - argument `value` is **Forbidden**
 - should probaly use `sequence`
@@ -225,8 +219,6 @@ class FruitOrder:
 > As seen above `strawberry_django.process_order` function is exposed and can be
 > reused in custom methods.
 > For order method `order` `skip_object_order_method` was used to avoid endless recursion.
-> 
-
 
 ## Adding orderings to types
 
