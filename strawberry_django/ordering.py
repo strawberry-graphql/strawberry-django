@@ -231,9 +231,8 @@ def process_ordering_default(
                 ordering_cls = f.type
                 if isinstance(ordering_cls, StrawberryOptional):
                     ordering_cls = ordering_cls.of_type
-                assert isinstance(ordering_cls, type) and has_object_definition(
-                    ordering_cls
-                )
+                assert isinstance(ordering_cls, type)
+                assert has_object_definition(ordering_cls)
                 queryset, subargs = process_ordering(
                     ordering_cls,
                     (f_value,),
@@ -342,7 +341,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
             django_type = self.django_type
             ordering = (
                 django_type.__strawberry_django_definition__.ordering
-                if django_type not in (None, UNSET)
+                if django_type is not None and django_type is not UNSET
                 else None
             )
 
