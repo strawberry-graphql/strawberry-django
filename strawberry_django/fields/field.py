@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import warnings
 from collections.abc import (
     AsyncIterable,
     AsyncIterator,
@@ -684,6 +685,12 @@ def field(
         annotate=annotate,
         disable_optimization=disable_optimization,
     )
+
+    if order:
+        warnings.warn(
+            "strawberry_django.order is deprecated in favor of strawberry_django.ordering.",
+            DeprecationWarning,
+        )
 
     if resolver:
         return f(resolver)
