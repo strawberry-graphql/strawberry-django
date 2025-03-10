@@ -31,7 +31,6 @@ def test_non_defaults():
             DEFAULT_PK_FIELD_NAME="id",
             USE_DEPRECATED_FILTERS=True,
             PAGINATION_DEFAULT_LIMIT=250,
-            ORDERING_DEFAULT_ONE_OF=True,
         ),
     ):
         assert (
@@ -46,6 +45,5 @@ def test_non_defaults():
                 DEFAULT_PK_FIELD_NAME="id",
                 USE_DEPRECATED_FILTERS=True,
                 PAGINATION_DEFAULT_LIMIT=250,
-                ORDERING_DEFAULT_ONE_OF=True,
             )
         )
