@@ -4,6 +4,7 @@ from typing import Optional
 import pytest
 import strawberry
 from django.db.models import Case, Count, Value, When
+from django.db.models.functions import Reverse
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.base import (
@@ -41,6 +42,7 @@ class FruitOrder:
 
     @strawberry_django.order_field
     def types_number(self, queryset, prefix, value: auto):
+        print(f"TYPES NUMBER {type(value)}")
         return queryset.annotate(
             count=Count(f"{prefix}types__id"),
             count_nulls=Case(
@@ -48,6 +50,18 @@ class FruitOrder:
                 default="count",
             ),
         ), [value.resolve("count_nulls")]
+
+
+@strawberry_django.ordering.ordering(models.Fruit)
+class CustomFruitOrder:
+    reverse_name: auto
+
+    @strawberry_django.order_field
+    def order(self, info, queryset, prefix):
+        queryset = queryset.annotate(
+            reverse_name=Reverse(f'{prefix}name')
+        )
+        return queryset, (self.reverse_name.resolve('reverse_name'), )
 
 
 @strawberry_django.type(models.Fruit, ordering=FruitOrder)
@@ -59,11 +73,22 @@ class FruitWithOrder:
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(ordering=FruitOrder)
+    custom_order_fruits: list[Fruit] = strawberry_django.field(ordering=CustomFruitOrder)
 
 
 @pytest.fixture
 def query():
     return utils.generate_query(Query)
+
+
+def test_custom_order_method(query, fruits):
+    result = query("{ customOrderFruits(ordering: [{ reverseName: ASC }]) { id name } }")
+    assert not result.errors
+    assert result.data["customOrderFruits"] == [
+        {"id": "3", "name": "banana"},
+        {"id": "2", "name": "raspberry"},
+        {"id": "1", "name": "strawberry"},
+    ]
 
 
 def test_field_order_definition():

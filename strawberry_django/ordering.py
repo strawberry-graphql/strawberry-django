@@ -253,10 +253,15 @@ def process_ordering(
     queryset: _QS,
     prefix: str = "",
 ) -> tuple[_QS, Collection[F | OrderBy | str]]:
-    if callable(
-        order_method := getattr(ordering_cls, "process_ordering", None),
+    if ordering and isinstance(
+        order_method := getattr(ordering_cls, "order", None),
+        FilterOrderFieldResolver
     ):
-        return order_method(order, info, queryset=queryset, prefix=prefix)
+        args = []
+        for o in ordering:
+            queryset, new_args = order_method(o, info, queryset=queryset, prefix=prefix)
+            args.extend(new_args)
+        return queryset, args
     return process_ordering_default(ordering, info, queryset, prefix)
 
 
@@ -334,7 +339,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         if ordering is None:
             return None
 
-        if ordering is UNSET:
+        if isinstance(ordering, UnsetType):
             django_type = self.django_type
             ordering = (
                 django_type.__strawberry_django_definition__.ordering
