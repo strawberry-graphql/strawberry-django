@@ -6,13 +6,12 @@ import copy
 import dataclasses
 import itertools
 from collections import Counter, defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
     TypeVar,
     cast,
-    Iterable, Union,
 )
 
 from django.db import models
@@ -47,7 +46,7 @@ from strawberry.types.base import StrawberryContainer, StrawberryType
 from strawberry.types.info import Info
 from strawberry.types.lazy_type import LazyType
 from strawberry.types.object_type import StrawberryObjectDefinition
-from typing_extensions import assert_never, assert_type, TypeGuard
+from typing_extensions import TypeGuard, assert_never, assert_type
 
 from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
@@ -78,10 +77,10 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from django.contrib.contenttypes.fields import GenericRelation
+    from polymorphic.models import PolymorphicModel
     from strawberry.types.execution import ExecutionContext
     from strawberry.types.field import StrawberryField
     from strawberry.utils.await_maybe import AwaitableOrValue
-    from polymorphic.models import PolymorphicModel
 
 
 __all__ = [
@@ -1030,10 +1029,7 @@ def _get_model_hints(
     config = config or OptimizerConfig()
 
     dj_definition = get_django_definition(object_definition.origin)
-    if (
-        dj_definition is None
-        or dj_definition.disable_optimization
-    ):
+    if dj_definition is None or dj_definition.disable_optimization:
         return None
 
     if not issubclass(model, dj_definition.model):
@@ -1044,12 +1040,15 @@ def _get_model_hints(
         # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
         if _is_polymorphic_model(model) and issubclass(dj_definition.model, model):
             return _get_model_hints(
-                dj_definition.model, schema, object_definition,
-                parent_type=parent_type, info=info, config=config,
-                prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___"
+                dj_definition.model,
+                schema,
+                object_definition,
+                parent_type=parent_type,
+                info=info,
+                config=config,
+                prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
             )
-        else:
-            return None
+        return None
 
     dj_type_store = getattr(dj_definition, "store", None)
     if dj_type_store:
@@ -1062,9 +1061,7 @@ def _get_model_hints(
 
     # If this is a polymorphic Model, make sure to select its content type
     if _is_polymorphic_model(model):
-        store.only.extend(
-            (prefix + f for f in model.polymorphic_internal_model_fields)
-        )
+        store.only.extend(prefix + f for f in model.polymorphic_internal_model_fields)
 
     selections = [
         field_data
@@ -1217,7 +1214,9 @@ def _get_model_hints_from_connection(
             if node.name.value != "node":
                 continue
 
-            for concrete_n_type in _get_possible_concrete_types(model, schema, n_definition):
+            for concrete_n_type in _get_possible_concrete_types(
+                model, schema, n_definition
+            ):
                 n_gql_definition = _get_gql_definition(schema, concrete_n_type)
                 assert isinstance(
                     n_gql_definition,
@@ -1272,12 +1271,16 @@ def _get_model_hints_from_paginated(
         if selection.name.value != "results":
             continue
 
-        for concrete_n_type in _get_possible_concrete_types(model, schema, n_definition):
+        for concrete_n_type in _get_possible_concrete_types(
+            model, schema, n_definition
+        ):
             n_gql_definition = _get_gql_definition(
                 schema,
                 concrete_n_type,
             )
-            assert isinstance(n_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
+            assert isinstance(
+                n_gql_definition, (GraphQLObjectType, GraphQLInterfaceType)
+            )
             n_info = _generate_selection_resolve_info(
                 info,
                 selections,
@@ -1305,7 +1308,7 @@ def _get_model_hints_from_paginated(
 def _get_possible_concrete_types(
     model: type[models.Model],
     schema: Schema,
-    strawberry_type: Union[StrawberryObjectDefinition, StrawberryType]
+    strawberry_type: StrawberryObjectDefinition | StrawberryType,
 ) -> Iterable[StrawberryObjectDefinition]:
     for object_definition in get_possible_type_definitions(strawberry_type):
         if object_definition.is_interface:
@@ -1315,18 +1318,21 @@ def _get_possible_concrete_types(
                 for t in schema.schema_converter.type_map.values():
                     t_definition = t.definition
                     if isinstance(
-                            t_definition, StrawberryObjectDefinition
+                        t_definition, StrawberryObjectDefinition
                     ) and issubclass(t_definition.origin, object_definition.origin):
                         interface_definitions.append(t_definition)
                 _interfaces[schema][object_definition] = interface_definitions
 
             for interface_definition in interface_definitions:
                 dj_definition = get_django_definition(interface_definition.origin)
-                if dj_definition:
-                    if issubclass(model, dj_definition.model):
-                        yield interface_definition
-                    elif _is_polymorphic_model(model) and issubclass(dj_definition.model, model):
-                        yield interface_definition
+                if dj_definition and (
+                    issubclass(model, dj_definition.model)
+                    or (
+                        _is_polymorphic_model(model)
+                        and issubclass(dj_definition.model, model)
+                    )
+                ):
+                    yield interface_definition
         else:
             yield object_definition
 

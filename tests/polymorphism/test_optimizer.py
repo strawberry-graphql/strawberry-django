@@ -1,8 +1,9 @@
 import pytest
 
+from tests.utils import assert_num_queries
+
 from .models import ArtProject, ResearchProject
 from .schema import schema
-from ..utils import assert_num_queries
 
 
 @pytest.mark.django_db(transaction=True)

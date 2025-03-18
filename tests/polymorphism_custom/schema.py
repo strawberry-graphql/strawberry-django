@@ -1,5 +1,5 @@
 import strawberry
-from django.db.models import Case, When, Q, Value
+from django.db.models import Case, Q, Value, When
 from strawberry import Info
 from strawberry.relay import Node
 
@@ -7,6 +7,7 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.relay import ListConnectionWithTotalCount
+
 from .models import Project
 
 
@@ -20,8 +21,8 @@ class ProjectType(Node):
         # Therefor we have to prefix with _Project
         return qs.annotate(
             _Project__typename=Case(
-                When(~Q(artist=''), then=Value('ArtProjectType')),
-                When(~Q(supervisor=''), then=Value('ResearchProjectType')),
+                When(~Q(artist=""), then=Value("ArtProjectType")),
+                When(~Q(supervisor=""), then=Value("ResearchProjectType")),
             )
         )
 
@@ -40,8 +41,12 @@ class ResearchProjectType(ProjectType):
 class Query:
     projects: list[ProjectType] = strawberry_django.field()
     projects_paginated: list[ProjectType] = strawberry_django.field(pagination=True)
-    projects_offset_paginated: OffsetPaginated[ProjectType] = strawberry_django.offset_paginated()
-    projects_connection: ListConnectionWithTotalCount[ProjectType] = strawberry_django.connection()
+    projects_offset_paginated: OffsetPaginated[ProjectType] = (
+        strawberry_django.offset_paginated()
+    )
+    projects_connection: ListConnectionWithTotalCount[ProjectType] = (
+        strawberry_django.connection()
+    )
 
 
 schema = strawberry.Schema(

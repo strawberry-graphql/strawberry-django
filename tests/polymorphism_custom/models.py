@@ -9,7 +9,8 @@ class Project(models.Model):
     class Meta:
         constraints = (
             models.CheckConstraint(
-                check=(models.Q(artist='') | models.Q(supervisor='')) & (~models.Q(topic='') | ~models.Q(topic='')),
+                check=(models.Q(artist="") | models.Q(supervisor=""))
+                & (~models.Q(topic="") | ~models.Q(topic="")),
                 name="artist_xor_supervisor",
             ),
         )

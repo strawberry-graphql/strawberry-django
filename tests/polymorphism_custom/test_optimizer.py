@@ -1,8 +1,9 @@
 import pytest
 
+from tests.utils import assert_num_queries
+
 from .models import Project
 from .schema import schema
-from ..utils import assert_num_queries
 
 
 @pytest.mark.django_db(transaction=True)
@@ -105,13 +106,17 @@ def test_polymorphic_interface_offset_paginated():
         "projectsOffsetPaginated": {
             "totalCount": 2,
             "results": [
-                {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist},
+                {
+                    "__typename": "ArtProjectType",
+                    "topic": ap.topic,
+                    "artist": ap.artist,
+                },
                 {
                     "__typename": "ResearchProjectType",
                     "topic": rp.topic,
                     "supervisor": rp.supervisor,
                 },
-            ]
+            ],
         }
     }
 
@@ -149,7 +154,11 @@ def test_polymorphic_interface_connection():
             "totalCount": 2,
             "edges": [
                 {
-                    "node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    }
                 },
                 {
                     "node": {
@@ -158,6 +167,6 @@ def test_polymorphic_interface_connection():
                         "supervisor": rp.supervisor,
                     }
                 },
-            ]
+            ],
         }
     }
