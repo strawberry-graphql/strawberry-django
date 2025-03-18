@@ -2,14 +2,14 @@ import pytest
 
 from tests.utils import assert_num_queries
 
-from .models import Project
+from .models import CustomPolyProject
 from .schema import schema
 
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_query():
-    ap = Project.objects.create(topic="Art", artist="Artist")
-    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
+    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
+    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -43,8 +43,8 @@ def test_polymorphic_interface_query():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_paginated():
-    ap = Project.objects.create(topic="Art", artist="Artist")
-    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
+    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
+    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -78,8 +78,8 @@ def test_polymorphic_interface_paginated():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_offset_paginated():
-    ap = Project.objects.create(topic="Art", artist="Artist")
-    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
+    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
+    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -123,8 +123,8 @@ def test_polymorphic_interface_offset_paginated():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_connection():
-    ap = Project.objects.create(topic="Art", artist="Artist")
-    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
+    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
+    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {

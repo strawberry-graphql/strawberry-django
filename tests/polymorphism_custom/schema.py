@@ -8,31 +8,31 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.relay import ListConnectionWithTotalCount
 
-from .models import Project
+from .models import CustomPolyProject
 
 
-@strawberry_django.interface(Project)
+@strawberry_django.interface(CustomPolyProject)
 class ProjectType(Node):
     topic: strawberry.auto
 
     @classmethod
     def get_queryset(cls, qs, info: Info):
         # Graphql assumes the __typename would be affected by private name mangling
-        # Therefor we have to prefix with _Project
-        return qs.annotate(
-            _Project__typename=Case(
+        # Therefor we have to prefix with _CustomPolyProject
+        return qs.annotate(**{
+            f"_{qs.model._meta.object_name}__typename": Case(
                 When(~Q(artist=""), then=Value("ArtProjectType")),
                 When(~Q(supervisor=""), then=Value("ResearchProjectType")),
             )
-        )
+        })
 
 
-@strawberry_django.type(Project)
+@strawberry_django.type(CustomPolyProject)
 class ArtProjectType(ProjectType):
     artist: strawberry.auto
 
 
-@strawberry_django.type(Project)
+@strawberry_django.type(CustomPolyProject)
 class ResearchProjectType(ProjectType):
     supervisor: strawberry.auto
 
