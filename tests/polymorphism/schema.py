@@ -2,6 +2,7 @@ import strawberry
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.pagination import OffsetPaginated
 
 from .models import ArtProject, Project, ResearchProject
 
@@ -24,6 +25,10 @@ class ResearchProjectType(ProjectType):
 @strawberry.type
 class Query:
     projects: list[ProjectType] = strawberry_django.field()
+    projects_paginated: list[ProjectType] = strawberry_django.field(pagination=True)
+    projects_offset_paginated: OffsetPaginated[ProjectType] = (
+        strawberry_django.offset_paginated()
+    )
 
 
 schema = strawberry.Schema(

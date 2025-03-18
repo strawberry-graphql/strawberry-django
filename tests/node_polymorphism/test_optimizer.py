@@ -2,6 +2,7 @@ import pytest
 
 from .models import ArtProject, ResearchProject
 from .schema import schema
+from ..utils import assert_num_queries
 
 
 @pytest.mark.django_db(transaction=True)
@@ -28,7 +29,9 @@ def test_polymorphic_interface_query():
     }
     """
 
-    result = schema.execute_sync(query)
+    # ContentType, base table, two subtables = 4 queries
+    with assert_num_queries(4):
+        result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
         "projects": {
