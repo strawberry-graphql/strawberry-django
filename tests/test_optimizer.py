@@ -1791,3 +1791,39 @@ def test_prefetch_multi_field_single_required_multiple_returned(
             "path": ["milestone", "firstIssueRequired"],
         }
     ]
+### NEW
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_multi_field_single_required_multiple_returned_num_instances(
+    db, gql_client: GraphQLTestClient
+):
+    project = ProjectFactory.create()
+
+    milestone = MilestoneFactory.create(name="Foo", project=project)
+
+    project2 = ProjectFactory.create()
+    milestone2 = MilestoneFactory.create_batch(1000, name="Bar", project=project2)
+
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        milestone(id: $id) {
+          project {
+            id
+          }
+        }
+      }
+    """
+
+    #with assert_num_queries(2):
+    res = gql_client.query(
+        query, assert_no_errors=False, variables={"id": milestone_id}
+    )
+
+    assert res.errors is None

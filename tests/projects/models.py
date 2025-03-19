@@ -59,8 +59,14 @@ class Project(NamedModel):
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
 
-
+count = 0
 class Milestone(NamedModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        global count
+        count += 1
+        print(count)
+
     issues: "RelatedManager[Issue]"
 
     id = models.BigAutoField(
