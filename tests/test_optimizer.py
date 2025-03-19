@@ -1791,7 +1791,9 @@ def test_prefetch_multi_field_single_required_multiple_returned(
             "path": ["milestone", "firstIssueRequired"],
         }
     ]
-### NEW
+
+
+# NEW
 
 
 @pytest.mark.django_db(transaction=True)
@@ -1821,7 +1823,7 @@ def test_prefetch_multi_field_single_required_multiple_returned_num_instances(
       }
     """
 
-    #with assert_num_queries(2):
+    # with assert_num_queries(2):
     res = gql_client.query(
         query, assert_no_errors=False, variables={"id": milestone_id}
     )
