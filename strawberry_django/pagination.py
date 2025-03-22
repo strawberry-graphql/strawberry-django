@@ -360,8 +360,10 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         # Add implicit pagination if this field is not a list
         # that way when first() / get() is called on the QuerySet it does not cause extra queries
         # and we don't prefetch more than necessary
-        if not pagination and not (
-            self.is_list or self.is_paginated or self.is_connection
+        if (
+            not pagination
+            and not (self.is_list or self.is_paginated or self.is_connection)
+            and not _strawberry_related_field_id
         ):
             if self.is_optional:
                 pagination = OffsetPaginationInput(offset=0, limit=1)
