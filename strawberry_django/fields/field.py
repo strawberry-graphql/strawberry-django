@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import warnings
 from collections.abc import (
     AsyncIterable,
     AsyncIterator,
@@ -548,6 +549,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -576,6 +578,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -604,6 +607,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -631,6 +635,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -672,6 +677,7 @@ def field(
         filters=filters,
         pagination=pagination,
         order=order,
+        ordering=ordering,
         extensions=extensions,
         only=only,
         select_related=select_related,
@@ -679,6 +685,13 @@ def field(
         annotate=annotate,
         disable_optimization=disable_optimization,
     )
+
+    if order:
+        warnings.warn(
+            "strawberry_django.order is deprecated in favor of strawberry_django.ordering.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     if resolver:
         return f(resolver)
