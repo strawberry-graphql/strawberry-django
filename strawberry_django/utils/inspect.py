@@ -3,13 +3,17 @@ from __future__ import annotations
 import dataclasses
 import functools
 import itertools
+from collections import defaultdict
+from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
+    TypeGuard,
     cast,
 )
 
 from django.db.models.query import Prefetch, QuerySet
 from django.db.models.sql.where import WhereNode
+from strawberry import Schema
 from strawberry.types import has_object_definition
 from strawberry.types.base import (
     StrawberryContainer,
@@ -25,6 +29,7 @@ from typing_extensions import assert_never
 from strawberry_django.fields.types import resolve_model_field_name
 
 from .pyutils import DictTree, dicttree_insersection_differs, dicttree_merge
+from .typing import get_django_definition
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -34,6 +39,7 @@ if TYPE_CHECKING:
     from django.db.models.fields import Field
     from django.db.models.fields.reverse_related import ForeignObjectRel
     from django.db.models.sql.query import Query
+    from polymorphic.models import PolymorphicModel
 
 
 @functools.lru_cache
@@ -141,6 +147,63 @@ def get_possible_type_definitions(
             yield t
         elif has_object_definition(t):
             yield t.__strawberry_definition__
+
+
+def is_polymorphic_model(v: type) -> TypeGuard[type[PolymorphicModel]]:
+    try:
+        from polymorphic.models import PolymorphicModel
+    except ImportError:
+        return False
+    return issubclass(v, PolymorphicModel)
+
+
+def _can_optimize_subtypes(model: type[models.Model]) -> bool:
+    return is_polymorphic_model(model)
+
+
+_interfaces: defaultdict[
+    Schema,
+    dict[StrawberryObjectDefinition, list[StrawberryObjectDefinition]],
+] = defaultdict(dict)
+
+
+def get_possible_concrete_types(
+    model: type[models.Model],
+    schema: Schema,
+    strawberry_type: StrawberryObjectDefinition | StrawberryType,
+) -> Iterable[StrawberryObjectDefinition]:
+    """Return the object definitions the optimizer should look at when optimizing a model.
+
+    Returns any object definitions attached to either the model or one of its supertypes.
+
+    If the model is one that supports polymorphism, by returning subtypes from its queryset, subtypes are also
+    looked at. Currently, this is only supported for django-polymorphic.
+    """
+    for object_definition in get_possible_type_definitions(strawberry_type):
+        if object_definition.is_interface:
+            interface_definitions = _interfaces[schema].get(object_definition)
+            if interface_definitions is None:
+                interface_definitions = []
+                for t in schema.schema_converter.type_map.values():
+                    t_definition = t.definition
+                    if isinstance(
+                        t_definition, StrawberryObjectDefinition
+                    ) and issubclass(t_definition.origin, object_definition.origin):
+                        interface_definitions.append(t_definition)
+                _interfaces[schema][object_definition] = interface_definitions
+
+            for interface_definition in interface_definitions:
+                dj_definition = get_django_definition(interface_definition.origin)
+                if dj_definition and (
+                    issubclass(model, dj_definition.model)
+                    or (
+                        _can_optimize_subtypes(model)
+                        and issubclass(dj_definition.model, model)
+                    )
+                ):
+                    yield interface_definition
+        else:
+            yield object_definition
 
 
 @dataclasses.dataclass(eq=True)

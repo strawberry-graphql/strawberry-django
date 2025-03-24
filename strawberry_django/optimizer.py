@@ -5,8 +5,8 @@ import contextvars
 import copy
 import dataclasses
 import itertools
-from collections import Counter, defaultdict
-from collections.abc import Callable, Iterable
+from collections import Counter
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -42,11 +42,11 @@ from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
 from strawberry.types import get_object_definition
-from strawberry.types.base import StrawberryContainer, StrawberryType
+from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.types.lazy_type import LazyType
 from strawberry.types.object_type import StrawberryObjectDefinition
-from typing_extensions import TypeGuard, assert_never, assert_type
+from typing_extensions import assert_never, assert_type
 
 from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
@@ -59,7 +59,9 @@ from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
     get_model_fields,
+    get_possible_concrete_types,
     get_possible_type_definitions,
+    is_polymorphic_model,
 )
 from .utils.typing import (
     AnnotateCallable,
@@ -77,7 +79,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from django.contrib.contenttypes.fields import GenericRelation
-    from polymorphic.models import PolymorphicModel
     from strawberry.types.execution import ExecutionContext
     from strawberry.types.field import StrawberryField
     from strawberry.utils.await_maybe import AwaitableOrValue
@@ -96,20 +97,6 @@ _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
-_interfaces: defaultdict[
-    Schema,
-    dict[StrawberryObjectDefinition, list[StrawberryObjectDefinition]],
-] = defaultdict(
-    dict,
-)
-
-
-def _is_polymorphic_model(v: type) -> TypeGuard[type[PolymorphicModel]]:
-    try:
-        from polymorphic.models import PolymorphicModel
-    except ImportError:
-        return False
-    return issubclass(v, PolymorphicModel)
 
 
 @dataclasses.dataclass
@@ -1038,7 +1025,7 @@ def _get_model_hints(
         # These must be prefixed with app_label__ModelName___ (note three underscores)
         # This is a special syntax for django-polymorphic:
         # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
-        if _is_polymorphic_model(model) and issubclass(dj_definition.model, model):
+        if is_polymorphic_model(model) and issubclass(dj_definition.model, model):
             return _get_model_hints(
                 dj_definition.model,
                 schema,
@@ -1060,7 +1047,7 @@ def _get_model_hints(
         store.only.append(prefix + pk.attname)
 
     # If this is a polymorphic Model, make sure to select its content type
-    if _is_polymorphic_model(model):
+    if is_polymorphic_model(model):
         store.only.extend(prefix + f for f in model.polymorphic_internal_model_fields)
 
     selections = [
@@ -1214,7 +1201,7 @@ def _get_model_hints_from_connection(
             if node.name.value != "node":
                 continue
 
-            for concrete_n_type in _get_possible_concrete_types(
+            for concrete_n_type in get_possible_concrete_types(
                 model, schema, n_definition
             ):
                 n_gql_definition = _get_gql_definition(schema, concrete_n_type)
@@ -1271,9 +1258,7 @@ def _get_model_hints_from_paginated(
         if selection.name.value != "results":
             continue
 
-        for concrete_n_type in _get_possible_concrete_types(
-            model, schema, n_definition
-        ):
+        for concrete_n_type in get_possible_concrete_types(model, schema, n_definition):
             n_gql_definition = _get_gql_definition(
                 schema,
                 concrete_n_type,
@@ -1303,38 +1288,6 @@ def _get_model_hints_from_paginated(
                 store = concrete_store if store is None else store | concrete_store
 
     return store
-
-
-def _get_possible_concrete_types(
-    model: type[models.Model],
-    schema: Schema,
-    strawberry_type: StrawberryObjectDefinition | StrawberryType,
-) -> Iterable[StrawberryObjectDefinition]:
-    for object_definition in get_possible_type_definitions(strawberry_type):
-        if object_definition.is_interface:
-            interface_definitions = _interfaces[schema].get(object_definition)
-            if interface_definitions is None:
-                interface_definitions = []
-                for t in schema.schema_converter.type_map.values():
-                    t_definition = t.definition
-                    if isinstance(
-                        t_definition, StrawberryObjectDefinition
-                    ) and issubclass(t_definition.origin, object_definition.origin):
-                        interface_definitions.append(t_definition)
-                _interfaces[schema][object_definition] = interface_definitions
-
-            for interface_definition in interface_definitions:
-                dj_definition = get_django_definition(interface_definition.origin)
-                if dj_definition and (
-                    issubclass(model, dj_definition.model)
-                    or (
-                        _is_polymorphic_model(model)
-                        and issubclass(dj_definition.model, model)
-                    )
-                ):
-                    yield interface_definition
-        else:
-            yield object_definition
 
 
 def optimize(
@@ -1400,7 +1353,7 @@ def optimize(
     if strawberry_type is None:
         return qs
 
-    for inner_object_definition in _get_possible_concrete_types(
+    for inner_object_definition in get_possible_concrete_types(
         qs.model, schema, strawberry_type
     ):
         parent_type = _get_gql_definition(schema, inner_object_definition)
