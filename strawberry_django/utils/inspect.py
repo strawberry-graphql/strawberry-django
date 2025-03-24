@@ -7,7 +7,6 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
-    TypeGuard,
     cast,
 )
 
@@ -24,7 +23,7 @@ from strawberry.types.base import (
 from strawberry.types.lazy_type import LazyType
 from strawberry.types.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
-from typing_extensions import assert_never
+from typing_extensions import TypeGuard, assert_never
 
 from strawberry_django.fields.types import resolve_model_field_name
 
