@@ -4,7 +4,7 @@ from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
-from .models import CustomPolyProject, Company
+from .models import Company, CustomPolyProject
 from .schema import schema
 
 
@@ -257,7 +257,7 @@ def test_polymorphic_relation():
                     "topic": rp.topic,
                     "supervisor": rp.supervisor,
                 },
-            }
+            },
         ]
     }
 
@@ -266,7 +266,9 @@ def test_polymorphic_relation():
 def test_polymorphic_nested_list():
     company = Company.objects.create(name="Company")
     ap = CustomPolyProject.objects.create(company=company, topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(company=company, topic="Research", supervisor="Supervisor")
+    rp = CustomPolyProject.objects.create(
+        company=company, topic="Research", supervisor="Supervisor"
+    )
 
     query = """\
     query {

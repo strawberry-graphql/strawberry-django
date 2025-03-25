@@ -3,14 +3,22 @@ from django.db import models
 
 class Company(models.Model):
     name = models.CharField(max_length=100)
-    main_project = models.ForeignKey('CustomPolyProject', null=True, blank=True, on_delete=models.CASCADE)
+    main_project = models.ForeignKey(
+        "CustomPolyProject", null=True, blank=True, on_delete=models.CASCADE
+    )
 
     class Meta:
-        ordering = ('name',)
+        ordering = ("name",)
 
 
 class CustomPolyProject(models.Model):
-    company = models.ForeignKey(Company, null=True, blank=True, on_delete=models.CASCADE, related_name='projects')
+    company = models.ForeignKey(
+        Company,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="projects",
+    )
     topic = models.CharField(max_length=30)
     artist = models.CharField(max_length=30, blank=True)
     supervisor = models.CharField(max_length=30, blank=True)

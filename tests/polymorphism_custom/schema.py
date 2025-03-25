@@ -8,7 +8,7 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.relay import ListConnectionWithTotalCount
 
-from .models import CustomPolyProject, Company
+from .models import Company, CustomPolyProject
 
 
 @strawberry_django.interface(CustomPolyProject)

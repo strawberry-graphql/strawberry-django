@@ -707,15 +707,13 @@ def _must_use_prefetch_related(
     model_field: models.ForeignKey | OneToOneRel,
 ) -> bool:
     f_type = _get_django_type(field)
-    if f_type and hasattr(f_type, "get_queryset"):
-        # If the field has a get_queryset method, change strategy to Prefetch
-        # so it will be respected
-        return True
-    if is_polymorphic_model(model_field.related_model):
-        # If the model is using django-polymorphic, change strategy to Prefetch,
-        # so its custom queryset will be used, returning polymorphic models
-        return True
-    return False
+
+    # - If the field has a get_queryset method, use Prefetch so it will be respected
+    # - If the model is using django-polymorphic,
+    #   use Prefetch so its custom queryset will be used, returning polymorphic models
+    return (f_type and hasattr(f_type, "get_queryset")) or is_polymorphic_model(
+        model_field.related_model
+    )
 
 
 def _get_hints_from_django_foreign_key(
