@@ -816,16 +816,21 @@ def _get_hints_from_django_relation(
 
     remote_field = model_field.remote_field
     remote_model = remote_field.model
-    field_store = _get_model_hints(
-        remote_model,
-        schema,
-        f_types[0],
-        parent_type=field_definition,
-        info=field_info,
-        config=config,
-        cache=cache,
-        level=level + 1,
-    )
+    field_store = None
+    f_type = f_types[0]
+    for concrete_field_type in get_possible_concrete_types(remote_model, schema, f_type):
+        concrete_store = _get_model_hints(
+            remote_model,
+            schema,
+            concrete_field_type,
+            parent_type=_get_gql_definition(schema, concrete_field_type),
+            info=field_info,
+            config=config,
+            cache=cache,
+            level=level + 1,
+        )
+        if concrete_store is not None:
+            field_store = concrete_store if field_store is None else field_store | concrete_store
     if field_store is None:
         return store
 
