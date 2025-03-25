@@ -8,8 +8,11 @@ from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     cast,
+    Any,
 )
 
+from django.db.models import OneToOneField, OneToOneRel
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.query import Prefetch, QuerySet
 from django.db.models.sql.where import WhereNode
 from strawberry import Schema
@@ -39,6 +42,11 @@ if TYPE_CHECKING:
     from django.db.models.fields.reverse_related import ForeignObjectRel
     from django.db.models.sql.query import Query
     from polymorphic.models import PolymorphicModel
+    from model_utils.managers import (
+        InheritanceManagerMixin,
+        InheritanceQuerySetMixin,
+        InheritanceManager,
+    )
 
 
 @functools.lru_cache
@@ -156,8 +164,47 @@ def is_polymorphic_model(v: type) -> TypeGuard[type[PolymorphicModel]]:
     return issubclass(v, PolymorphicModel)
 
 
+def is_inheritance_manager_or_qs(
+    v: Any,
+) -> TypeGuard[InheritanceManagerMixin | InheritanceQuerySetMixin]:
+    try:
+        from model_utils.managers import (
+            InheritanceManagerMixin,
+            InheritanceQuerySetMixin,
+        )
+    except ImportError:
+        return False
+    return isinstance(v, (InheritanceManagerMixin, InheritanceQuerySetMixin))
+
+
+@functools.lru_cache
+def get_inheritance_prefix(
+    subclass: type[models.Model], parent_class: type[models.Model]
+) -> str | None:
+    chain = []
+    current = subclass
+    while current != parent_class:
+        fields = get_model_fields(current)
+        for field_name, field in fields.items():
+            if not isinstance(field, OneToOneField):
+                continue
+            remote_field = field.remote_field
+            if not isinstance(remote_field, OneToOneRel):
+                continue
+            if not remote_field.parent_link:
+                continue
+            current = field.related_model
+            chain.append(remote_field.get_accessor_name())
+            break
+        else:
+            return None
+    return LOOKUP_SEP.join(reversed(chain)) + LOOKUP_SEP
+
+
 def _can_optimize_subtypes(model: type[models.Model]) -> bool:
-    return is_polymorphic_model(model)
+    return is_polymorphic_model(model) or is_inheritance_manager_or_qs(
+        model._default_manager
+    )
 
 
 _interfaces: defaultdict[

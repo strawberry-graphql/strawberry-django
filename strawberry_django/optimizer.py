@@ -62,6 +62,8 @@ from .utils.inspect import (
     get_possible_concrete_types,
     get_possible_type_definitions,
     is_polymorphic_model,
+    is_inheritance_manager_or_qs,
+    get_inheritance_prefix,
 )
 from .utils.typing import (
     AnnotateCallable,
@@ -703,6 +705,7 @@ def _get_hints_from_model_property(
 
 
 def _must_use_prefetch_related(
+    config: OptimizerConfig,
     field: StrawberryField,
     model_field: models.ForeignKey | OneToOneRel,
 ) -> bool:
@@ -711,8 +714,14 @@ def _must_use_prefetch_related(
     # - If the field has a get_queryset method, use Prefetch so it will be respected
     # - If the model is using django-polymorphic,
     #   use Prefetch so its custom queryset will be used, returning polymorphic models
-    return (f_type and hasattr(f_type, "get_queryset")) or is_polymorphic_model(
-        model_field.related_model
+    return (
+        (f_type and hasattr(f_type, "get_queryset"))
+        or is_polymorphic_model(model_field.related_model)
+        or is_inheritance_manager_or_qs(
+            model_field.related_model._default_manager
+            if config.prefetch_custom_queryset
+            else model_field.related_model._base_manager  # type: ignore
+        )
     )
 
 
@@ -731,7 +740,7 @@ def _get_hints_from_django_foreign_key(
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
     level: int = 0,
 ) -> OptimizerStore:
-    if _must_use_prefetch_related(field, model_field):
+    if _must_use_prefetch_related(config, field, model_field):
         store = _get_hints_from_django_relation(
             field,
             field_selection=field_selection,
@@ -827,9 +836,13 @@ def _get_hints_from_django_relation(
     remote_model = remote_field.model
     field_store = None
     f_type = f_types[0]
+    subclasses = []
     for concrete_field_type in get_possible_concrete_types(
         remote_model, schema, f_type
     ):
+        django_definition = get_django_definition(concrete_field_type.origin)
+        if django_definition and issubclass(django_definition.model, remote_model):
+            subclasses.append(django_definition.model)
         concrete_store = _get_model_hints(
             remote_model,
             schema,
@@ -891,6 +904,8 @@ def _get_hints_from_django_relation(
         info=field_info,
         related_field_id=related_field_id,
     )
+    if is_inheritance_manager_or_qs(base_qs):
+        base_qs = base_qs.select_subclasses(*subclasses)
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
@@ -1042,16 +1057,30 @@ def _get_model_hints(
         # These must be prefixed with app_label__ModelName___ (note three underscores)
         # This is a special syntax for django-polymorphic:
         # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
-        if is_polymorphic_model(model) and issubclass(dj_definition.model, model):
-            return _get_model_hints(
-                dj_definition.model,
-                schema,
-                object_definition,
-                parent_type=parent_type,
-                info=info,
-                config=config,
-                prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
-            )
+        if issubclass(dj_definition.model, model):
+            if is_polymorphic_model(model):
+                return _get_model_hints(
+                    dj_definition.model,
+                    schema,
+                    object_definition,
+                    parent_type=parent_type,
+                    info=info,
+                    config=config,
+                    prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
+                )
+            if is_inheritance_manager_or_qs(model._default_manager) and (
+                prefix := get_inheritance_prefix(dj_definition.model, model)
+            ):
+                return _get_model_hints(
+                    dj_definition.model,
+                    schema,
+                    object_definition,
+                    parent_type=parent_type,
+                    info=info,
+                    config=config,
+                    prefix=prefix,
+                )
+
         return None
 
     dj_type_store = getattr(dj_definition, "store", None)
@@ -1370,9 +1399,16 @@ def optimize(
     if strawberry_type is None:
         return qs
 
+    inheritance_qs = is_inheritance_manager_or_qs(qs)
+    subclasses = []
+
     for inner_object_definition in get_possible_concrete_types(
         qs.model, schema, strawberry_type
     ):
+        if inheritance_qs:
+            django_definition = get_django_definition(inner_object_definition.origin)
+            if django_definition and issubclass(django_definition.model, qs.model):
+                subclasses.append(django_definition.model)
         parent_type = _get_gql_definition(schema, inner_object_definition)
         new_store = _get_model_hints(
             qs.model,
@@ -1386,6 +1422,8 @@ def optimize(
             store |= new_store
 
     if store:
+        if inheritance_qs:
+            qs = qs.select_subclasses(*subclasses)
         qs = store.apply(qs, info=info, config=config)
         qs_config = get_queryset_config(qs)
         qs_config.optimized = True
