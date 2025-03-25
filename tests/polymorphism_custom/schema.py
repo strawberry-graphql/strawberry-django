@@ -1,3 +1,5 @@
+from typing import Optional
+
 import strawberry
 from django.db.models import Case, Q, Value, When
 from strawberry import Info
@@ -40,7 +42,7 @@ class ResearchProjectType(ProjectType):
 @strawberry_django.type(Company)
 class CompanyType:
     name: strawberry.auto
-    main_project: ProjectType | None
+    main_project: Optional[ProjectType]
     projects: list[ProjectType]
 
 

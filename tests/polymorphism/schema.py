@@ -1,3 +1,5 @@
+from typing import Optional
+
 import strawberry
 
 import strawberry_django
@@ -26,7 +28,7 @@ class ResearchProjectType(ProjectType):
 class CompanyType:
     name: strawberry.auto
     projects: list[ProjectType]
-    main_project: ProjectType | None
+    main_project: Optional[ProjectType]
 
 
 @strawberry.type
