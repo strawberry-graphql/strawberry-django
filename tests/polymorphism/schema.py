@@ -4,7 +4,7 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 
-from .models import ArtProject, Project, ResearchProject, Company
+from .models import ArtProject, Company, Project, ResearchProject
 
 
 @strawberry_django.interface(Project)

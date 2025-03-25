@@ -4,7 +4,7 @@ from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
-from .models import ArtProject, ResearchProject, Company
+from .models import ArtProject, Company, ResearchProject
 from .schema import schema
 
 
@@ -67,8 +67,8 @@ def test_polymorphic_query_optimization_working():
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
         result = schema.execute_sync(query)
         # validate that we're not selecting extra fields
-        assert not any('research_notes' in q for q in ctx.captured_queries)
-        assert not any('art_style' in q for q in ctx.captured_queries)
+        assert not any("research_notes" in q for q in ctx.captured_queries)
+        assert not any("art_style" in q for q in ctx.captured_queries)
     assert not result.errors
     assert result.data == {
         "projects": [
@@ -166,9 +166,11 @@ def test_polymorphic_offset_paginated_query():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_nested_list():
-    company = Company.objects.create(name='Company')
+    company = Company.objects.create(name="Company")
     ap = ArtProject.objects.create(company=company, topic="Art", artist="Artist")
-    rp = ResearchProject.objects.create(company=company, topic="Research", supervisor="Supervisor")
+    rp = ResearchProject.objects.create(
+        company=company, topic="Research", supervisor="Supervisor"
+    )
 
     query = """\
     query {
@@ -197,13 +199,17 @@ def test_polymorphic_nested_list():
             {
                 "name": "Company",
                 "projects": [
-                    {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist},
+                    {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    },
                     {
                         "__typename": "ResearchProjectType",
                         "topic": rp.topic,
                         "supervisor": rp.supervisor,
                     },
-                ]
+                ],
             }
         ]
     }

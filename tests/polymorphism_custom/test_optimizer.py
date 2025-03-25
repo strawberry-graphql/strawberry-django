@@ -1,5 +1,5 @@
 import pytest
-from django.db import connections, DEFAULT_DB_ALIAS
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
@@ -66,7 +66,7 @@ def test_polymorphic_query_optimization_working():
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
         result = schema.execute_sync(query)
         # validate that we're not selecting extra fields
-        assert not any('research_notes' in q for q in ctx.captured_queries)
+        assert not any("research_notes" in q for q in ctx.captured_queries)
     assert not result.errors
     assert result.data == {
         "projects": [

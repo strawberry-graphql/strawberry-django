@@ -818,7 +818,9 @@ def _get_hints_from_django_relation(
     remote_model = remote_field.model
     field_store = None
     f_type = f_types[0]
-    for concrete_field_type in get_possible_concrete_types(remote_model, schema, f_type):
+    for concrete_field_type in get_possible_concrete_types(
+        remote_model, schema, f_type
+    ):
         concrete_store = _get_model_hints(
             remote_model,
             schema,
@@ -830,7 +832,9 @@ def _get_hints_from_django_relation(
             level=level + 1,
         )
         if concrete_store is not None:
-            field_store = concrete_store if field_store is None else field_store | concrete_store
+            field_store = (
+                concrete_store if field_store is None else field_store | concrete_store
+            )
     if field_store is None:
         return store
 
