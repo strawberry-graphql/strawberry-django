@@ -4,7 +4,7 @@ from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
-from .models import CustomPolyProject
+from .models import CustomPolyProject, Company
 from .schema import schema
 
 
@@ -208,4 +208,103 @@ def test_polymorphic_interface_connection():
                 },
             ],
         }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_relation():
+    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
+    art_company = Company.objects.create(name="ArtCompany", main_project=ap)
+
+    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    research_company = Company.objects.create(name="ResearchCompany", main_project=rp)
+
+    query = """\
+    query {
+      companies {
+        name
+        mainProject {
+            __typename
+            topic
+            ... on ArtProjectType {
+              artist
+            }
+            ... on ResearchProjectType {
+              supervisor
+            }
+          }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "companies": [
+            {
+                "name": art_company.name,
+                "mainProject": {
+                    "__typename": "ArtProjectType",
+                    "topic": ap.topic,
+                    "artist": ap.artist,
+                },
+            },
+            {
+                "name": research_company.name,
+                "mainProject": {
+                    "__typename": "ResearchProjectType",
+                    "topic": rp.topic,
+                    "supervisor": rp.supervisor,
+                },
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_nested_list():
+    company = Company.objects.create(name="Company")
+    ap = CustomPolyProject.objects.create(company=company, topic="Art", artist="Artist")
+    rp = CustomPolyProject.objects.create(company=company, topic="Research", supervisor="Supervisor")
+
+    query = """\
+    query {
+      companies {
+        name
+        projects {
+            __typename
+            topic
+            ... on ArtProjectType {
+              artist
+            }
+            ... on ResearchProjectType {
+              supervisor
+            }
+          }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "companies": [
+            {
+                "name": "Company",
+                "projects": [
+                    {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    },
+                    {
+                        "__typename": "ResearchProjectType",
+                        "topic": rp.topic,
+                        "supervisor": rp.supervisor,
+                    },
+                ],
+            }
+        ]
     }

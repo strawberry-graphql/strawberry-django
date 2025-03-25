@@ -8,7 +8,7 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.relay import ListConnectionWithTotalCount
 
-from .models import CustomPolyProject
+from .models import CustomPolyProject, Company
 
 
 @strawberry_django.interface(CustomPolyProject)
@@ -37,8 +37,16 @@ class ResearchProjectType(ProjectType):
     supervisor: strawberry.auto
 
 
+@strawberry_django.type(Company)
+class CompanyType:
+    name: strawberry.auto
+    main_project: ProjectType | None
+    projects: list[ProjectType]
+
+
 @strawberry.type
 class Query:
+    companies: list[CompanyType] = strawberry_django.field()
     projects: list[ProjectType] = strawberry_django.field()
     projects_paginated: list[ProjectType] = strawberry_django.field(pagination=True)
     projects_offset_paginated: OffsetPaginated[ProjectType] = (

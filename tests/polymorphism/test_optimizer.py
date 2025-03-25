@@ -193,7 +193,7 @@ def test_polymorphic_relation():
     """
 
     # Company, ContentType, base table, two subtables = 5 queries
-    with assert_num_queries(1):
+    with assert_num_queries(5):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -216,7 +216,6 @@ def test_polymorphic_relation():
             }
         ]
     }
-
 
 
 @pytest.mark.django_db(transaction=True)
