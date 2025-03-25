@@ -1,4 +1,6 @@
 import pytest
+from django.db import DEFAULT_DB_ALIAS, connections
+from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
@@ -29,6 +31,44 @@ def test_polymorphic_interface_query():
     # ContentType, base table, two subtables = 4 queries
     with assert_num_queries(4):
         result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist},
+            {
+                "__typename": "ResearchProjectType",
+                "topic": rp.topic,
+                "supervisor": rp.supervisor,
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_query_optimization_working():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+
+    query = """\
+    query {
+      projects {
+        __typename
+        topic
+        ... on ArtProjectType {
+          artist
+        }
+        ... on ResearchProjectType {
+          supervisor
+        }
+      }
+    }
+    """
+
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        result = schema.execute_sync(query)
+        # validate that we're not selecting extra fields
+        assert not any('research_notes' in q for q in ctx.captured_queries)
+        assert not any('art_style' in q for q in ctx.captured_queries)
     assert not result.errors
     assert result.data == {
         "projects": [
