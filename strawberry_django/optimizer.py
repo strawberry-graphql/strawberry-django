@@ -702,6 +702,22 @@ def _get_hints_from_model_property(
     return store
 
 
+def _must_use_prefetch_related(
+    field: StrawberryField,
+    model_field: models.ForeignKey | OneToOneRel,
+) -> bool:
+    f_type = _get_django_type(field)
+    if f_type and hasattr(f_type, "get_queryset"):
+        # If the field has a get_queryset method, change strategy to Prefetch
+        # so it will be respected
+        return True
+    if is_polymorphic_model(model_field.related_model):
+        # If the model is using django-polymorphic, change strategy to Prefetch,
+        # so its custom queryset will be used, returning polymorphic models
+        return True
+    return False
+
+
 def _get_hints_from_django_foreign_key(
     field: StrawberryField,
     field_definition: GraphQLObjectType,
@@ -717,13 +733,9 @@ def _get_hints_from_django_foreign_key(
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
     level: int = 0,
 ) -> OptimizerStore:
-    f_type = _get_django_type(field)
-    if f_type and hasattr(f_type, "get_queryset"):
-        # If the field has a get_queryset method, change strategy to Prefetch
-        # so it will be respected
+    if _must_use_prefetch_related(field, model_field):
         store = _get_hints_from_django_relation(
             field,
-            field_definition=field_definition,
             field_selection=field_selection,
             model_field=model_field,
             model_fieldname=model_fieldname,
@@ -772,7 +784,6 @@ def _get_hints_from_django_foreign_key(
 
 def _get_hints_from_django_relation(
     field: StrawberryField,
-    field_definition: GraphQLObjectType,
     field_selection: FieldNode,
     model_field: (
         models.ManyToManyField
@@ -961,7 +972,6 @@ def _get_hints_from_django_field(
     elif isinstance(model_field, relation_fields):
         store = _get_hints_from_django_relation(
             field,
-            field_definition=field_definition,
             field_selection=field_selection,
             model_field=model_field,
             model_fieldname=model_fieldname,

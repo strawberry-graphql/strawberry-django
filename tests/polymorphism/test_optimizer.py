@@ -165,6 +165,61 @@ def test_polymorphic_offset_paginated_query():
 
 
 @pytest.mark.django_db(transaction=True)
+def test_polymorphic_relation():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    art_company = Company.objects.create(name="ArtCompany", main_project=ap)
+
+    rp = ResearchProject.objects.create(
+        topic="Research", supervisor="Supervisor"
+    )
+    research_company = Company.objects.create(name="ResearchCompany", main_project=rp)
+
+    query = """\
+    query {
+      companies {
+        name
+        mainProject {
+            __typename
+            topic
+            ... on ArtProjectType {
+              artist
+            }
+            ... on ResearchProjectType {
+              supervisor
+            }
+          }
+      }
+    }
+    """
+
+    # Company, ContentType, base table, two subtables = 5 queries
+    with assert_num_queries(1):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "companies": [
+            {
+                "name": art_company.name,
+                "mainProject": {
+                    "__typename": "ArtProjectType",
+                    "topic": ap.topic,
+                    "artist": ap.artist,
+                },
+            },
+            {
+                "name": research_company.name,
+                "mainProject": {
+                    "__typename": "ResearchProjectType",
+                    "topic": rp.topic,
+                    "supervisor": rp.supervisor,
+                },
+            }
+        ]
+    }
+
+
+
+@pytest.mark.django_db(transaction=True)
 def test_polymorphic_nested_list():
     company = Company.objects.create(name="Company")
     ap = ArtProject.objects.create(company=company, topic="Art", artist="Artist")

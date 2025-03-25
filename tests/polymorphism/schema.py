@@ -26,6 +26,7 @@ class ResearchProjectType(ProjectType):
 class CompanyType:
     name: strawberry.auto
     projects: list[ProjectType]
+    main_project: ProjectType | None
 
 
 @strawberry.type

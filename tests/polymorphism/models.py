@@ -4,6 +4,10 @@ from polymorphic.models import PolymorphicModel
 
 class Company(models.Model):
     name = models.CharField(max_length=100)
+    main_project = models.ForeignKey('Project', on_delete=models.CASCADE, null=True)
+
+    class Meta:
+        ordering = ('name',)
 
 
 class Project(PolymorphicModel):
