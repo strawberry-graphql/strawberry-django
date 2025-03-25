@@ -5,6 +5,7 @@ class CustomPolyProject(models.Model):
     topic = models.CharField(max_length=30)
     artist = models.CharField(max_length=30, blank=True)
     supervisor = models.CharField(max_length=30, blank=True)
+    research_notes = models.TextField(blank=True)
 
     class Meta:
         constraints = (
