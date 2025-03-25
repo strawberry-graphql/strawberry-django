@@ -169,9 +169,7 @@ def test_polymorphic_relation():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     art_company = Company.objects.create(name="ArtCompany", main_project=ap)
 
-    rp = ResearchProject.objects.create(
-        topic="Research", supervisor="Supervisor"
-    )
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
     research_company = Company.objects.create(name="ResearchCompany", main_project=rp)
 
     query = """\
@@ -213,7 +211,7 @@ def test_polymorphic_relation():
                     "topic": rp.topic,
                     "supervisor": rp.supervisor,
                 },
-            }
+            },
         ]
     }
 
