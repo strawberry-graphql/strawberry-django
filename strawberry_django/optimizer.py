@@ -841,7 +841,7 @@ def _get_hints_from_django_relation(
         remote_model, schema, f_type
     ):
         django_definition = get_django_definition(concrete_field_type.origin)
-        if django_definition and issubclass(django_definition.model, remote_model):
+        if django_definition and django_definition.model != remote_model and issubclass(django_definition.model, remote_model):
             subclasses.append(django_definition.model)
         concrete_store = _get_model_hints(
             remote_model,
@@ -905,7 +905,7 @@ def _get_hints_from_django_relation(
         related_field_id=related_field_id,
     )
     if is_inheritance_manager_or_qs(base_qs):
-        base_qs = base_qs.select_subclasses(*subclasses)
+        base_qs = base_qs.instance_of(*subclasses)
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
@@ -1407,7 +1407,7 @@ def optimize(
     ):
         if inheritance_qs:
             django_definition = get_django_definition(inner_object_definition.origin)
-            if django_definition and issubclass(django_definition.model, qs.model):
+            if django_definition and django_definition.model != qs.model and issubclass(django_definition.model, qs.model):
                 subclasses.append(django_definition.model)
         parent_type = _get_gql_definition(schema, inner_object_definition)
         new_store = _get_model_hints(
@@ -1422,8 +1422,8 @@ def optimize(
             store |= new_store
 
     if store:
-        if inheritance_qs:
-            qs = qs.select_subclasses(*subclasses)
+        if inheritance_qs and subclasses:
+            qs = qs.instance_of(*subclasses)
         qs = store.apply(qs, info=info, config=config)
         qs_config = get_queryset_config(qs)
         qs_config.optimized = True
