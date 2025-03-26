@@ -61,9 +61,8 @@ from .utils.inspect import (
     get_model_fields,
     get_possible_concrete_types,
     get_possible_type_definitions,
-    is_polymorphic_model,
     is_inheritance_manager_or_qs,
-    get_inheritance_prefix,
+    is_polymorphic_model,
 )
 from .utils.typing import (
     AnnotateCallable,
@@ -841,7 +840,11 @@ def _get_hints_from_django_relation(
         remote_model, schema, f_type
     ):
         django_definition = get_django_definition(concrete_field_type.origin)
-        if django_definition and django_definition.model != remote_model and issubclass(django_definition.model, remote_model):
+        if (
+            django_definition
+            and django_definition.model != remote_model
+            and issubclass(django_definition.model, remote_model)
+        ):
             subclasses.append(django_definition.model)
         concrete_store = _get_model_hints(
             remote_model,
@@ -1069,8 +1072,13 @@ def _get_model_hints(
                     prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
                 )
             if is_inheritance_manager_or_qs(model._default_manager) and (
-                prefix := get_inheritance_prefix(dj_definition.model, model)
+                path_to_parent := dj_definition.model._meta.get_path_to_parent(model)
             ):
+                prefix = LOOKUP_SEP.join(
+                    p.join_field.remote_field.get_accessor_name()
+                    for p in path_to_parent
+                )
+                prefix += LOOKUP_SEP
                 return _get_model_hints(
                     dj_definition.model,
                     schema,
@@ -1407,7 +1415,11 @@ def optimize(
     ):
         if inheritance_qs:
             django_definition = get_django_definition(inner_object_definition.origin)
-            if django_definition and django_definition.model != qs.model and issubclass(django_definition.model, qs.model):
+            if (
+                django_definition
+                and django_definition.model != qs.model
+                and issubclass(django_definition.model, qs.model)
+            ):
                 subclasses.append(django_definition.model)
         parent_type = _get_gql_definition(schema, inner_object_definition)
         new_store = _get_model_hints(

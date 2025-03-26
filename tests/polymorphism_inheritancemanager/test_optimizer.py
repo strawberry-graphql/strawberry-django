@@ -4,7 +4,7 @@ from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
-from .models import ArtProject, Company, ResearchProject, ConstructionProject
+from .models import ArtProject, Company, ConstructionProject, ResearchProject
 from .schema import schema
 
 
@@ -106,8 +106,10 @@ def test_polymorphic_query_only_subclasses_in_schema():
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
         result = schema.execute_sync(query)
         # validate that we're not selecting extra subclasses
-        assert any(ArtProject._meta.db_table in q['sql'] for q in ctx.captured_queries)
-        assert not any(ConstructionProject._meta.db_table in q['sql'] for q in ctx.captured_queries)
+        assert any(ArtProject._meta.db_table in q["sql"] for q in ctx.captured_queries)
+        assert not any(
+            ConstructionProject._meta.db_table in q["sql"] for q in ctx.captured_queries
+        )
     assert not result.errors
     assert result.data == {
         "projects": [
