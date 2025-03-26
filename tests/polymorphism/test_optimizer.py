@@ -67,8 +67,9 @@ def test_polymorphic_query_optimization_working():
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
         result = schema.execute_sync(query)
         # validate that we're not selecting extra fields
-        assert not any("research_notes" in q for q in ctx.captured_queries)
-        assert not any("art_style" in q for q in ctx.captured_queries)
+        assert any("artist" in q["sql"] for q in ctx.captured_queries)
+        assert not any("research_notes" in q["sql"] for q in ctx.captured_queries)
+        assert not any("art_style" in q["sql"] for q in ctx.captured_queries)
     assert not result.errors
     assert result.data == {
         "projects": [
