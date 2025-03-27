@@ -24,7 +24,7 @@ from strawberry.types.base import (
 from strawberry.types.lazy_type import LazyType
 from strawberry.types.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
-from typing_extensions import TypeGuard, assert_never
+from typing_extensions import TypeGuard, TypeIs, assert_never
 
 from strawberry_django.fields.types import resolve_model_field_name
 
@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from django.db.models.fields.reverse_related import ForeignObjectRel
     from django.db.models.sql.query import Query
     from model_utils.managers import (
-        InheritanceManagerMixin,
         InheritanceQuerySetMixin,
     )
     from polymorphic.models import PolymorphicModel
@@ -161,23 +160,28 @@ def is_polymorphic_model(v: type) -> TypeGuard[type[PolymorphicModel]]:
     return issubclass(v, PolymorphicModel)
 
 
-def is_inheritance_manager_or_qs(
+def is_inheritance_manager(
     v: Any,
-) -> TypeGuard[InheritanceManagerMixin | InheritanceQuerySetMixin]:
+) -> bool:
     try:
-        from model_utils.managers import (
-            InheritanceManagerMixin,
-            InheritanceQuerySetMixin,
-        )
+        from model_utils.managers import InheritanceManagerMixin
     except ImportError:
         return False
-    return isinstance(v, (InheritanceManagerMixin, InheritanceQuerySetMixin))
+    return isinstance(v, InheritanceManagerMixin)
+
+
+def is_inheritance_qs(
+    v: Any,
+) -> TypeIs[InheritanceQuerySetMixin]:
+    try:
+        from model_utils.managers import InheritanceQuerySetMixin
+    except ImportError:
+        return False
+    return isinstance(v, InheritanceQuerySetMixin)
 
 
 def _can_optimize_subtypes(model: type[models.Model]) -> bool:
-    return is_polymorphic_model(model) or is_inheritance_manager_or_qs(
-        model._default_manager
-    )
+    return is_polymorphic_model(model) or is_inheritance_manager(model._default_manager)
 
 
 _interfaces: defaultdict[

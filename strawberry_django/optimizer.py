@@ -61,7 +61,8 @@ from .utils.inspect import (
     get_model_fields,
     get_possible_concrete_types,
     get_possible_type_definitions,
-    is_inheritance_manager_or_qs,
+    is_inheritance_manager,
+    is_inheritance_qs,
     is_polymorphic_model,
 )
 from .utils.typing import (
@@ -716,7 +717,7 @@ def _must_use_prefetch_related(
     return (
         (f_type and hasattr(f_type, "get_queryset"))
         or is_polymorphic_model(model_field.related_model)
-        or is_inheritance_manager_or_qs(
+        or is_inheritance_manager(
             model_field.related_model._default_manager
             if config.prefetch_custom_queryset
             else model_field.related_model._base_manager  # type: ignore
@@ -908,7 +909,7 @@ def _get_hints_from_django_relation(
         info=field_info,
         related_field_id=related_field_id,
     )
-    if is_inheritance_manager_or_qs(base_qs):
+    if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
     field_prefetch = Prefetch(path, queryset=field_qs)
@@ -1079,7 +1080,7 @@ def _get_model_hints(
                     config=config,
                     prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
                 )
-            if is_inheritance_manager_or_qs(model._default_manager) and (
+            if is_inheritance_manager(model._default_manager) and (
                 path_to_parent := dj_definition.model._meta.get_path_to_parent(model)
             ):
                 prefix = LOOKUP_SEP.join(
@@ -1419,8 +1420,8 @@ def optimize(
     if strawberry_type is None:
         return qs
 
-    inheritance_qs = is_inheritance_manager_or_qs(qs)
-    subclasses = set() if is_inheritance_manager_or_qs(qs) else None
+    inheritance_qs = is_inheritance_qs(qs)
+    subclasses = set() if inheritance_qs else None
 
     for inner_object_definition in get_possible_concrete_types(
         qs.model, schema, strawberry_type

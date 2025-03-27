@@ -40,7 +40,7 @@ class ResearchProject(Project):
 class TechnicalProject(Project):
     timeline = models.CharField(max_length=30)
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         abstract = True
 
 
