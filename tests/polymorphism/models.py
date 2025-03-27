@@ -29,3 +29,18 @@ class ArtProject(Project):
 class ResearchProject(Project):
     supervisor = models.CharField(max_length=30)
     research_notes = models.TextField()
+
+
+class TechnicalProject(Project):
+    timeline = models.CharField(max_length=30)
+
+    class Meta:
+        abstract = True
+
+
+class SoftwareProject(TechnicalProject):
+    repository = models.CharField(max_length=255)
+
+
+class EngineeringProject(TechnicalProject):
+    lead_engineer = models.CharField(max_length=255)
