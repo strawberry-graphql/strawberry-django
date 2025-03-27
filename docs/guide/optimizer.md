@@ -295,15 +295,17 @@ class OrderItem:
 decorated attribute, which contains the required information for optimizing it.
 
 ## Optimizing polymorphic queries
+
 The optimizer has dedicated support for polymorphic queries, that is, fields which return an interface.
 The optimizer will handle optimizing any subtypes of the interface as necessary. This is supported on top level queries
-as well as relations between models.  
+as well as relations between models.
 See the following sections for how this interacts with your models.
 
 ### Using Django Polymorphic
 
 If you are already using the [Django Polymorphic](https://django-polymorphic.readthedocs.io/en/stable/) library,
 polymorphic queries work out of the box. Just match your schema to your models:
+
 ```python title="models.py"
 from django.db import models
 from polymorphic.models import PolymorphicModel
@@ -342,9 +344,9 @@ class ArtProjectType(ProjectType):
 @strawberry.type
 class Query:
     projects: list[ProjectType] = strawberry_django.field()
-``` 
+```
 
-The `projects` field will return either ResearchProjectType or ArtProjectType, matching on whether it is a 
+The `projects` field will return either ResearchProjectType or ArtProjectType, matching on whether it is a
 ResearchProject or ArtProject. The optimizer will make sure to only select those fields from subclasses which are
 requested in the GraphQL query, just like normal.
 
@@ -353,20 +355,21 @@ requested in the GraphQL query, just like normal.
 > all instances of your model, regardless of whether their type exists in your GraphQL schema or not.
 > Make sure you have a corresponding type for every model subclass or add a `get_queryset` method to your
 > GraphQL interface type to filter out unwanted subtypes.
-> Otherwise you might receive an error like 
+> Otherwise you might receive an error like
 > `Abstract type 'ProjectType' must resolve to an Object type at runtime for field 'Query.projects'.`
 
-
 ### Using Model-Utils InheritanceManager
+
 Models using `InheritanceManager` from [django-model-utils](https://django-model-utils.readthedocs.io/en/latest/)
 are also supported. Just match your schema to your models:
+
 ```python title="models.py"
 from django.db import models
 from model_utils.managers import InheritanceManager
 
 class Project(models.Model):
     topic = models.CharField(max_length=255)
-    
+
     objects = InheritanceManager()
 
 class ResearchProject(Project):
@@ -400,7 +403,7 @@ class ArtProjectType(ProjectType):
 @strawberry.type
 class Query:
     projects: list[ProjectType] = strawberry_django.field()
-``` 
+```
 
 The `projects` field will return either ResearchProjectType or ArtProjectType, matching on whether it is a
 ResearchProject or ArtProject. The optimizer automatically calls `select_subclasses`, passing in any subtypes present
@@ -422,8 +425,8 @@ in your schema.
 > Either change your base manager to also be an `InheritanceManager` or set Strawberry Django to use the default
 > manager: `DjangoOptimizerExtension(prefetch_custom_queryset=True)`.
 
-
 ### Custom polymorphic solution
+
 The optimizer also supports polymorphism even if your models are not polymorphic. You simply need to implement
 `resolve_type` in the interface type:
 
@@ -475,7 +478,7 @@ class ArtProjectType(ProjectType):
 @strawberry.type
 class Query:
     projects: list[ProjectType] = strawberry_django.field()
-``` 
+```
 
 > [!WARNING]
 > Make sure to add `get_queryset` to your interface type, to force the optimizer to use
