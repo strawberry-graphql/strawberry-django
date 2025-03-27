@@ -4,14 +4,14 @@ from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
-from .models import Company, CustomPolyProject
+from .models import Company, Project
 from .schema import schema
 
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_query():
-    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    ap = Project.objects.create(topic="Art", artist="Artist")
+    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -45,8 +45,8 @@ def test_polymorphic_interface_query():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_query_optimization_working():
-    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    ap = Project.objects.create(topic="Art", artist="Artist")
+    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -83,8 +83,8 @@ def test_polymorphic_query_optimization_working():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_paginated():
-    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    ap = Project.objects.create(topic="Art", artist="Artist")
+    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -118,8 +118,8 @@ def test_polymorphic_interface_paginated():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_offset_paginated():
-    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    ap = Project.objects.create(topic="Art", artist="Artist")
+    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -163,8 +163,8 @@ def test_polymorphic_interface_offset_paginated():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_connection():
-    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    ap = Project.objects.create(topic="Art", artist="Artist")
+    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -214,10 +214,10 @@ def test_polymorphic_interface_connection():
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_relation():
-    ap = CustomPolyProject.objects.create(topic="Art", artist="Artist")
+    ap = Project.objects.create(topic="Art", artist="Artist")
     art_company = Company.objects.create(name="ArtCompany", main_project=ap)
 
-    rp = CustomPolyProject.objects.create(topic="Research", supervisor="Supervisor")
+    rp = Project.objects.create(topic="Research", supervisor="Supervisor")
     research_company = Company.objects.create(name="ResearchCompany", main_project=rp)
 
     query = """\
@@ -266,8 +266,8 @@ def test_polymorphic_relation():
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_nested_list():
     company = Company.objects.create(name="Company")
-    ap = CustomPolyProject.objects.create(company=company, topic="Art", artist="Artist")
-    rp = CustomPolyProject.objects.create(
+    ap = Project.objects.create(company=company, topic="Art", artist="Artist")
+    rp = Project.objects.create(
         company=company, topic="Research", supervisor="Supervisor"
     )
 

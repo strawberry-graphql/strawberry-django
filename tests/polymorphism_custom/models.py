@@ -4,14 +4,14 @@ from django.db import models
 class Company(models.Model):
     name = models.CharField(max_length=100)
     main_project = models.ForeignKey(
-        "CustomPolyProject", null=True, blank=True, on_delete=models.CASCADE
+        "Project", null=True, blank=True, on_delete=models.CASCADE
     )
 
     class Meta:
         ordering = ("name",)
 
 
-class CustomPolyProject(models.Model):
+class Project(models.Model):
     company = models.ForeignKey(
         Company,
         null=True,

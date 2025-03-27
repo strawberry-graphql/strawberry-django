@@ -10,10 +10,10 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.relay import ListConnectionWithTotalCount
 
-from .models import Company, CustomPolyProject
+from .models import Company, Project
 
 
-@strawberry_django.interface(CustomPolyProject)
+@strawberry_django.interface(Project)
 class ProjectType(Node):
     topic: strawberry.auto
 
@@ -21,7 +21,7 @@ class ProjectType(Node):
     def resolve_type(
         cls, value: Any, info: GraphQLResolveInfo, parent_type: GraphQLAbstractType
     ) -> str:
-        if not isinstance(value, CustomPolyProject):
+        if not isinstance(value, Project):
             raise TypeError
         if value.artist:
             return "ArtProjectType"
@@ -34,12 +34,12 @@ class ProjectType(Node):
         return qs
 
 
-@strawberry_django.type(CustomPolyProject)
+@strawberry_django.type(Project)
 class ArtProjectType(ProjectType):
     artist: strawberry.auto
 
 
-@strawberry_django.type(CustomPolyProject)
+@strawberry_django.type(Project)
 class ResearchProjectType(ProjectType):
     supervisor: strawberry.auto
 
