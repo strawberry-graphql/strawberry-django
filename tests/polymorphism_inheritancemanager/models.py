@@ -1,5 +1,5 @@
 from django.db import models
-from polymorphic.models import PolymorphicModel
+from model_utils.managers import InheritanceManager
 
 
 class Company(models.Model):
@@ -10,7 +10,7 @@ class Company(models.Model):
         ordering = ("name",)
 
 
-class Project(PolymorphicModel):
+class Project(models.Model):
     company = models.ForeignKey(
         Company,
         null=True,
@@ -19,6 +19,12 @@ class Project(PolymorphicModel):
         related_name="projects",
     )
     topic = models.CharField(max_length=30)
+
+    base_objects = InheritanceManager()
+    objects = InheritanceManager()
+
+    class Meta:
+        base_manager_name = "base_objects"
 
 
 class ArtProject(Project):
