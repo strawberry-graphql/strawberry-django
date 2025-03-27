@@ -5,9 +5,11 @@ from django.test.utils import CaptureQueriesContext
 from tests.utils import assert_num_queries
 
 from .models import (
+    AndroidProject,
     ArtProject,
     Company,
     EngineeringProject,
+    IOSProject,
     ResearchProject,
     SoftwareProject,
 )
@@ -91,6 +93,77 @@ def test_polymorphic_query_abstract_model():
                 "topic": sp.topic,
                 "repository": sp.repository,
                 "timeline": sp.timeline,
+            },
+            {
+                "__typename": "EngineeringProjectType",
+                "topic": ep.topic,
+                "leadEngineer": ep.lead_engineer,
+                "timeline": ep.timeline,
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_query_multiple_inheritance_levels():
+    app1 = AndroidProject.objects.create(
+        topic="Software",
+        repository="https://example.com/android",
+        timeline="3 months",
+        android_version="14",
+    )
+    app2 = IOSProject.objects.create(
+        topic="Software",
+        repository="https://example.com/ios",
+        timeline="5 months",
+        ios_version="16",
+    )
+    ep = EngineeringProject.objects.create(
+        topic="Engineering", lead_engineer="Elara Voss", timeline="6 years"
+    )
+
+    query = """\
+    query {
+      projects {
+        __typename
+        topic
+        ...on TechnicalProjectType {
+          timeline
+        }
+        ...on AppProjectType {
+          repository
+        }
+        ...on AndroidProjectType {
+          androidVersion
+        }
+        ...on IOSProjectType {
+          iosVersion
+        }
+        ...on EngineeringProjectType {
+          leadEngineer
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "__typename": "AndroidProjectType",
+                "topic": app1.topic,
+                "repository": app1.repository,
+                "timeline": app1.timeline,
+                "androidVersion": app1.android_version,
+            },
+            {
+                "__typename": "IOSProjectType",
+                "topic": app2.topic,
+                "repository": app2.repository,
+                "timeline": app2.timeline,
+                "iosVersion": app2.ios_version,
             },
             {
                 "__typename": "EngineeringProjectType",

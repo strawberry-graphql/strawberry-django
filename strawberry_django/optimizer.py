@@ -1017,6 +1017,7 @@ def _get_model_hints(
     prefix: str = "",
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]] | None = None,
     level: int = 0,
+    subclass_collection: set[type[models.Model]] | None = None,
 ) -> OptimizerStore | None:
     cache = cache or {}
 
@@ -1032,6 +1033,7 @@ def _get_model_hints(
             prefix=prefix,
             cache=cache,
             level=level,
+            subclass_collection=subclass_collection,
         )
 
     # In case this is a Paginated field, the selected fields are inside results selection
@@ -1046,6 +1048,7 @@ def _get_model_hints(
             prefix=prefix,
             cache=cache,
             level=level,
+            subclass_collection=subclass_collection,
         )
 
     store = OptimizerStore()
@@ -1058,13 +1061,15 @@ def _get_model_hints(
     if not issubclass(model, dj_definition.model):
         # If this is a PolymorphicModel, also try to optimize fields in subclasses
         # of the current model.
-        # These must be prefixed with app_label__ModelName___ (note three underscores)
-        # This is a special syntax for django-polymorphic:
-        # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
         if not dj_definition.model._meta.abstract and issubclass(
             dj_definition.model, model
         ):
+            if subclass_collection is not None:
+                subclass_collection.add(dj_definition.model)
             if is_polymorphic_model(model):
+                # These must be prefixed with app_label__ModelName___ (note three underscores)
+                # This is a special syntax for django-polymorphic:
+                # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
                 return _get_model_hints(
                     dj_definition.model,
                     schema,
@@ -1079,7 +1084,7 @@ def _get_model_hints(
             ):
                 prefix = LOOKUP_SEP.join(
                     p.join_field.remote_field.get_accessor_name()
-                    for p in path_to_parent
+                    for p in reversed(path_to_parent)
                 )
                 prefix += LOOKUP_SEP
                 return _get_model_hints(
@@ -1219,6 +1224,7 @@ def _get_model_hints_from_connection(
     prefix: str = "",
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]] | None = None,
     level: int = 0,
+    subclass_collection: set[type[models.Model]] | None = None,
 ) -> OptimizerStore | None:
     store = None
 
@@ -1282,6 +1288,7 @@ def _get_model_hints_from_connection(
                     prefix=prefix,
                     cache=cache,
                     level=level,
+                    subclass_collection=subclass_collection,
                 )
                 if concrete_store is not None:
                     store = concrete_store if store is None else store | concrete_store
@@ -1300,6 +1307,7 @@ def _get_model_hints_from_paginated(
     prefix: str = "",
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]] | None = None,
     level: int = 0,
+    subclass_collection: set[type[models.Model]] | None = None,
 ) -> OptimizerStore | None:
     store = None
 
@@ -1340,6 +1348,7 @@ def _get_model_hints_from_paginated(
                 prefix=prefix,
                 cache=cache,
                 level=level,
+                subclass_collection=subclass_collection,
             )
             if concrete_store is not None:
                 store = concrete_store if store is None else store | concrete_store
@@ -1411,20 +1420,11 @@ def optimize(
         return qs
 
     inheritance_qs = is_inheritance_manager_or_qs(qs)
-    subclasses = []
+    subclasses = set() if is_inheritance_manager_or_qs(qs) else None
 
     for inner_object_definition in get_possible_concrete_types(
         qs.model, schema, strawberry_type
     ):
-        if inheritance_qs:
-            django_definition = get_django_definition(inner_object_definition.origin)
-            if (
-                django_definition
-                and django_definition.model != qs.model
-                and not django_definition.model._meta.abstract
-                and issubclass(django_definition.model, qs.model)
-            ):
-                subclasses.append(django_definition.model)
         parent_type = _get_gql_definition(schema, inner_object_definition)
         new_store = _get_model_hints(
             qs.model,
@@ -1433,6 +1433,7 @@ def optimize(
             parent_type=parent_type,
             info=info,
             config=config,
+            subclass_collection=subclasses,
         )
         if new_store is not None:
             store |= new_store
