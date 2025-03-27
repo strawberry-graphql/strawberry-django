@@ -6,7 +6,15 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 
-from .models import ArtProject, Company, Project, ResearchProject
+from .models import (
+    ArtProject,
+    Company,
+    EngineeringProject,
+    Project,
+    ResearchProject,
+    SoftwareProject,
+    TechnicalProject,
+)
 
 
 @strawberry_django.interface(Project)
@@ -22,6 +30,21 @@ class ArtProjectType(ProjectType):
 @strawberry_django.type(ResearchProject)
 class ResearchProjectType(ProjectType):
     supervisor: strawberry.auto
+
+
+@strawberry_django.interface(TechnicalProject)
+class TechnicalProjectType(ProjectType):
+    timeline: strawberry.auto
+
+
+@strawberry_django.type(SoftwareProject)
+class SoftwareProjectType(TechnicalProjectType):
+    repository: strawberry.auto
+
+
+@strawberry_django.type(EngineeringProject)
+class EngineeringProjectType(TechnicalProjectType):
+    lead_engineer: strawberry.auto
 
 
 @strawberry_django.type(Company)
@@ -43,6 +66,12 @@ class Query:
 
 schema = strawberry.Schema(
     query=Query,
-    types=[ArtProjectType, ResearchProjectType],
+    types=[
+        ArtProjectType,
+        ResearchProjectType,
+        TechnicalProjectType,
+        EngineeringProjectType,
+        SoftwareProjectType,
+    ],
     extensions=[DjangoOptimizerExtension],
 )

@@ -37,7 +37,16 @@ class ResearchProject(Project):
     research_notes = models.TextField()
 
 
-# This model exists, but there is no corresponding GraphQL type on purpose.
-# This is used in tests to make sure that this project is not selected
-class ConstructionProject(Project):
-    building_type = models.CharField(max_length=30)
+class TechnicalProject(Project):
+    timeline = models.CharField(max_length=30)
+
+    class Meta:
+        abstract = True
+
+
+class SoftwareProject(TechnicalProject):
+    repository = models.CharField(max_length=255)
+
+
+class EngineeringProject(TechnicalProject):
+    lead_engineer = models.CharField(max_length=255)

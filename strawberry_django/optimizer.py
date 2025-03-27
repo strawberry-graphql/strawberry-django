@@ -843,6 +843,7 @@ def _get_hints_from_django_relation(
         if (
             django_definition
             and django_definition.model != remote_model
+            and not django_definition.model._meta.abstract
             and issubclass(django_definition.model, remote_model)
         ):
             subclasses.append(django_definition.model)
@@ -908,7 +909,7 @@ def _get_hints_from_django_relation(
         related_field_id=related_field_id,
     )
     if is_inheritance_manager_or_qs(base_qs):
-        base_qs = base_qs.instance_of(*subclasses)
+        base_qs = base_qs.select_subclasses(*subclasses)
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
@@ -1060,7 +1061,9 @@ def _get_model_hints(
         # These must be prefixed with app_label__ModelName___ (note three underscores)
         # This is a special syntax for django-polymorphic:
         # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
-        if issubclass(dj_definition.model, model):
+        if not dj_definition.model._meta.abstract and issubclass(
+            dj_definition.model, model
+        ):
             if is_polymorphic_model(model):
                 return _get_model_hints(
                     dj_definition.model,
@@ -1418,6 +1421,7 @@ def optimize(
             if (
                 django_definition
                 and django_definition.model != qs.model
+                and not django_definition.model._meta.abstract
                 and issubclass(django_definition.model, qs.model)
             ):
                 subclasses.append(django_definition.model)
@@ -1435,7 +1439,7 @@ def optimize(
 
     if store:
         if inheritance_qs and subclasses:
-            qs = qs.instance_of(*subclasses)
+            qs = qs.select_subclasses(*subclasses)
         qs = store.apply(qs, info=info, config=config)
         qs_config = get_queryset_config(qs)
         qs_config.optimized = True

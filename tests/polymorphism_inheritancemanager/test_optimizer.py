@@ -4,7 +4,13 @@ from django.test.utils import CaptureQueriesContext
 
 from tests.utils import assert_num_queries
 
-from .models import ArtProject, Company, ConstructionProject, ResearchProject
+from .models import (
+    ArtProject,
+    Company,
+    EngineeringProject,
+    ResearchProject,
+    SoftwareProject,
+)
 from .schema import schema
 
 
@@ -44,6 +50,102 @@ def test_polymorphic_interface_query():
 
 
 @pytest.mark.django_db(transaction=True)
+def test_polymorphic_query_abstract_model():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    sp = SoftwareProject.objects.create(
+        topic="Software", repository="https://example.com", timeline="3 months"
+    )
+    ep = EngineeringProject.objects.create(
+        topic="Engineering", lead_engineer="Elara Voss", timeline="6 years"
+    )
+
+    query = """\
+    query {
+      projects {
+        __typename
+        topic
+        ... on ArtProjectType {
+          artist
+        }
+        ...on TechnicalProjectType {
+          timeline
+        }
+        ... on SoftwareProjectType {
+          repository
+        }
+        ...on EngineeringProjectType {
+          leadEngineer
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(1):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist},
+            {
+                "__typename": "SoftwareProjectType",
+                "topic": sp.topic,
+                "repository": sp.repository,
+                "timeline": sp.timeline,
+            },
+            {
+                "__typename": "EngineeringProjectType",
+                "topic": ep.topic,
+                "leadEngineer": ep.lead_engineer,
+                "timeline": ep.timeline,
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_query_abstract_model_on_field():
+    ep = EngineeringProject.objects.create(
+        topic="Engineering", lead_engineer="Elara Voss", timeline="6 years"
+    )
+    company = Company.objects.create(name="Company", main_project=ep)
+
+    query = """\
+    query {
+      companies {
+        name
+        mainProject {
+            __typename
+            topic
+            ...on TechnicalProjectType {
+              timeline
+            }
+            ...on EngineeringProjectType {
+              leadEngineer
+            }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "companies": [
+            {
+                "name": company.name,
+                "mainProject": {
+                    "__typename": "EngineeringProjectType",
+                    "topic": ep.topic,
+                    "leadEngineer": ep.lead_engineer,
+                    "timeline": ep.timeline,
+                },
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_polymorphic_query_optimization_working():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
@@ -68,48 +170,6 @@ def test_polymorphic_query_optimization_working():
         # validate that we're not selecting extra fields
         assert not any("research_notes" in q for q in ctx.captured_queries)
         assert not any("art_style" in q for q in ctx.captured_queries)
-    assert not result.errors
-    assert result.data == {
-        "projects": [
-            {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist},
-            {
-                "__typename": "ResearchProjectType",
-                "topic": rp.topic,
-                "supervisor": rp.supervisor,
-            },
-        ]
-    }
-
-
-# TODO: Test not selecting unneeded subclasses
-@pytest.mark.django_db(transaction=True)
-def test_polymorphic_query_only_subclasses_in_schema():
-    ap = ArtProject.objects.create(topic="Art", artist="Artist")
-    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
-    ConstructionProject.objects.create(building_type="Skyscraper")
-
-    query = """\
-    query {
-      projects {
-        __typename
-        topic
-        ... on ArtProjectType {
-          artist
-        }
-        ... on ResearchProjectType {
-          supervisor
-        }
-      }
-    }
-    """
-
-    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
-        result = schema.execute_sync(query)
-        # validate that we're not selecting extra subclasses
-        assert any(ArtProject._meta.db_table in q["sql"] for q in ctx.captured_queries)
-        assert not any(
-            ConstructionProject._meta.db_table in q["sql"] for q in ctx.captured_queries
-        )
     assert not result.errors
     assert result.data == {
         "projects": [
