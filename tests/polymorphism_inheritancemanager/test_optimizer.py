@@ -146,7 +146,7 @@ def test_polymorphic_query_multiple_inheritance_levels():
     }
     """
 
-    with assert_num_queries(2):
+    with assert_num_queries(1):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
