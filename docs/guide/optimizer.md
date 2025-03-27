@@ -303,7 +303,7 @@ See the following sections for how this interacts with your models.
 ### Using Django Polymorphic
 
 If you are already using the [Django Polymorphic](https://django-polymorphic.readthedocs.io/en/stable/) library,
-polymorphic queries work out of the box. Just match your schema to your models:
+polymorphic queries work out of the box.
 ```python title="models.py"
 from django.db import models
 from polymorphic.models import PolymorphicModel
@@ -346,7 +346,7 @@ class Query:
 
 The `projects` field will return either ResearchProjectType or ArtProjectType, matching on whether it is a 
 ResearchProject or ArtProject. The optimizer will make sure to only select those fields from subclasses which are
-requested in the GraphQL query, just like normal.
+requested in the GraphQL query in the same way that it does normally.
 
 > [!WARNING]
 > The optimizer does not filter your QuerySet and Django will return
@@ -359,7 +359,7 @@ requested in the GraphQL query, just like normal.
 
 ### Using Model-Utils InheritanceManager
 Models using `InheritanceManager` from [django-model-utils](https://django-model-utils.readthedocs.io/en/latest/)
-are also supported. Just match your schema to your models:
+are also supported.
 ```python title="models.py"
 from django.db import models
 from model_utils.managers import InheritanceManager
@@ -424,8 +424,8 @@ in your schema.
 
 
 ### Custom polymorphic solution
-The optimizer also supports polymorphism even if your models are not polymorphic. You simply need to implement
-`resolve_type` in the interface type:
+The optimizer also supports polymorphism even if your models are not polymorphic. 
+`resolve_type` in the GraphQL interface type is used to tell GraphQL the actual type that should be used.
 
 ```python title="models.py"
 from django.db import models
