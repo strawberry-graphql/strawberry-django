@@ -1081,11 +1081,12 @@ def _get_model_hints(
                     prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
                 )
             if is_inheritance_manager(model._default_manager) and (
-                path_to_parent := dj_definition.model._meta.get_path_to_parent(model)
+                path_from_parent := dj_definition.model._meta.get_path_from_parent(
+                    model
+                )
             ):
                 prefix = LOOKUP_SEP.join(
-                    p.join_field.remote_field.get_accessor_name()
-                    for p in reversed(path_to_parent)
+                    p.join_field.get_accessor_name() for p in path_from_parent
                 )
                 prefix += LOOKUP_SEP
                 return _get_model_hints(
