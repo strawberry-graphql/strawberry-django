@@ -44,3 +44,15 @@ class SoftwareProject(TechnicalProject):
 
 class EngineeringProject(TechnicalProject):
     lead_engineer = models.CharField(max_length=255)
+
+
+class AppProject(TechnicalProject):
+    repository = models.CharField(max_length=255)
+
+
+class AndroidProject(AppProject):
+    android_version = models.CharField(max_length=15)
+
+
+class IOSProject(AppProject):
+    ios_version = models.CharField(max_length=15)

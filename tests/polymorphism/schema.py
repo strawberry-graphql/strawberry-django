@@ -7,9 +7,12 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
 
 from .models import (
+    AndroidProject,
+    AppProject,
     ArtProject,
     Company,
     EngineeringProject,
+    IOSProject,
     Project,
     ResearchProject,
     SoftwareProject,
@@ -47,6 +50,21 @@ class EngineeringProjectType(TechnicalProjectType):
     lead_engineer: strawberry.auto
 
 
+@strawberry_django.interface(AppProject)
+class AppProjectType(TechnicalProjectType):
+    repository: strawberry.auto
+
+
+@strawberry_django.type(AndroidProject)
+class AndroidProjectType(AppProjectType):
+    android_version: strawberry.auto
+
+
+@strawberry_django.type(IOSProject)
+class IOSProjectType(AppProjectType):
+    ios_version: strawberry.auto
+
+
 @strawberry_django.type(Company)
 class CompanyType:
     name: strawberry.auto
@@ -72,6 +90,8 @@ schema = strawberry.Schema(
         TechnicalProjectType,
         EngineeringProjectType,
         SoftwareProjectType,
+        AndroidProjectType,
+        IOSProjectType,
     ],
     extensions=[DjangoOptimizerExtension],
 )
