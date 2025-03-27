@@ -7,9 +7,9 @@ from tests.utils import assert_num_queries
 from .models import (
     ArtProject,
     Company,
+    EngineeringProject,
     ResearchProject,
     SoftwareProject,
-    EngineeringProject,
 )
 from .schema import schema
 

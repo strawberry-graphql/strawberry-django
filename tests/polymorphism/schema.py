@@ -9,11 +9,11 @@ from strawberry_django.pagination import OffsetPaginated
 from .models import (
     ArtProject,
     Company,
+    EngineeringProject,
     Project,
     ResearchProject,
-    TechnicalProject,
     SoftwareProject,
-    EngineeringProject,
+    TechnicalProject,
 )
 
 
@@ -66,6 +66,12 @@ class Query:
 
 schema = strawberry.Schema(
     query=Query,
-    types=[ArtProjectType, ResearchProjectType, TechnicalProjectType, EngineeringProjectType, SoftwareProjectType],
+    types=[
+        ArtProjectType,
+        ResearchProjectType,
+        TechnicalProjectType,
+        EngineeringProjectType,
+        SoftwareProjectType,
+    ],
     extensions=[DjangoOptimizerExtension],
 )

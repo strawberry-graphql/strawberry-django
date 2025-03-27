@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Any, Optional
 
 import strawberry
-from django.db.models import Case, Q, Value, When
+from graphql import GraphQLAbstractType, GraphQLResolveInfo
 from strawberry import Info
 from strawberry.relay import Node
 
@@ -18,15 +18,20 @@ class ProjectType(Node):
     topic: strawberry.auto
 
     @classmethod
+    def resolve_type(
+        cls, value: Any, info: GraphQLResolveInfo, parent_type: GraphQLAbstractType
+    ) -> str:
+        if not isinstance(value, CustomPolyProject):
+            raise TypeError
+        if value.artist:
+            return "ArtProjectType"
+        if value.supervisor:
+            return "ResearchProjectType"
+        raise TypeError
+
+    @classmethod
     def get_queryset(cls, qs, info: Info):
-        # Graphql assumes the __typename would be affected by private name mangling
-        # Therefor we have to prefix with _CustomPolyProject
-        return qs.annotate(**{
-            f"_{qs.model._meta.object_name}__typename": Case(
-                When(~Q(artist=""), then=Value("ArtProjectType")),
-                When(~Q(supervisor=""), then=Value("ResearchProjectType")),
-            )
-        })
+        return qs
 
 
 @strawberry_django.type(CustomPolyProject)
