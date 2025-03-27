@@ -200,7 +200,7 @@ def get_possible_concrete_types(
     Returns any object definitions attached to either the model or one of its supertypes.
 
     If the model is one that supports polymorphism, by returning subtypes from its queryset, subtypes are also
-    looked at. Currently, this is only supported for django-polymorphic.
+    looked at. Currently, this is supported for django-polymorphic and django-model-utils InheritanceManager.
     """
     for object_definition in get_possible_type_definitions(strawberry_type):
         if not object_definition.is_interface:
