@@ -2,10 +2,11 @@
 title: Ordering
 ---
 
-# Order (Legacy)
+> [!WARNING]
+> The legacy `@strawberry_django.order` implementation is only provided for backwards compatibility.
+> You should prefer [Ordering](ordering) instead.
 
-The legacy `@strawberry_django.order` implementation is only provided for backwards compatibility.
-You should prefer [Ordering](ordering) instead.
+# Order (Legacy)
 
 `@strawberry_django.order` allows sorting by multiple fields only by specifying the object keys in the order input
 in the desired order. This is not always feasible and contradicts the way objects are supposed to be used.
