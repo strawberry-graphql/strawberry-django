@@ -138,7 +138,9 @@ def test_error_when_ordering_and_order_given(query, fruits):
     )
     assert result.errors is not None
     assert len(result.errors) == 1
-    assert result.errors[0].message == "Only one of ordering, order must be given."
+    assert (
+        result.errors[0].message == "Only one of `ordering` or `order` must be given."
+    )
 
 
 def test_field_order_definition():

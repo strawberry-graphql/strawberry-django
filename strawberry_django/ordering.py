@@ -358,7 +358,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         **kwargs,
     ) -> _QS:
         if order and ordering:
-            raise ValueError("Only one of ordering, order must be given.")
+            raise ValueError("Only one of `ordering` or `order` must be given.")
         queryset = super().get_queryset(queryset, info, **kwargs)
         queryset = apply(order, queryset, info=info)
         if ordering_cls := self.get_ordering():
