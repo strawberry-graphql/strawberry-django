@@ -153,32 +153,44 @@ def get_possible_type_definitions(
             yield t.__strawberry_definition__
 
 
-def is_polymorphic_model(v: type) -> TypeIs[type[PolymorphicModel]]:
-    try:
-        from polymorphic.models import PolymorphicModel
-    except ImportError:
+try:
+    # Can't import PolymorphicModel, because it requires Django Apps to be ready
+    # Import polymorphic instead to check for its existence
+    import polymorphic  # noqa: F401
+
+    def is_polymorphic_model(v: type) -> TypeIs[type[PolymorphicModel]]:
+        return getattr(v, "polymorphic_model_marker", False) is True
+
+except ImportError:
+
+    def is_polymorphic_model(v: type) -> TypeIs[type[PolymorphicModel]]:
         return False
-    return issubclass(v, PolymorphicModel)
 
 
-def is_inheritance_manager(
-    v: Any,
-) -> TypeIs[InheritanceManagerMixin]:
-    try:
-        from model_utils.managers import InheritanceManagerMixin
-    except ImportError:
+try:
+    from model_utils.managers import InheritanceManagerMixin, InheritanceQuerySetMixin
+
+    def is_inheritance_manager(
+        v: Any,
+    ) -> TypeIs[InheritanceManagerMixin]:
+        return isinstance(v, InheritanceManagerMixin)
+
+    def is_inheritance_qs(
+        v: Any,
+    ) -> TypeIs[InheritanceQuerySetMixin]:
+        return isinstance(v, InheritanceQuerySetMixin)
+
+except ImportError:
+
+    def is_inheritance_manager(
+        v: Any,
+    ) -> TypeIs[InheritanceManagerMixin]:
         return False
-    return isinstance(v, InheritanceManagerMixin)
 
-
-def is_inheritance_qs(
-    v: Any,
-) -> TypeIs[InheritanceQuerySetMixin]:
-    try:
-        from model_utils.managers import InheritanceQuerySetMixin
-    except ImportError:
+    def is_inheritance_qs(
+        v: Any,
+    ) -> TypeIs[InheritanceQuerySetMixin]:
         return False
-    return isinstance(v, InheritanceQuerySetMixin)
 
 
 def _can_optimize_subtypes(model: type[models.Model]) -> bool:
