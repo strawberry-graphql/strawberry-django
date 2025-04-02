@@ -5,6 +5,7 @@ from django.test.utils import CaptureQueriesContext
 from strawberry.relay import Node
 
 import strawberry_django
+from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.relay_cursor import DjangoCursorConnection
 from tests.projects.models import Project
 
@@ -29,11 +30,13 @@ def test_cursor_pagination():
     class Query:
         projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
 
-    schema = strawberry.Schema(query=Query)
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
     query = """
     query TestQuery {
         projects(after: "b3JkZXJlZGN1cnNvcjpbIlByb2plY3QgRiIsICIzIl0=") {
+            __typename
             edges {
+                __typename
                 cursor
                 node { id name }            
             }        

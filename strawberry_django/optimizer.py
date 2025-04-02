@@ -41,7 +41,7 @@ from strawberry.extensions import SchemaExtension
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
-from strawberry.types import get_object_definition
+from strawberry.types import get_object_definition, has_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.types.lazy_type import LazyType
@@ -1246,13 +1246,19 @@ def _get_model_hints_from_connection(
         if edge.name.value != "edges":
             continue
 
-        e_definition = get_object_definition(relay.Edge, strict=True)
-        e_type = e_definition.resolve_generic(
-            relay.Edge[cast("type[relay.Node]", n_type)],
-        )
+        e_field = object_definition.get_field('edges')
+        if e_field is None:
+            break
+
+        e_definition = e_field.type
+        while isinstance(e_definition, StrawberryContainer):
+            e_definition = e_definition.of_type
+        if has_object_definition(e_definition):
+            e_definition = get_object_definition(e_definition, strict=True)
+
         e_gql_definition = _get_gql_definition(
             schema,
-            get_object_definition(e_type, strict=True),
+            e_definition,
         )
         assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
         e_info = _generate_selection_resolve_info(
