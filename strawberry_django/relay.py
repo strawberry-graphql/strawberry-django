@@ -1,11 +1,7 @@
-import base64
-import dataclasses
 import functools
 import inspect
-import json
 import warnings
-from collections.abc import Iterable, Sized, Collection
-from json import JSONDecodeError
+from collections.abc import Iterable, Sized
 from typing import (
     Any,
     Callable,
@@ -19,22 +15,18 @@ from typing import (
 import strawberry
 from asgiref.sync import sync_to_async
 from django.db import models
-from django.db.models import QuerySet
 from strawberry import relay
-from strawberry.relay import NodeType, to_base64, from_base64
 from strawberry.relay.exceptions import NodeIDAnnotationError
 from strawberry.relay.types import NodeIterableType
-from strawberry.relay.utils import SliceMetadata
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Literal, Self, ClassVar
+from typing_extensions import Literal, Self
 
 from strawberry_django.pagination import get_total_count
 from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.resolvers import django_getattr, django_resolver
-from strawberry_django.utils.inspect import get_model_fields
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
     get_django_definition,
@@ -51,81 +43,6 @@ __all__ = [
     "resolve_model_node",
     "resolve_model_nodes",
 ]
-
-
-@dataclasses.dataclass
-class OrderedCollectionCursor:
-    PREFIX: ClassVar[str] = 'orderedcursor'
-
-    field_values: list[str]
-
-    @classmethod
-    def from_model(cls, model: models.Model, field_names: list[str]) -> Self:
-        model_fields = get_model_fields(type(model))
-        values = []
-        for field_name in field_names:
-            model_field = model_fields[field_name]
-            assert isinstance(model_field, models.Field)
-            values.append(model_field.value_to_string(model))  # type: ignore
-        return values
-
-    @classmethod
-    def from_cursor(cls, cursor: str) -> Self:
-        type_, values_json = from_base64(cursor)
-        if type_ != cls.PREFIX:
-            raise ValueError('Invalid Cursor')
-        try:
-            decoded_values = json.loads(values_json)
-        except JSONDecodeError as e:
-            raise ValueError('Invalid cursor') from e
-        if not isinstance(decoded_values, list):
-            raise ValueError('Invalid cursor')
-        if any(not isinstance(v, str) for v in decoded_values):
-            raise ValueError('Invalid cursor')
-        return OrderedCollectionCursor(decoded_values)
-
-    def to_cursor(self) -> str:
-        return to_base64(self.PREFIX, json.dumps(self.field_values))
-
-    def apply(self, qs: QuerySet, mode: Literal['before', 'after']) -> QuerySet:
-        return qs
-
-
-@strawberry.type(name="Connection", description="A connection to a list of items.")
-class DjangoCursorConnection(relay.Connection[relay.NodeType]):
-
-    cursor_fields: Collection[str] = ('pk', )
-
-    @classmethod
-    def resolve_connection(cls, nodes: NodeIterableType[NodeType], *, info: Info, before: Optional[str] = None,
-                           after: Optional[str] = None, first: Optional[int] = None, last: Optional[int] = None,
-                           max_results: Optional[int] = None, **kwargs: Any) -> AwaitableOrValue[Self]:
-        if not isinstance(nodes, QuerySet):
-            raise TypeError('DjangoCursorConnection requires a QuerySet')
-        if after:
-            after_cursor = OrderedCollectionCursor.from_cursor(after)
-            nodes = after_cursor.apply(nodes, 'after')
-        if before:
-            before_cursor = OrderedCollectionCursor.from_cursor(before)
-            nodes = before_cursor.apply(nodes, 'before')
-
-        backwards = False
-        limit = None
-        if first is not None and last is not None:
-            #  TODO: implement this edge-case
-            raise ValueError("'first' and 'last' together not yet supported")
-        elif first is not None:
-            if first < 0:
-                raise ValueError("Argument 'first' must be a non-negative integer.")
-            limit = first
-        elif last is not None:
-            if last < 0:
-                raise ValueError("Argument 'last' must be a non-negative integer.")
-            limit = last
-            backwards = True
-
-
-
 
 
 @strawberry.type(name="Connection", description="A connection to a list of items.")
