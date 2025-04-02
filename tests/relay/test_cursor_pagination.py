@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 import pytest
 import strawberry
 from django.db import connections, DEFAULT_DB_ALIAS
@@ -24,16 +26,20 @@ def test_cursor_pagination():
 
         @classmethod
         def get_queryset(cls, qs, info):
-            return qs.order_by('name', 'pk')
+            return qs.order_by('pk')
 
     @strawberry.type()
     class Query:
         projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
 
+        @strawberry_django.connection(DjangoCursorConnection[ProjectType])
+        def projects2(self) -> Iterable[ProjectType]:
+            return Project.objects.all().order_by('name', 'pk')
+
     schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
     query = """
     query TestQuery {
-        projects(after: "b3JkZXJlZGN1cnNvcjpbIlByb2plY3QgRiIsICIzIl0=") {
+        projects2 {
             __typename
             edges {
                 __typename
