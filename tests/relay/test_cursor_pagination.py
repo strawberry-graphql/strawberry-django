@@ -70,11 +70,12 @@ def test_cursor_pagination():
     # b3JkZXJlZGN1cnNvcjpbIlByb2plY3QgRCIsICI1Il0=
     query = """
     query TestQuery {
-        projects(after: "b3JkZXJlZGN1cnNvcjpbIlBST0pFQ1QgQSIsICIxIl0=", first: 5) {
+        projects(after: "b3JkZXJlZGN1cnNvcjpbIlBST0pFQ1QgQSIsICIxIl0=", first: 2) {
             edges {
                 cursor
                 node { id name }     
-            }        
+            }
+            pageInfo { hasNextPage hasPreviousPage }
         }
     }
     """

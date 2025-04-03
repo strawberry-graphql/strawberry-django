@@ -12,6 +12,7 @@ from django.db.models.lookups import LessThan, GreaterThan
 from strawberry import relay, Info
 from strawberry.relay import from_base64, to_base64, NodeType, PageInfo
 from strawberry.relay.types import NodeIterableType
+from strawberry.relay.utils import should_resolve_list_connection_edges
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.utils.await_maybe import AwaitableOrValue
@@ -185,8 +186,10 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 ordering_descriptors, before_cursor.field_values, True
             ))
 
+        has_previous_page = has_next_page = False
         iterate_backwards = False
         slice_: slice | None = None
+        real_limit: int | None = None
         if first is not None and last is not None:
             if last > max_results:
                 raise ValueError(
@@ -217,7 +220,8 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 raise ValueError(
                     f"Argument 'first' cannot be higher than {max_results}."
                 )
-            slice_ = slice(first)
+            slice_ = slice(first + 1)
+            real_limit = first
         elif last is not None:
             # when using last, optimize by reversing the QuerySet ordering in the DB,
             # then slicing from the end (which is now the start in QuerySet ordering)
@@ -228,10 +232,10 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 raise ValueError(
                     f"Argument 'last' cannot be higher than {max_results}."
                 )
-            slice_ = slice(last)
+            slice_ = slice(last + 1)
+            real_limit = last
             nodes = nodes.reverse()
             iterate_backwards = True
-
         if slice_ is not None:
             nodes = nodes[slice_]
 
@@ -246,20 +250,42 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
         edge_class = cast(DjangoCursorEdge[NodeType], field)
 
+        if not should_resolve_list_connection_edges(info):
+            return cls(
+                edges=[],
+                page_info=PageInfo(
+                    start_cursor=None,
+                    end_cursor=None,
+                    has_previous_page=False,
+                    has_next_page=False,
+                ),
+            )
+
+        if real_limit is not None:
+            has_more = len(nodes) > real_limit
+            if iterate_backwards:
+                has_previous_page = has_more
+            else:
+                has_next_page = has_more
+            nodes = nodes[:real_limit]
+
+        if iterate_backwards:
+            nodes = reversed(nodes)
+
         edges = [
             edge_class.resolve_edge(
                 cls.resolve_node(v, info=info, **kwargs),
                 cursor=OrderedCollectionCursor.from_model(v, ordering_descriptors)
             )
-            for v in (reversed(nodes) if iterate_backwards else nodes)
+            for v in nodes
         ]
 
         return cls(
             edges=edges,
             page_info=PageInfo(
-                has_next_page=False,
-                has_previous_page=False,
-                start_cursor='',
-                end_cursor='',
+                start_cursor=edges[0].cursor if edges else None,
+                end_cursor=edges[-1].cursor if edges else None,
+                has_previous_page=bool(has_previous_page),
+                has_next_page=bool(has_next_page),
             )
         )
