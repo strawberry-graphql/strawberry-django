@@ -4,10 +4,11 @@ from json import JSONDecodeError
 from typing import ClassVar, Self, Optional, Any, NamedTuple, cast
 
 import strawberry
-from django.db import models, DEFAULT_DB_ALIAS
-from django.db.models import QuerySet, Q, OrderBy, F, Window
+from django.db import models, DEFAULT_DB_ALIAS, connections
+from django.db.models import QuerySet, Q, OrderBy, Window, Func, Value
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.functions import RowNumber
+from django.db.models.lookups import LessThan, GreaterThan
 from strawberry import relay, Info
 from strawberry.relay import from_base64, to_base64, NodeType, PageInfo
 from strawberry.relay.types import NodeIterableType
@@ -23,96 +24,84 @@ def _get_order_by(qs: QuerySet) -> list[OrderBy]:
             using=qs._db or DEFAULT_DB_ALIAS  # type: ignore
         ).get_order_by()
     ]
-    # TODO: fall back to default order
-    return qs.query.order_by
+    return order_by
 
 
 class OrderingDescriptor(NamedTuple):
-    field: str
-    descending: bool
-    order_by: Optional[OrderBy]
-    output_field: models.Field | None = None
+    alias: str
+    order_by: OrderBy
 
-    @property
-    def nulls_first(self) -> bool:
-        return self.order_by is not None and self.order_by.nulls_first
-
-    def compare(self, value, before: bool) -> Q | None:
+    def get_comparator(self, value, before: bool) -> Q | None:
         if value is None:
-            if self.nulls_first ^ before:
-                return Q((f'{self.field}__isnull', False))
+            if bool(self.order_by.nulls_first) ^ before:
+                return Q((f'{self.alias}__isnull', False))
             else:
                 return None
         else:
-            lookup = 'lt' if before ^ self.descending else 'gt'
-            return Q((f'{self.field}{LOOKUP_SEP}{lookup}', value))
+            lookup = 'lt' if before ^ self.order_by.descending else 'gt'
+            return Q((f'{self.alias}{LOOKUP_SEP}{lookup}', value))
 
     def get_eq(self, value) -> Q:
         if value is None:
-            return Q((f'{self.field}__isnull', True))
+            return Q((f'{self.alias}__isnull', True))
         else:
-            return Q((f'{self.field}__exact', value))
-
-    def reverse(self):
-        if self.order_by is None:
-            return OrderBy(F(self.field), not self.descending)
-        else:
-            return OrderBy(
-                self.order_by.expression,
-                not self.order_by.descending,
-                self.order_by.nulls_first,
-                self.order_by.nulls_last,
-            )
+            return Q((f'{self.alias}__exact', value))
 
 
 def annotate_ordering_fields(qs: QuerySet) -> tuple[QuerySet, list[OrderingDescriptor], list[OrderBy]]:
     annotations = {}
     descriptors = []
-    index = 0
-    new_order_by = []
     order_bys = _get_order_by(qs)
-    for order_by in order_bys:
-        if order_by == '?':
-            raise ValueError('Random ordering cannot be combined with cursor pagination')
-        if isinstance(order_by, str):
-            if order_by[0] == '-':
-                field_name = order_by[1:]
-                descending = True
-            else:
-                field_name = order_by
-                descending = False
-
-            if field_name in qs.query.annotations:
-                # if it's an annotation, make sure it is selected and not just an alias
-                # Otherwise, it's a field and we don't need to annotate it
-                annotations[field_name] = F(field_name)
-            descriptors.append(OrderingDescriptor(field_name, descending, None))
-            new_order_by.append(order_by)
-        else:
-            dynamic_field = f'_strawberry_order_field_{index}'
-            annotations[dynamic_field] = order_by.expression
-            new_order_by.append(
-                OrderBy(F(dynamic_field), order_by.descending, order_by.nulls_first, order_by.nulls_last)
-            )
-            descriptors.append(OrderingDescriptor(dynamic_field, order_by.descending, order_by))
-    return qs.annotate(**annotations).order_by(*new_order_by), descriptors, order_bys
+    for index, order_by in enumerate(order_bys):
+        # TODO: Could optimize this for ordering by plain fields
+        # Those don't need annotations, but we need to make sure they are not deferred by the optimizer
+        dynamic_field = f'_strawberry_order_field_{index}'
+        annotations[dynamic_field] = order_by.expression
+        descriptors.append(OrderingDescriptor(dynamic_field, order_by))
+    return qs.annotate(**annotations), descriptors, order_bys
 
 
 def extract_cursor_values(descriptors: list[OrderingDescriptor], obj: models.Model) -> list:
     return [
-        getattr(obj, descriptor.field)
+        getattr(obj, descriptor.alias)
         for descriptor in descriptors
     ]
 
 
-def build_tuple_compare(descriptors: list[OrderingDescriptor], cursor_values: list, before: bool) -> Q:
+_supports_tuple_compare = {
+    'sqlite': '',
+    'postgresql': 'ROW'
+}
+
+
+def build_tuple_compare(
+        qs: QuerySet,
+        descriptors: list[OrderingDescriptor], cursor_values: list, before: bool
+) -> Q:
+    db = qs._db or DEFAULT_DB_ALIAS
+    connection = connections[db]
+    row_func = _supports_tuple_compare.get(connection.vendor)
+    if row_func is not None:
+        lhs_args = []
+        rhs_args = []
+        for descriptor, value in zip(descriptors, cursor_values):
+            order_by_expression = descriptor.order_by.expression
+            lhs_args.append(order_by_expression)
+            rhs_args.append(Value(value, output_field=order_by_expression.output_field))
+
+        # lhs and rhs get a dummy (but equal) output_field, because Django does not understand tuple types
+        lhs = Func(*lhs_args, function=row_func, output_field=models.TextField())
+        rhs = Func(*rhs_args, function=row_func, output_field=models.TextField())
+        cmp = LessThan(lhs, rhs) if before else GreaterThan(lhs, rhs)
+        return Q(cmp)
     current = None
     for descriptor, field_value in zip(reversed(descriptors), reversed(cursor_values)):
-        lt = descriptor.compare(field_value, before)
+        value_expr = Value(field_value, output_field=descriptor.order_by.expression.output_field)
+        lt = descriptor.get_comparator(value_expr, before)
         if current is None:
             current = lt
         else:
-            eq = descriptor.get_eq(field_value)
+            eq = descriptor.get_eq(value_expr)
             current = lt | (eq & current) if lt is not None else eq & current
     return current if current is not None else Q()
 
@@ -127,7 +116,7 @@ class OrderedCollectionCursor:
     def from_model(cls, model: models.Model, descriptors: list[OrderingDescriptor]) -> Self:
         values = []
         for descriptor in descriptors:
-            values.append(str(getattr(model, descriptor.field)))  # type: ignore
+            values.append(str(getattr(model, descriptor.alias)))  # type: ignore
         return OrderedCollectionCursor(field_values=values)
 
     @classmethod
@@ -182,11 +171,13 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         if after:
             after_cursor = OrderedCollectionCursor.from_cursor(after)
             nodes = nodes.filter(build_tuple_compare(
+                nodes,
                 ordering_descriptors, after_cursor.field_values, False
             ))
         if before:
             before_cursor = OrderedCollectionCursor.from_cursor(before)
             nodes = nodes.filter(build_tuple_compare(
+                nodes,
                 ordering_descriptors, before_cursor.field_values, True
             ))
 
@@ -205,16 +196,10 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             #   in the original direction, which is opposite the actual query order.
             #   This query is likely not very efficient, but using last _and_ first together is discouraged by the
             #   spec anyway
-            current_order = [
-                expr
-                for expr, _ in nodes.query.get_compiler(
-                    using=nodes._db or DEFAULT_DB_ALIAS  # type: ignore
-                ).get_order_by()
-            ]
             nodes = nodes.reverse().annotate(
                 _strawberry_row_number_fwd=Window(
                     RowNumber(),
-                    order_by=current_order,
+                    order_by=original_order_by,
                 ),
             ).filter(
                 _strawberry_row_number_fwd__lte=first,
@@ -230,8 +215,9 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 )
             slice_ = slice(first)
         elif last is not None:
-            # when using last, optimize by reversing the QuerySet ord100010001000ering in the DB,
-            # then slicing from the end and iterating in reverse10001000
+            # when using last, optimize by reversing the QuerySet ordering in the DB,
+            # then slicing from the end (which is now the start in QuerySet ordering)
+            # and then iterating the results in reverse to restore the original order
             if last < 0:
                 raise ValueError("Argument 'last' must be a non-negative integer.")
             if last > max_results:

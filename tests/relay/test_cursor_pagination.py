@@ -51,7 +51,7 @@ def test_cursor_pagination():
         @classmethod
         def get_queryset(cls, qs: QuerySet, info):
             if not qs.ordered:
-                qs = qs.order_by('name', 'pk')
+                qs = qs.annotate(__foo=F('pk')).order_by(Upper('name'), '__foo')
             return qs
 
     @strawberry.type()
@@ -70,7 +70,7 @@ def test_cursor_pagination():
     # b3JkZXJlZGN1cnNvcjpbIlByb2plY3QgRCIsICI1Il0=
     query = """
     query TestQuery {
-        projects(first: 5, last: 2) {
+        projects(after: "b3JkZXJlZGN1cnNvcjpbIlBST0pFQ1QgQSIsICIxIl0=", first: 5) {
             edges {
                 cursor
                 node { id name }     
