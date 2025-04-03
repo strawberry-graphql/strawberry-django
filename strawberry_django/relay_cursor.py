@@ -1,25 +1,28 @@
 import dataclasses
 import json
 from json import JSONDecodeError
-from typing import ClassVar, Self, Collection, Optional, Any, NamedTuple, cast
+from typing import ClassVar, Self, Optional, Any, NamedTuple, cast
 
 import strawberry
+from django.db import models, DEFAULT_DB_ALIAS
+from django.db.models import QuerySet, Q, OrderBy, F, Window
 from django.db.models.constants import LOOKUP_SEP
+from django.db.models.functions import RowNumber
 from strawberry import relay, Info
+from strawberry.relay import from_base64, to_base64, NodeType, PageInfo
 from strawberry.relay.types import NodeIterableType
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Literal
-
-from django.db import models
-from django.db.models import QuerySet, Q, OrderBy, F
-from strawberry.relay import from_base64, to_base64, NodeType, PageInfo
-
-from strawberry_django.utils.inspect import get_model_fields
 
 
-def _get_order_by(qs: QuerySet) -> list[str | OrderBy]:
+def _get_order_by(qs: QuerySet) -> list[OrderBy]:
+    order_by = [
+        expr
+        for expr, _ in qs.query.get_compiler(
+            using=qs._db or DEFAULT_DB_ALIAS  # type: ignore
+        ).get_order_by()
+    ]
     # TODO: fall back to default order
     return qs.query.order_by
 
@@ -50,13 +53,25 @@ class OrderingDescriptor(NamedTuple):
         else:
             return Q((f'{self.field}__exact', value))
 
+    def reverse(self):
+        if self.order_by is None:
+            return OrderBy(F(self.field), not self.descending)
+        else:
+            return OrderBy(
+                self.order_by.expression,
+                not self.order_by.descending,
+                self.order_by.nulls_first,
+                self.order_by.nulls_last,
+            )
 
-def annotate_ordering_fields(qs: QuerySet) -> tuple[QuerySet, list[OrderingDescriptor]]:
+
+def annotate_ordering_fields(qs: QuerySet) -> tuple[QuerySet, list[OrderingDescriptor], list[OrderBy]]:
     annotations = {}
     descriptors = []
     index = 0
     new_order_by = []
-    for order_by in _get_order_by(qs):
+    order_bys = _get_order_by(qs)
+    for order_by in order_bys:
         if order_by == '?':
             raise ValueError('Random ordering cannot be combined with cursor pagination')
         if isinstance(order_by, str):
@@ -80,7 +95,7 @@ def annotate_ordering_fields(qs: QuerySet) -> tuple[QuerySet, list[OrderingDescr
                 OrderBy(F(dynamic_field), order_by.descending, order_by.nulls_first, order_by.nulls_last)
             )
             descriptors.append(OrderingDescriptor(dynamic_field, order_by.descending, order_by))
-    return qs.annotate(**annotations).order_by(*new_order_by), descriptors
+    return qs.annotate(**annotations).order_by(*new_order_by), descriptors, order_bys
 
 
 def extract_cursor_values(descriptors: list[OrderingDescriptor], obj: models.Model) -> list:
@@ -134,7 +149,7 @@ class OrderedCollectionCursor:
         return to_base64(self.PREFIX, json.dumps(self.field_values))
 
 
-@strawberry.type(name="Edge", description="An edge in a connection.")
+@strawberry.type(name="CursorEdge", description="An edge in a connection.")
 class DjangoCursorEdge(relay.Edge[relay.NodeType]):
 
     @classmethod
@@ -142,7 +157,7 @@ class DjangoCursorEdge(relay.Edge[relay.NodeType]):
         return cls(cursor=cursor.to_cursor(), node=node)
 
 
-@strawberry.type(name="Connection", description="A connection to a list of items.")
+@strawberry.type(name="CursorConnection", description="A connection to a list of items.")
 class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
     edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(
@@ -156,7 +171,13 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         if not isinstance(nodes, QuerySet):
             raise TypeError('DjangoCursorConnection requires a QuerySet')
 
-        nodes, ordering_descriptors = annotate_ordering_fields(nodes)
+        max_results = (
+            max_results
+            if max_results is not None
+            else info.schema.config.relay_max_results
+        )
+
+        nodes, ordering_descriptors, original_order_by = annotate_ordering_fields(nodes)
 
         if after:
             after_cursor = OrderedCollectionCursor.from_cursor(after)
@@ -169,25 +190,60 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 ordering_descriptors, before_cursor.field_values, True
             ))
 
-        backwards = False
-        limit = None
+        iterate_backwards = False
+        slice_: slice | None = None
         if first is not None and last is not None:
-            #  TODO: implement this edge-case
-            raise ValueError("'first' and 'last' together not yet supported")
+            if last > max_results:
+                raise ValueError(
+                    f"Argument 'last' cannot be higher than {max_results}."
+                )
+            # if first and last are given, we have to
+            # - reverse the order in the DB so we can use slicing to apply [:last],
+            #   otherwise we would have to know the total count to apply slicing from the end
+            # - We still need to apply forward-direction [:first] slicing, and according to the Relay spec,
+            #   it shall happen before [:last] slicing. To do this, we use a window function with a RowNumber ordered
+            #   in the original direction, which is opposite the actual query order.
+            #   This query is likely not very efficient, but using last _and_ first together is discouraged by the
+            #   spec anyway
+            current_order = [
+                expr
+                for expr, _ in nodes.query.get_compiler(
+                    using=nodes._db or DEFAULT_DB_ALIAS  # type: ignore
+                ).get_order_by()
+            ]
+            nodes = nodes.reverse().annotate(
+                _strawberry_row_number_fwd=Window(
+                    RowNumber(),
+                    order_by=current_order,
+                ),
+            ).filter(
+                _strawberry_row_number_fwd__lte=first,
+            )
+            slice_ = slice(last)
+            iterate_backwards = True
         elif first is not None:
             if first < 0:
                 raise ValueError("Argument 'first' must be a non-negative integer.")
-            limit = first
+            if first > max_results:
+                raise ValueError(
+                    f"Argument 'first' cannot be higher than {max_results}."
+                )
+            slice_ = slice(first)
         elif last is not None:
+            # when using last, optimize by reversing the QuerySet ord100010001000ering in the DB,
+            # then slicing from the end and iterating in reverse10001000
             if last < 0:
                 raise ValueError("Argument 'last' must be a non-negative integer.")
-            limit = last
-            backwards = True
+            if last > max_results:
+                raise ValueError(
+                    f"Argument 'last' cannot be higher than {max_results}."
+                )
+            slice_ = slice(last)
+            nodes = nodes.reverse()
+            iterate_backwards = True
 
-        if backwards:
-            raise NotImplementedError('"backwards" not yet supported.')
-        if limit is not None:
-            nodes = nodes[:limit]
+        if slice_ is not None:
+            nodes = nodes[slice_]
 
         type_def = get_object_definition(cls)
         assert type_def
@@ -205,7 +261,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 cls.resolve_node(v, info=info, **kwargs),
                 cursor=OrderedCollectionCursor.from_model(v, ordering_descriptors)
             )
-            for v in nodes
+            for v in (reversed(nodes) if iterate_backwards else nodes)
         ]
 
         return cls(

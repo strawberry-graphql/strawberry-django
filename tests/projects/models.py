@@ -55,6 +55,9 @@ class Project(NamedModel):
         default=None,
     )
 
+    def __str__(self):
+        return f'Project "{self.name}"'
+
     @model_property(annotate={"_milestone_count": Count("milestone")})
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
