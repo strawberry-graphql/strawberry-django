@@ -68,9 +68,10 @@ def extract_cursor_values(descriptors: list[OrderingDescriptor], obj: models.Mod
     ]
 
 
-_supports_tuple_compare = {
+_tuple_constructor_func = {
     'sqlite': '',
-    'postgresql': 'ROW'
+    'postgresql': '',
+    'mysql': '',
 }
 
 
@@ -78,22 +79,25 @@ def build_tuple_compare(
         qs: QuerySet,
         descriptors: list[OrderingDescriptor], cursor_values: list, before: bool
 ) -> Q:
-    db = qs._db or DEFAULT_DB_ALIAS
-    connection = connections[db]
-    row_func = _supports_tuple_compare.get(connection.vendor)
-    if row_func is not None:
-        lhs_args = []
-        rhs_args = []
-        for descriptor, value in zip(descriptors, cursor_values):
-            order_by_expression = descriptor.order_by.expression
-            lhs_args.append(order_by_expression)
-            rhs_args.append(Value(value, output_field=order_by_expression.output_field))
+    if len(descriptors) > 1:
+        # if possible, use more efficient tuple comparison
+        # i.e. (foo, bar, baz) < (1, 2, 3)
+        db = qs._db or DEFAULT_DB_ALIAS
+        connection = connections[db]
+        tuple_func = _tuple_constructor_func.get(connection.vendor)
+        if tuple_func is not None:
+            lhs_args = []
+            rhs_args = []
+            for descriptor, value in zip(descriptors, cursor_values):
+                order_by_expression = descriptor.order_by.expression
+                lhs_args.append(order_by_expression)
+                rhs_args.append(Value(value, output_field=order_by_expression.output_field))
 
-        # lhs and rhs get a dummy (but equal) output_field, because Django does not understand tuple types
-        lhs = Func(*lhs_args, function=row_func, output_field=models.TextField())
-        rhs = Func(*rhs_args, function=row_func, output_field=models.TextField())
-        cmp = LessThan(lhs, rhs) if before else GreaterThan(lhs, rhs)
-        return Q(cmp)
+            # lhs and rhs get a dummy (but equal) output_field, because Django does not understand tuple types
+            lhs = Func(*lhs_args, function=tuple_func, output_field=models.TextField())
+            rhs = Func(*rhs_args, function=tuple_func, output_field=models.TextField())
+            cmp = LessThan(lhs, rhs) if before else GreaterThan(lhs, rhs)
+            return Q(cmp)
     current = None
     for descriptor, field_value in zip(reversed(descriptors), reversed(cursor_values)):
         value_expr = Value(field_value, output_field=descriptor.order_by.expression.output_field)
