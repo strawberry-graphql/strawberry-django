@@ -1,7 +1,7 @@
 import dataclasses
 import json
 from json import JSONDecodeError
-from typing import Any, ClassVar, NamedTuple, Optional, Self, cast
+from typing import Any, ClassVar, NamedTuple, Optional, cast
 
 import strawberry
 from django.core.exceptions import ValidationError
@@ -18,6 +18,7 @@ from strawberry.relay.utils import should_resolve_list_connection_edges
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.utils.await_maybe import AwaitableOrValue
+from typing_extensions import Self
 
 
 def _get_order_by(qs: QuerySet) -> list[OrderBy]:
@@ -33,7 +34,7 @@ class OrderingDescriptor(NamedTuple):
     attname: str
     order_by: OrderBy
 
-    def get_comparator(self, value, before: bool) -> Q | None:
+    def get_comparator(self, value, before: bool) -> Optional[Q]:
         if value is None:
             if bool(self.order_by.nulls_first) ^ before:
                 return Q((f"{self.attname}__isnull", False))
@@ -58,7 +59,9 @@ def annotate_ordering_fields(
     pk_in_order = False
     for index, order_by in enumerate(order_bys):
         if isinstance(order_by.expression, Col) and isinstance(
-            qs.query.alias_map[order_by.expression.alias], BaseTable
+            # Col.alias is missing from django-types
+            qs.query.alias_map[order_by.expression.alias],  # type: ignore
+            BaseTable,
         ):
             field_name = order_by.expression.field.name
             # if it's a field in the base table, just make sure it is not deferred (e.g. by the optimizer)
@@ -102,7 +105,7 @@ def annotate_ordering_fields(
         pk_order = F("pk").resolve_expression(qs.query).asc()
         order_bys.append(pk_order)
         descriptors.append(OrderingDescriptor("pk", pk_order))
-        qs = qs._chain()
+        qs = qs._chain()  # type: ignore
         qs.query.order_by += (pk_order,)
     return qs.annotate(**annotations), descriptors, order_bys
 
@@ -155,7 +158,8 @@ def _extract_expression_value(
         setattr(obj, output_field.attname, getattr(model, attname))
     else:
         obj = model
-    return output_field.value_to_string(obj)
+    # value_to_string is missing from django-types
+    return output_field.value_to_string(obj)  # type: ignore
 
 
 @dataclasses.dataclass
@@ -174,7 +178,7 @@ class OrderedCollectionCursor:
             )
             for descriptor in descriptors
         ]
-        return OrderedCollectionCursor(field_values=values)
+        return cls(field_values=values)
 
     @classmethod
     def from_cursor(cls, cursor: str, descriptors: list[OrderingDescriptor]) -> Self:
@@ -200,7 +204,7 @@ class OrderedCollectionCursor:
         except ValidationError as e:
             raise ValueError("Invalid cursor") from e
 
-        return OrderedCollectionCursor(decoded_values)
+        return cls(decoded_values)
 
     def to_cursor(self) -> str:
         return to_base64(
@@ -212,8 +216,9 @@ class OrderedCollectionCursor:
 class DjangoCursorEdge(relay.Edge[relay.NodeType]):
     @classmethod
     def resolve_edge(
-        cls, node: NodeType, *, cursor: OrderedCollectionCursor = None
+        cls, node: NodeType, *, cursor: Optional[OrderedCollectionCursor] = None
     ) -> Self:
+        assert cursor is not None
         return cls(cursor=cursor.to_cursor(), node=node)
 
 
@@ -221,7 +226,8 @@ class DjangoCursorEdge(relay.Edge[relay.NodeType]):
     name="CursorConnection", description="A connection to a list of items."
 )
 class DjangoCursorConnection(relay.Connection[relay.NodeType]):
-    edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(
+    # TODO: Django CursorEdge should not exist, but relay.Edge has a hardcoded prefix currently
+    edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(  # type: ignore
         description="Contains the nodes in this connection"
     )
 
@@ -240,6 +246,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
     ) -> AwaitableOrValue[Self]:
         if not isinstance(nodes, QuerySet):
             raise TypeError("DjangoCursorConnection requires a QuerySet")
+        qs: QuerySet = nodes
 
         max_results = (
             max_results
@@ -247,12 +254,12 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             else info.schema.config.relay_max_results
         )
 
-        nodes, ordering_descriptors, original_order_by = annotate_ordering_fields(nodes)
+        qs, ordering_descriptors, original_order_by = annotate_ordering_fields(qs)
         if after:
             after_cursor = OrderedCollectionCursor.from_cursor(
                 after, ordering_descriptors
             )
-            nodes = nodes.filter(
+            qs = qs.filter(
                 build_tuple_compare(
                     ordering_descriptors, after_cursor.field_values, False
                 )
@@ -261,7 +268,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             before_cursor = OrderedCollectionCursor.from_cursor(
                 before, ordering_descriptors
             )
-            nodes = nodes.filter(
+            qs = qs.filter(
                 build_tuple_compare(
                     ordering_descriptors, before_cursor.field_values, True
                 )
@@ -269,8 +276,8 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
         has_previous_page = has_next_page = False
         iterate_backwards = False
-        slice_: slice | None = None
-        real_limit: int | None = None
+        slice_: Optional[slice] = None
+        real_limit: Optional[int] = None
         if first is not None and last is not None:
             if last > max_results:
                 raise ValueError(
@@ -284,8 +291,8 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             #   in the original direction, which is opposite the actual query order.
             #   This query is likely not very efficient, but using last _and_ first together is discouraged by the
             #   spec anyway
-            nodes = (
-                nodes.reverse()
+            qs = (
+                qs.reverse()
                 .annotate(
                     _strawberry_row_number_fwd=Window(
                         RowNumber(),
@@ -319,10 +326,10 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 )
             slice_ = slice(last + 1)
             real_limit = last
-            nodes = nodes.reverse()
+            qs = qs.reverse()
             iterate_backwards = True
         if slice_ is not None:
-            nodes = nodes[slice_]
+            qs = qs[slice_]
 
         type_def = get_object_definition(cls)
         assert type_def
@@ -347,22 +354,21 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             )
 
         if real_limit is not None:
-            has_more = len(nodes) > real_limit
+            has_more = len(qs) > real_limit
             if iterate_backwards:
                 has_previous_page = has_more
             else:
                 has_next_page = has_more
-            nodes = nodes[:real_limit]
+            qs = qs[:real_limit]
 
-        if iterate_backwards:
-            nodes = reversed(nodes)
+        it = reversed(qs) if iterate_backwards else qs
 
         edges = [
             edge_class.resolve_edge(
                 cls.resolve_node(v, info=info, **kwargs),
                 cursor=OrderedCollectionCursor.from_model(v, ordering_descriptors),
             )
-            for v in nodes
+            for v in it
         ]
 
         return cls(

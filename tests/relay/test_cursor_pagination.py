@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 import strawberry
-from django.db.models import F, QuerySet, Value
+from django.db.models import F, OrderBy, QuerySet, Value
 from django.db.models.aggregates import Count
 from strawberry import Schema
 from strawberry.relay import GlobalID, Node, to_base64
@@ -27,7 +27,7 @@ def schema() -> Schema:
         @strawberry_django.order_field()
         def milestone_count(
             self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
-        ) -> tuple[QuerySet, list[str]] | list[str]:
+        ) -> "tuple[QuerySet, list[OrderBy]]":
             queryset = queryset.annotate(_milestone_count=Count(f"{prefix}milestone"))
             return queryset, [value.resolve("_milestone_count")]
 
@@ -49,7 +49,7 @@ def schema() -> Schema:
         @strawberry_django.order_field()
         def days_left(
             self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
-        ) -> tuple[QuerySet, list[str]] | list[str]:
+        ) -> "tuple[QuerySet, list[OrderBy]]":
             queryset = queryset.alias(
                 _days_left=Value(datetime.date(2025, 12, 31)) - F(f"{prefix}due_date")
             )

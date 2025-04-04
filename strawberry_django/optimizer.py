@@ -1255,6 +1255,7 @@ def _get_model_hints_from_connection(
             e_definition = e_definition.of_type
         if has_object_definition(e_definition):
             e_definition = get_object_definition(e_definition, strict=True)
+        assert isinstance(e_definition, StrawberryObjectDefinition)
 
         e_gql_definition = _get_gql_definition(
             schema,
