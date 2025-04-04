@@ -5,12 +5,11 @@ from typing import Any, ClassVar, NamedTuple, Optional, Self, cast
 
 import strawberry
 from django.core.exceptions import ValidationError
-from django.db import DEFAULT_DB_ALIAS, connections, models
-from django.db.models import Func, OrderBy, Q, QuerySet, Value, Window
+from django.db import DEFAULT_DB_ALIAS, models
+from django.db.models import Expression, F, OrderBy, Q, QuerySet, Value, Window
 from django.db.models.constants import LOOKUP_SEP
-from django.db.models.expressions import BaseExpression, Col
+from django.db.models.expressions import Col
 from django.db.models.functions import RowNumber
-from django.db.models.lookups import GreaterThan, LessThan
 from django.db.models.sql.datastructures import BaseTable
 from strawberry import Info, relay
 from strawberry.relay import NodeType, PageInfo, from_base64, to_base64
@@ -56,6 +55,7 @@ def annotate_ordering_fields(
     new_defer = None
     new_only = None
     order_bys = _get_order_by(qs)
+    pk_in_order = False
     for index, order_by in enumerate(order_bys):
         if isinstance(order_by.expression, Col) and isinstance(
             qs.query.alias_map[order_by.expression.alias], BaseTable
@@ -76,6 +76,8 @@ def annotate_ordering_fields(
             descriptors.append(
                 OrderingDescriptor(order_by.expression.field.attname, order_by)
             )
+            if order_by.expression.field.primary_key:
+                pk_in_order = True
         else:
             dynamic_field = f"_strawberry_order_field_{index}"
             annotations[dynamic_field] = order_by.expression
@@ -87,6 +89,21 @@ def annotate_ordering_fields(
     elif new_only is not None:
         # only overwrites
         qs = qs.only(*new_only)
+
+    if not pk_in_order:
+        # Ensure we always have a clearly defined order by ordering by pk if it isn't in the order already
+        # We cannot use QuerySet.order_by, because it validates the order expressions again,
+        # but we're operating on the OrderBy expressions which have already been resolved by the compiler
+        # In case the user has previously ordered by an aggregate like so:
+        # qs.annotate(_c=Count("foo")).order_by("_c")  # noqa: ERA001
+        # then the OrderBy we get here would trigger a ValidationError by QuerySet.order_by.
+        # But we only want to append to the existing order (and the existing order must be valid already)
+        # So this is safe.
+        pk_order = F("pk").resolve_expression(qs.query).asc()
+        order_bys.append(pk_order)
+        descriptors.append(OrderingDescriptor("pk", pk_order))
+        qs = qs._chain()
+        qs.query.order_by += (pk_order,)
     return qs.annotate(**annotations), descriptors, order_bys
 
 
@@ -96,40 +113,11 @@ def extract_cursor_values(
     return [getattr(obj, descriptor.attname) for descriptor in descriptors]
 
 
-_tuple_constructor_func = {
-    "sqlite": "",
-    "postgresql": "",
-    "mysql": "",
-}
-
-
 def build_tuple_compare(
-    qs: QuerySet,
     descriptors: list[OrderingDescriptor],
     cursor_values: list,
     before: bool,
 ) -> Q:
-    if len(descriptors) > 1:
-        # if possible, use more efficient tuple comparison
-        # i.e. (foo, bar, baz) < (1, 2, 3)
-        db = qs._db or DEFAULT_DB_ALIAS
-        connection = connections[db]
-        tuple_func = _tuple_constructor_func.get(connection.vendor)
-        if tuple_func is not None:
-            lhs_args = []
-            rhs_args = []
-            for descriptor, value in zip(descriptors, cursor_values):
-                order_by_expression = descriptor.order_by.expression
-                lhs_args.append(order_by_expression)
-                rhs_args.append(
-                    Value(value, output_field=order_by_expression.output_field)
-                )
-
-            # lhs and rhs get a dummy (but equal) output_field, because Django does not understand tuple types
-            lhs = Func(*lhs_args, function=tuple_func, output_field=models.TextField())
-            rhs = Func(*rhs_args, function=tuple_func, output_field=models.TextField())
-            cmp = LessThan(lhs, rhs) if before else GreaterThan(lhs, rhs)
-            return Q(cmp)
     current = None
     for descriptor, field_value in zip(reversed(descriptors), reversed(cursor_values)):
         value_expr = Value(
@@ -149,7 +137,7 @@ class AttrHelper:
 
 
 def _extract_expression_value(
-    model: models.Model, expr: BaseExpression, attname: str
+    model: models.Model, expr: Expression, attname: str
 ) -> str:
     output_field = expr.output_field
     # Unfortunately Field.value_to_string operates on the object, not a direct value
@@ -266,7 +254,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             )
             nodes = nodes.filter(
                 build_tuple_compare(
-                    nodes, ordering_descriptors, after_cursor.field_values, False
+                    ordering_descriptors, after_cursor.field_values, False
                 )
             )
         if before:
@@ -275,7 +263,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             )
             nodes = nodes.filter(
                 build_tuple_compare(
-                    nodes, ordering_descriptors, before_cursor.field_values, True
+                    ordering_descriptors, before_cursor.field_values, True
                 )
             )
 

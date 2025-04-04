@@ -1,6 +1,9 @@
+import datetime
+
 import pytest
 import strawberry
-from django.db.models import QuerySet
+from django.db.models import F, QuerySet, Value
+from django.db.models.aggregates import Count
 from strawberry import Schema
 from strawberry.relay import GlobalID, Node, to_base64
 
@@ -16,7 +19,19 @@ from tests.utils import assert_num_queries
 
 @pytest.fixture
 def schema() -> Schema:
-    @strawberry_django.type(Project)
+    @strawberry_django.order(Project)
+    class ProjectOrder:
+        id: strawberry.auto
+        name: strawberry.auto
+
+        @strawberry_django.order_field()
+        def milestone_count(
+            self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
+        ) -> tuple[QuerySet, list[str]] | list[str]:
+            queryset = queryset.annotate(_milestone_count=Count(f"{prefix}milestone"))
+            return queryset, [value.resolve("_milestone_count")]
+
+    @strawberry_django.type(Project, order=ProjectOrder)
     class ProjectType(Node):
         name: str
 
@@ -26,7 +41,21 @@ def schema() -> Schema:
                 qs = qs.order_by("name", "pk")
             return qs
 
-    @strawberry_django.type(Milestone)
+    @strawberry_django.order(Milestone)
+    class MilestoneOrder:
+        due_date: strawberry.auto
+        project: ProjectOrder
+
+        @strawberry_django.order_field()
+        def days_left(
+            self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
+        ) -> tuple[QuerySet, list[str]] | list[str]:
+            queryset = queryset.alias(
+                _days_left=Value(datetime.date(2025, 12, 31)) - F(f"{prefix}due_date")
+            )
+            return queryset, [value.resolve("_days_left")]
+
+    @strawberry_django.type(Milestone, order=MilestoneOrder)
     class MilestoneType(Node):
         due_date: strawberry.auto
         project: ProjectType
@@ -49,12 +78,17 @@ def schema() -> Schema:
 
 @pytest.fixture
 def test_objects():
-    Project.objects.create(id=1, name="Project A")
-    Project.objects.create(id=2, name="Project C")
+    pa = Project.objects.create(id=1, name="Project A")
+    pc1 = Project.objects.create(id=2, name="Project C")
     Project.objects.create(id=5, name="Project C")
-    Project.objects.create(id=3, name="Project B")
+    pb = Project.objects.create(id=3, name="Project B")
     Project.objects.create(id=6, name="Project D")
     Project.objects.create(id=4, name="Project E")
+
+    Milestone.objects.create(id=1, project=pb, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=2, project=pb, due_date=datetime.date(2025, 6, 2))
+    Milestone.objects.create(id=3, project=pc1, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=4, project=pa, due_date=datetime.date(2025, 6, 5))
 
 
 @pytest.mark.django_db(transaction=True)
@@ -488,5 +522,242 @@ def test_backward_pagination_last_page(schema: Schema, test_objects):
                         },
                     },
                 ],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cursor_pagination_custom_order(schema: Schema, test_objects):
+    query = """
+    query TestQuery($first: Int, $after: String) {
+        projects(first: $first, after: $after, order: { name: DESC id: ASC }) {
+            edges {
+                cursor
+                node { id name }
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query,
+            {
+                "first": 2,
+                "after": to_base64(OrderedCollectionCursor.PREFIX, '["Project E","4"]'),
+            },
+        )
+        assert result.data == {
+            "projects": {
+                "edges": [
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["Project D","6"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "6")),
+                            "name": "Project D",
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["Project C","2"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "2")),
+                            "name": "Project C",
+                        },
+                    },
+                ]
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cursor_pagination_joined_field_order(schema: Schema, test_objects):
+    query = """
+    query TestQuery {
+        milestones(order: { dueDate: DESC, project: { name: ASC } }) {
+            edges {
+                cursor
+                node { id dueDate project { id name } }
+            }
+        }
+    }
+    """
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+        assert result.data == {
+            "milestones": {
+                "edges": [
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX,
+                            '["2025-06-05","Project A","4"]',
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "4")),
+                            "dueDate": "2025-06-05",
+                            "project": {
+                                "id": str(GlobalID("ProjectType", "1")),
+                                "name": "Project A",
+                            },
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX,
+                            '["2025-06-02","Project B","2"]',
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "2")),
+                            "dueDate": "2025-06-02",
+                            "project": {
+                                "id": str(GlobalID("ProjectType", "3")),
+                                "name": "Project B",
+                            },
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX,
+                            '["2025-06-01","Project B","1"]',
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "1")),
+                            "dueDate": "2025-06-01",
+                            "project": {
+                                "id": str(GlobalID("ProjectType", "3")),
+                                "name": "Project B",
+                            },
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX,
+                            '["2025-06-01","Project C","3"]',
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "3")),
+                            "dueDate": "2025-06-01",
+                            "project": {
+                                "id": str(GlobalID("ProjectType", "2")),
+                                "name": "Project C",
+                            },
+                        },
+                    },
+                ]
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cursor_pagination_expression_order(schema: Schema, test_objects):
+    query = """
+    query TestQuery($after: String) {
+        milestones(after: $after, order: { daysLeft: ASC }) {
+            edges {
+                cursor
+                node { id }
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query,
+            {
+                "after": to_base64(
+                    OrderedCollectionCursor.PREFIX, '["209 00:00:00","4"]'
+                )
+            },
+        )
+        assert result.data == {
+            "milestones": {
+                "edges": [
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["212 00:00:00","2"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "2")),
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["213 00:00:00","1"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "1")),
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["213 00:00:00","3"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("MilestoneType", "3")),
+                        },
+                    },
+                ]
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cursor_pagination_agg_expression_order(schema: Schema, test_objects):
+    query = """
+    query TestQuery($after: String, $first: Int) {
+        projects(after: $after, first: $first, order: { milestoneCount: DESC }) {
+            edges {
+                cursor
+                node { id }
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query,
+            {
+                "after": None,
+                "first": 4,
+            },
+        )
+        assert result.data == {
+            "projects": {
+                "edges": [
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["2","3"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "3")),
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["1","1"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "1")),
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["1","2"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "2")),
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["0","4"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "4")),
+                        },
+                    },
+                ]
             }
         }
