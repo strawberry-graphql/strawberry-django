@@ -258,7 +258,7 @@ def create(
     extensions: Optional[list[FieldExtension]] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
-    full_clean: bool | FullCleanOptions = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> Any:
     """Create mutation for django input fields.
 
@@ -319,7 +319,7 @@ def update(
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
     key_attr: Optional[str] = None,
-    full_clean: bool | FullCleanOptions = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> Any:
     """Update mutation for django input fields.
 
@@ -380,7 +380,7 @@ def delete(
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
     key_attr: Optional[str] = None,
-    full_clean: bool | FullCleanOptions = True,
+    full_clean: Union[bool, FullCleanOptions] = True,
 ) -> Any:
     return DjangoDeleteMutation(
         input_type=input_type,
