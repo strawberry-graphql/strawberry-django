@@ -4,9 +4,11 @@ from json import JSONDecodeError
 from typing import ClassVar, Self, Optional, Any, NamedTuple, cast
 
 import strawberry
+from django.core.exceptions import ValidationError
 from django.db import models, DEFAULT_DB_ALIAS, connections
 from django.db.models import QuerySet, Q, OrderBy, Window, Func, Value
 from django.db.models.constants import LOOKUP_SEP
+from django.db.models.expressions import BaseExpression
 from django.db.models.functions import RowNumber
 from django.db.models.lookups import LessThan, GreaterThan
 from strawberry import relay, Info
@@ -118,6 +120,21 @@ def build_tuple_compare(
     return current if current is not None else Q()
 
 
+class AttrHelper:
+    pass
+
+
+def _extract_expression_value(model: models.Model, expr: BaseExpression, attname: str) -> str:
+    output_field = expr.output_field
+    # If the output field's attname doesn't match, we have to construct a fake object
+    if output_field.attname != attname:
+        obj = AttrHelper()
+        setattr(obj, output_field.attname, getattr(model, attname))
+    else:
+        obj = model
+    return output_field.value_to_string(obj)
+
+
 @dataclasses.dataclass
 class OrderedCollectionCursor:
     PREFIX: ClassVar[str] = "orderedcursor"
@@ -129,7 +146,7 @@ class OrderedCollectionCursor:
         cls, model: models.Model, descriptors: list[OrderingDescriptor]
     ) -> Self:
         values = [
-            str(getattr(model, descriptor.alias))
+            _extract_expression_value(model, descriptor.order_by.expression, descriptor.alias)
             for descriptor in descriptors
         ]
         return OrderedCollectionCursor(field_values=values)
@@ -140,15 +157,24 @@ class OrderedCollectionCursor:
         if type_ != cls.PREFIX:
             raise ValueError("Invalid Cursor")
         try:
-            decoded_values = json.loads(values_json)
+            string_values = json.loads(values_json)
         except JSONDecodeError as e:
             raise ValueError("Invalid cursor") from e
         if (
-            not isinstance(decoded_values, list)
-            or len(decoded_values) != len(descriptors)
-            or any(not isinstance(v, str) for v in decoded_values)
+            not isinstance(string_values, list)
+            or len(string_values) != len(descriptors)
+            or any(not isinstance(v, str) for v in string_values)
         ):
             raise ValueError("Invalid cursor")
+
+        try:
+            decoded_values = [
+                d.order_by.expression.output_field.to_python(v)
+                for d, v in zip(descriptors, string_values)
+            ]
+        except ValidationError:
+            raise ValueError("Invalid cursor")
+
         return OrderedCollectionCursor(decoded_values)
 
     def to_cursor(self) -> str:
