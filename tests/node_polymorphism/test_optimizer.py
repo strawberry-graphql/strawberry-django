@@ -1,5 +1,7 @@
 import pytest
 
+from tests.utils import assert_num_queries
+
 from .models import ArtProject, ResearchProject
 from .schema import schema
 
@@ -28,7 +30,9 @@ def test_polymorphic_interface_query():
     }
     """
 
-    result = schema.execute_sync(query)
+    # ContentType, base table, two subtables = 4 queries
+    with assert_num_queries(4):
+        result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
         "projects": {

@@ -43,7 +43,7 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> _T: ...
 
@@ -63,7 +63,7 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> Any: ...
 
@@ -83,7 +83,7 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> DjangoMutationBase: ...
 
@@ -102,7 +102,7 @@ def mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -149,7 +149,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> _T: ...
 
@@ -169,7 +169,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> Any: ...
 
@@ -189,7 +189,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
 ) -> DjangoMutationBase: ...
 
@@ -208,7 +208,7 @@ def input_mutation(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     handle_django_errors: Optional[bool] = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
@@ -216,7 +216,7 @@ def input_mutation(
     init: Optional[bool] = None,
 ) -> Any:
     """Annotate a property or a method to create an input mutation field."""
-    extensions = [*list(extensions), InputMutationExtension()]
+    extensions = [*(extensions or []), InputMutationExtension()]
     f = DjangoMutationBase(
         python_name=None,
         django_name=field_name,
@@ -255,7 +255,7 @@ def create(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
     full_clean: bool | FullCleanOptions = True,
@@ -315,7 +315,7 @@ def update(
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
     graphql_type: Optional[Any] = None,
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,
     key_attr: Optional[str] = None,
@@ -375,7 +375,7 @@ def delete(
     default_factory: Union[Callable[..., object], object] = dataclasses.MISSING,
     metadata: Optional[Mapping[Any, Any]] = None,
     directives: Optional[Sequence[object]] = (),
-    extensions: list[FieldExtension] = (),  # type: ignore
+    extensions: Optional[list[FieldExtension]] = None,
     graphql_type: Optional[Any] = None,
     argument_name: Optional[str] = None,
     handle_django_errors: Optional[bool] = None,

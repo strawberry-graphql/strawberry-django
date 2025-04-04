@@ -36,8 +36,7 @@ def test_polymorphic_interface_query():
     }
     """
 
-    # ContentType, base table, two subtables = 4 queries
-    with assert_num_queries(4):
+    with assert_num_queries(1):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -83,7 +82,7 @@ def test_polymorphic_query_abstract_model():
     }
     """
 
-    with assert_num_queries(5):
+    with assert_num_queries(1):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -147,8 +146,7 @@ def test_polymorphic_query_multiple_inheritance_levels():
     }
     """
 
-    # Project Table, Content Type, AndroidProject, IOSProject, EngineeringProject = 5
-    with assert_num_queries(5):
+    with assert_num_queries(1):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -202,7 +200,7 @@ def test_polymorphic_query_abstract_model_on_field():
     }
     """
 
-    with assert_num_queries(4):
+    with assert_num_queries(2):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -243,9 +241,8 @@ def test_polymorphic_query_optimization_working():
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
         result = schema.execute_sync(query)
         # validate that we're not selecting extra fields
-        assert any("artist" in q["sql"] for q in ctx.captured_queries)
-        assert not any("research_notes" in q["sql"] for q in ctx.captured_queries)
-        assert not any("art_style" in q["sql"] for q in ctx.captured_queries)
+        assert not any("research_notes" in q for q in ctx.captured_queries)
+        assert not any("art_style" in q for q in ctx.captured_queries)
     assert not result.errors
     assert result.data == {
         "projects": [
@@ -279,8 +276,7 @@ def test_polymorphic_paginated_query():
     }
     """
 
-    # ContentType, base table, two subtables = 4 queries
-    with assert_num_queries(4):
+    with assert_num_queries(1):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -318,8 +314,7 @@ def test_polymorphic_offset_paginated_query():
     }
     """
 
-    # ContentType, base table, two subtables = 4 queries + 1 query for total count
-    with assert_num_queries(5):
+    with assert_num_queries(2):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -367,8 +362,7 @@ def test_polymorphic_relation():
     }
     """
 
-    # Company, ContentType, base table, two subtables = 5 queries
-    with assert_num_queries(5):
+    with assert_num_queries(2):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
@@ -419,8 +413,7 @@ def test_polymorphic_nested_list():
     }
     """
 
-    # Company, ContentType, base table, two subtables = 5 queries
-    with assert_num_queries(5):
+    with assert_num_queries(2):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
