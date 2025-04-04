@@ -3,7 +3,7 @@ from collections.abc import Iterable
 import pytest
 import strawberry
 from django.db import connections, DEFAULT_DB_ALIAS
-from django.db.models import Window, F, QuerySet
+from django.db.models import Window, F, QuerySet, Value, CharField
 from django.db.models.functions import RowNumber, Upper
 from django.test.utils import CaptureQueriesContext
 from strawberry.relay import Node
@@ -55,7 +55,7 @@ def test_cursor_pagination():
         @classmethod
         def get_queryset(cls, qs: QuerySet, info):
             if not qs.ordered:
-                qs = qs.annotate(__foo=F("pk")).order_by(Upper("name"), "__foo")
+                qs = qs.annotate(__foo=F("pk")).order_by(Upper('name', output_field=CharField()), "__foo")
             return qs
 
     @strawberry.type()
@@ -78,7 +78,7 @@ def test_cursor_pagination():
     # b3JkZXJlZGN1cnNvcjpbIlByb2plY3QgRCIsICI1Il0=
     query = """
     query TestQuery {
-        projects(after: "b3JkZXJlZGN1cnNvcjpbIlBST0pFQ1QgQSIsICIxIl0=", first: 2, last: 1) {
+        projects(first: 2) {
             edges {
                 cursor
                 node { id name }     

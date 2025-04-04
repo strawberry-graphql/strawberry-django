@@ -126,8 +126,17 @@ class AttrHelper:
 
 def _extract_expression_value(model: models.Model, expr: BaseExpression, attname: str) -> str:
     output_field = expr.output_field
+    # Unfortunately Field.value_to_string operates on the object, not a direct value
+    # So we have to potentially construct a fake object
     # If the output field's attname doesn't match, we have to construct a fake object
-    if output_field.attname != attname:
+    # Additionally, the output field may not have an attname at all
+    # if expressions are used
+    field_attname = getattr(output_field, 'attname', None)
+    if not field_attname:
+        # If the field doesn't have an attname, it's a dynamically constructed field,
+        # for the purposes of output_field in an expression. Just set its attname, it doesn't hurt anything
+        output_field.attname = field_attname = attname
+    if field_attname != attname:
         obj = AttrHelper()
         setattr(obj, output_field.attname, getattr(model, attname))
     else:
