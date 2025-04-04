@@ -1,19 +1,19 @@
 import dataclasses
 import json
 from json import JSONDecodeError
-from typing import ClassVar, Self, Optional, Any, NamedTuple, cast
+from typing import Any, ClassVar, NamedTuple, Optional, Self, cast
 
 import strawberry
 from django.core.exceptions import ValidationError
-from django.db import models, DEFAULT_DB_ALIAS, connections
-from django.db.models import QuerySet, Q, OrderBy, Window, Func, Value
+from django.db import DEFAULT_DB_ALIAS, connections, models
+from django.db.models import Func, OrderBy, Q, QuerySet, Value, Window
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.expressions import BaseExpression, Col
 from django.db.models.functions import RowNumber
-from django.db.models.lookups import LessThan, GreaterThan
+from django.db.models.lookups import GreaterThan, LessThan
 from django.db.models.sql.datastructures import BaseTable
-from strawberry import relay, Info
-from strawberry.relay import from_base64, to_base64, NodeType, PageInfo
+from strawberry import Info, relay
+from strawberry.relay import NodeType, PageInfo, from_base64, to_base64
 from strawberry.relay.types import NodeIterableType
 from strawberry.relay.utils import should_resolve_list_connection_edges
 from strawberry.types import get_object_definition
@@ -22,13 +22,12 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 
 
 def _get_order_by(qs: QuerySet) -> list[OrderBy]:
-    order_by = [
+    return [
         expr
         for expr, _ in qs.query.get_compiler(
             using=qs._db or DEFAULT_DB_ALIAS  # type: ignore
         ).get_order_by()
     ]
-    return order_by
 
 
 class OrderingDescriptor(NamedTuple):
@@ -39,17 +38,14 @@ class OrderingDescriptor(NamedTuple):
         if value is None:
             if bool(self.order_by.nulls_first) ^ before:
                 return Q((f"{self.attname}__isnull", False))
-            else:
-                return None
-        else:
-            lookup = "lt" if before ^ self.order_by.descending else "gt"
-            return Q((f"{self.attname}{LOOKUP_SEP}{lookup}", value))
+            return None
+        lookup = "lt" if before ^ self.order_by.descending else "gt"
+        return Q((f"{self.attname}{LOOKUP_SEP}{lookup}", value))
 
     def get_eq(self, value) -> Q:
         if value is None:
             return Q((f"{self.attname}__isnull", True))
-        else:
-            return Q((f"{self.attname}__exact", value))
+        return Q((f"{self.attname}__exact", value))
 
 
 def annotate_ordering_fields(
@@ -213,13 +209,15 @@ class OrderedCollectionCursor:
                 d.order_by.expression.output_field.to_python(v)
                 for d, v in zip(descriptors, string_values)
             ]
-        except ValidationError:
-            raise ValueError("Invalid cursor")
+        except ValidationError as e:
+            raise ValueError("Invalid cursor") from e
 
         return OrderedCollectionCursor(decoded_values)
 
     def to_cursor(self) -> str:
-        return to_base64(self.PREFIX, json.dumps(self.field_values))
+        return to_base64(
+            self.PREFIX, json.dumps(self.field_values, separators=(",", ":"))
+        )
 
 
 @strawberry.type(name="CursorEdge", description="An edge in a connection.")
@@ -262,7 +260,6 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         )
 
         nodes, ordering_descriptors, original_order_by = annotate_ordering_fields(nodes)
-        print(f"{ordering_descriptors=}")
         if after:
             after_cursor = OrderedCollectionCursor.from_cursor(
                 after, ordering_descriptors
@@ -348,7 +345,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         while isinstance(field, StrawberryContainer):
             field = field.of_type
 
-        edge_class = cast(DjangoCursorEdge[NodeType], field)
+        edge_class = cast("DjangoCursorEdge[NodeType]", field)
 
         if not should_resolve_list_connection_edges(info):
             return cls(
@@ -385,7 +382,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             page_info=PageInfo(
                 start_cursor=edges[0].cursor if edges else None,
                 end_cursor=edges[-1].cursor if edges else None,
-                has_previous_page=bool(has_previous_page),
-                has_next_page=bool(has_next_page),
+                has_previous_page=has_previous_page,
+                has_next_page=has_next_page,
             ),
         )
