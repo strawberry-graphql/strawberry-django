@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import itertools
-from collections import defaultdict
+import weakref
 from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
@@ -197,10 +197,10 @@ def _can_optimize_subtypes(model: type[models.Model]) -> bool:
     return is_polymorphic_model(model) or is_inheritance_manager(model._default_manager)
 
 
-_interfaces: defaultdict[
+_interfaces: weakref.WeakKeyDictionary[
     Schema,
     dict[StrawberryObjectDefinition, list[StrawberryObjectDefinition]],
-] = defaultdict(dict)
+] = weakref.WeakKeyDictionary()
 
 
 def get_possible_concrete_types(
@@ -219,7 +219,9 @@ def get_possible_concrete_types(
         if not object_definition.is_interface:
             yield object_definition
             continue
-        interface_definitions = _interfaces[schema].get(object_definition)
+
+        schema_interfaces = _interfaces.setdefault(schema, {})
+        interface_definitions = schema_interfaces.get(object_definition)
         if interface_definitions is None:
             interface_definitions = []
             for t in schema.schema_converter.type_map.values():
@@ -228,7 +230,8 @@ def get_possible_concrete_types(
                     t_definition.origin, object_definition.origin
                 ):
                     interface_definitions.append(t_definition)
-            _interfaces[schema][object_definition] = interface_definitions
+
+            schema_interfaces[object_definition] = interface_definitions
 
         for interface_definition in interface_definitions:
             dj_definition = get_django_definition(interface_definition.origin)
