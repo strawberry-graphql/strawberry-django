@@ -1246,7 +1246,7 @@ def _get_model_hints_from_connection(
         if edge.name.value != "edges":
             continue
 
-        e_field = object_definition.get_field('edges')
+        e_field = object_definition.get_field("edges")
         if e_field is None:
             break
 
