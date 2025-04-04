@@ -8,9 +8,10 @@ from django.core.exceptions import ValidationError
 from django.db import models, DEFAULT_DB_ALIAS, connections
 from django.db.models import QuerySet, Q, OrderBy, Window, Func, Value
 from django.db.models.constants import LOOKUP_SEP
-from django.db.models.expressions import BaseExpression
+from django.db.models.expressions import BaseExpression, Col
 from django.db.models.functions import RowNumber
 from django.db.models.lookups import LessThan, GreaterThan
+from django.db.models.sql.datastructures import BaseTable
 from strawberry import relay, Info
 from strawberry.relay import from_base64, to_base64, NodeType, PageInfo
 from strawberry.relay.types import NodeIterableType
@@ -31,24 +32,24 @@ def _get_order_by(qs: QuerySet) -> list[OrderBy]:
 
 
 class OrderingDescriptor(NamedTuple):
-    alias: str
+    attname: str
     order_by: OrderBy
 
     def get_comparator(self, value, before: bool) -> Q | None:
         if value is None:
             if bool(self.order_by.nulls_first) ^ before:
-                return Q((f"{self.alias}__isnull", False))
+                return Q((f"{self.attname}__isnull", False))
             else:
                 return None
         else:
             lookup = "lt" if before ^ self.order_by.descending else "gt"
-            return Q((f"{self.alias}{LOOKUP_SEP}{lookup}", value))
+            return Q((f"{self.attname}{LOOKUP_SEP}{lookup}", value))
 
     def get_eq(self, value) -> Q:
         if value is None:
-            return Q((f"{self.alias}__isnull", True))
+            return Q((f"{self.attname}__isnull", True))
         else:
-            return Q((f"{self.alias}__exact", value))
+            return Q((f"{self.attname}__exact", value))
 
 
 def annotate_ordering_fields(
@@ -56,20 +57,47 @@ def annotate_ordering_fields(
 ) -> tuple[QuerySet, list[OrderingDescriptor], list[OrderBy]]:
     annotations = {}
     descriptors = []
+    new_defer = None
+    new_only = None
     order_bys = _get_order_by(qs)
     for index, order_by in enumerate(order_bys):
-        # TODO: Could optimize this for ordering by plain fields
-        # Those don't need annotations, but we need to make sure they are not deferred by the optimizer
-        dynamic_field = f"_strawberry_order_field_{index}"
-        annotations[dynamic_field] = order_by.expression
-        descriptors.append(OrderingDescriptor(dynamic_field, order_by))
+        if isinstance(order_by.expression, Col) and isinstance(
+            qs.query.alias_map[order_by.expression.alias], BaseTable
+        ):
+            field_name = order_by.expression.field.name
+            # if it's a field in the base table, just make sure it is not deferred (e.g. by the optimizer)
+            existing, defer = qs.query.deferred_loading
+            if defer and field_name in existing:
+                # Query is in "defer fields" mode and our field is being deferred
+                if new_defer is None:
+                    new_defer = set(existing)
+                new_defer.discard(field_name)
+            elif not defer and field_name not in existing:
+                # Query is in "only these fields" mode and our field is not in the set of fields
+                if new_only is None:
+                    new_only = set(existing)
+                new_only.add(field_name)
+            descriptors.append(
+                OrderingDescriptor(order_by.expression.field.attname, order_by)
+            )
+        else:
+            dynamic_field = f"_strawberry_order_field_{index}"
+            annotations[dynamic_field] = order_by.expression
+            descriptors.append(OrderingDescriptor(dynamic_field, order_by))
+
+    if new_defer is not None:
+        # defer is additive, so clear it first
+        qs = qs.defer(None).defer(*new_defer)
+    elif new_only is not None:
+        # only overwrites
+        qs = qs.only(*new_only)
     return qs.annotate(**annotations), descriptors, order_bys
 
 
 def extract_cursor_values(
     descriptors: list[OrderingDescriptor], obj: models.Model
 ) -> list:
-    return [getattr(obj, descriptor.alias) for descriptor in descriptors]
+    return [getattr(obj, descriptor.attname) for descriptor in descriptors]
 
 
 _tuple_constructor_func = {
@@ -124,14 +152,16 @@ class AttrHelper:
     pass
 
 
-def _extract_expression_value(model: models.Model, expr: BaseExpression, attname: str) -> str:
+def _extract_expression_value(
+    model: models.Model, expr: BaseExpression, attname: str
+) -> str:
     output_field = expr.output_field
     # Unfortunately Field.value_to_string operates on the object, not a direct value
     # So we have to potentially construct a fake object
     # If the output field's attname doesn't match, we have to construct a fake object
     # Additionally, the output field may not have an attname at all
     # if expressions are used
-    field_attname = getattr(output_field, 'attname', None)
+    field_attname = getattr(output_field, "attname", None)
     if not field_attname:
         # If the field doesn't have an attname, it's a dynamically constructed field,
         # for the purposes of output_field in an expression. Just set its attname, it doesn't hurt anything
@@ -155,7 +185,9 @@ class OrderedCollectionCursor:
         cls, model: models.Model, descriptors: list[OrderingDescriptor]
     ) -> Self:
         values = [
-            _extract_expression_value(model, descriptor.order_by.expression, descriptor.alias)
+            _extract_expression_value(
+                model, descriptor.order_by.expression, descriptor.attname
+            )
             for descriptor in descriptors
         ]
         return OrderedCollectionCursor(field_values=values)
@@ -230,7 +262,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         )
 
         nodes, ordering_descriptors, original_order_by = annotate_ordering_fields(nodes)
-
+        print(f"{ordering_descriptors=}")
         if after:
             after_cursor = OrderedCollectionCursor.from_cursor(
                 after, ordering_descriptors

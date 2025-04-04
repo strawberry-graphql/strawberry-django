@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import Iterable
 
 import pytest
@@ -12,7 +13,7 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.relay import ListConnectionWithTotalCount
 from strawberry_django.relay_cursor import DjangoCursorConnection
-from tests.projects.models import Project
+from tests.projects.models import Project, Milestone
 
 
 @pytest.mark.django_db(transaction=True)
@@ -41,12 +42,14 @@ def test_window_reordering():
 
 @pytest.mark.django_db(transaction=True)
 def test_cursor_pagination():
-    Project.objects.create(name="Project A")
+    p1 = Project.objects.create(name="Project A")
     Project.objects.create(name="Project E")
     Project.objects.create(name="Project F")
     Project.objects.create(name="Project C")
     Project.objects.create(name="Project D")
     Project.objects.create(name="Project B")
+
+    Milestone.objects.create(due_date=datetime.date(2025, 6, 1), project=p1)
 
     @strawberry_django.type(Project)
     class ProjectType(Node):
@@ -55,12 +58,28 @@ def test_cursor_pagination():
         @classmethod
         def get_queryset(cls, qs: QuerySet, info):
             if not qs.ordered:
-                qs = qs.annotate(__foo=F("pk")).order_by(Upper('name', output_field=CharField()), "__foo")
+                qs = qs.annotate(__foo=F("pk")).order_by(
+                    Upper("name", output_field=CharField()), "__foo"
+                )
+            return qs
+
+    @strawberry_django.type(Milestone)
+    class MilestoneType(Node):
+        due_date: strawberry.auto
+        project: ProjectType
+
+        @classmethod
+        def get_queryset(cls, qs: QuerySet, info):
+            if not qs.ordered:
+                qs = qs.order_by("project__name", "pk")
             return qs
 
     @strawberry.type()
     class Query:
         projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
+        milestones: DjangoCursorConnection[MilestoneType] = (
+            strawberry_django.connection()
+        )
 
         @strawberry_django.connection(DjangoCursorConnection[ProjectType])
         def projects2(self) -> Iterable[ProjectType]:
@@ -75,18 +94,28 @@ def test_cursor_pagination():
             return Project.objects.all().order_by("name", "pk")
 
     schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
-    # b3JkZXJlZGN1cnNvcjpbIlByb2plY3QgRCIsICI1Il0=
     query = """
     query TestQuery {
         projects(first: 2) {
             edges {
                 cursor
-                node { id name }     
+                node { id name }
             }
             pageInfo { hasNextPage hasPreviousPage }
         }
     }
     """
+    # query = """
+    # query TestQuery {
+    #     milestones {
+    #         edges {
+    #             cursor
+    #             node { id dueDate project { name } }
+    #         }
+    #         pageInfo { hasNextPage hasPreviousPage }
+    #     }
+    # }
+    # """
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
         result = schema.execute_sync(query)
         print(ctx.captured_queries)
