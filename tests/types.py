@@ -38,7 +38,11 @@ class TomatoWithRequiredPictureType:
 
 if settings.GEOS_IMPORTED:
 
-    @strawberry_django.type(models.GeosFieldsModel)
+    @strawberry_django.filters.filter(models.GeosFieldsModel, lookups=True)
+    class GeoFieldFilter:
+        geometry: auto
+
+    @strawberry_django.type(models.GeosFieldsModel, filters=GeoFieldFilter)
     class GeoField:
         id: auto
         point: auto

@@ -321,14 +321,15 @@ def test_field_name():
 
 @pytest.mark.skipif(not settings.GEOS_IMPORTED, reason="GeoDjango is not available.")
 async def test_geos(query):
+    from django.contrib.gis.geos import GEOSGeometry
     result = await query(
         """
-        query GeosQuery {
-          geometries {
+        query GeosQuery($filter: GeoFieldFilter) {
+          geometries(filters: $filter) {
             geometry
           }
         }
-        """
+        """, variable_values={"filter": {"geometry": {"contains": GEOSGeometry("POLYGON(( 10 10, 10 20, 20 20, 20 15, 10 10))")}}}
     )
 
     assert not result.errors
