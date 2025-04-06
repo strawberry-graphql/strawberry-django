@@ -3,7 +3,9 @@ from typing import Any, cast
 
 import pytest
 import strawberry
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.models import Prefetch
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
@@ -1791,3 +1793,69 @@ def test_prefetch_multi_field_single_required_multiple_returned(
             "path": ["milestone", "firstIssueRequired"],
         }
     ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_no_window_function_for_normal_prefetch(
+    db,
+):
+    @strawberry_django.type(Project)
+    class ProjectType:
+        pk: strawberry.ID
+        name: str
+
+        @staticmethod
+        def get_queryset(qs, info):
+            # get_queryset exists to force the optimizer to use prefetch instead of select_related
+            return qs
+
+    @strawberry_django.type(Milestone)
+    class MilestoneType:
+        pk: strawberry.ID
+        project: ProjectType
+
+    @strawberry.type
+    class Query:
+        milestones: list[MilestoneType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
+
+    query = """\
+      query TestQuery {
+        milestones {
+          pk
+          project { pk name }
+        }
+      }
+    """
+
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        res = schema.execute_sync(query)
+        assert len(ctx.captured_queries) == 2
+        # Test that the Prefetch does not use Window pagination unnecessarily
+        assert not any(
+            '"_strawberry_row_number"' in q["sql"] for q in ctx.captured_queries
+        )
+
+    assert res.errors is None
+    assert res.data == {
+        "milestones": [
+            {
+                "pk": str(milestone1.pk),
+                "project": {
+                    "pk": str(milestone1.project.pk),
+                    "name": milestone1.project.name,
+                },
+            },
+            {
+                "pk": str(milestone2.pk),
+                "project": {
+                    "pk": str(milestone2.project.pk),
+                    "name": milestone2.project.name,
+                },
+            },
+        ]
+    }
