@@ -557,8 +557,19 @@ def resolve_model_field_type(
         and (field_type is not bool or not using_old_filters)
     ):
         if using_old_filters:
-            field_type = filters.FilterLookup[field_type] # type: ignore
-        elif type(field_type) is ScalarWrapper and field_type._scalar_definition.name in ("Point", "LineString", "LinearRing", "Polygon", "MultiPoint", "MultilineString", "MultiPolygon", "Geometry"):
+            field_type = filters.FilterLookup[field_type]  # type: ignore
+        elif type(
+            field_type
+        ) is ScalarWrapper and field_type._scalar_definition.name in (
+            "Point",
+            "LineString",
+            "LinearRing",
+            "Polygon",
+            "MultiPoint",
+            "MultilineString",
+            "MultiPolygon",
+            "Geometry",
+        ):
             field_type = filter_types.GeometryFilterLookup[field_type]
         else:
             field_type = filter_types.type_filter_map.get(  # type: ignore

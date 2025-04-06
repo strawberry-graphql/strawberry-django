@@ -7,9 +7,9 @@ from .fields.filter_types import (
     DateFilterLookup,
     DatetimeFilterLookup,
     FilterLookup,
+    GeometryFilterLookup,
     RangeLookup,
     TimeFilterLookup,
-    GeometryFilterLookup,
 )
 from .fields.types import (
     DjangoFileType,
@@ -39,6 +39,7 @@ __all__ = [
     "DjangoModelType",
     "FilterLookup",
     "GeometryFilterLookup",
+    "GeometryFilterLookup",
     "ListInput",
     "ManyToManyInput",
     "ManyToOneInput",
@@ -49,7 +50,6 @@ __all__ = [
     "Ordering",
     "RangeLookup",
     "TimeFilterLookup",
-    "GeometryFilterLookup",
     "auth",
     "connection",
     "django_resolver",

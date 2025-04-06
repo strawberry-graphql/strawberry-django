@@ -6,9 +6,9 @@ from unittest import mock
 import pytest
 import strawberry
 from asgiref.sync import sync_to_async
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
-from django.conf import settings
 from graphql import GraphQLError
 from PIL import Image
 from strawberry import auto
@@ -16,7 +16,7 @@ from strawberry import auto
 import strawberry_django
 from strawberry_django.settings import StrawberryDjangoSettings
 
-from . import models, utils, types
+from . import models, types, utils
 
 
 @pytest.fixture
@@ -322,6 +322,7 @@ def test_field_name():
 @pytest.mark.skipif(not settings.GEOS_IMPORTED, reason="GeoDjango is not available.")
 async def test_geos(query):
     from django.contrib.gis.geos import GEOSGeometry
+
     result = await query(
         """
         query GeosQuery($filter: GeoFieldFilter) {
@@ -329,7 +330,16 @@ async def test_geos(query):
             geometry
           }
         }
-        """, variable_values={"filter": {"geometry": {"contains": GEOSGeometry("POLYGON(( 10 10, 10 20, 20 20, 20 15, 10 10))")}}}
+        """,
+        variable_values={
+            "filter": {
+                "geometry": {
+                    "contains": GEOSGeometry(
+                        "POLYGON(( 10 10, 10 20, 20 20, 20 15, 10 10))"
+                    )
+                }
+            }
+        },
     )
 
     assert not result.errors
