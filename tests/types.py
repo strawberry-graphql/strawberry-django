@@ -47,6 +47,7 @@ if settings.GEOS_IMPORTED:
         multi_point: auto
         multi_line_string: auto
         multi_polygon: auto
+        geometry: auto
 
     @strawberry_django.input(models.GeosFieldsModel)
     class GeoFieldInput(GeoField):

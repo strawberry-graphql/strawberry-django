@@ -9,6 +9,7 @@ from .fields.filter_types import (
     FilterLookup,
     RangeLookup,
     TimeFilterLookup,
+    GeometryFilterLookup,
 )
 from .fields.types import (
     DjangoFileType,
@@ -48,6 +49,7 @@ __all__ = [
     "Ordering",
     "RangeLookup",
     "TimeFilterLookup",
+    "GeometryFilterLookup",
     "auth",
     "connection",
     "django_resolver",
@@ -72,13 +74,3 @@ __all__ = [
     "relay",
     "type",
 ]
-
-from django.core.exceptions import ImproperlyConfigured
-
-try:
-    from .fields.filter_types import GeometryFilterLookup
-
-    __all__.append("GeometryFilterLookup")
-except ImproperlyConfigured:
-    # If gdal is not available, skip.
-    pass

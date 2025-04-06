@@ -131,6 +131,8 @@ type_filter_map = {
 }
 
 
+GeometryFilterLookup = None
+
 try:
     pass
 except ImproperlyConfigured:

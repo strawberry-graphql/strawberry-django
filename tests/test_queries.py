@@ -8,6 +8,7 @@ import strawberry
 from asgiref.sync import sync_to_async
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.conf import settings
 from graphql import GraphQLError
 from PIL import Image
 from strawberry import auto
@@ -15,7 +16,7 @@ from strawberry import auto
 import strawberry_django
 from strawberry_django.settings import StrawberryDjangoSettings
 
-from . import models, utils
+from . import models, utils, types
 
 
 @pytest.fixture
@@ -79,6 +80,8 @@ class Query:
     fruit: Fruit = strawberry_django.field()
     berries: list[BerryFruit] = strawberry_django.field()
     bananas: list[BananaFruit] = strawberry_django.field()
+    if settings.GEOS_IMPORTED:
+        geometries: list[types.GeoField] = strawberry_django.field()
 
 
 @pytest.fixture
@@ -314,3 +317,18 @@ def test_field_name():
       }
     """)
     assert result.data == {"fruit": {"colorId": mock.ANY, "name": "Banana"}}
+
+
+@pytest.mark.skipif(not settings.GEOS_IMPORTED, reason="GeoDjango is not available.")
+async def test_geos(query):
+    result = await query(
+        """
+        query GeosQuery {
+          geometries {
+            geometry
+          }
+        }
+        """
+    )
+
+    assert not result.errors
