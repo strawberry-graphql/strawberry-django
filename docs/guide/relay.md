@@ -76,7 +76,7 @@ As an alternative to the default `ListConnection`, `DjangoCursorConnection` is a
 It supports pagination through a Django `QuerySet` via "true" cursors.
 `ListConnection` uses slicing to achieve pagination, which can negatively affect performance for huge datasets,
 because large page numbers require a large `OFFSET` in SQL.
-Instead `DjangoCursorConnection` can use range queries such as `Q(due_date__gte=...)` for pagination. In combination
+Instead, `DjangoCursorConnection` uses range queries such as `Q(due_date__gte=...)` for pagination. In combination
 with an Index, this makes for more efficient queries.
 
 `DjangoCursorConnection` requires a _strictly_ ordered `QuerySet`, that is, no two entries in the `QuerySet`
@@ -89,7 +89,7 @@ When the order for the connection is configurable by the user (for example via
 between different orders.
 
 The drawback of cursor based pagination is that users cannot jump to a particular page immediately. Therefor
-cursor based pagination is better suited for things like an infinitely scrollable list.
+cursor based pagination is better suited for special use-cases like an infinitely scrollable list.
 
 Otherwise `DjangoCursorConnection` behaves like other connection classes:
 ```python
