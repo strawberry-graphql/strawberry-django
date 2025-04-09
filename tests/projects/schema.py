@@ -39,7 +39,6 @@ from strawberry_django.permissions import (
     filter_for_user,
 )
 from strawberry_django.relay import ListConnectionWithTotalCount
-from strawberry_django.relay_cursor import DjangoCursorConnection
 
 from .models import (
     Assignee,
@@ -435,9 +434,6 @@ class Query:
         ]
     ] = strawberry_django.connection()
     milestone_conn: ListConnectionWithTotalCount[MilestoneType] = (
-        strawberry_django.connection()
-    )
-    milestone_cursor_conn: DjangoCursorConnection[MilestoneType] = (
         strawberry_django.connection()
     )
 

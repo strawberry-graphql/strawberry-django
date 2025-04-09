@@ -427,24 +427,6 @@ type MilestoneTypeConnection {
   totalCount: Int
 }
 
-"""A connection to a list of items."""
-type MilestoneTypeCursorConnection {
-  """Pagination data for this connection"""
-  pageInfo: PageInfo!
-
-  """Contains the nodes in this connection"""
-  edges: [MilestoneTypeCursorEdge!]!
-}
-
-"""An edge in a connection."""
-type MilestoneTypeCursorEdge {
-  """A cursor for use in pagination"""
-  cursor: String!
-
-  """The item at the end of the edge"""
-  node: MilestoneType!
-}
-
 """An edge in a connection."""
 type MilestoneTypeEdge {
   """A cursor for use in pagination"""
@@ -746,22 +728,6 @@ type Query {
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
   ): MilestoneTypeConnection!
-  milestoneCursorConn(
-    filters: MilestoneFilter
-    order: MilestoneOrder
-
-    """Returns the items in the list that come before the specified cursor."""
-    before: String = null
-
-    """Returns the items in the list that come after the specified cursor."""
-    after: String = null
-
-    """Returns the first n items from the list."""
-    first: Int = null
-
-    """Returns the items in the list that come after the specified cursor."""
-    last: Int = null
-  ): MilestoneTypeCursorConnection!
   projectConn(
     filters: ProjectFilter
 
