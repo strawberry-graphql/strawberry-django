@@ -1231,3 +1231,39 @@ def test_invalid_cursor(cursor, test_objects):
     assert result.data is None
     assert result.errors
     assert result.errors[0].message == "Invalid cursor"
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("first", "last", "error_message"),
+    [
+        (-1, None, "Argument 'first' must be a non-negative integer."),
+        (None, -1, "Argument 'last' must be a non-negative integer."),
+        (150, None, "Argument 'first' cannot be higher than 100."),
+        (None, 150, "Argument 'last' cannot be higher than 100."),
+        (30, 150, "Argument 'last' cannot be higher than 100."),
+    ],
+)
+def test_invalid_offsets(first, last, error_message, test_objects):
+    query = """
+    query TestQuery($first: Int, $last: Int) {
+        projects(first: $first, last: $last, order: { id: ASC }) {
+            edges {
+                cursor
+                node {
+                  id
+                }
+            }
+        }
+    }
+    """
+    result = schema.execute_sync(query, {"first": first, "last": last})
+    assert result.data is None
+    assert result.errors
+    assert result.errors[0].message == error_message
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cursor_connection_rejects_non_querysets():
+    with pytest.raises(TypeError):
+        DjangoCursorConnection.resolve_connection(list(Project.objects.all()))
