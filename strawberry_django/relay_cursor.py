@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from typing import Any, ClassVar, NamedTuple, Optional, cast
 
 import strawberry
+from asgiref.sync import sync_to_async
 from django.core.exceptions import ValidationError
 from django.db import DEFAULT_DB_ALIAS, models
 from django.db.models import Expression, F, OrderBy, Q, QuerySet, Value, Window
@@ -18,6 +19,7 @@ from strawberry.relay.utils import should_resolve_list_connection_edges
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.utils.await_maybe import AwaitableOrValue
+from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
 
@@ -353,30 +355,36 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 ),
             )
 
-        if real_limit is not None:
-            has_more = len(qs) > real_limit
-            if iterate_backwards:
-                has_previous_page = has_more
-            else:
-                has_next_page = has_more
-            qs = qs[:real_limit]
+        def finish_resolving():
+            nonlocal qs, has_next_page, has_previous_page
+            if real_limit is not None:
+                has_more = len(qs) > real_limit
+                if iterate_backwards:
+                    has_previous_page = has_more
+                else:
+                    has_next_page = has_more
+                qs = qs[:real_limit]
 
-        it = reversed(qs) if iterate_backwards else qs
+            it = reversed(qs) if iterate_backwards else qs
 
-        edges = [
-            edge_class.resolve_edge(
-                cls.resolve_node(v, info=info, **kwargs),
-                cursor=OrderedCollectionCursor.from_model(v, ordering_descriptors),
+            edges = [
+                edge_class.resolve_edge(
+                    cls.resolve_node(v, info=info, **kwargs),
+                    cursor=OrderedCollectionCursor.from_model(v, ordering_descriptors),
+                )
+                for v in it
+            ]
+
+            return cls(
+                edges=edges,
+                page_info=PageInfo(
+                    start_cursor=edges[0].cursor if edges else None,
+                    end_cursor=edges[-1].cursor if edges else None,
+                    has_previous_page=has_previous_page,
+                    has_next_page=has_next_page,
+                ),
             )
-            for v in it
-        ]
 
-        return cls(
-            edges=edges,
-            page_info=PageInfo(
-                start_cursor=edges[0].cursor if edges else None,
-                end_cursor=edges[-1].cursor if edges else None,
-                has_previous_page=has_previous_page,
-                has_next_page=has_next_page,
-            ),
-        )
+        if in_async_context() and qs._result_cache is None:  # type: ignore
+            return sync_to_async(finish_resolving)()
+        return finish_resolving()

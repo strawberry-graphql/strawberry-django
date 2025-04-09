@@ -761,3 +761,78 @@ def test_cursor_pagination_agg_expression_order(schema: Schema, test_objects):
                 ]
             }
         }
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_cursor_pagination_async(schema: Schema, test_objects):
+    query = """
+    query TestQuery {
+        projects {
+            edges {
+                cursor
+                node { id name }
+            }
+        }
+    }
+    """
+    result = await schema.execute(query)
+    assert result.data == {
+        "projects": {
+            "edges": [
+                {
+                    "cursor": to_base64(
+                        OrderedCollectionCursor.PREFIX, '["Project A","1"]'
+                    ),
+                    "node": {
+                        "id": str(GlobalID("ProjectType", "1")),
+                        "name": "Project A",
+                    },
+                },
+                {
+                    "cursor": to_base64(
+                        OrderedCollectionCursor.PREFIX, '["Project B","3"]'
+                    ),
+                    "node": {
+                        "id": str(GlobalID("ProjectType", "3")),
+                        "name": "Project B",
+                    },
+                },
+                {
+                    "cursor": to_base64(
+                        OrderedCollectionCursor.PREFIX, '["Project C","2"]'
+                    ),
+                    "node": {
+                        "id": str(GlobalID("ProjectType", "2")),
+                        "name": "Project C",
+                    },
+                },
+                {
+                    "cursor": to_base64(
+                        OrderedCollectionCursor.PREFIX, '["Project C","5"]'
+                    ),
+                    "node": {
+                        "id": str(GlobalID("ProjectType", "5")),
+                        "name": "Project C",
+                    },
+                },
+                {
+                    "cursor": to_base64(
+                        OrderedCollectionCursor.PREFIX, '["Project D","6"]'
+                    ),
+                    "node": {
+                        "id": str(GlobalID("ProjectType", "6")),
+                        "name": "Project D",
+                    },
+                },
+                {
+                    "cursor": to_base64(
+                        OrderedCollectionCursor.PREFIX, '["Project E","4"]'
+                    ),
+                    "node": {
+                        "id": str(GlobalID("ProjectType", "4")),
+                        "name": "Project E",
+                    },
+                },
+            ]
+        }
+    }
