@@ -134,12 +134,6 @@ def annotate_ordering_fields(
     return qs.annotate(**annotations), descriptors, order_bys
 
 
-def extract_cursor_values(
-    descriptors: list[OrderingDescriptor], obj: models.Model
-) -> list:
-    return [getattr(obj, descriptor.attname) for descriptor in descriptors]
-
-
 def build_tuple_compare(
     descriptors: list[OrderingDescriptor],
     cursor_values: list[Optional[str]],
