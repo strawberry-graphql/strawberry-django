@@ -1084,3 +1084,34 @@ def test_nested_cursor_pagination():
                 ]
             }
         }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "cursor",
+    [
+        *(
+            to_base64(DjangoCursorEdge.PREFIX, c)
+            for c in ("", "[]", "[1]", "{}", "foo", '["foo"]')
+        ),
+        to_base64("foo", "bar"),
+        to_base64("foo", '["1"]'),
+    ],
+)
+def test_invalid_cursor(cursor, test_objects):
+    query = """
+    query TestQuery($after: String) {
+        projects(after: $after, order: { id: ASC }) {
+            edges {
+                cursor
+                node {
+                  id
+                }
+            }
+        }
+    }
+    """
+    result = schema.execute_sync(query, {"after": cursor})
+    assert result.data is None
+    assert result.errors
+    assert result.errors[0].message == "Invalid cursor"

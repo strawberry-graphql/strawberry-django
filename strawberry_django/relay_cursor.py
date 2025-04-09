@@ -300,7 +300,7 @@ class OrderedCollectionCursor(NamedTuple):
     ) -> "OrderedCollectionCursor":
         type_, values_json = from_base64(cursor)
         if type_ != DjangoCursorEdge.PREFIX:
-            raise ValueError("Invalid Cursor")
+            raise ValueError("Invalid cursor")
         try:
             string_values = json.loads(values_json)
         except JSONDecodeError as e:
