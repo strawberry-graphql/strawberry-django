@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import Optional, cast
 
 import pytest
 import strawberry
@@ -74,6 +74,11 @@ class Query:
     project: Optional[ProjectType] = strawberry_django.node()
     projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
     milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
+
+    @strawberry_django.connection(DjangoCursorConnection[ProjectType])
+    @staticmethod
+    def projects_with_resolver() -> list[ProjectType]:
+        return cast("list[ProjectType]", Project.objects.all().order_by("-pk"))
 
 
 schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
@@ -160,6 +165,48 @@ def test_cursor_pagination(test_objects):
                         "cursor": to_base64(
                             OrderedCollectionCursor.PREFIX, '["Project E","4"]'
                         ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "4")),
+                            "name": "Project E",
+                        },
+                    },
+                ]
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cursor_pagination_custom_resolver(test_objects):
+    query = """
+    query TestQuery($after: String, $first: Int) {
+        projectsWithResolver(after: $after, first: $first) {
+            edges {
+                cursor
+                node { id name }
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query,
+            {
+                "after": to_base64(OrderedCollectionCursor.PREFIX, '["6"]'),
+                "first": 2,
+            },
+        )
+        assert result.data == {
+            "projectsWithResolver": {
+                "edges": [
+                    {
+                        "cursor": to_base64(OrderedCollectionCursor.PREFIX, '["5"]'),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "5")),
+                            "name": "Project C",
+                        },
+                    },
+                    {
+                        "cursor": to_base64(OrderedCollectionCursor.PREFIX, '["4"]'),
                         "node": {
                             "id": str(GlobalID("ProjectType", "4")),
                             "name": "Project E",
