@@ -238,10 +238,11 @@ def apply_cursor_pagination(
                 ),
             )
             .filter(
-                _strawberry_row_number_fwd__lte=first,
+                _strawberry_row_number_fwd__lte=first + 1,
             )
         )
-        slice_ = slice(last)
+        # we're overfetching by two, in both directions
+        slice_ = slice(last + 2)
     elif first is not None:
         if first < 0:
             raise ValueError("Argument 'first' must be a non-negative integer.")
@@ -415,24 +416,26 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             nonlocal qs
             has_previous_page = has_next_page = False
 
-            if first is not None and last is None:
-                real_limit = first
-            elif last is not None and first is None:
-                real_limit = last
-            else:
-                real_limit = None
+            results = list(qs)
 
-            iterate_backwards = last is not None
+            if first is not None:
+                if last is None:
+                    has_next_page = len(results) > first
+                    results = results[:first]
+                # we're paginating forwards _and_ backwards
+                # remove the (potentially) overfetched row in the forwards direction first
+                elif (
+                    results
+                    and getattr(results[0], "_strawberry_row_number_fwd", 0) > first
+                ):
+                    has_next_page = True
+                    results = results[1:]
 
-            if real_limit is not None:
-                has_more = len(qs) > real_limit
-                if iterate_backwards:
-                    has_previous_page = has_more
-                else:
-                    has_next_page = has_more
-                qs = qs[:real_limit]
+            if last is not None:
+                has_previous_page = len(results) > last
+                results = results[:last]
 
-            it = reversed(qs) if iterate_backwards else qs
+            it = reversed(results) if last is not None else results
 
             edges = [
                 edge_class.resolve_edge(

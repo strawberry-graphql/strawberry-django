@@ -583,6 +583,66 @@ def test_backward_pagination_last_page(test_objects):
         }
 
 
+@pytest.mark.parametrize(
+    ("first", "last", "pks", "has_next", "has_previous"),
+    [
+        (4, 2, [3, 4], True, True),
+        (6, 2, [5, 6], False, True),
+        (4, 4, [1, 2, 3, 4], True, False),
+        (6, 6, [1, 2, 3, 4, 5, 6], False, False),
+        (8, 4, [3, 4, 5, 6], False, True),
+        (4, 8, [1, 2, 3, 4], True, False),
+    ],
+)
+@pytest.mark.django_db(transaction=True)
+def test_first_and_last_pagination(
+    first, last, pks, has_next, has_previous, test_objects
+):
+    query = """
+    query TestQuery($first: Int, $last: Int) {
+        projects(first: $first, last: $last, order: { id: ASC }) {
+            edges {
+                cursor
+                node { id }
+            }
+            pageInfo {
+              startCursor
+              endCursor
+              hasNextPage
+              hasPreviousPage
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query,
+            {
+                "first": first,
+                "last": last,
+            },
+        )
+        assert result.data == {
+            "projects": {
+                "pageInfo": {
+                    "startCursor": to_base64(DjangoCursorEdge.PREFIX, f'["{pks[0]}"]'),
+                    "endCursor": to_base64(DjangoCursorEdge.PREFIX, f'["{pks[-1]}"]'),
+                    "hasPreviousPage": has_previous,
+                    "hasNextPage": has_next,
+                },
+                "edges": [
+                    {
+                        "cursor": to_base64(DjangoCursorEdge.PREFIX, f'["{pk}"]'),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", str(pk))),
+                        },
+                    }
+                    for pk in pks
+                ],
+            }
+        }
+
+
 @pytest.mark.django_db(transaction=True)
 def test_cursor_pagination_custom_order(test_objects):
     query = """
@@ -1049,6 +1109,7 @@ def test_nested_cursor_pagination():
                 node {
                   id
                   milestones(first: 2, order: { dueDate: ASC }) {
+                    pageInfo { hasNextPage }
                     edges {
                       cursor
                       node { id dueDate }
@@ -1071,6 +1132,7 @@ def test_nested_cursor_pagination():
                         "node": {
                             "id": str(GlobalID("ProjectType", "1")),
                             "milestones": {
+                                "pageInfo": {"hasNextPage": False},
                                 "edges": [
                                     {
                                         "cursor": to_base64(
@@ -1092,7 +1154,7 @@ def test_nested_cursor_pagination():
                                             "dueDate": "2025-06-05",
                                         },
                                     },
-                                ]
+                                ],
                             },
                         },
                     },
@@ -1103,6 +1165,7 @@ def test_nested_cursor_pagination():
                         "node": {
                             "id": str(GlobalID("ProjectType", "2")),
                             "milestones": {
+                                "pageInfo": {"hasNextPage": True},
                                 "edges": [
                                     {
                                         "cursor": to_base64(
@@ -1124,7 +1187,7 @@ def test_nested_cursor_pagination():
                                             "dueDate": "2025-06-01",
                                         },
                                     },
-                                ]
+                                ],
                             },
                         },
                     },
