@@ -55,6 +55,7 @@ from strawberry_django.relay import ListConnectionWithTotalCount
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
+from .relay_cursor import DjangoCursorConnection, apply_cursor_pagination
 from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
@@ -94,7 +95,6 @@ __all__ = [
     "optimize",
 ]
 
-NESTED_PREFETCH_MARK = "_strawberry_nested_prefetch_optimized"
 _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
@@ -569,6 +569,17 @@ def _optimize_prefetch_queryset(
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
                     limit=slice_metadata.end - slice_metadata.start,
+                    max_results=connection_extension.max_results,
+                )
+            elif connection_type is DjangoCursorConnection:
+                qs, _ = apply_cursor_pagination(
+                    qs,
+                    related_field_id=related_field_id,
+                    info=Info(_raw_info=info, _field=field),
+                    first=field_kwargs.get("first"),
+                    last=field_kwargs.get("last"),
+                    before=field_kwargs.get("before"),
+                    after=field_kwargs.get("after"),
                     max_results=connection_extension.max_results,
                 )
             else:
@@ -1458,20 +1469,17 @@ def optimize(
 
 
 def is_optimized(qs: QuerySet) -> bool:
-    return get_queryset_config(qs).optimized or is_optimized_by_prefetching(qs)
+    config = get_queryset_config(qs)
+    return config.optimized or config.optimized_by_prefetching
 
 
 def mark_optimized_by_prefetching(qs: QuerySet[_M]) -> QuerySet[_M]:
-    # This is a bit of a hack, but there is no easy way to mark a related manager
-    # as optimized at this phase, so we just add a mark to the queryset that
-    # we can check leater on using is_optimized_by_prefetching
-    return qs.annotate(**{
-        NESTED_PREFETCH_MARK: models.Value(True),
-    })
+    get_queryset_config(qs).optimized_by_prefetching = True
+    return qs
 
 
 def is_optimized_by_prefetching(qs: QuerySet) -> bool:
-    return NESTED_PREFETCH_MARK in qs.query.annotations
+    return get_queryset_config(qs).optimized_by_prefetching
 
 
 optimizer: contextvars.ContextVar[DjangoOptimizerExtension | None] = (

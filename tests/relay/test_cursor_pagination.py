@@ -1,10 +1,10 @@
 import datetime
+from typing import Optional
 
 import pytest
 import strawberry
 from django.db.models import F, OrderBy, QuerySet, Value
 from django.db.models.aggregates import Count
-from strawberry import Schema
 from strawberry.relay import GlobalID, Node, to_base64
 
 import strawberry_django
@@ -17,63 +17,66 @@ from tests.projects.models import Milestone, Project
 from tests.utils import assert_num_queries
 
 
-@pytest.fixture
-def schema() -> Schema:
-    @strawberry_django.order(Project)
-    class ProjectOrder:
-        id: strawberry.auto
-        name: strawberry.auto
+@strawberry_django.order(Project)
+class ProjectOrder:
+    id: strawberry.auto
+    name: strawberry.auto
 
-        @strawberry_django.order_field()
-        def milestone_count(
-            self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
-        ) -> "tuple[QuerySet, list[OrderBy]]":
-            queryset = queryset.annotate(_milestone_count=Count(f"{prefix}milestone"))
-            return queryset, [value.resolve("_milestone_count")]
+    @strawberry_django.order_field()
+    def milestone_count(
+        self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
+    ) -> "tuple[QuerySet, list[OrderBy]]":
+        queryset = queryset.annotate(_milestone_count=Count(f"{prefix}milestone"))
+        return queryset, [value.resolve("_milestone_count")]
 
-    @strawberry_django.type(Project, order=ProjectOrder)
-    class ProjectType(Node):
-        name: str
 
-        @classmethod
-        def get_queryset(cls, qs: QuerySet, info):
-            if not qs.ordered:
-                qs = qs.order_by("name", "pk")
-            return qs
+@strawberry_django.order(Milestone)
+class MilestoneOrder:
+    due_date: strawberry.auto
+    project: ProjectOrder
 
-    @strawberry_django.order(Milestone)
-    class MilestoneOrder:
-        due_date: strawberry.auto
-        project: ProjectOrder
-
-        @strawberry_django.order_field()
-        def days_left(
-            self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
-        ) -> "tuple[QuerySet, list[OrderBy]]":
-            queryset = queryset.alias(
-                _days_left=Value(datetime.date(2025, 12, 31)) - F(f"{prefix}due_date")
-            )
-            return queryset, [value.resolve("_days_left")]
-
-    @strawberry_django.type(Milestone, order=MilestoneOrder)
-    class MilestoneType(Node):
-        due_date: strawberry.auto
-        project: ProjectType
-
-        @classmethod
-        def get_queryset(cls, qs: QuerySet, info):
-            if not qs.ordered:
-                qs = qs.order_by("project__name", "pk")
-            return qs
-
-    @strawberry.type()
-    class Query:
-        projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
-        milestones: DjangoCursorConnection[MilestoneType] = (
-            strawberry_django.connection()
+    @strawberry_django.order_field()
+    def days_left(
+        self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
+    ) -> "tuple[QuerySet, list[OrderBy]]":
+        queryset = queryset.alias(
+            _days_left=Value(datetime.date(2025, 12, 31)) - F(f"{prefix}due_date")
         )
+        return queryset, [value.resolve("_days_left")]
 
-    return strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
+
+@strawberry_django.type(Milestone, order=MilestoneOrder)
+class MilestoneType(Node):
+    due_date: strawberry.auto
+    project: "ProjectType"
+
+    @classmethod
+    def get_queryset(cls, qs: QuerySet, info):
+        if not qs.ordered:
+            qs = qs.order_by("project__name", "pk")
+        return qs
+
+
+@strawberry_django.type(Project, order=ProjectOrder)
+class ProjectType(Node):
+    name: str
+    milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
+
+    @classmethod
+    def get_queryset(cls, qs: QuerySet, info):
+        if not qs.ordered:
+            qs = qs.order_by("name", "pk")
+        return qs
+
+
+@strawberry.type()
+class Query:
+    project: Optional[ProjectType] = strawberry_django.node()
+    projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
+    milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
+
+
+schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
 
 
 @pytest.fixture
@@ -92,7 +95,7 @@ def test_objects():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_cursor_pagination(schema: Schema, test_objects):
+def test_cursor_pagination(test_objects):
     query = """
     query TestQuery {
         projects {
@@ -168,7 +171,7 @@ def test_cursor_pagination(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_forward_pagination(schema: Schema, test_objects):
+def test_forward_pagination(test_objects):
     query = """
     query TestQuery($first: Int, $after: String) {
         projects(first: $first, after: $after) {
@@ -237,7 +240,7 @@ def test_forward_pagination(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_forward_pagination_first_page(schema: Schema, test_objects):
+def test_forward_pagination_first_page(test_objects):
     query = """
     query TestQuery($first: Int, $after: String) {
         projects(first: $first, after: $after) {
@@ -290,7 +293,7 @@ def test_forward_pagination_first_page(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_forward_pagination_last_page(schema: Schema, test_objects):
+def test_forward_pagination_last_page(test_objects):
     query = """
     query TestQuery($first: Int, $after: String) {
         projects(first: $first, after: $after) {
@@ -341,7 +344,7 @@ def test_forward_pagination_last_page(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_backward_pagination(schema: Schema, test_objects):
+def test_backward_pagination(test_objects):
     query = """
     query TestQuery($last: Int, $before: String) {
         projects(last: $last, before: $before) {
@@ -403,7 +406,7 @@ def test_backward_pagination(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_backward_pagination_first_page(schema: Schema, test_objects):
+def test_backward_pagination_first_page(test_objects):
     query = """
     query TestQuery($last: Int, $before: String) {
         projects(last: $last, before: $before) {
@@ -465,7 +468,7 @@ def test_backward_pagination_first_page(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_backward_pagination_last_page(schema: Schema, test_objects):
+def test_backward_pagination_last_page(test_objects):
     query = """
     query TestQuery($last: Int, $before: String) {
         projects(last: $last, before: $before) {
@@ -527,7 +530,7 @@ def test_backward_pagination_last_page(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_cursor_pagination_custom_order(schema: Schema, test_objects):
+def test_cursor_pagination_custom_order(test_objects):
     query = """
     query TestQuery($first: Int, $after: String) {
         projects(first: $first, after: $after, order: { name: DESC id: ASC }) {
@@ -573,7 +576,7 @@ def test_cursor_pagination_custom_order(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_cursor_pagination_joined_field_order(schema: Schema, test_objects):
+def test_cursor_pagination_joined_field_order(test_objects):
     query = """
     query TestQuery {
         milestones(order: { dueDate: DESC, project: { name: ASC } }) {
@@ -651,7 +654,7 @@ def test_cursor_pagination_joined_field_order(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_cursor_pagination_expression_order(schema: Schema, test_objects):
+def test_cursor_pagination_expression_order(test_objects):
     query = """
     query TestQuery($after: String) {
         milestones(after: $after, order: { daysLeft: ASC }) {
@@ -704,7 +707,7 @@ def test_cursor_pagination_expression_order(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_cursor_pagination_agg_expression_order(schema: Schema, test_objects):
+def test_cursor_pagination_agg_expression_order(test_objects):
     query = """
     query TestQuery($after: String, $first: Int) {
         projects(after: $after, first: $first, order: { milestoneCount: DESC }) {
@@ -764,7 +767,7 @@ def test_cursor_pagination_agg_expression_order(schema: Schema, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-async def test_cursor_pagination_async(schema: Schema, test_objects):
+async def test_cursor_pagination_async(test_objects):
     query = """
     query TestQuery {
         projects {
@@ -836,3 +839,163 @@ async def test_cursor_pagination_async(schema: Schema, test_objects):
             ]
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_cursor_pagination_in_single():
+    pa = Project.objects.create(id=1, name="Project A")
+    pb = Project.objects.create(id=2, name="Project B")
+
+    Milestone.objects.create(id=1, project=pb, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=2, project=pb, due_date=datetime.date(2025, 6, 2))
+    Milestone.objects.create(id=3, project=pb, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=4, project=pa, due_date=datetime.date(2025, 6, 5))
+    Milestone.objects.create(id=5, project=pa, due_date=datetime.date(2025, 6, 1))
+
+    query = """
+    query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+            id
+                  milestones(first: 2, order: { dueDate: ASC }) {
+                    edges {
+                      cursor
+                      node { id dueDate }
+                    }
+                  }
+        }
+    }
+    """
+    with assert_num_queries(2):
+        result = schema.execute_sync(query, {"id": str(GlobalID("ProjectType", "2"))})
+        assert result.data == {
+            "project": {
+                "id": str(GlobalID("ProjectType", "2")),
+                "milestones": {
+                    "edges": [
+                        {
+                            "cursor": to_base64(
+                                OrderedCollectionCursor.PREFIX,
+                                '["2025-06-01","1"]',
+                            ),
+                            "node": {
+                                "id": str(GlobalID("MilestoneType", "1")),
+                                "dueDate": "2025-06-01",
+                            },
+                        },
+                        {
+                            "cursor": to_base64(
+                                OrderedCollectionCursor.PREFIX,
+                                '["2025-06-01","3"]',
+                            ),
+                            "node": {
+                                "id": str(GlobalID("MilestoneType", "3")),
+                                "dueDate": "2025-06-01",
+                            },
+                        },
+                    ]
+                },
+            },
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_cursor_pagination():
+    pa = Project.objects.create(id=1, name="Project A")
+    pb = Project.objects.create(id=2, name="Project B")
+
+    Milestone.objects.create(id=1, project=pb, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=2, project=pb, due_date=datetime.date(2025, 6, 2))
+    Milestone.objects.create(id=3, project=pb, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=4, project=pa, due_date=datetime.date(2025, 6, 5))
+    Milestone.objects.create(id=5, project=pa, due_date=datetime.date(2025, 6, 1))
+
+    query = """
+    query TestQuery {
+        projects {
+            edges {
+                cursor
+                node {
+                  id
+                  milestones(first: 2, order: { dueDate: ASC }) {
+                    edges {
+                      cursor
+                      node { id dueDate }
+                    }
+                  }
+                }
+            }
+        }
+    }
+    """
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+        assert result.data == {
+            "projects": {
+                "edges": [
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["Project A","1"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "1")),
+                            "milestones": {
+                                "edges": [
+                                    {
+                                        "cursor": to_base64(
+                                            OrderedCollectionCursor.PREFIX,
+                                            '["2025-06-01","5"]',
+                                        ),
+                                        "node": {
+                                            "id": str(GlobalID("MilestoneType", "5")),
+                                            "dueDate": "2025-06-01",
+                                        },
+                                    },
+                                    {
+                                        "cursor": to_base64(
+                                            OrderedCollectionCursor.PREFIX,
+                                            '["2025-06-05","4"]',
+                                        ),
+                                        "node": {
+                                            "id": str(GlobalID("MilestoneType", "4")),
+                                            "dueDate": "2025-06-05",
+                                        },
+                                    },
+                                ]
+                            },
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            OrderedCollectionCursor.PREFIX, '["Project B","2"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "2")),
+                            "milestones": {
+                                "edges": [
+                                    {
+                                        "cursor": to_base64(
+                                            OrderedCollectionCursor.PREFIX,
+                                            '["2025-06-01","1"]',
+                                        ),
+                                        "node": {
+                                            "id": str(GlobalID("MilestoneType", "1")),
+                                            "dueDate": "2025-06-01",
+                                        },
+                                    },
+                                    {
+                                        "cursor": to_base64(
+                                            OrderedCollectionCursor.PREFIX,
+                                            '["2025-06-01","3"]',
+                                        ),
+                                        "node": {
+                                            "id": str(GlobalID("MilestoneType", "3")),
+                                            "dueDate": "2025-06-01",
+                                        },
+                                    },
+                                ]
+                            },
+                        },
+                    },
+                ]
+            }
+        }

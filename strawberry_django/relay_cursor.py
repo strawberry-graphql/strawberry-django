@@ -22,6 +22,9 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
+from strawberry_django.pagination import apply_window_pagination
+from strawberry_django.queryset import get_queryset_config
+
 
 def _get_order_by(qs: QuerySet) -> list[OrderBy]:
     return [
@@ -164,6 +167,93 @@ def _extract_expression_value(
     return output_field.value_to_string(obj)  # type: ignore
 
 
+def apply_cursor_pagination(
+    qs: QuerySet,
+    *,
+    related_field_id: Optional[str] = None,
+    info: Info,
+    before: Optional[str],
+    after: Optional[str],
+    first: Optional[int],
+    last: Optional[int],
+    max_results: Optional[int],
+) -> tuple[QuerySet, list[OrderingDescriptor]]:
+    max_results = (
+        max_results if max_results is not None else info.schema.config.relay_max_results
+    )
+
+    qs, ordering_descriptors, original_order_by = annotate_ordering_fields(qs)
+    if after:
+        after_cursor = OrderedCollectionCursor.from_cursor(after, ordering_descriptors)
+        qs = qs.filter(
+            build_tuple_compare(ordering_descriptors, after_cursor.field_values, False)
+        )
+    if before:
+        before_cursor = OrderedCollectionCursor.from_cursor(
+            before, ordering_descriptors
+        )
+        qs = qs.filter(
+            build_tuple_compare(ordering_descriptors, before_cursor.field_values, True)
+        )
+
+    slice_: Optional[slice] = None
+    if first is not None and last is not None:
+        if last > max_results:
+            raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
+        # if first and last are given, we have to
+        # - reverse the order in the DB so we can use slicing to apply [:last],
+        #   otherwise we would have to know the total count to apply slicing from the end
+        # - We still need to apply forward-direction [:first] slicing, and according to the Relay spec,
+        #   it shall happen before [:last] slicing. To do this, we use a window function with a RowNumber ordered
+        #   in the original direction, which is opposite the actual query order.
+        #   This query is likely not very efficient, but using last _and_ first together is discouraged by the
+        #   spec anyway
+        qs = (
+            qs.reverse()
+            .annotate(
+                _strawberry_row_number_fwd=Window(
+                    RowNumber(),
+                    order_by=original_order_by,
+                ),
+            )
+            .filter(
+                _strawberry_row_number_fwd__lte=first,
+            )
+        )
+        slice_ = slice(last)
+    elif first is not None:
+        if first < 0:
+            raise ValueError("Argument 'first' must be a non-negative integer.")
+        if first > max_results:
+            raise ValueError(f"Argument 'first' cannot be higher than {max_results}.")
+        slice_ = slice(first + 1)
+    elif last is not None:
+        # when using last, optimize by reversing the QuerySet ordering in the DB,
+        # then slicing from the end (which is now the start in QuerySet ordering)
+        # and then iterating the results in reverse to restore the original order
+        if last < 0:
+            raise ValueError("Argument 'last' must be a non-negative integer.")
+        if last > max_results:
+            raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
+        slice_ = slice(last + 1)
+        qs = qs.reverse()
+    if slice_ is not None:
+        if related_field_id is not None:
+            offset = slice_.start or 0
+            qs = apply_window_pagination(
+                qs,
+                related_field_id=related_field_id,
+                offset=offset,
+                limit=slice_.stop - offset,
+            )
+        else:
+            qs = qs[slice_]
+
+    get_queryset_config(qs).ordering_descriptors = ordering_descriptors
+
+    return qs, ordering_descriptors
+
+
 @dataclasses.dataclass
 class OrderedCollectionCursor:
     PREFIX: ClassVar[str] = "orderedcursor"
@@ -246,92 +336,25 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         max_results: Optional[int] = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
+        from strawberry_django.optimizer import is_optimized_by_prefetching
+
         if not isinstance(nodes, QuerySet):
             raise TypeError("DjangoCursorConnection requires a QuerySet")
-        qs: QuerySet = nodes
-
-        max_results = (
-            max_results
-            if max_results is not None
-            else info.schema.config.relay_max_results
-        )
-
-        qs, ordering_descriptors, original_order_by = annotate_ordering_fields(qs)
-        if after:
-            after_cursor = OrderedCollectionCursor.from_cursor(
-                after, ordering_descriptors
+        qs: QuerySet
+        if not is_optimized_by_prefetching(nodes):
+            qs, ordering_descriptors = apply_cursor_pagination(
+                nodes,
+                info=info,
+                before=before,
+                after=after,
+                first=first,
+                last=last,
+                max_results=max_results,
             )
-            qs = qs.filter(
-                build_tuple_compare(
-                    ordering_descriptors, after_cursor.field_values, False
-                )
-            )
-        if before:
-            before_cursor = OrderedCollectionCursor.from_cursor(
-                before, ordering_descriptors
-            )
-            qs = qs.filter(
-                build_tuple_compare(
-                    ordering_descriptors, before_cursor.field_values, True
-                )
-            )
-
-        has_previous_page = has_next_page = False
-        iterate_backwards = False
-        slice_: Optional[slice] = None
-        real_limit: Optional[int] = None
-        if first is not None and last is not None:
-            if last > max_results:
-                raise ValueError(
-                    f"Argument 'last' cannot be higher than {max_results}."
-                )
-            # if first and last are given, we have to
-            # - reverse the order in the DB so we can use slicing to apply [:last],
-            #   otherwise we would have to know the total count to apply slicing from the end
-            # - We still need to apply forward-direction [:first] slicing, and according to the Relay spec,
-            #   it shall happen before [:last] slicing. To do this, we use a window function with a RowNumber ordered
-            #   in the original direction, which is opposite the actual query order.
-            #   This query is likely not very efficient, but using last _and_ first together is discouraged by the
-            #   spec anyway
-            qs = (
-                qs.reverse()
-                .annotate(
-                    _strawberry_row_number_fwd=Window(
-                        RowNumber(),
-                        order_by=original_order_by,
-                    ),
-                )
-                .filter(
-                    _strawberry_row_number_fwd__lte=first,
-                )
-            )
-            slice_ = slice(last)
-            iterate_backwards = True
-        elif first is not None:
-            if first < 0:
-                raise ValueError("Argument 'first' must be a non-negative integer.")
-            if first > max_results:
-                raise ValueError(
-                    f"Argument 'first' cannot be higher than {max_results}."
-                )
-            slice_ = slice(first + 1)
-            real_limit = first
-        elif last is not None:
-            # when using last, optimize by reversing the QuerySet ordering in the DB,
-            # then slicing from the end (which is now the start in QuerySet ordering)
-            # and then iterating the results in reverse to restore the original order
-            if last < 0:
-                raise ValueError("Argument 'last' must be a non-negative integer.")
-            if last > max_results:
-                raise ValueError(
-                    f"Argument 'last' cannot be higher than {max_results}."
-                )
-            slice_ = slice(last + 1)
-            real_limit = last
-            qs = qs.reverse()
-            iterate_backwards = True
-        if slice_ is not None:
-            qs = qs[slice_]
+        else:
+            qs = nodes
+            ordering_descriptors = get_queryset_config(qs).ordering_descriptors
+            assert ordering_descriptors is not None
 
         type_def = get_object_definition(cls)
         assert type_def
@@ -356,7 +379,18 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             )
 
         def finish_resolving():
-            nonlocal qs, has_next_page, has_previous_page
+            nonlocal qs
+            has_previous_page = has_next_page = False
+
+            if first is not None and last is None:
+                real_limit = first
+            elif last is not None and first is None:
+                real_limit = last
+            else:
+                real_limit = None
+
+            iterate_backwards = last is not None
+
             if real_limit is not None:
                 has_more = len(qs) > real_limit
                 if iterate_backwards:
