@@ -81,7 +81,7 @@ with an Index, this makes for more efficient queries.
 
 `DjangoCursorConnection` requires a _strictly_ ordered `QuerySet`, that is, no two entries in the `QuerySet`
 must be considered equal by its ordering. `order_by('due_date')` for example is not strictly ordered, because two
-items could have the same due date. `DjangoCursorConnection` will automatically resolve such situations by 
+items could have the same due date. `DjangoCursorConnection` will automatically resolve such situations by
 also ordering by the primary key.
 
 When the order for the connection is configurable by the user (for example via
@@ -92,6 +92,7 @@ The drawback of cursor based pagination is that users cannot jump to a particula
 cursor based pagination is better suited for special use-cases like an infinitely scrollable list.
 
 Otherwise `DjangoCursorConnection` behaves like other connection classes:
+
 ```python
 @strawberry.type
 class Query:
