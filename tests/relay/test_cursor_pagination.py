@@ -5,6 +5,7 @@ import pytest
 import strawberry
 from django.db.models import F, OrderBy, QuerySet, Value
 from django.db.models.aggregates import Count
+from pytest_mock import MockFixture
 from strawberry.relay import GlobalID, Node, to_base64
 
 import strawberry_django
@@ -76,6 +77,14 @@ class Query:
     project: Optional[ProjectType] = strawberry_django.node()
     projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
     milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
+
+    @strawberry_django.connection(
+        DjangoCursorConnection[ProjectType], disable_optimization=True
+    )
+    @staticmethod
+    def deferred_projects() -> list[ProjectType]:
+        result = Project.objects.all().order_by("name").defer("name")
+        return cast("list[ProjectType]", result)
 
     @strawberry_django.connection(DjangoCursorConnection[ProjectType])
     @staticmethod
@@ -800,6 +809,44 @@ def test_cursor_pagination_agg_expression_order(test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_cursor_pagination_order_field_deferred(test_objects):
+    query = """
+    query TestQuery {
+        deferredProjects(first: 2) {
+            edges {
+                cursor
+                node { id }
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(query)
+        assert result.data == {
+            "deferredProjects": {
+                "edges": [
+                    {
+                        "cursor": to_base64(
+                            DjangoCursorEdge.PREFIX, '["Project A","1"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "1")),
+                        },
+                    },
+                    {
+                        "cursor": to_base64(
+                            DjangoCursorEdge.PREFIX, '["Project B","3"]'
+                        ),
+                        "node": {
+                            "id": str(GlobalID("ProjectType", "3")),
+                        },
+                    },
+                ]
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     ("order", "pks"),
     [
@@ -1264,6 +1311,8 @@ def test_invalid_offsets(first, last, error_message, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_cursor_connection_rejects_non_querysets():
+def test_cursor_connection_rejects_non_querysets(mocker: MockFixture):
     with pytest.raises(TypeError):
-        DjangoCursorConnection.resolve_connection(list(Project.objects.all()))
+        DjangoCursorConnection.resolve_connection(
+            list(Project.objects.all()), info=mocker.Mock()
+        )
