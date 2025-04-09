@@ -1,4 +1,3 @@
-import dataclasses
 import json
 from json import JSONDecodeError
 from typing import Any, ClassVar, NamedTuple, Optional, cast
@@ -38,19 +37,35 @@ def _get_order_by(qs: QuerySet) -> list[OrderBy]:
 class OrderingDescriptor(NamedTuple):
     attname: str
     order_by: OrderBy
+    # we have to assume everything is nullable by default
+    maybe_null: bool = True
 
-    def get_comparator(self, value, before: bool) -> Optional[Q]:
+    def get_comparator(self, value: Any, before: bool) -> Optional[Q]:
         if value is None:
+            # 1. When nulls are first:
+            #    1.1 there is nothing before "null"
+            #    1.2 after "null" comes everything non-null
+            # 2. When nulls are last:
+            #    2.1 there is nothing after "null"
+            #    2.2 before "null" comes everything non-null
+            # => 1.1 and 2.1 require no checks
+            # => 1.2 and 2.2 require an "is not null" check
             if bool(self.order_by.nulls_first) ^ before:
-                return Q((f"{self.attname}__isnull", False))
+                return Q((f"{self.attname}{LOOKUP_SEP}isnull", False))
             return None
         lookup = "lt" if before ^ self.order_by.descending else "gt"
-        return Q((f"{self.attname}{LOOKUP_SEP}{lookup}", value))
+        cmp = Q((f"{self.attname}{LOOKUP_SEP}{lookup}", value))
+
+        if self.maybe_null and bool(self.order_by.nulls_first) == before:
+            # if nulls are first, "before any value" can also mean "is null"
+            # if nulls are last, "after any value" can also mean "is null"
+            cmp |= Q((f"{self.attname}{LOOKUP_SEP}isnull", True))
+        return cmp
 
     def get_eq(self, value) -> Q:
         if value is None:
-            return Q((f"{self.attname}__isnull", True))
-        return Q((f"{self.attname}__exact", value))
+            return Q((f"{self.attname}{LOOKUP_SEP}isnull", True))
+        return Q((f"{self.attname}{LOOKUP_SEP}exact", value))
 
 
 def annotate_ordering_fields(
@@ -82,7 +97,11 @@ def annotate_ordering_fields(
                     new_only = set(existing)
                 new_only.add(field_name)
             descriptors.append(
-                OrderingDescriptor(order_by.expression.field.attname, order_by)
+                OrderingDescriptor(
+                    order_by.expression.field.attname,
+                    order_by,
+                    maybe_null=order_by.expression.field.null,
+                )
             )
             if order_by.expression.field.primary_key:
                 pk_in_order = True
@@ -109,7 +128,7 @@ def annotate_ordering_fields(
         # So this is safe.
         pk_order = F("pk").resolve_expression(qs.query).asc()
         order_bys.append(pk_order)
-        descriptors.append(OrderingDescriptor("pk", pk_order))
+        descriptors.append(OrderingDescriptor("pk", pk_order, maybe_null=False))
         qs = qs._chain()  # type: ignore
         qs.query.order_by += (pk_order,)
     return qs.annotate(**annotations), descriptors, order_bys
@@ -123,20 +142,22 @@ def extract_cursor_values(
 
 def build_tuple_compare(
     descriptors: list[OrderingDescriptor],
-    cursor_values: list,
+    cursor_values: list[Optional[str]],
     before: bool,
 ) -> Q:
     current = None
     for descriptor, field_value in zip(reversed(descriptors), reversed(cursor_values)):
-        value_expr = Value(
-            field_value, output_field=descriptor.order_by.expression.output_field
-        )
-        lt = descriptor.get_comparator(value_expr, before)
+        if field_value is None:
+            value_expr = None
+        else:
+            output_field = descriptor.order_by.expression.output_field
+            value_expr = Value(field_value, output_field=output_field)
+        cmp = descriptor.get_comparator(value_expr, before)
         if current is None:
-            current = lt
+            current = cmp
         else:
             eq = descriptor.get_eq(value_expr)
-            current = lt | (eq & current) if lt is not None else eq & current
+            current = cmp | (eq & current) if cmp is not None else eq & current
     return current if current is not None else Q()
 
 
@@ -146,7 +167,7 @@ class AttrHelper:
 
 def _extract_expression_value(
     model: models.Model, expr: Expression, attname: str
-) -> str:
+) -> Optional[str]:
     output_field = expr.output_field
     # Unfortunately Field.value_to_string operates on the object, not a direct value
     # So we have to potentially construct a fake object
@@ -158,11 +179,15 @@ def _extract_expression_value(
         # If the field doesn't have an attname, it's a dynamically constructed field,
         # for the purposes of output_field in an expression. Just set its attname, it doesn't hurt anything
         output_field.attname = field_attname = attname
+    obj: Any
     if field_attname != attname:
         obj = AttrHelper()
         setattr(obj, output_field.attname, getattr(model, attname))
     else:
         obj = model
+    value = output_field.value_from_object(obj)
+    if value is None:
+        return None
     # value_to_string is missing from django-types
     return output_field.value_to_string(obj)  # type: ignore
 
@@ -254,28 +279,27 @@ def apply_cursor_pagination(
     return qs, ordering_descriptors
 
 
-@dataclasses.dataclass
-class OrderedCollectionCursor:
-    PREFIX: ClassVar[str] = "orderedcursor"
+class OrderedCollectionCursor(NamedTuple):
+    field_values: list[Any]
 
-    field_values: list[str]
-
-    @classmethod
+    @staticmethod
     def from_model(
-        cls, model: models.Model, descriptors: list[OrderingDescriptor]
-    ) -> Self:
+        model: models.Model, descriptors: list[OrderingDescriptor]
+    ) -> "OrderedCollectionCursor":
         values = [
             _extract_expression_value(
                 model, descriptor.order_by.expression, descriptor.attname
             )
             for descriptor in descriptors
         ]
-        return cls(field_values=values)
+        return OrderedCollectionCursor(field_values=values)
 
-    @classmethod
-    def from_cursor(cls, cursor: str, descriptors: list[OrderingDescriptor]) -> Self:
+    @staticmethod
+    def from_cursor(
+        cursor: str, descriptors: list[OrderingDescriptor]
+    ) -> "OrderedCollectionCursor":
         type_, values_json = from_base64(cursor)
-        if type_ != cls.PREFIX:
+        if type_ != DjangoCursorEdge.PREFIX:
             raise ValueError("Invalid Cursor")
         try:
             string_values = json.loads(values_json)
@@ -284,7 +308,7 @@ class OrderedCollectionCursor:
         if (
             not isinstance(string_values, list)
             or len(string_values) != len(descriptors)
-            or any(not isinstance(v, str) for v in string_values)
+            or any(not (v is None or isinstance(v, str)) for v in string_values)
         ):
             raise ValueError("Invalid cursor")
 
@@ -296,16 +320,19 @@ class OrderedCollectionCursor:
         except ValidationError as e:
             raise ValueError("Invalid cursor") from e
 
-        return cls(decoded_values)
+        return OrderedCollectionCursor(decoded_values)
 
     def to_cursor(self) -> str:
         return to_base64(
-            self.PREFIX, json.dumps(self.field_values, separators=(",", ":"))
+            DjangoCursorEdge.PREFIX,
+            json.dumps(self.field_values, separators=(",", ":")),
         )
 
 
 @strawberry.type(name="CursorEdge", description="An edge in a connection.")
 class DjangoCursorEdge(relay.Edge[relay.NodeType]):
+    PREFIX: ClassVar[str] = "orderedcursor"
+
     @classmethod
     def resolve_edge(
         cls, node: NodeType, *, cursor: Optional[OrderedCollectionCursor] = None
