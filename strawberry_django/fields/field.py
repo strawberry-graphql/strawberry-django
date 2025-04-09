@@ -323,8 +323,10 @@ class StrawberryDjangoField(
         )
 
         # If optimizer extension is enabled, optimize this queryset
-        ext = optimizer.optimizer.get()
-        if ext is not None:
+        if (
+            not self.disable_optimization
+            and (ext := optimizer.optimizer.get()) is not None
+        ):
             queryset = ext.optimize(queryset, info=info)
 
         return queryset
