@@ -55,7 +55,6 @@ from strawberry_django.relay import ListConnectionWithTotalCount
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
-from .relay_cursor import DjangoCursorConnection, apply_cursor_pagination
 from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
@@ -495,6 +494,8 @@ def _optimize_prefetch_queryset(
         StrawberryDjangoConnectionExtension,
         StrawberryDjangoField,
     )
+
+    from .relay_cursor import DjangoCursorConnection, apply_cursor_pagination
 
     if (
         not config

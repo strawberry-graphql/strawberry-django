@@ -1087,6 +1087,122 @@ def test_nested_cursor_pagination():
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("first", [None, 3])
+@pytest.mark.parametrize("after", [None, to_base64(DjangoCursorEdge.PREFIX, '["2"]')])
+@pytest.mark.parametrize("last", [None, 3])
+@pytest.mark.parametrize("before", [None, to_base64(DjangoCursorEdge.PREFIX, '["2"]')])
+def test_total_count_ignores_pagination(test_objects, first, after, before, last):
+    query = """
+    query TestQuery($first: Int, $after: String, $last: Int, $before: String) {
+        projects(first: $first, after: $after, last: $last, before: $before, order: { id: ASC }) {
+            totalCount
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query, {"first": first, "after": after, "last": last, "before": before}
+        )
+        assert result.data == {"projects": {"totalCount": 6}}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_total_count_works_with_edges(test_objects):
+    query = """
+    query TestQuery($first: Int, $after: String, $last: Int, $before: String) {
+        projects(first: $first, after: $after, last: $last, before: $before, order: { id: ASC }) {
+            totalCount
+            edges {
+              node {
+                id
+              }
+            }
+        }
+    }
+    """
+    with assert_num_queries(2):
+        result = schema.execute_sync(
+            query, {"first": 3, "after": to_base64(DjangoCursorEdge.PREFIX, '["2"]')}
+        )
+        assert result.data == {
+            "projects": {
+                "totalCount": 6,
+                "edges": [
+                    {"node": {"id": str(GlobalID("ProjectType", "3"))}},
+                    {"node": {"id": str(GlobalID("ProjectType", "4"))}},
+                    {"node": {"id": str(GlobalID("ProjectType", "5"))}},
+                ],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_total_count():
+    p1 = Project.objects.create()
+    p2 = Project.objects.create()
+
+    p1m = [Milestone.objects.create(project=p1) for _ in range(3)]
+    p2m = [Milestone.objects.create(project=p2) for _ in range(2)]
+
+    query = """
+    query TestQuery {
+        projects(first: 2, order: { id: ASC }) {
+            edges {
+              node {
+                id
+                milestones { totalCount edges { node { id } } }
+              }
+            }
+        }
+    }
+    """
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+        assert result.data == {
+            "projects": {
+                "edges": [
+                    {
+                        "node": {
+                            "id": str(GlobalID("ProjectType", str(p1.pk))),
+                            "milestones": {
+                                "totalCount": 3,
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "id": str(
+                                                GlobalID("MilestoneType", str(m.pk))
+                                            )
+                                        }
+                                    }
+                                    for m in p1m
+                                ],
+                            },
+                        }
+                    },
+                    {
+                        "node": {
+                            "id": str(GlobalID("ProjectType", str(p2.pk))),
+                            "milestones": {
+                                "totalCount": 2,
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "id": str(
+                                                GlobalID("MilestoneType", str(m.pk))
+                                            )
+                                        }
+                                    }
+                                    for m in p2m
+                                ],
+                            },
+                        }
+                    },
+                ],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "cursor",
     [

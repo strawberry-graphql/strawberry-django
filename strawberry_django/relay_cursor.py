@@ -21,7 +21,9 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
-from strawberry_django.pagination import apply_window_pagination
+from strawberry_django import django_resolver
+from strawberry_django.optimizer import is_optimized_by_prefetching
+from strawberry_django.pagination import apply_window_pagination, get_total_count
 from strawberry_django.queryset import get_queryset_config
 
 
@@ -256,17 +258,18 @@ def apply_cursor_pagination(
             raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
         slice_ = slice(last + 1)
         qs = qs.reverse()
-    if slice_ is not None:
-        if related_field_id is not None:
-            offset = slice_.start or 0
-            qs = apply_window_pagination(
-                qs,
-                related_field_id=related_field_id,
-                offset=offset,
-                limit=slice_.stop - offset,
-            )
-        else:
-            qs = qs[slice_]
+    if related_field_id is not None:
+        # we always apply window pagination for nested connections,
+        # because we want its total count annotation
+        offset = slice_.start or 0 if slice_ is not None else 0
+        qs = apply_window_pagination(
+            qs,
+            related_field_id=related_field_id,
+            offset=offset,
+            limit=slice_.stop - offset if slice_ is not None else None,
+        )
+    elif slice_ is not None:
+        qs = qs[slice_]
 
     get_queryset_config(qs).ordering_descriptors = ordering_descriptors
 
@@ -339,6 +342,15 @@ class DjangoCursorEdge(relay.Edge[relay.NodeType]):
     name="CursorConnection", description="A connection to a list of items."
 )
 class DjangoCursorConnection(relay.Connection[relay.NodeType]):
+    total_count_qs: strawberry.Private[Optional[QuerySet]] = None
+
+    @strawberry.field(description="Total quantity of existing nodes.")
+    @django_resolver
+    def total_count(self) -> int:
+        assert self.total_count_qs is not None
+
+        return get_total_count(self.total_count_qs)
+
     # TODO: Django CursorEdge should not exist, but relay.Edge has a hardcoded prefix currently
     edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(  # type: ignore
         description="Contains the nodes in this connection"
@@ -357,10 +369,9 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         max_results: Optional[int] = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
-        from strawberry_django.optimizer import is_optimized_by_prefetching
-
         if not isinstance(nodes, QuerySet):
             raise TypeError("DjangoCursorConnection requires a QuerySet")
+        total_count_qs: QuerySet = nodes
         qs: QuerySet
         if not is_optimized_by_prefetching(nodes):
             qs, ordering_descriptors = apply_cursor_pagination(
@@ -391,6 +402,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         if not should_resolve_list_connection_edges(info):
             return cls(
                 edges=[],
+                total_count_qs=total_count_qs,
                 page_info=PageInfo(
                     start_cursor=None,
                     end_cursor=None,
@@ -432,6 +444,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
             return cls(
                 edges=edges,
+                total_count_qs=total_count_qs,
                 page_info=PageInfo(
                     start_cursor=edges[0].cursor if edges else None,
                     end_cursor=edges[-1].cursor if edges else None,
