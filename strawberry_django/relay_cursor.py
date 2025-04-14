@@ -1,6 +1,7 @@
 import json
+from dataclasses import dataclass
 from json import JSONDecodeError
-from typing import Any, ClassVar, NamedTuple, Optional, cast
+from typing import Any, ClassVar, Optional, cast
 
 import strawberry
 from asgiref.sync import sync_to_async
@@ -36,7 +37,8 @@ def _get_order_by(qs: QuerySet) -> list[OrderBy]:
     ]
 
 
-class OrderingDescriptor(NamedTuple):
+@dataclass
+class OrderingDescriptor:
     attname: str
     order_by: OrderBy
     # we have to assume everything is nullable by default
@@ -277,25 +279,24 @@ def apply_cursor_pagination(
     return qs, ordering_descriptors
 
 
-class OrderedCollectionCursor(NamedTuple):
+@dataclass
+class OrderedCollectionCursor:
     field_values: list[Any]
 
-    @staticmethod
+    @classmethod
     def from_model(
-        model: models.Model, descriptors: list[OrderingDescriptor]
-    ) -> "OrderedCollectionCursor":
+        cls, model: models.Model, descriptors: list[OrderingDescriptor]
+    ) -> Self:
         values = [
             _extract_expression_value(
                 model, descriptor.order_by.expression, descriptor.attname
             )
             for descriptor in descriptors
         ]
-        return OrderedCollectionCursor(field_values=values)
+        return cls(field_values=values)
 
-    @staticmethod
-    def from_cursor(
-        cursor: str, descriptors: list[OrderingDescriptor]
-    ) -> "OrderedCollectionCursor":
+    @classmethod
+    def from_cursor(cls, cursor: str, descriptors: list[OrderingDescriptor]) -> Self:
         type_, values_json = from_base64(cursor)
         if type_ != DjangoCursorEdge.PREFIX:
             raise ValueError("Invalid cursor")
@@ -318,7 +319,7 @@ class OrderedCollectionCursor(NamedTuple):
         except ValidationError as e:
             raise ValueError("Invalid cursor") from e
 
-        return OrderedCollectionCursor(decoded_values)
+        return cls(decoded_values)
 
     def to_cursor(self) -> str:
         return to_base64(
