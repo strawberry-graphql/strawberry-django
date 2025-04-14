@@ -1,4 +1,4 @@
-# ruff: noqa: TRY002, B904, BLE001, F811, PT012, A001, PLC2701
+# ruff: noqa: B904, BLE001, F811, PT012, A001
 from enum import Enum
 from typing import Any, Optional, cast
 
