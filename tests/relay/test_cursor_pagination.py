@@ -644,6 +644,41 @@ def test_first_and_last_pagination(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_empty_connection():
+    query = """
+    query TestQuery {
+        projects {
+            edges {
+                cursor
+                node { id name }
+            }
+            pageInfo {
+              startCursor
+              endCursor
+              hasNextPage
+              hasPreviousPage
+            }
+        }
+    }
+    """
+    with assert_num_queries(1):
+        result = schema.execute_sync(
+            query,
+        )
+        assert result.data == {
+            "projects": {
+                "pageInfo": {
+                    "startCursor": None,
+                    "endCursor": None,
+                    "hasNextPage": False,
+                    "hasPreviousPage": False,
+                },
+                "edges": [],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_cursor_pagination_custom_order(test_objects):
     query = """
     query TestQuery($first: Int, $after: String) {
