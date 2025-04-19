@@ -41,7 +41,7 @@ from strawberry.extensions import SchemaExtension
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
-from strawberry.types import get_object_definition
+from strawberry.types import get_object_definition, has_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.types.lazy_type import LazyType
@@ -94,7 +94,6 @@ __all__ = [
     "optimize",
 ]
 
-NESTED_PREFETCH_MARK = "_strawberry_nested_prefetch_optimized"
 _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
@@ -496,6 +495,8 @@ def _optimize_prefetch_queryset(
         StrawberryDjangoField,
     )
 
+    from .relay_cursor import DjangoCursorConnection, apply_cursor_pagination
+
     if (
         not config
         or not config.enable_nested_relations_prefetch
@@ -569,6 +570,17 @@ def _optimize_prefetch_queryset(
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
                     limit=slice_metadata.end - slice_metadata.start,
+                    max_results=connection_extension.max_results,
+                )
+            elif connection_type is DjangoCursorConnection:
+                qs, _ = apply_cursor_pagination(
+                    qs,
+                    related_field_id=related_field_id,
+                    info=Info(_raw_info=info, _field=field),
+                    first=field_kwargs.get("first"),
+                    last=field_kwargs.get("last"),
+                    before=field_kwargs.get("before"),
+                    after=field_kwargs.get("after"),
                     max_results=connection_extension.max_results,
                 )
             else:
@@ -1246,13 +1258,20 @@ def _get_model_hints_from_connection(
         if edge.name.value != "edges":
             continue
 
-        e_definition = get_object_definition(relay.Edge, strict=True)
-        e_type = e_definition.resolve_generic(
-            relay.Edge[cast("type[relay.Node]", n_type)],
-        )
+        e_field = object_definition.get_field("edges")
+        if e_field is None:
+            break
+
+        e_definition = e_field.type
+        while isinstance(e_definition, StrawberryContainer):
+            e_definition = e_definition.of_type
+        if has_object_definition(e_definition):
+            e_definition = get_object_definition(e_definition, strict=True)
+        assert isinstance(e_definition, StrawberryObjectDefinition)
+
         e_gql_definition = _get_gql_definition(
             schema,
-            get_object_definition(e_type, strict=True),
+            e_definition,
         )
         assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
         e_info = _generate_selection_resolve_info(
@@ -1451,20 +1470,17 @@ def optimize(
 
 
 def is_optimized(qs: QuerySet) -> bool:
-    return get_queryset_config(qs).optimized or is_optimized_by_prefetching(qs)
+    config = get_queryset_config(qs)
+    return config.optimized or config.optimized_by_prefetching
 
 
 def mark_optimized_by_prefetching(qs: QuerySet[_M]) -> QuerySet[_M]:
-    # This is a bit of a hack, but there is no easy way to mark a related manager
-    # as optimized at this phase, so we just add a mark to the queryset that
-    # we can check leater on using is_optimized_by_prefetching
-    return qs.annotate(**{
-        NESTED_PREFETCH_MARK: models.Value(True),
-    })
+    get_queryset_config(qs).optimized_by_prefetching = True
+    return qs
 
 
 def is_optimized_by_prefetching(qs: QuerySet) -> bool:
-    return NESTED_PREFETCH_MARK in qs.query.annotations
+    return get_queryset_config(qs).optimized_by_prefetching
 
 
 optimizer: contextvars.ContextVar[DjangoOptimizerExtension | None] = (
