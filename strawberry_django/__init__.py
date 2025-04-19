@@ -7,6 +7,7 @@ from .fields.filter_types import (
     DateFilterLookup,
     DatetimeFilterLookup,
     FilterLookup,
+    GeometryFilterLookup,
     RangeLookup,
     TimeFilterLookup,
 )
@@ -37,6 +38,8 @@ __all__ = [
     "DjangoImageType",
     "DjangoModelType",
     "FilterLookup",
+    "GeometryFilterLookup",
+    "GeometryFilterLookup",
     "ListInput",
     "ManyToManyInput",
     "ManyToOneInput",
