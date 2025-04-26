@@ -95,7 +95,7 @@ class Query:
         self,
         info: Info
         filters: FruitFilter | None = strawberry.UNSET,
-        order: FruitOrder | None = strawberry.UNSET  
+        order: FruitOrder | None = strawberry.UNSET
     ) -> list[Fruit]:
         qs = models.fruit.objects.all()
 
