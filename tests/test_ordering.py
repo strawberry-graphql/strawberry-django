@@ -1,4 +1,3 @@
-# ruff: noqa: TRY002, B904, BLE001, F811, PT012
 import textwrap
 from typing import Optional
 
