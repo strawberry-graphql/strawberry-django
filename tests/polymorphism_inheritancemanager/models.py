@@ -1,6 +1,8 @@
 from django.db import models
 from model_utils.managers import InheritanceManager
 
+from strawberry_django.descriptors import model_property
+
 
 class Company(models.Model):
     name = models.CharField(max_length=100)
@@ -30,6 +32,10 @@ class Project(models.Model):
 class ArtProject(Project):
     artist = models.CharField(max_length=30)
     art_style = models.CharField(max_length=30)
+
+    @model_property(only=("art_style",))
+    def art_style_upper(self) -> str:
+        return self.art_style.upper()
 
 
 class ResearchProject(Project):
