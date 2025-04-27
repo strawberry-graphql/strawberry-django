@@ -298,7 +298,7 @@ class OrderedCollectionCursor:
     @classmethod
     def from_cursor(cls, cursor: str, descriptors: list[OrderingDescriptor]) -> Self:
         type_, values_json = from_base64(cursor)
-        if type_ != DjangoCursorEdge.PREFIX:
+        if type_ != DjangoCursorEdge.CURSOR_PREFIX:
             raise ValueError("Invalid cursor")
         try:
             string_values = json.loads(values_json)
@@ -321,23 +321,13 @@ class OrderedCollectionCursor:
 
         return cls(decoded_values)
 
-    def to_cursor(self) -> str:
-        return to_base64(
-            DjangoCursorEdge.PREFIX,
-            json.dumps(self.field_values, separators=(",", ":")),
-        )
+    def __str__(self):
+        return json.dumps(self.field_values, separators=(",", ":"))
 
 
 @strawberry.type(name="CursorEdge", description="An edge in a connection.")
 class DjangoCursorEdge(relay.Edge[relay.NodeType]):
-    PREFIX: ClassVar[str] = "orderedcursor"
-
-    @classmethod
-    def resolve_edge(
-        cls, node: NodeType, *, cursor: Optional[OrderedCollectionCursor] = None
-    ) -> Self:
-        assert cursor is not None
-        return cls(cursor=cursor.to_cursor(), node=node)
+    CURSOR_PREFIX: ClassVar[str] = "orderedcursor"
 
 
 @strawberry.type(
@@ -353,7 +343,6 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
         return get_total_count(self.total_count_qs)
 
-    # TODO: Django CursorEdge should not exist, but relay.Edge has a hardcoded prefix currently
     edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(  # type: ignore
         description="Contains the nodes in this connection"
     )
