@@ -93,10 +93,10 @@ class Query:
     @strawberry_django.field
     def fruits(
         self,
-        filters: FruitFilter | None = strawberry.UNSET,
-        order: FruitOrder | None = strawberry.UNSET,
         info: Info
-    ) -> list[Fruit]
+        filters: FruitFilter | None = strawberry.UNSET,
+        order: FruitOrder | None = strawberry.UNSET
+    ) -> list[Fruit]:
         qs = models.fruit.objects.all()
 
         # apply filters if defined
