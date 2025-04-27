@@ -13,7 +13,7 @@ from django.db.models.expressions import Col
 from django.db.models.functions import RowNumber
 from django.db.models.sql.datastructures import BaseTable
 from strawberry import Info, relay
-from strawberry.relay import NodeType, PageInfo, from_base64, to_base64
+from strawberry.relay import NodeType, PageInfo, from_base64
 from strawberry.relay.types import NodeIterableType
 from strawberry.relay.utils import should_resolve_list_connection_edges
 from strawberry.types import get_object_definition
