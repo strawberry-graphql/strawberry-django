@@ -373,7 +373,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         field,
     ),
 )
-def ordering(
+def order_type(
     model: type[Model],
     *,
     name: str | None = None,

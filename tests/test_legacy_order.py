@@ -42,7 +42,7 @@ class ColorOrder:
         return [value.resolve(f"{prefix}name")]
 
 
-@strawberry_django.ordering.ordering(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrdering:
     name: auto
 

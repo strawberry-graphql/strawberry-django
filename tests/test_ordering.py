@@ -25,7 +25,7 @@ from tests import models, utils
 from tests.types import Fruit
 
 
-@strawberry_django.ordering.ordering(models.Color)
+@strawberry_django.order_type(models.Color)
 class ColorOrder:
     pk: auto
 
@@ -34,7 +34,7 @@ class ColorOrder:
         return [value.resolve(f"{prefix}name")]
 
 
-@strawberry_django.ordering.ordering(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     color_id: auto
     name: auto
@@ -52,7 +52,7 @@ class FruitOrder:
         ), [value.resolve("count_nulls")]
 
 
-@strawberry_django.ordering.ordering(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class CustomFruitOrder:
     reverse_name: auto
 
@@ -89,7 +89,7 @@ def test_correct_ordering_schema():
         id: auto
         name: auto
 
-    @strawberry_django.ordering.ordering(models.Fruit, name="FruitOrder")
+    @strawberry_django.order_type(models.Fruit, name="FruitOrder")
     class MiniFruitOrder:
         name: auto
 
@@ -250,7 +250,7 @@ def test_multi_order_respected(query, db):
 
 
 def test_order_type():
-    @strawberry_django.ordering.ordering(models.Fruit)
+    @strawberry_django.ordering.order_type(models.Fruit)
     class FruitOrder:
         color_id: auto
         name: auto
