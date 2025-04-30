@@ -69,7 +69,7 @@ def test_field_permission_classes():
 
 
 def test_auto_id():
-    @strawberry_django.filter(FieldAttributeModel)
+    @strawberry_django.filter_type(FieldAttributeModel)
     class MyTypeFilter:
         id: auto
         field: auto
@@ -109,7 +109,7 @@ def test_auto_id():
 
 
 def test_auto_id_with_node():
-    @strawberry_django.filter(FieldAttributeModel)
+    @strawberry_django.filter_type(FieldAttributeModel)
     class MyTypeFilter:
         id: auto
         field: auto
@@ -166,7 +166,7 @@ def test_auto_id_with_node():
     },
 )
 def test_auto_id_with_node_mapping_global_id():
-    @strawberry_django.filter(FieldAttributeModel)
+    @strawberry_django.filter_type(FieldAttributeModel)
     class MyTypeFilter:
         id: auto
         field: auto

@@ -575,7 +575,7 @@ def test_pagination_query_with_resolver_schema():
         id: int
         name: str
 
-    @strawberry_django.filter(models.Fruit)
+    @strawberry_django.filter_type(models.Fruit)
     class FruitFilter:
         name: str
 
@@ -651,7 +651,7 @@ def test_pagination_query_with_resolver():
         id: int
         name: str
 
-    @strawberry_django.filter(models.Fruit)
+    @strawberry_django.filter_type(models.Fruit)
     class FruitFilter:
         name: strawberry.auto
 
@@ -777,7 +777,7 @@ def test_pagination_query_with_resolver_arguments():
         id: int
         name: str
 
-    @strawberry_django.filter(models.Fruit)
+    @strawberry_django.filter_type(models.Fruit)
     class FruitFilter:
         name: strawberry.auto
 

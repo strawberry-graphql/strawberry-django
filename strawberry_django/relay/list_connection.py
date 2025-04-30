@@ -1,7 +1,7 @@
 import inspect
 import warnings
 from collections.abc import Sized
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import strawberry
 from django.db import models
@@ -10,14 +10,14 @@ from strawberry.relay.types import NodeIterableType
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Self
+from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_total_count
 from strawberry_django.resolvers import django_resolver
 
 
 @strawberry.type(name="Connection", description="A connection to a list of items.")
-class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
+class DjangoListConnection(relay.ListConnection[relay.NodeType]):
     nodes: strawberry.Private[Optional[NodeIterableType[relay.NodeType]]] = None
 
     @strawberry.field(description="Total quantity of existing nodes.")
@@ -146,3 +146,22 @@ class ListConnectionWithTotalCount(relay.ListConnection[relay.NodeType]):
                 has_next_page=has_next_page,
             ),
         )
+
+
+if TYPE_CHECKING:
+
+    @deprecated(
+        "`ListConnectionWithTotalCount` is deprecated, use `DjangoListConnection` instead."
+    )
+    class ListConnectionWithTotalCount(DjangoListConnection): ...
+
+
+def __getattr__(name: str) -> Any:
+    if name == "ListConnectionWithTotalCount":
+        warnings.warn(
+            "`ListConnectionWithTotalCount` is deprecated, use `DjangoListConnection` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return DjangoListConnection
+    raise AttributeError(f"module {__name__} has no attribute {name}")

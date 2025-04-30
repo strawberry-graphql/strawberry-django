@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+import warnings
 from enum import Enum
 from types import FunctionType
 from typing import (
@@ -20,7 +21,7 @@ from strawberry.types import has_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
-from typing_extensions import Self, assert_never, dataclass_transform
+from typing_extensions import Self, assert_never, dataclass_transform, deprecated
 
 from strawberry_django.fields.filter_order import (
     RESOLVE_VALUE_META,
@@ -359,7 +360,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         field,
     ),
 )
-def filter(  # noqa: A001
+def filter_type(
     model: type[Model],
     *,
     name: str | None = None,
@@ -377,3 +378,20 @@ def filter(  # noqa: A001
         is_filter="lookups" if lookups else True,
         partial=True,
     )
+
+
+if TYPE_CHECKING:
+    filter = deprecated("`filter` is deprecated, use `filter_type` instead.")(  # noqa: A001
+        filter_type
+    )
+
+
+def __getattr__(name: str) -> Any:
+    if name == "filter":
+        warnings.warn(
+            "`filter` is deprecated, use `filter_type` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return filter_type
+    raise AttributeError(f"module {__name__} has no attribute {name}")
