@@ -10,7 +10,7 @@ from strawberry.relay import GlobalID, Node, to_base64
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from strawberry_django.relay_cursor import (
+from strawberry_django.relay import (
     DjangoCursorConnection,
     DjangoCursorEdge,
 )

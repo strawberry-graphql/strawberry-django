@@ -22,10 +22,10 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
-from strawberry_django import django_resolver
 from strawberry_django.optimizer import is_optimized_by_prefetching
 from strawberry_django.pagination import apply_window_pagination, get_total_count
 from strawberry_django.queryset import get_queryset_config
+from strawberry_django.resolvers import django_resolver
 
 
 def _get_order_by(qs: QuerySet) -> list[OrderBy]:

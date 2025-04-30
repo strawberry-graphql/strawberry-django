@@ -51,7 +51,7 @@ from typing_extensions import assert_never, assert_type
 from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
 from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
-from strawberry_django.relay import ListConnectionWithTotalCount
+from strawberry_django.relay_impl.list_connection import ListConnectionWithTotalCount
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
@@ -495,8 +495,10 @@ def _optimize_prefetch_queryset(
         StrawberryDjangoConnectionExtension,
         StrawberryDjangoField,
     )
-
-    from .relay_cursor import DjangoCursorConnection, apply_cursor_pagination
+    from strawberry_django.relay_impl.cursor_connection import (
+        DjangoCursorConnection,
+        apply_cursor_pagination,
+    )
 
     if (
         not config
