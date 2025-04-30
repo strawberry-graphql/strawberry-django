@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "strawberry-graphql-django"
 packages = [{ include = "strawberry_django" }]
-version = "0.57.1"
+version = "0.58.0"
 description = "Strawberry GraphQL Django extension"
 authors = [
     "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
@@ -28,6 +28,8 @@ classifiers = [
     "Framework :: Django",
     "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
 ]
 
 [tool.poetry.dependencies]
@@ -47,7 +49,7 @@ django-types = "^0.20.0"
 factory-boy = "^3.2.1"
 pillow = "^11.0.0"
 pytest = "^8.0.2"
-pytest-asyncio = "^0.25.0"
+pytest-asyncio = "^0.26.0"
 pytest-cov = "^6.0.0"
 pytest-django = "^4.1.0"
 pytest-mock = "^3.5.1"
@@ -55,10 +57,11 @@ pytest-snapshot = "^0.9.0"
 pytest-watch = "^4.2.0"
 ruff = "^0.11.2"
 django-polymorphic = "^3.1.0"
-setuptools = "^77.0.3"
+setuptools = "^78.1.0"
 psycopg2 = "^2.9.9"
 psycopg2-binary = "^2.9.9"
 django-tree-queries = "^0.19.0"
+django-model-utils = "^5.0.0"
 
 [tool.poetry.extras]
 debug-toolbar = ["django-debug-toolbar"]

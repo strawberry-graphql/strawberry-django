@@ -99,8 +99,9 @@ schema = strawberry.Schema(
         TechnicalProjectType,
         EngineeringProjectType,
         SoftwareProjectType,
-        AndroidProjectType,
+        AppProjectType,
         IOSProjectType,
+        AndroidProjectType,
     ],
     extensions=[DjangoOptimizerExtension],
 )

@@ -8,6 +8,7 @@ import weakref
 from typing import Optional
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
+from debug_toolbar import VERSION as _DEBUG_TOOLBAR_VERSION
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
@@ -26,6 +27,10 @@ from strawberry.django.views import BaseView
 _HTML_TYPES = {"text/html", "application/xhtml+xml"}
 
 _store_cache = weakref.WeakKeyDictionary()
+_debug_toolbar_51plus = [
+    int("".join(filter(str.isdigit, n)) or "0")
+    for n in _DEBUG_TOOLBAR_VERSION.split(".")
+] >= [5, 1]
 _debug_toolbar_map: "weakref.WeakKeyDictionary[HttpRequest, DebugToolbar]" = (
     weakref.WeakKeyDictionary()
 )
@@ -153,7 +158,11 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
     def process_request(self, request: HttpRequest):
         response = super().__call__(request)
 
-        show_toolbar = get_show_toolbar()
+        if _debug_toolbar_51plus:
+            # async mode is handled on our side
+            show_toolbar = get_show_toolbar(async_mode=False)
+        else:
+            show_toolbar = get_show_toolbar()
         if (
             callable(show_toolbar) and not show_toolbar(request)
         ) or DebugToolbar.is_toolbar_request(request):
