@@ -335,6 +335,9 @@ class DjangoCursorEdge(relay.Edge[relay.NodeType]):
 )
 class DjangoCursorConnection(relay.Connection[relay.NodeType]):
     total_count_qs: strawberry.Private[Optional[QuerySet]] = None
+    edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(  # type: ignore
+        description="Contains the nodes in this connection"
+    )
 
     @strawberry.field(description="Total quantity of existing nodes.")
     @django_resolver
@@ -343,9 +346,6 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
         return get_total_count(self.total_count_qs)
 
-    edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(  # type: ignore
-        description="Contains the nodes in this connection"
-    )
 
     @classmethod
     def resolve_connection(
