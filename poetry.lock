@@ -958,4 +958,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "53a2d7c1957529df02e4dbc90a9d8f6b6ba3fe9d805ab0a5afb955e3c99dc0df"
+content-hash = "6719e563136291729d670a5bb2e4e67c676315da3336c372679ab45bf65ffbcb"
