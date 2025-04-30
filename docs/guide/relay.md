@@ -100,5 +100,5 @@ class Query:
 
     @strawberry_django.connection(DjangoCursorConnection[FruitType])
     def fruit_with_custom_resolver(self) -> list[Fruit]:
-      return Fruit.objects.all()
+        return Fruit.objects.all()
 ```
