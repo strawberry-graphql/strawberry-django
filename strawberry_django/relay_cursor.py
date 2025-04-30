@@ -346,7 +346,6 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
         return get_total_count(self.total_count_qs)
 
-
     @classmethod
     def resolve_connection(
         cls,
