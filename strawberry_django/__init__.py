@@ -24,7 +24,7 @@ from .fields.types import (
 )
 from .filters import filter, process_filters  # noqa: A004
 from .mutations.mutations import input_mutation, mutation
-from .ordering import Ordering, order, process_order
+from .ordering import Ordering, order, order_type, process_order
 from .resolvers import django_resolver
 from .type import input, interface, partial, type  # noqa: A004
 
@@ -63,6 +63,7 @@ __all__ = [
     "offset_paginated",
     "order",
     "order_field",
+    "order_type",
     "ordering",
     "pagination",
     "partial",

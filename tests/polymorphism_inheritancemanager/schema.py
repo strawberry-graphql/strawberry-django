@@ -24,10 +24,19 @@ from .models import (
 class ProjectType:
     topic: strawberry.auto
 
+    @strawberry_django.field(only=("topic",))
+    def topic_upper(self) -> str:
+        return self.topic.upper()
+
 
 @strawberry_django.type(ArtProject)
 class ArtProjectType(ProjectType):
     artist: strawberry.auto
+    art_style_upper: strawberry.auto
+
+    @strawberry_django.field(only=("artist",))
+    def artist_upper(self) -> str:
+        return self.artist.upper()
 
 
 @strawberry_django.type(ResearchProject)

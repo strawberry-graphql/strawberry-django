@@ -435,3 +435,40 @@ def test_polymorphic_nested_list():
             }
         ]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_optimizer_hints_polymorphic():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+
+    query = """\
+    query {
+      projects {
+        __typename
+        topicUpper
+        ... on ArtProjectType {
+          artistUpper
+          artStyleUpper
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(1):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "__typename": "ArtProjectType",
+                "topicUpper": ap.topic.upper(),
+                "artistUpper": ap.artist.upper(),
+                "artStyleUpper": ap.art_style.upper(),
+            },
+            {
+                "__typename": "ResearchProjectType",
+                "topicUpper": rp.topic.upper(),
+            },
+        ]
+    }
