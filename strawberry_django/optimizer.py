@@ -51,7 +51,7 @@ from typing_extensions import assert_never, assert_type
 from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
 from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
-from strawberry_django.relay_impl.list_connection import ListConnectionWithTotalCount
+from strawberry_django.relay.list_connection import DjangoListConnection
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
@@ -495,7 +495,7 @@ def _optimize_prefetch_queryset(
         StrawberryDjangoConnectionExtension,
         StrawberryDjangoField,
     )
-    from strawberry_django.relay_impl.cursor_connection import (
+    from strawberry_django.relay.cursor_connection import (
         DjangoCursorConnection,
         apply_cursor_pagination,
     )
@@ -559,7 +559,7 @@ def _optimize_prefetch_queryset(
             )
             if (
                 connection_type is relay.ListConnection
-                or connection_type is ListConnectionWithTotalCount
+                or connection_type is DjangoListConnection
             ):
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
@@ -1514,7 +1514,7 @@ class DjangoOptimizerExtension(SchemaExtension):
             Enable prefetch of nested relations. This will allow for nested
             relations to be prefetched even when using filters/ordering/pagination.
             Note however that for connections, it will only work when for the
-            `ListConnection` and `ListConnectionWithTotalCount` types, as this optimization
+            `ListConnection` and `DjangoListConnection` types, as this optimization
             is not safe to be applied automatically for custom connections.
         enable_annotate_optimization:
             Enable `QuerySet.annotate` optimizations

@@ -23,7 +23,7 @@ def _filter_order_settings(settings):
 
 
 def test_filter():
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
         id: auto
         name: auto
@@ -44,7 +44,7 @@ def test_filter():
 
 
 def test_lookups():
-    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    @strawberry_django.filters.filter_type(models.Fruit, lookups=True)
     class Filter:
         id: auto
         name: auto
@@ -75,7 +75,7 @@ def test_inherit(testtype):
         color: auto
         types: auto
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter(Base):
         pass
 
@@ -93,11 +93,11 @@ def test_inherit(testtype):
 
 
 def test_relationship():
-    @strawberry_django.filters.filter(models.Color)
+    @strawberry_django.filters.filter_type(models.Color)
     class ColorFilter:
         name: auto
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
         color: Optional[ColorFilter]
 
@@ -112,7 +112,7 @@ def test_relationship():
 
 
 def test_relationship_with_inheritance():
-    @strawberry_django.filters.filter(models.Color)
+    @strawberry_django.filters.filter_type(models.Color)
     class ColorFilter:
         name: auto
 
@@ -120,7 +120,7 @@ def test_relationship_with_inheritance():
     class Base:
         color: auto
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter(Base):
         color: Optional[ColorFilter]
 

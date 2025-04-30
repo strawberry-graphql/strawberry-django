@@ -5,7 +5,7 @@ from strawberry import relay
 from typing_extensions import TypeAlias
 
 import strawberry_django
-from strawberry_django.relay import ListConnectionWithTotalCount
+from strawberry_django.relay import DjangoListConnection
 
 from .models import TreeNodeAuthor
 
@@ -22,4 +22,4 @@ class TreeNodeAuthorType(relay.Node):
     children: "TreeNodeAuthorConnection" = strawberry_django.connection()
 
 
-TreeNodeAuthorConnection: TypeAlias = ListConnectionWithTotalCount[TreeNodeAuthorType]
+TreeNodeAuthorConnection: TypeAlias = DjangoListConnection[TreeNodeAuthorType]

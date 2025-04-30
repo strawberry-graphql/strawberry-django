@@ -1,23 +1,28 @@
-from strawberry_django.relay_impl import utils
-from strawberry_django.relay_impl.cursor_connection import (
+import warnings
+from typing import TYPE_CHECKING, Any
+
+from .cursor_connection import (
     DjangoCursorConnection,
     DjangoCursorEdge,
     OrderedCollectionCursor,
     OrderingDescriptor,
     apply_cursor_pagination,
 )
-from strawberry_django.relay_impl.list_connection import ListConnectionWithTotalCount
-from strawberry_django.relay_impl.utils import (
+from .list_connection import DjangoListConnection
+from .utils import (
     resolve_model_id,
     resolve_model_id_attr,
     resolve_model_node,
     resolve_model_nodes,
 )
 
+if TYPE_CHECKING:
+    from .list_connection import ListConnectionWithTotalCount  # noqa: F401
+
 __all__ = [
     "DjangoCursorConnection",
     "DjangoCursorEdge",
-    "ListConnectionWithTotalCount",
+    "DjangoListConnection",
     "OrderedCollectionCursor",
     "OrderingDescriptor",
     "apply_cursor_pagination",
@@ -25,5 +30,15 @@ __all__ = [
     "resolve_model_id_attr",
     "resolve_model_node",
     "resolve_model_nodes",
-    "utils",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "ListConnectionWithTotalCount":
+        warnings.warn(
+            "`ListConnectionWithTotalCount` is deprecated, use `DjangoListConnection` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return DjangoListConnection
+    raise AttributeError(f"module {__name__} has no attribute {name}")

@@ -9,7 +9,7 @@ from django.db.models.query import QuerySet
 if TYPE_CHECKING:
     from strawberry import Info
 
-    from strawberry_django.relay_impl.cursor_connection import OrderingDescriptor
+    from strawberry_django.relay.cursor_connection import OrderingDescriptor
 
 _M = TypeVar("_M", bound=Model)
 

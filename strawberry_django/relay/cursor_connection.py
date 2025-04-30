@@ -22,7 +22,6 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
-from strawberry_django.optimizer import is_optimized_by_prefetching
 from strawberry_django.pagination import apply_window_pagination, get_total_count
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import django_resolver
@@ -359,6 +358,8 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         max_results: Optional[int] = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
+        from strawberry_django.optimizer import is_optimized_by_prefetching
+
         if not isinstance(nodes, QuerySet):
             raise TypeError("DjangoCursorConnection requires a QuerySet")
         total_count_qs: QuerySet = nodes
