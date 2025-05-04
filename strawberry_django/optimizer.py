@@ -41,7 +41,7 @@ from strawberry.extensions import SchemaExtension
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
-from strawberry.types import get_object_definition
+from strawberry.types import get_object_definition, has_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.types.lazy_type import LazyType
@@ -51,7 +51,7 @@ from typing_extensions import assert_never, assert_type
 from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
 from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
-from strawberry_django.relay import ListConnectionWithTotalCount
+from strawberry_django.relay.list_connection import DjangoListConnection
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
@@ -94,7 +94,6 @@ __all__ = [
     "optimize",
 ]
 
-NESTED_PREFETCH_MARK = "_strawberry_nested_prefetch_optimized"
 _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
@@ -350,8 +349,9 @@ class OptimizerStore:
 
         # Abort only optimization if one prefetch related was made for everything
         for ao in abort_only:
-            to_prefetch[ao].queryset.query.deferred_loading = (  # type: ignore
-                [],
+            # cast is safe as the loop above only adds Prefetch instances as abort_only
+            cast("Prefetch", to_prefetch[ao]).queryset.query.deferred_loading = (
+                set(),
                 True,
             )
 
@@ -512,6 +512,10 @@ def _optimize_prefetch_queryset(
         StrawberryDjangoConnectionExtension,
         StrawberryDjangoField,
     )
+    from strawberry_django.relay.cursor_connection import (
+        DjangoCursorConnection,
+        apply_cursor_pagination,
+    )
 
     if (
         not config
@@ -572,7 +576,7 @@ def _optimize_prefetch_queryset(
             )
             if (
                 connection_type is relay.ListConnection
-                or connection_type is ListConnectionWithTotalCount
+                or connection_type is DjangoListConnection
             ):
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
@@ -586,6 +590,17 @@ def _optimize_prefetch_queryset(
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
                     limit=slice_metadata.end - slice_metadata.start,
+                    max_results=connection_extension.max_results,
+                )
+            elif connection_type is DjangoCursorConnection:
+                qs, _ = apply_cursor_pagination(
+                    qs,
+                    related_field_id=related_field_id,
+                    info=Info(_raw_info=info, _field=field),
+                    first=field_kwargs.get("first"),
+                    last=field_kwargs.get("last"),
+                    before=field_kwargs.get("before"),
+                    after=field_kwargs.get("after"),
                     max_results=connection_extension.max_results,
                 )
             else:
@@ -984,7 +999,8 @@ def _get_hints_from_django_field(
     if (model_field := get_model_field(model, model_fieldname)) is None:
         return None
 
-    path = f"{prefix}{model_fieldname}"
+    lookup_prefix = prefix + LOOKUP_SEP if prefix else ""
+    path = f"{lookup_prefix}{model_fieldname}"
 
     if isinstance(model_field, (models.ForeignKey, OneToOneRel)):
         store = _get_hints_from_django_foreign_key(
@@ -1090,6 +1106,8 @@ def _get_model_hints(
                 # These must be prefixed with app_label__ModelName___ (note three underscores)
                 # This is a special syntax for django-polymorphic:
                 # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
+                # "prefix" however is written in terms of not including the final LOOKUP_SEP (i.e. "__")
+                # So we don't include the final __ here.
                 return _get_model_hints(
                     dj_definition.model,
                     schema,
@@ -1097,7 +1115,7 @@ def _get_model_hints(
                     parent_type=parent_type,
                     info=info,
                     config=config,
-                    prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}___",
+                    prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}_",
                 )
             if is_inheritance_manager(model._default_manager) and (
                 path_from_parent := dj_definition.model._meta.get_path_from_parent(
@@ -1107,7 +1125,6 @@ def _get_model_hints(
                 prefix = LOOKUP_SEP.join(
                     p.join_field.get_accessor_name() for p in path_from_parent
                 )
-                prefix += LOOKUP_SEP
                 return _get_model_hints(
                     dj_definition.model,
                     schema,
@@ -1124,14 +1141,17 @@ def _get_model_hints(
     if dj_type_store:
         store |= dj_type_store
 
+    lookup_prefix = prefix + LOOKUP_SEP if prefix else ""
     # Make sure that the model's pk is always selected when using only
     pk = model._meta.pk
     if pk is not None:
-        store.only.append(prefix + pk.attname)
+        store.only.append(lookup_prefix + pk.attname)
 
     # If this is a polymorphic Model, make sure to select its content type
     if is_polymorphic_model(model):
-        store.only.extend(prefix + f for f in model.polymorphic_internal_model_fields)
+        store.only.extend(
+            lookup_prefix + f for f in model.polymorphic_internal_model_fields
+        )
 
     selections = [
         field_data
@@ -1265,13 +1285,20 @@ def _get_model_hints_from_connection(
         if edge.name.value != "edges":
             continue
 
-        e_definition = get_object_definition(relay.Edge, strict=True)
-        e_type = e_definition.resolve_generic(
-            relay.Edge[cast("type[relay.Node]", n_type)],
-        )
+        e_field = object_definition.get_field("edges")
+        if e_field is None:
+            break
+
+        e_definition = e_field.type
+        while isinstance(e_definition, StrawberryContainer):
+            e_definition = e_definition.of_type
+        if has_object_definition(e_definition):
+            e_definition = get_object_definition(e_definition, strict=True)
+        assert isinstance(e_definition, StrawberryObjectDefinition)
+
         e_gql_definition = _get_gql_definition(
             schema,
-            get_object_definition(e_type, strict=True),
+            e_definition,
         )
         assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
         e_info = _generate_selection_resolve_info(
@@ -1470,20 +1497,17 @@ def optimize(
 
 
 def is_optimized(qs: QuerySet) -> bool:
-    return get_queryset_config(qs).optimized or is_optimized_by_prefetching(qs)
+    config = get_queryset_config(qs)
+    return config.optimized or config.optimized_by_prefetching
 
 
 def mark_optimized_by_prefetching(qs: QuerySet[_M]) -> QuerySet[_M]:
-    # This is a bit of a hack, but there is no easy way to mark a related manager
-    # as optimized at this phase, so we just add a mark to the queryset that
-    # we can check leater on using is_optimized_by_prefetching
-    return qs.annotate(**{
-        NESTED_PREFETCH_MARK: models.Value(True),
-    })
+    get_queryset_config(qs).optimized_by_prefetching = True
+    return qs
 
 
 def is_optimized_by_prefetching(qs: QuerySet) -> bool:
-    return NESTED_PREFETCH_MARK in qs.query.annotations
+    return get_queryset_config(qs).optimized_by_prefetching
 
 
 optimizer: contextvars.ContextVar[DjangoOptimizerExtension | None] = (
@@ -1509,7 +1533,7 @@ class DjangoOptimizerExtension(SchemaExtension):
             Enable prefetch of nested relations. This will allow for nested
             relations to be prefetched even when using filters/ordering/pagination.
             Note however that for connections, it will only work when for the
-            `ListConnection` and `ListConnectionWithTotalCount` types, as this optimization
+            `ListConnection` and `DjangoListConnection` types, as this optimization
             is not safe to be applied automatically for custom connections.
         enable_annotate_optimization:
             Enable `QuerySet.annotate` optimizations

@@ -14,22 +14,22 @@ from tests import models, utils
 
 with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
 
-    @strawberry_django.filter(models.NameDescriptionMixin)
+    @strawberry_django.filter_type(models.NameDescriptionMixin)
     class NameDescriptionFilter:
         name: auto
         description: auto
 
-    @strawberry_django.filter(models.Vegetable, lookups=True)
+    @strawberry_django.filter_type(models.Vegetable, lookups=True)
     class VegetableFilter(NameDescriptionFilter):
         id: auto
         world_production: auto
 
-    @strawberry_django.filters.filter(models.Color, lookups=True)
+    @strawberry_django.filters.filter_type(models.Color, lookups=True)
     class ColorFilter:
         id: auto
         name: auto
 
-    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    @strawberry_django.filters.filter_type(models.Fruit, lookups=True)
     class FruitFilter:
         id: auto
         name: auto
@@ -40,7 +40,7 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
         strawberry = "strawberry"
         banana = "banana"
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class EnumFilter:
         name: Optional[FruitEnum] = strawberry.UNSET
 
@@ -51,7 +51,7 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
         exact: Optional[_T] = strawberry.UNSET
         in_list: Optional[list[_T]] = strawberry.UNSET
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class EnumLookupFilter:
         name: Optional[FilterInLookup[FruitEnum]] = strawberry.UNSET
 
@@ -62,14 +62,14 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
         def filter(self, queryset):
             raise NotImplementedError
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class FieldFilter:
         search: str
 
         def filter_search(self, queryset):
             return queryset.filter(name__icontains=self.search)
 
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class TypeFilter:
         name: auto
 
@@ -342,7 +342,7 @@ def test_resolver_filter_with_inheritance(vegetables):
 def test_resolver_filter_with_info(fruits):
     from strawberry.types.info import Info
 
-    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    @strawberry_django.filters.filter_type(models.Fruit, lookups=True)
     class FruitFilterWithInfo:
         id: auto
         name: auto
@@ -376,7 +376,7 @@ def test_resolver_filter_with_info(fruits):
 def test_resolver_filter_override_with_info(fruits):
     from strawberry.types.info import Info
 
-    @strawberry_django.filters.filter(models.Fruit, lookups=True)
+    @strawberry_django.filters.filter_type(models.Fruit, lookups=True)
     class FruitFilterWithInfo:
         custom_field: bool
 
@@ -518,7 +518,7 @@ def test_adds_id_filter(use_pk: bool):
 
 @pytest.mark.django_db(transaction=True)
 def test_pk_inserted_for_root_field_only():
-    @strawberry_django.filters.filter(models.Group)
+    @strawberry_django.filters.filter_type(models.Group)
     class GroupFilter:
         name: str
 

@@ -5,7 +5,7 @@ from strawberry import relay
 from typing_extensions import TypeAlias
 
 import strawberry_django
-from strawberry_django.relay import ListConnectionWithTotalCount
+from strawberry_django.relay import DjangoListConnection
 
 from .models import RelayBook
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .a import AuthorType
 
 
-@strawberry_django.filter(RelayBook)
+@strawberry_django.filter_type(RelayBook)
 class BookFilter:
     name: str
 
@@ -29,4 +29,4 @@ class BookType(relay.Node):
     author: Annotated["AuthorType", strawberry.lazy("tests.relay.lazy.a")]
 
 
-BookConnection: TypeAlias = ListConnectionWithTotalCount[BookType]
+BookConnection: TypeAlias = DjangoListConnection[BookType]

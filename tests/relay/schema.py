@@ -13,7 +13,7 @@ from strawberry.permission import BasePermission
 from strawberry.types import Info
 
 import strawberry_django
-from strawberry_django.relay import ListConnectionWithTotalCount
+from strawberry_django.relay import DjangoListConnection
 
 
 class FruitModel(models.Model):
@@ -24,7 +24,7 @@ class FruitModel(models.Model):
     color = models.CharField(max_length=255)
 
 
-@strawberry_django.filter(FruitModel, lookups=True)
+@strawberry_django.filter_type(FruitModel, lookups=True)
 class FruitFilter:
     name: strawberry.auto
     color: strawberry.auto
@@ -58,23 +58,23 @@ class Query:
     nodes: list[relay.Node] = strawberry_django.node()
     node_optional: Optional[relay.Node] = strawberry_django.node()
     nodes_optional: list[Optional[relay.Node]] = strawberry_django.node()
-    fruits: ListConnectionWithTotalCount[Fruit] = strawberry_django.connection()
-    fruits_lazy: ListConnectionWithTotalCount[
+    fruits: DjangoListConnection[Fruit] = strawberry_django.connection()
+    fruits_lazy: DjangoListConnection[
         Annotated["Fruit", strawberry.lazy("tests.relay.schema")]
     ] = strawberry_django.connection()
-    fruits_with_filters_and_order: ListConnectionWithTotalCount[Fruit] = (
+    fruits_with_filters_and_order: DjangoListConnection[Fruit] = (
         strawberry_django.connection(
             filters=FruitFilter,
             order=FruitOrder,
         )
     )
 
-    @strawberry_django.connection(ListConnectionWithTotalCount[Fruit])
+    @strawberry_django.connection(DjangoListConnection[Fruit])
     def fruits_custom_resolver(self, info: Info) -> Iterable[FruitModel]:
         return FruitModel.objects.all()
 
     @strawberry_django.connection(
-        ListConnectionWithTotalCount[Fruit],
+        DjangoListConnection[Fruit],
         filters=FruitFilter,
         order=FruitOrder,
     )

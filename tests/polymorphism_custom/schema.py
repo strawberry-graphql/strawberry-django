@@ -8,7 +8,7 @@ from strawberry.relay import Node
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated
-from strawberry_django.relay import ListConnectionWithTotalCount
+from strawberry_django.relay import DjangoListConnection
 
 from .models import Company, Project
 
@@ -59,7 +59,7 @@ class Query:
     projects_offset_paginated: OffsetPaginated[ProjectType] = (
         strawberry_django.offset_paginated()
     )
-    projects_connection: ListConnectionWithTotalCount[ProjectType] = (
+    projects_connection: DjangoListConnection[ProjectType] = (
         strawberry_django.connection()
     )
 
