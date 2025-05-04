@@ -209,6 +209,23 @@ class OptimizerStore:
             ),
         )
 
+    def with_resolved_callables(self, info: GraphQLResolveInfo):
+        if not any(isinstance(p, Callable) for p in self.prefetch_related):
+            return self
+
+        prefetch_related = []
+        for p in self.prefetch_related:
+            if isinstance(p, Callable):
+                prefetch_related.append(p(info))
+            else:
+                prefetch_related.append(p)
+        return self.__class__(
+            only=self.only,
+            select_related=self.select_related,
+            prefetch_related=prefetch_related,
+            annotate=self.annotate,
+        )
+
     def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
         """Create a copy of this store with the given prefix.
 
@@ -668,6 +685,8 @@ def _get_hints_from_field(
     if not (field_store := getattr(field, "store", None)):
         return None
 
+    field_store: OptimizerStore
+
     if len(field_store.annotate) == 1 and _annotate_placeholder in field_store.annotate:
         # This is a special case where we need to update the field name,
         # because when field_store was created on __init__,
@@ -680,7 +699,7 @@ def _get_hints_from_field(
             field.name: field_store.annotate[_annotate_placeholder],
         }
 
-    return field_store.with_prefix(prefix, info=f_info) if prefix else field_store
+    return field_store.with_prefix(prefix, info=f_info) if prefix else field_store.with_resolved_callables(f_info)
 
 
 def _get_hints_from_model_property(
@@ -697,7 +716,7 @@ def _get_hints_from_model_property(
         and model_attr.store
     ):
         attr_store = model_attr.store
-        store = attr_store.with_prefix(prefix, info=f_info) if prefix else attr_store
+        store = attr_store.with_prefix(prefix, info=f_info) if prefix else attr_store.with_resolved_callables(f_info)
     else:
         store = None
 

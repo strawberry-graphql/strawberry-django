@@ -30,7 +30,11 @@ from strawberry_django import mutations
 from strawberry_django.auth.queries import get_current_user
 from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartial
 from strawberry_django.mutations import resolvers
-from strawberry_django.optimizer import DjangoOptimizerExtension, _get_selections, _get_field_data, optimize
+from strawberry_django.optimizer import (
+    DjangoOptimizerExtension,
+    _get_field_data,
+    _get_selections, optimize, OptimizerStore,
+)
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.permissions import (
     HasPerm,
@@ -85,10 +89,10 @@ class StaffType(relay.Node):
 
     @classmethod
     def get_queryset(
-            cls,
-            queryset: QuerySet[AbstractUser],
-            info: Info,
-            **kwargs,
+        cls,
+        queryset: QuerySet[AbstractUser],
+        info: Info,
+        **kwargs,
     ) -> QuerySet[AbstractUser]:
         return queryset.filter(is_staff=True)
 
@@ -127,28 +131,19 @@ class ProjectType(relay.Node, Named):
 
     @staticmethod
     def _prefetch_custom_milestones(info: GraphQLResolveInfo) -> Prefetch:
-        print(f"custom pfetch path={info.path.as_list()}, parent={info.parent_type}, return={info.return_type}")
-        selection = next(iter((
-            field_data
-            for f_selection in _get_selections(info, info.return_type).values()
-            if (
-                   field_data := _get_field_data(
-                       f_selection,
-                       get_object_definition(ProjectType, strict=True),
-                       schema,
-                       parent_type=info.parent_type,
-                       info=info,
-                   )
-               ) is not None and field_data[2].name.value == info.path.key
-        )))
+        print(
+            f"custom pfetch path={info.path.as_list()}, parent={info.parent_type}, return={info.return_type}"
+        )
         qs = Milestone.objects.all()
-        # if selection:
-        #     qs = optimize(qs, selection[3])
+        qs = optimize(qs, info, store=OptimizerStore.with_hints(only="project_id"))
+        print("pfetch qs=", str(qs.query))
         return Prefetch("milestones", queryset=qs, to_attr="custom_milestones")
 
     @strawberry_django.field(prefetch_related=_prefetch_custom_milestones)
     @staticmethod
-    def custom_milestones(parent: strawberry.Parent, info: Info) -> list["MilestoneType"]:
+    def custom_milestones(
+        parent: strawberry.Parent, info: Info
+    ) -> list["MilestoneType"]:
         return parent.custom_milestones
 
 
@@ -322,10 +317,10 @@ class QuizType(relay.Node):
 
     @classmethod
     def get_queryset(
-            cls,
-            queryset: QuerySet[Quiz],
-            info: Info,
-            **kwargs,
+        cls,
+        queryset: QuerySet[Quiz],
+        info: Info,
+        **kwargs,
     ) -> QuerySet[Quiz]:
         return queryset.order_by("title")
 
@@ -602,14 +597,14 @@ class Mutation:
 
     @mutations.input_mutation(handle_django_errors=True)
     def create_project(
-            self,
-            info: Info,
-            name: str,
-            cost: Annotated[
-                decimal.Decimal,
-                strawberry.argument(description="The project's cost"),
-            ],
-            due_date: Optional[datetime.datetime] = None,
+        self,
+        info: Info,
+        name: str,
+        cost: Annotated[
+            decimal.Decimal,
+            strawberry.argument(description="The project's cost"),
+        ],
+        due_date: Optional[datetime.datetime] = None,
     ) -> ProjectType:
         """Create project documentation."""
         if cost > 500:
@@ -640,10 +635,10 @@ class Mutation:
 
     @mutations.input_mutation(handle_django_errors=True)
     def create_quiz(
-            self,
-            info: Info,
-            title: str,
-            full_clean_options: bool = False,
+        self,
+        info: Info,
+        title: str,
+        full_clean_options: bool = False,
     ) -> QuizType:
         return cast(
             "QuizType",

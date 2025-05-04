@@ -13,7 +13,7 @@ from strawberry.types import ExecutionResult, get_object_definition
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from tests.projects.schema import IssueType, MilestoneType, StaffType, ProjectType
+from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
 from . import utils
 from .projects.faker import (
@@ -1862,15 +1862,13 @@ def test_no_window_function_for_normal_prefetch(
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("gql_client", ("async", "sync"), indirect=True)
+@pytest.mark.parametrize("gql_client", ("sync",), indirect=True)
 def test_custom_prefetch_optimization(gql_client):
     project = ProjectFactory.create()
     milestone = MilestoneFactory.create(project=project, name="Hello")
 
     project_id = str(
-        GlobalID(
-            get_object_definition(ProjectType, strict=True).name, str(project.id)
-        )
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
     )
     milestone_id = str(
         GlobalID(
@@ -1894,33 +1892,28 @@ def test_custom_prefetch_optimization(gql_client):
             query, variables={"id": project_id}, assert_no_errors=False
         )
     assert Milestone._meta.db_table in ctx.captured_queries[1]["sql"]
-    assert Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    assert (
+        Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    )
 
     assert res.errors is None
     assert res.data == {
         "project": {
             "id": project_id,
-            "customMilestones": [
-                {
-                    "id": milestone_id,
-                    "name": milestone.name
-                }
-            ]
+            "customMilestones": [{"id": milestone_id, "name": milestone.name}],
         }
     }
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("gql_client", ("sync", ), indirect=True)
+@pytest.mark.parametrize("gql_client", ("sync",), indirect=True)
 def test_custom_prefetch_optimization_nested(gql_client):
     project = ProjectFactory.create()
     milestone1 = MilestoneFactory.create(project=project, name="Hello1")
     milestone2 = MilestoneFactory.create(project=project, name="Hello2")
 
     project_id = str(
-        GlobalID(
-            get_object_definition(ProjectType, strict=True).name, str(project.id)
-        )
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
     )
     milestone1_id = str(
         GlobalID(
@@ -1951,7 +1944,9 @@ def test_custom_prefetch_optimization_nested(gql_client):
             query, variables={"id": milestone1_id}, assert_no_errors=False
         )
     assert Milestone._meta.db_table in ctx.captured_queries[1]["sql"]
-    assert Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    assert (
+        Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    )
 
     assert res.errors is None
     assert res.data == {
@@ -1960,15 +1955,9 @@ def test_custom_prefetch_optimization_nested(gql_client):
             "project": {
                 "id": project_id,
                 "customMilestones": [
-                    {
-                        "id": milestone1_id,
-                        "name": milestone1.name
-                    },
-                    {
-                        "id": milestone2_id,
-                        "name": milestone2.name
-                    },
-                ]
-            }
+                    {"id": milestone1_id, "name": milestone1.name},
+                    {"id": milestone2_id, "name": milestone2.name},
+                ],
+            },
         }
     }

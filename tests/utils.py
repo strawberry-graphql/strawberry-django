@@ -3,19 +3,23 @@ import contextlib
 import contextvars
 import dataclasses
 import inspect
-import threading
 import warnings
 from contextlib import AbstractContextManager
-from typing import Any, Optional, Union, cast, Protocol, ContextManager, TypeVar, Generic
+from typing import (
+    Any,
+    Optional,
+    Union,
+    cast,
+)
 
 import strawberry
-from asgiref.sync import sync_to_async, async_to_sync
+from asgiref.sync import sync_to_async
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.client import AsyncClient, Client
 from django.test.utils import CaptureQueriesContext
 from strawberry.test.client import Response
 from strawberry.utils.inspect import in_async_context
-from typing_extensions import override, ParamSpec
+from typing_extensions import override
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.test.client import TestClient
@@ -90,21 +94,23 @@ def deep_tuple_to_list(data: tuple) -> list:
 
 
 class AsyncCaptureQueriesContext(AbstractContextManager[CaptureQueriesContext]):
-
     wrapped: CaptureQueriesContext
 
     def __init__(self, using: str):
         self.using = using
 
+    @sync_to_async
     def wrapped_enter(self):
         self.wrapped = CaptureQueriesContext(connection=connections[self.using])
-        return self.wrapped.__enter__()
+        return self.wrapped.__enter__()  # noqa: PLC2801
 
     def __enter__(self):
-        return asyncio.run(sync_to_async(self.wrapped_enter)())
+        return asyncio.run(self.wrapped_enter())
 
     def __exit__(self, exc_type, exc_value, traceback, /):
-        return asyncio.run(sync_to_async(self.wrapped.__exit__)(exc_type, exc_value, traceback))
+        return asyncio.run(
+            sync_to_async(self.wrapped.__exit__)(exc_type, exc_value, traceback)
+        )
 
 
 @contextlib.contextmanager
