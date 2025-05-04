@@ -115,6 +115,7 @@ class ProjectType(relay.Node, Named):
     cost: strawberry.auto = strawberry_django.field(extensions=[IsAuthenticated()])
     milestones: list["MilestoneType"] = strawberry_django.field(pagination=True)
     milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
+    custom_milestones_model_property: strawberry.auto
     first_milestone: Optional["MilestoneType"] = strawberry_django.field(
         field_name="milestones"
     )

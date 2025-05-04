@@ -20,6 +20,7 @@ from strawberry.types.field import UNRESOLVED, StrawberryField
 from strawberry.types.union import StrawberryUnion
 from strawberry.utils.inspect import get_specialized_type_var_map
 
+from strawberry_django.descriptors import ModelProperty
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
@@ -138,6 +139,13 @@ class StrawberryDjangoFieldBase(StrawberryField):
             django_type.__strawberry_django_definition__.model
             if django_type is not None
             else None
+        )
+
+    @functools.cached_property
+    def has_model_property(self) -> bool:
+        django_definition = self.origin_django_type
+        return django_definition is not None and isinstance(
+            getattr(django_definition.model, self.python_name, None), ModelProperty
         )
 
     @functools.cached_property

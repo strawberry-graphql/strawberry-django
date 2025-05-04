@@ -589,6 +589,7 @@ type ProjectType implements Node & Named {
   cost: Decimal @isAuthenticated
   milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   milestonesCount: Int!
+  customMilestonesModelProperty: [MilestoneType!]!
   firstMilestone: MilestoneType
   firstMilestoneRequired: MilestoneType!
   milestoneConn(

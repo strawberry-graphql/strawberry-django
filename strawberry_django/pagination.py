@@ -306,7 +306,11 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
     @property
     def arguments(self) -> list[StrawberryArgument]:
         arguments = []
-        if self.base_resolver is None and (self.is_list or self.is_paginated):
+        if (
+            self.base_resolver is None
+            and (self.is_list or self.is_paginated)
+            and not self.has_model_property
+        ):
             pagination = self.get_pagination()
             if pagination is not None:
                 arguments.append(
