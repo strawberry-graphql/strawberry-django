@@ -22,7 +22,6 @@ from django.db.models.functions import Now
 from django.db.models.query import QuerySet
 from graphql import GraphQLResolveInfo
 from strawberry import UNSET, relay
-from strawberry.types import get_object_definition
 from strawberry.types.info import Info
 
 import strawberry_django
@@ -32,8 +31,8 @@ from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartia
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
-    _get_field_data,
-    _get_selections, optimize, OptimizerStore,
+    OptimizerStore,
+    optimize,
 )
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.permissions import (
@@ -131,12 +130,8 @@ class ProjectType(relay.Node, Named):
 
     @staticmethod
     def _prefetch_custom_milestones(info: GraphQLResolveInfo) -> Prefetch:
-        print(
-            f"custom pfetch path={info.path.as_list()}, parent={info.parent_type}, return={info.return_type}"
-        )
         qs = Milestone.objects.all()
         qs = optimize(qs, info, store=OptimizerStore.with_hints(only="project_id"))
-        print("pfetch qs=", str(qs.query))
         return Prefetch("milestones", queryset=qs, to_attr="custom_milestones")
 
     @strawberry_django.field(prefetch_related=_prefetch_custom_milestones)

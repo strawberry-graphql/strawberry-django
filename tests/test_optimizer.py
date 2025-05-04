@@ -1862,7 +1862,7 @@ def test_no_window_function_for_normal_prefetch(
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("gql_client", ("sync",), indirect=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
 def test_custom_prefetch_optimization(gql_client):
     project = ProjectFactory.create()
     milestone = MilestoneFactory.create(project=project, name="Hello")
@@ -1906,7 +1906,7 @@ def test_custom_prefetch_optimization(gql_client):
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("gql_client", ("sync",), indirect=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
 def test_custom_prefetch_optimization_nested(gql_client):
     project = ProjectFactory.create()
     milestone1 = MilestoneFactory.create(project=project, name="Hello1")

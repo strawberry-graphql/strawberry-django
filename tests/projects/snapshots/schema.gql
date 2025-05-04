@@ -608,6 +608,7 @@ type ProjectType implements Node & Named {
     last: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 """An edge in a connection."""

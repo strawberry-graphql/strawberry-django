@@ -386,6 +386,7 @@ type ProjectType implements Node & Named {
     last: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 type ProjectTypeSubclass implements Node & Named {
@@ -417,6 +418,7 @@ type ProjectTypeSubclass implements Node & Named {
     last: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 type Query {

@@ -4,7 +4,6 @@ import contextvars
 import dataclasses
 import inspect
 import warnings
-from contextlib import AbstractContextManager
 from typing import (
     Any,
     Optional,
@@ -93,10 +92,11 @@ def deep_tuple_to_list(data: tuple) -> list:
     return return_list
 
 
-class AsyncCaptureQueriesContext(AbstractContextManager[CaptureQueriesContext]):
+class AsyncCaptureQueriesContext:
     wrapped: CaptureQueriesContext
 
     def __init__(self, using: str):
+        super().__init__()
         self.using = using
 
     @sync_to_async

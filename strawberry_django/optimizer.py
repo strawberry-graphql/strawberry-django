@@ -10,6 +10,7 @@ from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
+    Optional,
     TypeVar,
     cast,
 )
@@ -697,10 +698,10 @@ def _get_hints_from_field(
     f_info: GraphQLResolveInfo,
     prefix: str = "",
 ) -> OptimizerStore | None:
-    if not (field_store := getattr(field, "store", None)):
+    if not (
+        field_store := cast("Optional[OptimizerStore]", getattr(field, "store", None))
+    ):
         return None
-
-    field_store: OptimizerStore
 
     if len(field_store.annotate) == 1 and _annotate_placeholder in field_store.annotate:
         # This is a special case where we need to update the field name,
@@ -714,7 +715,11 @@ def _get_hints_from_field(
             field.name: field_store.annotate[_annotate_placeholder],
         }
 
-    return field_store.with_prefix(prefix, info=f_info) if prefix else field_store.with_resolved_callables(f_info)
+    return (
+        field_store.with_prefix(prefix, info=f_info)
+        if prefix
+        else field_store.with_resolved_callables(f_info)
+    )
 
 
 def _get_hints_from_model_property(
@@ -731,7 +736,11 @@ def _get_hints_from_model_property(
         and model_attr.store
     ):
         attr_store = model_attr.store
-        store = attr_store.with_prefix(prefix, info=f_info) if prefix else attr_store.with_resolved_callables(f_info)
+        store = (
+            attr_store.with_prefix(prefix, info=f_info)
+            if prefix
+            else attr_store.with_resolved_callables(f_info)
+        )
     else:
         store = None
 
