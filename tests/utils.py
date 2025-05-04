@@ -3,16 +3,19 @@ import contextlib
 import contextvars
 import dataclasses
 import inspect
+import threading
 import warnings
-from typing import Any, Optional, Union, cast
+from contextlib import AbstractContextManager
+from typing import Any, Optional, Union, cast, Protocol, ContextManager, TypeVar, Generic
 
 import strawberry
+from asgiref.sync import sync_to_async, async_to_sync
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.client import AsyncClient, Client
 from django.test.utils import CaptureQueriesContext
 from strawberry.test.client import Response
 from strawberry.utils.inspect import in_async_context
-from typing_extensions import override
+from typing_extensions import override, ParamSpec
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.test.client import TestClient
@@ -86,19 +89,37 @@ def deep_tuple_to_list(data: tuple) -> list:
     return return_list
 
 
+class AsyncCaptureQueriesContext(AbstractContextManager[CaptureQueriesContext]):
+
+    wrapped: CaptureQueriesContext
+
+    def __init__(self, using: str):
+        self.using = using
+
+    def wrapped_enter(self):
+        self.wrapped = CaptureQueriesContext(connection=connections[self.using])
+        return self.wrapped.__enter__()
+
+    def __enter__(self):
+        return asyncio.run(sync_to_async(self.wrapped_enter)())
+
+    def __exit__(self, exc_type, exc_value, traceback, /):
+        return asyncio.run(sync_to_async(self.wrapped.__exit__)(exc_type, exc_value, traceback))
+
+
 @contextlib.contextmanager
 def assert_num_queries(n: int, *, using=DEFAULT_DB_ALIAS):
-    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
-        yield
+    is_async = (gql_client := _client.get(None)) is not None and gql_client.is_async
+
+    if is_async:
+        ctx_manager = AsyncCaptureQueriesContext(using)
+    else:
+        ctx_manager = CaptureQueriesContext(connection=connections[using])
+
+    with ctx_manager as ctx:
+        yield ctx
 
     executed = len(ctx)
-
-    # FIXME: Async will not have access to the correct number of queries without
-    # execing CaptureQueriesContext.(__enter__|__exit__) wrapped in sync_to_async
-    # How can we fix this?
-    with contextlib.suppress(LookupError):
-        if _client.get().is_async and executed == 0:
-            return
 
     assert executed == n, (
         "{} queries executed, {} expected\nCaptured queries were:\n{}".format(
