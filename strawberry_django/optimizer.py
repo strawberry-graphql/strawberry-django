@@ -210,7 +210,13 @@ class OptimizerStore:
         )
 
     def with_resolved_callables(self, info: GraphQLResolveInfo):
-        if not any(isinstance(p, Callable) for p in self.prefetch_related):
+        """Resolve any prefetch/annotate callables using the provided info and return a new store.
+
+        This is used to resolve callables using the correct info object, scoped to their respective fields.
+        """
+        if not any(isinstance(p, Callable) for p in self.prefetch_related) and not any(
+            isinstance(p, Callable) for p in self.annotate.values()
+        ):
             return self
 
         prefetch_related = []
@@ -219,11 +225,17 @@ class OptimizerStore:
                 prefetch_related.append(p(info))
             else:
                 prefetch_related.append(p)
+        annotate = {}
+        for label, annotation in self.annotate.items():
+            if isinstance(annotation, Callable):
+                annotate[label] = annotation(info)
+            else:
+                annotate[label] = annotation
         return self.__class__(
             only=self.only,
             select_related=self.select_related,
             prefetch_related=prefetch_related,
-            annotate=self.annotate,
+            annotate=annotate,
         )
 
     def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):

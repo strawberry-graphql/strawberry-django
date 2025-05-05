@@ -2065,3 +2065,105 @@ def test_custom_prefetch_optimization_model_property_nested(gql_client):
             },
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_correct_annotation_info(gql_client):
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project, name="Hello")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+          id
+          milestones {
+            id
+            graphqlPath
+          }
+        }
+      }
+    """
+
+    res = gql_client.query(query, variables={"id": project_id}, assert_no_errors=False)
+    assert res.errors is None
+    assert res.data == {
+        "project": {
+            "id": project_id,
+            "milestones": [
+                {
+                    "id": milestone_id,
+                    "graphqlPath": "project,0,milestones,0,graphqlPath",
+                }
+            ],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_correct_annotation_info_nested(gql_client):
+    project = ProjectFactory.create()
+    milestone1 = MilestoneFactory.create(project=project, name="Hello1")
+    milestone2 = MilestoneFactory.create(project=project, name="Hello2")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone1_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone1.id)
+        )
+    )
+    milestone2_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone2.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          graphqlPath
+          project {
+            id
+            milestones {
+                id
+                graphqlPath
+            }
+          }
+        }
+      }
+    """
+
+    res = gql_client.query(
+        query, variables={"id": milestone1_id}, assert_no_errors=False
+    )
+    assert res.errors is None
+    assert res.data == {
+        "milestone": {
+            "id": milestone1_id,
+            "graphqlPath": "milestone,0,graphqlPath",
+            "project": {
+                "id": project_id,
+                "milestones": [
+                    {
+                        "id": milestone1_id,
+                        "graphqlPath": "milestone,0,project,0,milestones,0,graphqlPath",
+                    },
+                    {
+                        "id": milestone2_id,
+                        "graphqlPath": "milestone,0,project,0,milestones,0,graphqlPath",
+                    },
+                ],
+            },
+        }
+    }

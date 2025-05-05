@@ -17,7 +17,9 @@ from django.db.models import (
     Prefetch,
     Q,
     Subquery,
+    Value,
 )
+from django.db.models.fields import CharField
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
 from graphql import GraphQLResolveInfo
@@ -192,6 +194,15 @@ class MilestoneType(relay.Node, Named):
     )
     first_issue: Optional["IssueType"] = strawberry_django.field(field_name="issues")
     first_issue_required: "IssueType" = strawberry_django.field(field_name="issues")
+
+    @staticmethod
+    def _annotate_graphql_path(info: GraphQLResolveInfo):
+        return Value(
+            ",".join(map(str, info.path.as_list())),
+            output_field=CharField(max_length=255),
+        )
+
+    graphql_path: str = strawberry_django.field(annotate=_annotate_graphql_path)
     issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
         field_name="issues",
         order=IssueOrder,
