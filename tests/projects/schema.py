@@ -22,7 +22,6 @@ from django.db.models import (
 from django.db.models.fields import CharField
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
-from graphql import GraphQLResolveInfo
 from strawberry import UNSET, relay
 from strawberry.types.info import Info
 
@@ -131,13 +130,17 @@ class ProjectType(relay.Node, Named):
         strawberry_django.offset_paginated(field_name="milestones")
     )
 
-    @staticmethod
-    def _prefetch_custom_milestones(info: GraphQLResolveInfo) -> Prefetch:
-        qs = Milestone.objects.all()
-        qs = optimize(qs, info, store=OptimizerStore.with_hints(only="project_id"))
-        return Prefetch("milestones", queryset=qs, to_attr="custom_milestones")
-
-    @strawberry_django.field(prefetch_related=_prefetch_custom_milestones)
+    @strawberry_django.field(
+        prefetch_related=lambda info: Prefetch(
+            "milestones",
+            queryset=optimize(
+                Milestone.objects.all(),
+                info,
+                store=OptimizerStore.with_hints(only="project_id"),
+            ),
+            to_attr="custom_milestones",
+        )
+    )
     @staticmethod
     def custom_milestones(
         parent: strawberry.Parent, info: Info
@@ -195,14 +198,12 @@ class MilestoneType(relay.Node, Named):
     first_issue: Optional["IssueType"] = strawberry_django.field(field_name="issues")
     first_issue_required: "IssueType" = strawberry_django.field(field_name="issues")
 
-    @staticmethod
-    def _annotate_graphql_path(info: GraphQLResolveInfo):
-        return Value(
+    graphql_path: str = strawberry_django.field(
+        annotate=lambda info: Value(
             ",".join(map(str, info.path.as_list())),
             output_field=CharField(max_length=255),
         )
-
-    graphql_path: str = strawberry_django.field(annotate=_annotate_graphql_path)
+    )
     issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
         field_name="issues",
         order=IssueOrder,

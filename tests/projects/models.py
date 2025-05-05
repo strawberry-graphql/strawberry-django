@@ -6,7 +6,6 @@ from django.db import models
 from django.db.models import Count, Prefetch, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
-from graphql import GraphQLResolveInfo
 
 from strawberry_django.descriptors import model_property
 from strawberry_django.optimizer import OptimizerStore, optimize
@@ -64,13 +63,17 @@ class Project(NamedModel):
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
 
-    @staticmethod
-    def _prefetch_custom_milestones(info: GraphQLResolveInfo) -> Prefetch:
-        qs = Milestone.objects.all()
-        qs = optimize(qs, info, store=OptimizerStore.with_hints(only="project_id"))
-        return Prefetch("milestones", queryset=qs, to_attr="custom_milestones_property")
-
-    @model_property(prefetch_related=_prefetch_custom_milestones)
+    @model_property(
+        prefetch_related=lambda info: Prefetch(
+            "milestones",
+            queryset=optimize(
+                Milestone.objects.all(),
+                info,
+                store=OptimizerStore.with_hints(only="project_id"),
+            ),
+            to_attr="custom_milestones_property",
+        )
+    )
     def custom_milestones_model_property(
         self,
     ) -> list[Annotated["MilestoneType", strawberry.lazy("tests.projects.schema")]]:
