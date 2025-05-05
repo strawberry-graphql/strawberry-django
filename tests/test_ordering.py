@@ -7,6 +7,7 @@ from django.db.models import Case, Count, Value, When
 from django.db.models.functions import Reverse
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.relay import Node
 from strawberry.types.base import (
     StrawberryOptional,
     get_object_definition,
@@ -20,6 +21,8 @@ from strawberry_django.fields.filter_order import (
     FilterOrderFieldResolver,
 )
 from strawberry_django.ordering import Ordering
+from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.relay import DjangoListConnection
 from tests import models, utils
 from tests.types import Fruit
 
@@ -69,11 +72,34 @@ class FruitWithOrder:
     name: auto
 
 
+@strawberry_django.type(models.Fruit)
+class FruitNode(Node):
+    name: auto
+
+
+@strawberry_django.type(models.Fruit, ordering=FruitOrder)
+class FruitWithOrderNode(Node):
+    name: auto
+
+
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field(ordering=FruitOrder)
+    fruits_connection: DjangoListConnection[FruitNode] = strawberry_django.connection(
+        ordering=FruitOrder
+    )
+    fruits_paginated: OffsetPaginated[Fruit] = strawberry_django.offset_paginated(
+        ordering=FruitOrder
+    )
     custom_order_fruits: list[Fruit] = strawberry_django.field(
         ordering=CustomFruitOrder
+    )
+    fruits_with_order: list[FruitWithOrder] = strawberry_django.field()
+    fruits_with_order_connection: DjangoListConnection[FruitWithOrderNode] = (
+        strawberry_django.connection()
+    )
+    fruits_with_order_paginated: OffsetPaginated[FruitWithOrder] = (
+        strawberry_django.offset_paginated()
     )
 
 
@@ -145,6 +171,73 @@ def test_field_order_definition():
         ordering=None,
     )
     assert field.get_ordering() is None
+
+
+def test_type_ordering(query, fruits):
+    result = query("{ fruitsWithOrder(ordering: [{ name: ASC }]) { id name } }")
+    assert not result.errors
+
+    assert result.data["fruitsWithOrder"] == [
+        {"id": "3", "name": "banana"},
+        {"id": "2", "name": "raspberry"},
+        {"id": "1", "name": "strawberry"},
+    ]
+
+
+def test_type_ordering_connection(query, fruits):
+    result = query(
+        "{ fruitsWithOrderConnection(ordering: [{ name: ASC }]) { edges { node { name } } } }"
+    )
+    assert not result.errors
+    assert result.data["fruitsWithOrderConnection"] == {
+        "edges": [
+            {"node": {"name": "banana"}},
+            {"node": {"name": "raspberry"}},
+            {"node": {"name": "strawberry"}},
+        ]
+    }
+
+
+def test_type_ordering_paginated(query, fruits):
+    result = query(
+        "{ fruitsWithOrderPaginated(ordering: [{ name: ASC }]) { results { id name } } }"
+    )
+    assert not result.errors
+    assert result.data["fruitsWithOrderPaginated"] == {
+        "results": [
+            {"id": "3", "name": "banana"},
+            {"id": "2", "name": "raspberry"},
+            {"id": "1", "name": "strawberry"},
+        ]
+    }
+
+
+def test_ordering_connection(query, fruits):
+    result = query(
+        "{ fruitsConnection(ordering: [{ name: ASC }]) { edges { node { name } } } }"
+    )
+    assert not result.errors
+    assert result.data["fruitsConnection"] == {
+        "edges": [
+            {"node": {"name": "banana"}},
+            {"node": {"name": "raspberry"}},
+            {"node": {"name": "strawberry"}},
+        ]
+    }
+
+
+def test_ordering_paginated(query, fruits):
+    result = query(
+        "{ fruitsPaginated(ordering: [{ name: ASC }]) { results { id name } } }"
+    )
+    assert not result.errors
+    assert result.data["fruitsPaginated"] == {
+        "results": [
+            {"id": "3", "name": "banana"},
+            {"id": "2", "name": "raspberry"},
+            {"id": "1", "name": "strawberry"},
+        ]
+    }
 
 
 def test_asc(query, fruits):
