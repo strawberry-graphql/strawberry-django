@@ -395,6 +395,8 @@ type MilestoneType implements Node & Named {
   firstIssue: IssueType
   firstIssueRequired: IssueType!
   graphqlPath: String!
+  mixedAnnotatedPrefetch: String!
+  mixedPrefetchAnnotated: String!
   issuesPaginated(pagination: OffsetPaginationInput, order: IssueOrder): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter

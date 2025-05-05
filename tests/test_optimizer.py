@@ -2167,3 +2167,37 @@ def test_correct_annotation_info_nested(gql_client):
             },
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_mixed_annotation_prefetch(gql_client):
+    project = ProjectFactory.create()
+    MilestoneFactory.create(project=project, name="Hello")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+          milestones {
+            mixedAnnotatedPrefetch
+            mixedPrefetchAnnotated
+          }
+        }
+      }
+    """
+
+    res = gql_client.query(query, variables={"id": project_id}, assert_no_errors=False)
+    assert res.errors is None
+    assert res.data == {
+        "project": {
+            "milestones": [
+                {
+                    "mixedAnnotatedPrefetch": "dummy",
+                    "mixedPrefetchAnnotated": "dummy",
+                }
+            ],
+        }
+    }

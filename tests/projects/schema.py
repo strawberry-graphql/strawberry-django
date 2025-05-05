@@ -204,6 +204,14 @@ class MilestoneType(relay.Node, Named):
             output_field=CharField(max_length=255),
         )
     )
+    mixed_annotated_prefetch: str = strawberry_django.field(
+        annotate=lambda info: Value("dummy", output_field=CharField(max_length=255)),
+        prefetch_related="issues",
+    )
+    mixed_prefetch_annotated: str = strawberry_django.field(
+        annotate=Value("dummy", output_field=CharField(max_length=255)),
+        prefetch_related=lambda info: Prefetch("issues"),
+    )
     issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
         field_name="issues",
         order=IssueOrder,

@@ -363,10 +363,12 @@ class OptimizerStore:
         # Abort only optimization if one prefetch related was made for everything
         for ao in abort_only:
             # cast is safe as the loop above only adds Prefetch instances as abort_only
-            cast("Prefetch", to_prefetch[ao]).queryset.query.deferred_loading = (
-                set(),
-                True,
-            )
+            prefetch = cast("Prefetch", to_prefetch[ao])
+            if prefetch.queryset is not None:  # type: ignore - queryset can be None
+                prefetch.queryset.query.deferred_loading = (
+                    set(),
+                    True,
+                )
 
         # First prefetch_related(None) to clear all existing prefetches, and then
         # add ours, which also contains them. This is to avoid the
