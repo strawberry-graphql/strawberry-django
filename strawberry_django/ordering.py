@@ -43,6 +43,7 @@ _QS = TypeVar("_QS", bound="QuerySet")
 _SFT = TypeVar("_SFT", bound=StrawberryField)
 
 ORDER_ARG = "order"
+ORDERING_ARG = "ordering"
 
 
 @dataclasses.dataclass
