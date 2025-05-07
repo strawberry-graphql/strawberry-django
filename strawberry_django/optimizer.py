@@ -238,6 +238,7 @@ class OptimizerStore:
 
         This is useful when we need to apply the same store to a nested field.
         `prefix` will be prepended to all fields in the store.
+        Any callables will be resolved, just like with_resolved_callables, to apply the prefix to their results.
         """
         prefetch_related = []
         for p in self.prefetch_related:
@@ -724,6 +725,7 @@ def _get_hints_from_field(
             field.name: field_store.annotate[_annotate_placeholder],
         }
 
+    # with_prefix also resolves callables, so we only need one or the other
     return (
         field_store.with_prefix(prefix, info=f_info)
         if prefix
@@ -745,6 +747,7 @@ def _get_hints_from_model_property(
         and model_attr.store
     ):
         attr_store = model_attr.store
+        # with_prefix also resolves callables, so we only need one or the other
         store = (
             attr_store.with_prefix(prefix, info=f_info)
             if prefix
