@@ -142,7 +142,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
         )
 
     @functools.cached_property
-    def has_model_property(self) -> bool:
+    def is_model_property(self) -> bool:
         django_definition = self.origin_django_type
         return django_definition is not None and isinstance(
             getattr(django_definition.model, self.python_name, None), ModelProperty

@@ -301,11 +301,11 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
     @property
     def arguments(self) -> list[StrawberryArgument]:
         arguments = []
-        if self.base_resolver is None and self.is_list and not self.has_model_property:
+        if self.base_resolver is None and self.is_list and not self.is_model_property:
             order = self.get_order()
             if order and order is not UNSET:
                 arguments.append(argument("order", order, is_optional=True))
-        if self.base_resolver is None and self.is_list and not self.has_model_property:
+        if self.base_resolver is None and self.is_list and not self.is_model_property:
             ordering = self.get_ordering()
             if ordering is not None:
                 arguments.append(

@@ -309,7 +309,7 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         if (
             self.base_resolver is None
             and (self.is_list or self.is_paginated)
-            and not self.has_model_property
+            and not self.is_model_property
         ):
             pagination = self.get_pagination()
             if pagination is not None:
