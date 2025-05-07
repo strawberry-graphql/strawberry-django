@@ -214,23 +214,18 @@ class OptimizerStore:
 
         This is used to resolve callables using the correct info object, scoped to their respective fields.
         """
-        if not any(isinstance(p, Callable) for p in self.prefetch_related) and not any(
-            isinstance(p, Callable) for p in self.annotate.values()
+        if not any(callable(p) for p in self.prefetch_related) and not any(
+            callable(a) for a in self.annotate.values()
         ):
             return self
 
-        prefetch_related = []
-        for p in self.prefetch_related:
-            if isinstance(p, Callable):
-                prefetch_related.append(p(info))
-            else:
-                prefetch_related.append(p)
-        annotate = {}
-        for label, annotation in self.annotate.items():
-            if isinstance(annotation, Callable):
-                annotate[label] = annotation(info)
-            else:
-                annotate[label] = annotation
+        prefetch_related: list[PrefetchType] = [
+            p(info) if callable(p) else p for p in self.prefetch_related
+        ]
+        annotate: dict[str, AnnotateType] = {
+            label: annotation(info) if callable(annotation) else annotation
+            for label, annotation in self.annotate.items()
+        }
         return self.__class__(
             only=self.only,
             select_related=self.select_related,
