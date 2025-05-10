@@ -182,6 +182,9 @@ type MilestoneType implements Node & Named {
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   firstIssue: IssueType
   firstIssueRequired: IssueType!
+  graphqlPath: String!
+  mixedAnnotatedPrefetch: String!
+  mixedPrefetchAnnotated: String!
   issuesPaginated(pagination: OffsetPaginationInput, order: IssueOrder): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter
@@ -243,6 +246,9 @@ type MilestoneTypeSubclass implements Node & Named {
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   firstIssue: IssueType
   firstIssueRequired: IssueType!
+  graphqlPath: String!
+  mixedAnnotatedPrefetch: String!
+  mixedPrefetchAnnotated: String!
   issuesPaginated(pagination: OffsetPaginationInput, order: IssueOrder): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter
@@ -367,6 +373,7 @@ type ProjectType implements Node & Named {
   cost: Decimal @isAuthenticated
   milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   milestonesCount: Int!
+  customMilestonesModelProperty: [MilestoneType!]!
   firstMilestone: MilestoneType
   firstMilestoneRequired: MilestoneType!
   milestoneConn(
@@ -386,6 +393,7 @@ type ProjectType implements Node & Named {
     last: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 type ProjectTypeSubclass implements Node & Named {
@@ -398,6 +406,7 @@ type ProjectTypeSubclass implements Node & Named {
   cost: Decimal @isAuthenticated
   milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
   milestonesCount: Int!
+  customMilestonesModelProperty: [MilestoneType!]!
   firstMilestone: MilestoneType
   firstMilestoneRequired: MilestoneType!
   milestoneConn(
@@ -417,6 +426,7 @@ type ProjectTypeSubclass implements Node & Named {
     last: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 type Query {

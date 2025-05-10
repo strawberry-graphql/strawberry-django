@@ -286,7 +286,7 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
     @property
     def arguments(self) -> list[StrawberryArgument]:
         arguments = []
-        if self.base_resolver is None:
+        if self.base_resolver is None and not self.is_model_property:
             filters = self.get_filters()
             origin = cast("WithStrawberryObjectDefinition", self.origin)
             is_root_query = origin.__strawberry_definition__.name == "Query"

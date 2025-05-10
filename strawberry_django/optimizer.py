@@ -10,6 +10,7 @@ from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
+    Optional,
     TypeVar,
     cast,
 )
@@ -208,11 +209,36 @@ class OptimizerStore:
             ),
         )
 
+    def with_resolved_callables(self, info: GraphQLResolveInfo):
+        """Resolve any prefetch/annotate callables using the provided info and return a new store.
+
+        This is used to resolve callables using the correct info object, scoped to their respective fields.
+        """
+        if not any(callable(p) for p in self.prefetch_related) and not any(
+            callable(a) for a in self.annotate.values()
+        ):
+            return self
+
+        prefetch_related: list[PrefetchType] = [
+            p(info) if callable(p) else p for p in self.prefetch_related
+        ]
+        annotate: dict[str, AnnotateType] = {
+            label: annotation(info) if callable(annotation) else annotation
+            for label, annotation in self.annotate.items()
+        }
+        return self.__class__(
+            only=self.only,
+            select_related=self.select_related,
+            prefetch_related=prefetch_related,
+            annotate=annotate,
+        )
+
     def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
         """Create a copy of this store with the given prefix.
 
         This is useful when we need to apply the same store to a nested field.
         `prefix` will be prepended to all fields in the store.
+        Any callables will be resolved, just like with_resolved_callables, to apply the prefix to their results.
         """
         prefetch_related = []
         for p in self.prefetch_related:
@@ -333,10 +359,12 @@ class OptimizerStore:
         # Abort only optimization if one prefetch related was made for everything
         for ao in abort_only:
             # cast is safe as the loop above only adds Prefetch instances as abort_only
-            cast("Prefetch", to_prefetch[ao]).queryset.query.deferred_loading = (
-                set(),
-                True,
-            )
+            prefetch = cast("Prefetch", to_prefetch[ao])
+            if prefetch.queryset is not None:  # type: ignore - queryset can be None
+                prefetch.queryset.query.deferred_loading = (
+                    set(),
+                    True,
+                )
 
         # First prefetch_related(None) to clear all existing prefetches, and then
         # add ours, which also contains them. This is to avoid the
@@ -680,7 +708,9 @@ def _get_hints_from_field(
     f_info: GraphQLResolveInfo,
     prefix: str = "",
 ) -> OptimizerStore | None:
-    if not (field_store := getattr(field, "store", None)):
+    if not (
+        field_store := cast("Optional[OptimizerStore]", getattr(field, "store", None))
+    ):
         return None
 
     if len(field_store.annotate) == 1 and _annotate_placeholder in field_store.annotate:
@@ -695,7 +725,12 @@ def _get_hints_from_field(
             field.name: field_store.annotate[_annotate_placeholder],
         }
 
-    return field_store.with_prefix(prefix, info=f_info) if prefix else field_store
+    # with_prefix also resolves callables, so we only need one or the other
+    return (
+        field_store.with_prefix(prefix, info=f_info)
+        if prefix
+        else field_store.with_resolved_callables(f_info)
+    )
 
 
 def _get_hints_from_model_property(
@@ -712,7 +747,12 @@ def _get_hints_from_model_property(
         and model_attr.store
     ):
         attr_store = model_attr.store
-        store = attr_store.with_prefix(prefix, info=f_info) if prefix else attr_store
+        # with_prefix also resolves callables, so we only need one or the other
+        store = (
+            attr_store.with_prefix(prefix, info=f_info)
+            if prefix
+            else attr_store.with_resolved_callables(f_info)
+        )
     else:
         store = None
 

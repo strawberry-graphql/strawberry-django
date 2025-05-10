@@ -17,7 +17,9 @@ from django.db.models import (
     Prefetch,
     Q,
     Subquery,
+    Value,
 )
+from django.db.models.fields import CharField
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
 from strawberry import UNSET, relay
@@ -28,7 +30,11 @@ from strawberry_django import mutations
 from strawberry_django.auth.queries import get_current_user
 from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartial
 from strawberry_django.mutations import resolvers
-from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.optimizer import (
+    DjangoOptimizerExtension,
+    OptimizerStore,
+    optimize,
+)
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.permissions import (
     HasPerm,
@@ -110,6 +116,7 @@ class ProjectType(relay.Node, Named):
     cost: strawberry.auto = strawberry_django.field(extensions=[IsAuthenticated()])
     milestones: list["MilestoneType"] = strawberry_django.field(pagination=True)
     milestones_count: int = strawberry_django.field(annotate=Count("milestone"))
+    custom_milestones_model_property: strawberry.auto
     first_milestone: Optional["MilestoneType"] = strawberry_django.field(
         field_name="milestones"
     )
@@ -122,6 +129,23 @@ class ProjectType(relay.Node, Named):
     milestones_paginated: OffsetPaginated["MilestoneType"] = (
         strawberry_django.offset_paginated(field_name="milestones")
     )
+
+    @strawberry_django.field(
+        prefetch_related=lambda info: Prefetch(
+            "milestones",
+            queryset=optimize(
+                Milestone.objects.all(),
+                info,
+                store=OptimizerStore.with_hints(only="project_id"),
+            ),
+            to_attr="custom_milestones",
+        )
+    )
+    @staticmethod
+    def custom_milestones(
+        parent: strawberry.Parent, info: Info
+    ) -> list["MilestoneType"]:
+        return parent.custom_milestones
 
 
 @strawberry_django.filter_type(Milestone, lookups=True)
@@ -173,6 +197,21 @@ class MilestoneType(relay.Node, Named):
     )
     first_issue: Optional["IssueType"] = strawberry_django.field(field_name="issues")
     first_issue_required: "IssueType" = strawberry_django.field(field_name="issues")
+
+    graphql_path: str = strawberry_django.field(
+        annotate=lambda info: Value(
+            ",".join(map(str, info.path.as_list())),
+            output_field=CharField(max_length=255),
+        )
+    )
+    mixed_annotated_prefetch: str = strawberry_django.field(
+        annotate=lambda info: Value("dummy", output_field=CharField(max_length=255)),
+        prefetch_related="issues",
+    )
+    mixed_prefetch_annotated: str = strawberry_django.field(
+        annotate=Value("dummy", output_field=CharField(max_length=255)),
+        prefetch_related=lambda info: Prefetch("issues"),
+    )
     issues_paginated: OffsetPaginated["IssueType"] = strawberry_django.offset_paginated(
         field_name="issues",
         order=IssueOrder,
