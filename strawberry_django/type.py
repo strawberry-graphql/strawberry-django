@@ -39,6 +39,7 @@ from strawberry_django.relay import (
     resolve_model_node,
     resolve_model_nodes,
 )
+from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import (
     AnnotateType,
     PrefetchType,
@@ -209,7 +210,7 @@ def _process_type(
                 existing_resolver is None
                 or existing_resolver.__func__ is getattr(relay.Node, attr).__func__
             ):
-                setattr(cls, attr, types.MethodType(func, cls))
+                setattr(cls, attr, types.MethodType(django_resolver(func), cls))
 
             # Adjust types that inherit from other types/interfaces that implement Node
             # to make sure they pass themselves as the node type
