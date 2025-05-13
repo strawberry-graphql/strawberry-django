@@ -1035,6 +1035,10 @@ def _get_model_hints(
     if pk is not None:
         store.only.append(pk.attname)
 
+    db_unique_key = next((field.attname for field in model._meta.fields if field.name == "db_unique_key"), None)
+    if db_unique_key is not None:
+        store.only.append(db_unique_key)
+
     for f_selections in _get_selections(info, parent_type).values():
         field_data = _get_field_data(
             f_selections,
