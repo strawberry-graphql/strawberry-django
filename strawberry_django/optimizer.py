@@ -1168,6 +1168,10 @@ def _get_model_hints(
     if pk is not None:
         store.only.append(lookup_prefix + pk.attname)
 
+    db_unique_key = getattr(model._meta, "db_unique_key", None)
+    if db_unique_key is not None:
+        store.only.append(lookup_prefix + db_unique_key.attname)
+
     # If this is a polymorphic Model, make sure to select its content type
     if is_polymorphic_model(model):
         store.only.extend(
