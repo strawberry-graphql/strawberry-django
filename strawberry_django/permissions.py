@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 
 _M = TypeVar("_M", bound=Model)
 
+
 # Borrowed from the DRF project
 class OperationHolderMixin:
     def __and__(self, other):
@@ -93,10 +94,10 @@ class OperandHolder(OperationHolderMixin):
 
     def __eq__(self, other):
         return (
-            isinstance(other, OperandHolder) and
-            self.operator_class == other.operator_class and
-            self.op1_class == other.op1_class and
-            self.op2_class == other.op2_class
+            isinstance(other, OperandHolder)
+            and self.operator_class == other.operator_class
+            and self.op1_class == other.op1_class
+            and self.op2_class == other.op2_class
         )
 
     def __hash__(self):
@@ -1015,6 +1016,7 @@ class HasRetvalPerm(HasPerm):
         "Will check if the user has any/all permissions for the resolved "
         "value of this field before returning it.",
     )
+
 
 class HasPermissionClasses(DjangoPermissionExtension):
     def __init__(self, *args, permission_classes: Iterable, **kwargs):
