@@ -210,7 +210,7 @@ def _process_type(
                 existing_resolver is None
                 or existing_resolver.__func__ is getattr(relay.Node, attr).__func__
             ):
-                setattr(cls, attr, types.MethodType(django_resolver(func), cls))
+                setattr(cls, attr, types.MethodType(django_resolver(func), cls))  # type: ignore
 
             # Adjust types that inherit from other types/interfaces that implement Node
             # to make sure they pass themselves as the node type
