@@ -98,7 +98,7 @@ def test_staff_query(db, gql_client: GraphQLTestClient, mocker: MockerFixture):
 @pytest.mark.django_db(transaction=True)
 def test_interface_query(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         node (id: $id) {
           __typename
           id
@@ -352,7 +352,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_prefetch(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($node_id: GlobalID!) {
+      query TestQuery ($node_id: ID!) {
         project (id: $node_id) {
           id
           name
@@ -418,7 +418,7 @@ def test_query_prefetch(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($node_id: GlobalID!) {
+      query TestQuery ($node_id: ID!) {
         project (id: $node_id) {
           id
           name
@@ -512,7 +512,7 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
         }
       }
 
-      query TestQuery ($node_id: GlobalID!) {
+      query TestQuery ($node_id: ID!) {
         project (id: $node_id) {
           id
           name
@@ -752,7 +752,7 @@ def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_annotate(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($node_id: GlobalID!) {
+      query TestQuery ($node_id: ID!) {
         project (id: $node_id) {
           id
           name
@@ -810,7 +810,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_annotate_with_callable(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($node_id: GlobalID!) {
+      query TestQuery ($node_id: ID!) {
         project (id: $node_id) {
           id
           name
@@ -943,7 +943,7 @@ def test_user_query_with_prefetch():
 @pytest.mark.django_db(transaction=True)
 def test_query_select_related_with_only(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         issue (id: $id) {
           id
           milestoneName
@@ -968,7 +968,7 @@ def test_query_select_related_with_only(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         issue (id: $id) {
           id
           milestoneNameWithoutOnlyOptimization
@@ -1030,7 +1030,7 @@ def test_handles_existing_select_related(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         milestone(id: $id) {
           id
           issuesWithFilters (filters: {search: "Foo"}) {
@@ -1068,7 +1068,7 @@ def test_query_nested_connection_with_filter_and_alias(
     db, gql_client: GraphQLTestClient
 ):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         milestone(id: $id) {
           id
           fooIssues: issuesWithFilters (filters: {search: "Foo"}) {
@@ -1195,7 +1195,7 @@ def test_query_with_optimizer_paginated_prefetch():
 @pytest.mark.django_db(transaction=True)
 def test_nested_prefetch_with_filter(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         milestone(id: $id) {
           id
           name
@@ -1239,7 +1239,7 @@ def test_nested_prefetch_with_filter(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_nested_prefetch_with_filter_and_pagination(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         milestone(id: $id) {
           id
           name
@@ -1283,7 +1283,7 @@ def test_nested_prefetch_with_filter_and_pagination(db, gql_client: GraphQLTestC
 @pytest.mark.django_db(transaction=True)
 def test_nested_prefetch_with_multiple_levels(db, gql_client: GraphQLTestClient):
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         milestone(id: $id) {
           id
           name
@@ -1356,7 +1356,7 @@ def test_nested_prefetch_with_get_queryset(
     mock_get_queryset = mocker.spy(StaffType, "get_queryset")
 
     query = """
-      query TestQuery ($id: GlobalID!) {
+      query TestQuery ($id: ID!) {
         issue(id: $id) {
           id
           staffAssignees {
@@ -1649,7 +1649,7 @@ def test_prefetch_multi_field_single_optional(db, gql_client: GraphQLTestClient)
     )
 
     query = """\
-      query TestQuery($id1: GlobalID!, $id2: GlobalID!) {
+      query TestQuery($id1: ID!, $id2: ID!) {
         a: milestone(id: $id1) {
           firstIssue {
             id
@@ -1697,7 +1697,7 @@ def test_prefetch_multi_field_single_required(db, gql_client: GraphQLTestClient)
     )
 
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         milestone(id: $id) {
           firstIssueRequired {
             id
@@ -1732,7 +1732,7 @@ def test_prefetch_multi_field_single_required_missing(
     )
 
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         milestone(id: $id) {
           firstIssueRequired {
             id
@@ -1771,7 +1771,7 @@ def test_prefetch_multi_field_single_required_multiple_returned(
     IssueFactory.create(name="Bar", milestone=milestone)
 
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         milestone(id: $id) {
           firstIssueRequired {
             id
@@ -1876,7 +1876,7 @@ def test_custom_prefetch_optimization(gql_client):
         )
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         project(id: $id) {
           id
           customMilestones {
@@ -1926,7 +1926,7 @@ def test_custom_prefetch_optimization_nested(gql_client):
         )
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         milestone(id: $id) {
           id
           project {
@@ -1978,7 +1978,7 @@ def test_custom_prefetch_model_property_optimization(gql_client):
         )
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         project(id: $id) {
           id
           customMilestonesModelProperty {
@@ -2030,7 +2030,7 @@ def test_custom_prefetch_optimization_model_property_nested(gql_client):
         )
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         milestone(id: $id) {
           id
           project {
@@ -2082,7 +2082,7 @@ def test_correct_annotation_info(gql_client):
         )
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         project(id: $id) {
           id
           milestones {
@@ -2129,7 +2129,7 @@ def test_correct_annotation_info_nested(gql_client):
         )
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         milestone(id: $id) {
           id
           graphqlPath
@@ -2179,7 +2179,7 @@ def test_mixed_annotation_prefetch(gql_client):
         GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
     )
     query = """\
-      query TestQuery($id: GlobalID!) {
+      query TestQuery($id: ID!) {
         project(id: $id) {
           milestones {
             mixedAnnotatedPrefetch

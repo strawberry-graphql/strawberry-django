@@ -8,15 +8,10 @@ from .models import User
 
 # textdedent not possible because of comments
 expected_schema = '''
-"""
-The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
-"""
-scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
-
 """An object with a Globally Unique ID"""
 interface Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
 }
 
 type Query {
@@ -25,7 +20,7 @@ type Query {
 
 type UserType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
 }
 '''

@@ -13,15 +13,6 @@ from strawberry_django.settings import strawberry_django_settings
 if TYPE_CHECKING:
     from strawberry_django.fields.field import StrawberryDjangoField
 
-_global_id_desc = (
-    "The `ID` scalar type represents a unique identifier, "
-    "often used to refetch an object or as key for a cache. "
-    "The ID type appears in a JSON response as a String; "
-    "however, it is not intended to be human-readable. "
-    'When expected as an input type, any string (such as `"4"`) '
-    "or integer (such as `4`) input value will be accepted as an ID."
-)
-
 
 class FieldAttributeModel(models.Model):
     field = models.CharField(max_length=50)
@@ -124,37 +115,32 @@ def test_auto_id_with_node():
         my_type: list[MyType] = strawberry_django.field(filters=MyTypeFilter)
 
     schema = strawberry.Schema(query=Query)
-    expected = f'''\
-    """
-    {_global_id_desc}
-    """
-    scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
-
-    type MyType implements Node {{
+    expected = '''\
+    type MyType implements Node {
       """The Globally Unique ID of this object"""
-      id: GlobalID!
+      id: ID!
       otherId: ID!
       field: String!
-    }}
+    }
 
-    input MyTypeFilter {{
+    input MyTypeFilter {
       id: ID
       field: String
       AND: MyTypeFilter
       OR: MyTypeFilter
       NOT: MyTypeFilter
       DISTINCT: Boolean
-    }}
+    }
 
     """An object with a Globally Unique ID"""
-    interface Node {{
+    interface Node {
       """The Globally Unique ID of this object"""
-      id: GlobalID!
-    }}
+      id: ID!
+    }
 
-    type Query {{
+    type Query {
       myType(filters: MyTypeFilter): [MyType!]!
-    }}
+    }
     '''
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
@@ -181,36 +167,31 @@ def test_auto_id_with_node_mapping_global_id():
         my_type: list[MyType] = strawberry_django.field(filters=MyTypeFilter)
 
     schema = strawberry.Schema(query=Query)
-    expected = f'''\
-    """
-    {_global_id_desc}
-    """
-    scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
-
-    type MyType implements Node {{
+    expected = '''\
+    type MyType implements Node {
       """The Globally Unique ID of this object"""
-      id: GlobalID!
-      otherId: GlobalID!
+      id: ID!
+      otherId: ID!
       field: String!
-    }}
+    }
 
-    input MyTypeFilter {{
-      id: GlobalID
+    input MyTypeFilter {
+      id: ID
       field: String
       AND: MyTypeFilter
       OR: MyTypeFilter
       NOT: MyTypeFilter
       DISTINCT: Boolean
-    }}
+    }
 
     """An object with a Globally Unique ID"""
-    interface Node {{
+    interface Node {
       """The Globally Unique ID of this object"""
-      id: GlobalID!
-    }}
+      id: ID!
+    }
 
-    type Query {{
+    type Query {
       myType(filters: MyTypeFilter): [MyType!]!
-    }}
+    }
     '''
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()

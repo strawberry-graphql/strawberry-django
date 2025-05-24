@@ -59,7 +59,7 @@ When the condition fails, the following can be returned (following this priority
 directive @hasPerm(permissions: [PermDefinition!]!, any: Boolean! = true) repeatable on FIELD_DEFINITION
 
 input AssigneeInputPartial {
-  id: GlobalID
+  id: ID
   throughDefaults: AssigneeThroughInputPartial
 }
 
@@ -76,7 +76,7 @@ input AssigneeThroughInputPartial {
 
 type AssigneeType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   user: UserType!
   owner: Boolean!
 }
@@ -164,7 +164,7 @@ input DjangoModelFilterInput {
 
 type FavoriteType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   user: UserType!
   issue: IssueType!
@@ -190,11 +190,6 @@ type FavoriteTypeEdge {
   """The item at the end of the edge"""
   node: FavoriteType!
 }
-
-"""
-The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
-"""
-scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
 
 input IntComparisonFilterLookup {
   """Exact match. Filter will be skipped on `null` value"""
@@ -230,7 +225,7 @@ input IntRangeLookup {
 }
 
 input IssueAssigneeInputPartial {
-  id: GlobalID
+  id: ID
   user: NodeInputPartial
   owner: Boolean
 }
@@ -261,7 +256,7 @@ input IssueInput {
 }
 
 input IssueInputPartial {
-  id: GlobalID!
+  id: ID!
   name: String
   milestone: MilestoneInputPartial!
   priority: Int
@@ -289,7 +284,7 @@ input IssueOrder {
 
 type IssueType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   milestone: MilestoneType!
   priority: Int!
@@ -365,7 +360,7 @@ input MilestoneInput {
 }
 
 input MilestoneInputPartial {
-  id: GlobalID
+  id: ID
   name: String
   issues: [MilestoneIssueInputPartial!]
   project: ProjectInputPartial
@@ -387,7 +382,7 @@ input MilestoneOrder {
 
 type MilestoneType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   dueDate: Date
   project: ProjectType!
@@ -475,17 +470,17 @@ interface Named {
 """An object with a Globally Unique ID"""
 interface Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
 }
 
 """Input of an object that implements the `Node` interface."""
 input NodeInput {
-  id: GlobalID!
+  id: ID!
 }
 
 """Input of an object that implements the `Node` interface."""
 input NodeInputPartial {
-  id: GlobalID
+  id: ID
 }
 
 type OffsetPaginationInfo {
@@ -572,7 +567,7 @@ input ProjectFilter {
 }
 
 input ProjectInputPartial {
-  id: GlobalID
+  id: ID
   name: String
   milestones: [MilestoneInputPartial!]
 }
@@ -584,7 +579,7 @@ input ProjectOrder {
 
 type ProjectType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   dueDate: Date
   isSmall: Boolean!
@@ -637,53 +632,53 @@ type ProjectTypeOffsetPaginated {
 type Query {
   node(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): Node
   favorite(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): FavoriteType
 
   """Foobar"""
   issue(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType
   milestone(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): MilestoneType
   milestoneMandatory(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): MilestoneType!
   milestones(
     """The IDs of the objects."""
-    ids: [GlobalID!]!
+    ids: [ID!]!
   ): [MilestoneType!]!
   project(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): ProjectType
   projectMandatory(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): ProjectType!
   projectLoginRequired(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): ProjectType @isAuthenticated
   tag(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): TagType
   staff(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): StaffType
   staffList(
     """The IDs of the objects."""
-    ids: [GlobalID!]!
+    ids: [ID!]!
   ): [StaffType]!
   issueList: [IssueType!]!
   issuesPaginated(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated!
@@ -777,35 +772,35 @@ type Query {
   quizList: [QuizType!]!
   issueLoginRequired(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType! @isAuthenticated
   issueLoginRequiredOptional(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType @isAuthenticated
   issueStaffRequired(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType! @isStaff
   issueStaffRequiredOptional(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType @isStaff
   issueSuperuserRequired(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType! @isSuperuser
   issueSuperuserRequiredOptional(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType @isSuperuser
   issuePermRequired(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issuePermRequiredOptional(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListPermRequired: [IssueType!]! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issuesPaginatedPermRequired(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
@@ -824,11 +819,11 @@ type Query {
   ): IssueTypeConnection! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueObjPermRequired(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueObjPermRequiredOptional(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): IssueType @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListObjPermRequired: [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueListObjPermRequiredPaginated(pagination: OffsetPaginationInput): [IssueType!]! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
@@ -868,14 +863,14 @@ type Query {
 
 type QuizType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   title: String!
   sequence: Int!
 }
 
 type StaffType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   email: String!
   isActive: Boolean!
   isSuperuser: Boolean!
@@ -952,7 +947,7 @@ input StrFilterLookup {
 }
 
 input TagInputPartial {
-  id: GlobalID
+  id: ID
   name: String
 }
 
@@ -965,7 +960,7 @@ input TagInputPartialListInput {
 
 type TagType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   issues(
     """Returns the items in the list that come before the specified cursor."""
@@ -1012,7 +1007,7 @@ union UpdateProjectPayload = ProjectType | OperationInfo
 
 type UserType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   email: String!
   isActive: Boolean!
   isSuperuser: Boolean!

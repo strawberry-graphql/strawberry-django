@@ -24,7 +24,7 @@ def _fixtures(transactional_db):
 def test_query_node():
     result = schema.execute_sync(
         """
-        query TestQuery ($id: GlobalID!) {
+        query TestQuery ($id: ID!) {
             node (id: $id) {
                 ... on Node {
                     id
@@ -53,7 +53,7 @@ def test_query_node():
 async def test_query_node_with_async_permissions():
     result = await schema.execute(
         """
-        query TestQuery ($id: GlobalID!) {
+        query TestQuery ($id: ID!) {
             nodeWithAsyncPermissions (id: $id) {
                 ... on Node {
                     id
@@ -82,7 +82,7 @@ async def test_query_node_with_async_permissions():
 def test_query_node_optional():
     result = schema.execute_sync(
         """
-        query TestQuery ($id: GlobalID!) {
+        query TestQuery ($id: ID!) {
             nodeOptional (id: $id) {
                 ... on Node {
                     id
@@ -105,7 +105,7 @@ def test_query_node_optional():
 async def test_query_node_async():
     result = await schema.execute(
         """
-        query TestQuery ($id: GlobalID!) {
+        query TestQuery ($id: ID!) {
             node (id: $id) {
                 ... on Node {
                     id
@@ -134,7 +134,7 @@ async def test_query_node_async():
 async def test_query_node_optional_async():
     result = await schema.execute(
         """
-        query TestQuery ($id: GlobalID!) {
+        query TestQuery ($id: ID!) {
             nodeOptional (id: $id) {
                 ... on Node {
                     id
@@ -157,7 +157,7 @@ async def test_query_node_optional_async():
 def test_query_nodes():
     result = schema.execute_sync(
         """
-        query TestQuery ($ids: [GlobalID!]!) {
+        query TestQuery ($ids: [ID!]!) {
             nodes (ids: $ids) {
                 ... on Node {
                     id
@@ -193,7 +193,7 @@ def test_query_nodes():
 def test_query_nodes_optional():
     result = schema.execute_sync(
         """
-        query TestQuery ($ids: [GlobalID!]!) {
+        query TestQuery ($ids: [ID!]!) {
             nodesOptional (ids: $ids) {
                 ... on Node {
                     id
@@ -234,7 +234,7 @@ def test_query_nodes_optional():
 async def test_query_nodes_async():
     result = await schema.execute(
         """
-        query TestQuery ($ids: [GlobalID!]!) {
+        query TestQuery ($ids: [ID!]!) {
             nodes (ids: $ids) {
                 ... on Node {
                     id
@@ -273,7 +273,7 @@ async def test_query_nodes_async():
 async def test_query_nodes_optional_async():
     result = await schema.execute(
         """
-        query TestQuery ($ids: [GlobalID!]!) {
+        query TestQuery ($ids: [ID!]!) {
             nodesOptional (ids: $ids) {
                 ... on Node {
                     id

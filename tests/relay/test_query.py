@@ -29,7 +29,7 @@ def test_correct_model_returned(type_name: str):
     node_id = relay.to_base64(type_name, "test")
     result = schema.execute_sync(
         """
-        query NodeQuery($id: GlobalID!) {
+        query NodeQuery($id: ID!) {
           node(id: $id) {
             __typename
             id

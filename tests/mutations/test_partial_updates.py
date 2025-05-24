@@ -600,7 +600,7 @@ def relay_mutation(db):
 
 def test_relay_field_required(relay_mutation):
     """Tests Relay behaviour for a required model field."""
-    query = """mutation UpdateIssueName($id: GlobalID!, $name: String) {
+    query = """mutation UpdateIssueName($id: ID!, $name: String) {
       updateIssue(data: { id: $id, name: $name }) {
         ...on IssueType {
           name
@@ -653,7 +653,7 @@ def test_relay_field_required(relay_mutation):
 
 def test_relay_field_optional_and_non_nullable(relay_mutation):
     """Tests Relay behaviour for an optional & non-nullable model field."""
-    query = """mutation UpdateIssuePriority($id: GlobalID!, $priority: Int) {
+    query = """mutation UpdateIssuePriority($id: ID!, $priority: Int) {
       updateIssue(data: { id: $id, priority: $priority }) {
         ...on IssueType {
           priority
@@ -706,7 +706,7 @@ def test_relay_field_optional_and_non_nullable(relay_mutation):
 
 def test_relay_field_optional_and_nullable(relay_mutation):
     """Tests Relay behaviour for an optional & nullable model field."""
-    query = """mutation UpdateIssueKind($id: GlobalID!, $kind: String) {
+    query = """mutation UpdateIssueKind($id: ID!, $kind: String) {
       updateIssue(data: { id: $id, kind: $kind }) {
         ...on IssueType {
           kind
@@ -747,7 +747,7 @@ def test_relay_field_optional_and_nullable(relay_mutation):
 
 def test_relay_foreign_key_required(relay_mutation):
     """Tests Relay behaviour for a required foreign key field."""
-    query = """mutation UpdateMilestoneProject($id: GlobalID!, $project: NodeInput) {
+    query = """mutation UpdateMilestoneProject($id: ID!, $project: NodeInput) {
       updateMilestone(data: { id: $id, project: $project }) {
         ...on MilestoneType {
           project { id }
@@ -801,7 +801,7 @@ def test_relay_foreign_key_required(relay_mutation):
 
 def test_relay_foreign_key_optional(relay_mutation):
     """Tests Relay behaviour for an optional foreign key field."""
-    query = """mutation UpdateIssueMilestone($id: GlobalID!, $milestone: NodeInput) {
+    query = """mutation UpdateIssueMilestone($id: ID!, $milestone: NodeInput) {
       updateIssue(data: { id: $id, milestone: $milestone }) {
         ...on IssueType {
           milestone { id }
@@ -843,7 +843,7 @@ def test_relay_foreign_key_optional(relay_mutation):
 
 def test_relay_many_to_many(relay_mutation):
     """Tests Relay behaviour for a many to many field."""
-    query = """mutation UpdateIssueTags($id: GlobalID!, $tags: NodeInputListInput) {
+    query = """mutation UpdateIssueTags($id: ID!, $tags: NodeInputListInput) {
       updateIssue(data: { id: $id, tags: $tags }) {
         ...on IssueType {
           tags { id }
@@ -890,7 +890,7 @@ def test_relay_many_to_many(relay_mutation):
 
 def test_relay_many_to_many_set(relay_mutation):
     """Tests Relay behaviour for `set` on a many to many field."""
-    query = """mutation SetIssueTags($id: GlobalID!, $setTags: [NodeInput!]) {
+    query = """mutation SetIssueTags($id: ID!, $setTags: [NodeInput!]) {
       updateIssue(data: { id: $id, tags: { set: $setTags } }) {
         ...on IssueType {
           tags { id }
@@ -945,7 +945,7 @@ def test_relay_many_to_many_set(relay_mutation):
 
 def test_relay_many_to_many_add(relay_mutation):
     """Tests Relay behaviour for `add` on a many to many field."""
-    query = """mutation AddIssueTags($id: GlobalID!, $addTags: [NodeInput!]) {
+    query = """mutation AddIssueTags($id: ID!, $addTags: [NodeInput!]) {
       updateIssue(data: { id: $id, tags: { add: $addTags } }) {
         ...on IssueType {
           tags { id }
@@ -1002,7 +1002,7 @@ def test_relay_many_to_many_add(relay_mutation):
 
 def test_relay_many_to_many_remove(relay_mutation):
     """Tests Relay behaviour for `remove` on a many to many field."""
-    query = """mutation RemoveIssueTags($id: GlobalID!, $removeTags: [NodeInput!]) {
+    query = """mutation RemoveIssueTags($id: ID!, $removeTags: [NodeInput!]) {
       updateIssue(data: { id: $id, tags: { remove: $removeTags } }) {
         ...on IssueType {
           tags { id }

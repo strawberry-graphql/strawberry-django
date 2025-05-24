@@ -20,7 +20,7 @@ def test_required(gql_client: utils.GraphQLTestClient):
     # Query a required field, and a nested required field with no ordering
     # We expect the queries to **not** have an `ORDER BY` clause
     query = """
-      query testRequired($id: GlobalID!) {
+      query testRequired($id: ID!) {
         projectMandatory(id: $id) {
           name
           firstMilestoneRequired {
@@ -65,7 +65,7 @@ def test_optional(gql_client: utils.GraphQLTestClient):
     # Query an optional field, and a nested optional field with no ordering
     # We expect the queries to have an `ORDER BY` clause
     query = """
-      query testOptional($id: GlobalID!) {
+      query testOptional($id: ID!) {
         project(id: $id) {
           name
           firstMilestone {

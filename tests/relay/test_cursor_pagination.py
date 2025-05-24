@@ -1116,7 +1116,7 @@ def test_nested_cursor_pagination_in_single():
     Milestone.objects.create(id=5, project=pa, due_date=datetime.date(2025, 6, 1))
 
     query = """
-    query TestQuery($id: GlobalID!) {
+    query TestQuery($id: ID!) {
         project(id: $id) {
             id
                   milestones(first: 2, order: { dueDate: ASC }) {

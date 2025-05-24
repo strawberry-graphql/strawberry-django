@@ -23,7 +23,7 @@ perm_kinds: list[PermKind] = ["user", "group", "superuser"]
 @pytest.mark.django_db(transaction=True)
 def test_is_authenticated(db, gql_client: GraphQLTestClient):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueLoginRequired (id: $id) {
           id
           name
@@ -60,7 +60,7 @@ def test_is_authenticated(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_is_authenticated_optional(db, gql_client: GraphQLTestClient):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueLoginRequiredOptional (id: $id) {
           id
           name
@@ -86,7 +86,7 @@ def test_is_authenticated_optional(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_staff_required(db, gql_client: GraphQLTestClient):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueStaffRequired (id: $id) {
           id
           name
@@ -134,7 +134,7 @@ def test_staff_required(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_staff_required_optional(db, gql_client: GraphQLTestClient):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueStaffRequiredOptional (id: $id) {
           id
           name
@@ -165,7 +165,7 @@ def test_staff_required_optional(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_superuser_required(db, gql_client: GraphQLTestClient):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueSuperuserRequired (id: $id) {
           id
           name
@@ -255,7 +255,7 @@ def test_async_user_resolve(db, gql_client: GraphQLTestClient):
 @pytest.mark.django_db(transaction=True)
 def test_superuser_required_optional(db, gql_client: GraphQLTestClient):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueSuperuserRequiredOptional (id: $id) {
           id
           name
@@ -300,7 +300,7 @@ def test_perm_cached(db, gql_client: GraphQLTestClient):
     ```
     """
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issuePermRequired (id: $id) {
           id
           privateName
@@ -330,7 +330,7 @@ def test_perm_cached(db, gql_client: GraphQLTestClient):
 @pytest.mark.parametrize("kind", perm_kinds)
 def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issuePermRequired (id: $id) {
           id
           name
@@ -398,7 +398,7 @@ def test_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
 @pytest.mark.parametrize("kind", perm_kinds)
 def test_perm_required_optional(db, gql_client: GraphQLTestClient, kind: PermKind):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issuePermRequiredOptional (id: $id) {
           id
           name
@@ -550,7 +550,7 @@ def test_conn_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
 @pytest.mark.parametrize("kind", perm_kinds)
 def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueObjPermRequired (id: $id) {
           id
           name
@@ -627,7 +627,7 @@ def test_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKind):
 @pytest.mark.parametrize("kind", perm_kinds)
 def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermKind):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueObjPermRequired (id: $id) {
           id
           name
@@ -701,7 +701,7 @@ def test_obj_perm_required_global(db, gql_client: GraphQLTestClient, kind: PermK
 @pytest.mark.parametrize("kind", perm_kinds)
 def test_obj_perm_required_optional(db, gql_client: GraphQLTestClient, kind: PermKind):
     query = """
-    query Issue ($id: GlobalID!) {
+    query Issue ($id: ID!) {
         issueObjPermRequiredOptional (id: $id) {
           id
           name

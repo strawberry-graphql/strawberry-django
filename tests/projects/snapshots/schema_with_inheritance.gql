@@ -12,7 +12,7 @@ directive @isAuthenticated repeatable on FIELD_DEFINITION
 
 type AssigneeType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   user: UserType!
   owner: Boolean!
 }
@@ -31,7 +31,7 @@ input DjangoModelFilterInput {
 
 type FavoriteType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   user: UserType!
   issue: IssueType!
@@ -58,11 +58,6 @@ type FavoriteTypeEdge {
   node: FavoriteType!
 }
 
-"""
-The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
-"""
-scalar GlobalID @specifiedBy(url: "https://relay.dev/graphql/objectidentification.htm")
-
 input IssueFilter {
   name: StrFilterLookup
   AND: IssueFilter
@@ -87,7 +82,7 @@ input IssueOrder {
 
 type IssueType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   milestone: MilestoneType!
   priority: Int!
@@ -157,7 +152,7 @@ input MilestoneFilter {
 }
 
 input MilestoneInputPartial {
-  id: GlobalID
+  id: ID
   name: String
   issues: [MilestoneIssueInputPartial!]
   project: ProjectInputPartial
@@ -175,7 +170,7 @@ input MilestoneOrder {
 
 type MilestoneType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   dueDate: Date
   project: ProjectType!
@@ -239,7 +234,7 @@ type MilestoneTypeOffsetPaginated {
 
 type MilestoneTypeSubclass implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   dueDate: Date
   project: ProjectType!
@@ -281,12 +276,12 @@ interface Named {
 """An object with a Globally Unique ID"""
 interface Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
 }
 
 """Input of an object that implements the `Node` interface."""
 input NodeInput {
-  id: GlobalID!
+  id: ID!
 }
 
 type OffsetPaginationInfo {
@@ -353,7 +348,7 @@ type PageInfo {
 }
 
 input ProjectInputPartial {
-  id: GlobalID
+  id: ID
   name: String
   milestones: [MilestoneInputPartial!]
 }
@@ -365,7 +360,7 @@ input ProjectOrder {
 
 type ProjectType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   dueDate: Date
   isSmall: Boolean!
@@ -398,7 +393,7 @@ type ProjectType implements Node & Named {
 
 type ProjectTypeSubclass implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   dueDate: Date
   isSmall: Boolean!
@@ -432,17 +427,17 @@ type ProjectTypeSubclass implements Node & Named {
 type Query {
   project(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): ProjectTypeSubclass
   milestone(
     """The ID of the object."""
-    id: GlobalID!
+    id: ID!
   ): MilestoneTypeSubclass
 }
 
 type StaffType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   email: String!
   isActive: Boolean!
   isSuperuser: Boolean!
@@ -498,13 +493,13 @@ input StrFilterLookup {
 }
 
 input TagInputPartial {
-  id: GlobalID
+  id: ID
   name: String
 }
 
 type TagType implements Node & Named {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   name: String!
   issues(
     """Returns the items in the list that come before the specified cursor."""
@@ -524,7 +519,7 @@ type TagType implements Node & Named {
 
 type UserType implements Node {
   """The Globally Unique ID of this object"""
-  id: GlobalID!
+  id: ID!
   email: String!
   isActive: Boolean!
   isSuperuser: Boolean!
