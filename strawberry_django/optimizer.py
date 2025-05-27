@@ -1168,10 +1168,21 @@ def _get_model_hints(
     if pk is not None:
         store.only.append(lookup_prefix + pk.attname)
 
-    # If this is a polymorphic Model, make sure to select its content type
-    if is_polymorphic_model(model):
-        store.only.extend(
-            lookup_prefix + f for f in model.polymorphic_internal_model_fields
+    db_unique_key = next((field.attname for field in model._meta.fields if field.name == "db_unique_key"), None)
+    if db_unique_key is not None:
+        store.only.append(db_unique_key)
+        
+    external_uuid = next((field.attname for field in model._meta.fields if field.name == "external_uuid"), None)
+    if external_uuid is not None:
+        store.only.append(external_uuid)
+
+    for f_selections in _get_selections(info, parent_type).values():
+        field_data = _get_field_data(
+            f_selections,
+            object_definition,
+            schema,
+            parent_type=parent_type,
+            info=info,
         )
 
     selections = [
