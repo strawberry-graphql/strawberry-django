@@ -182,6 +182,9 @@ type MilestoneType implements Node & Named {
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   firstIssue: IssueType
   firstIssueRequired: IssueType!
+  graphqlPath: String!
+  mixedAnnotatedPrefetch: String!
+  mixedPrefetchAnnotated: String!
   issuesPaginated(pagination: OffsetPaginationInput, order: IssueOrder): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter
@@ -203,6 +206,37 @@ type MilestoneType implements Node & Named {
   asyncField(value: String!): String!
 }
 
+"""A connection to a list of items."""
+type MilestoneTypeConnection {
+  """Pagination data for this connection"""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection"""
+  edges: [MilestoneTypeEdge!]!
+
+  """Total quantity of existing nodes."""
+  totalCount: Int
+}
+
+"""An edge in a connection."""
+type MilestoneTypeEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: MilestoneType!
+}
+
+type MilestoneTypeOffsetPaginated {
+  pageInfo: OffsetPaginationInfo!
+
+  """Total count of existing results."""
+  totalCount: Int!
+
+  """List of paginated results."""
+  results: [MilestoneType!]!
+}
+
 type MilestoneTypeSubclass implements Node & Named {
   """The Globally Unique ID of this object"""
   id: GlobalID!
@@ -212,6 +246,9 @@ type MilestoneTypeSubclass implements Node & Named {
   issues(filters: IssueFilter, order: IssueOrder, pagination: OffsetPaginationInput): [IssueType!]!
   firstIssue: IssueType
   firstIssueRequired: IssueType!
+  graphqlPath: String!
+  mixedAnnotatedPrefetch: String!
+  mixedPrefetchAnnotated: String!
   issuesPaginated(pagination: OffsetPaginationInput, order: IssueOrder): IssueTypeOffsetPaginated!
   issuesWithFilters(
     filters: IssueFilter
@@ -331,11 +368,32 @@ type ProjectType implements Node & Named {
   id: GlobalID!
   name: String!
   dueDate: Date
-  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
-  milestonesCount: Int!
+  isSmall: Boolean!
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
-  isSmall: Boolean!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
+  milestonesCount: Int!
+  customMilestonesModelProperty: [MilestoneType!]!
+  firstMilestone: MilestoneType
+  firstMilestoneRequired: MilestoneType!
+  milestoneConn(
+    filters: MilestoneFilter
+    order: MilestoneOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): MilestoneTypeConnection!
+  milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 type ProjectTypeSubclass implements Node & Named {
@@ -343,11 +401,32 @@ type ProjectTypeSubclass implements Node & Named {
   id: GlobalID!
   name: String!
   dueDate: Date
-  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
-  milestonesCount: Int!
+  isSmall: Boolean!
   isDelayed: Boolean!
   cost: Decimal @isAuthenticated
-  isSmall: Boolean!
+  milestones(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
+  milestonesCount: Int!
+  customMilestonesModelProperty: [MilestoneType!]!
+  firstMilestone: MilestoneType
+  firstMilestoneRequired: MilestoneType!
+  milestoneConn(
+    filters: MilestoneFilter
+    order: MilestoneOrder
+
+    """Returns the items in the list that come before the specified cursor."""
+    before: String = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    after: String = null
+
+    """Returns the first n items from the list."""
+    first: Int = null
+
+    """Returns the items in the list that come after the specified cursor."""
+    last: Int = null
+  ): MilestoneTypeConnection!
+  milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
+  customMilestones: [MilestoneType!]!
 }
 
 type Query {

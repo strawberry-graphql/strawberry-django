@@ -1,4 +1,4 @@
-# ruff: noqa: TRY002, B904, BLE001, F811, PT012, A001, PLC2701
+# ruff: noqa: B904, BLE001, F811, PT012, A001
 from enum import Enum
 from typing import Any, Optional, cast
 
@@ -35,7 +35,7 @@ class Version(Enum):
     THREE = "third"
 
 
-@strawberry_django.filter(models.Color, lookups=True)
+@strawberry_django.filter_type(models.Color, lookups=True)
 class ColorFilter:
     id: auto
     name: auto
@@ -45,13 +45,13 @@ class ColorFilter:
         return Q(**{f"{prefix}name": value})
 
 
-@strawberry_django.filter(models.FruitType, lookups=True)
+@strawberry_django.filter_type(models.FruitType, lookups=True)
 class FruitTypeFilter:
     name: auto
     fruits: Optional["FruitFilter"]
 
 
-@strawberry_django.filter(models.Fruit, lookups=True)
+@strawberry_django.filter_type(models.Fruit, lookups=True)
 class FruitFilter:
     color_id: auto
     name: auto
@@ -237,7 +237,7 @@ def test_filter_field_on_object():
 
 
 def test_filter_field_method():
-    @strawberry_django.filter(models.Fruit)
+    @strawberry_django.filter_type(models.Fruit)
     class Filter:
         @strawberry_django.order_field
         def custom_filter(self, root, info, prefix, value: auto, queryset):
@@ -258,7 +258,7 @@ def test_filter_field_method():
 
 
 def test_filter_object_method():
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
         @strawberry_django.filter_field
         def field_filter(self, value: str, prefix):
@@ -282,7 +282,7 @@ def test_filter_object_method():
 
 
 def test_filter_value_resolution():
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
         id: Optional[strawberry_django.ComparisonFilterLookup[GlobalID]]
 
@@ -298,7 +298,7 @@ def test_filter_value_resolution():
 
 
 def test_filter_method_value_resolution():
-    @strawberry_django.filters.filter(models.Fruit)
+    @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
         @strawberry_django.filter_field(resolve_value=True)
         def field_filter_resolved(self, value: GlobalID, prefix):
@@ -317,7 +317,7 @@ def test_filter_method_value_resolution():
 
 
 def test_filter_type():
-    @strawberry_django.filter(models.Fruit, lookups=True)
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
     class FruitOrder:
         id: auto
         name: auto

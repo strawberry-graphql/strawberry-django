@@ -11,7 +11,7 @@ from . import models
 # filters
 
 
-@strawberry_django.filters.filter(models.Fruit, lookups=True)
+@strawberry_django.filters.filter_type(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
@@ -22,7 +22,7 @@ class FruitFilter:
         return Q(**{f"{prefix}name": value})
 
 
-@strawberry_django.filters.filter(models.Color, lookups=True)
+@strawberry_django.filters.filter_type(models.Color, lookups=True)
 class ColorFilter:
     id: auto
     name: auto

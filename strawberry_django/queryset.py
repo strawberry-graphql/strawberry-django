@@ -9,6 +9,8 @@ from django.db.models.query import QuerySet
 if TYPE_CHECKING:
     from strawberry import Info
 
+    from strawberry_django.relay.cursor_connection import OrderingDescriptor
+
 _M = TypeVar("_M", bound=Model)
 
 CONFIG_KEY = "_strawberry_django_config"
@@ -17,11 +19,16 @@ CONFIG_KEY = "_strawberry_django_config"
 @dataclasses.dataclass
 class StrawberryDjangoQuerySetConfig:
     optimized: bool = False
+    optimized_by_prefetching: bool = False
     type_get_queryset_did_run: bool = False
+    ordering_descriptors: list[OrderingDescriptor] | None = None
 
 
 def get_queryset_config(queryset: QuerySet) -> StrawberryDjangoQuerySetConfig:
-    return getattr(queryset, CONFIG_KEY, None) or StrawberryDjangoQuerySetConfig()
+    config = getattr(queryset, CONFIG_KEY, None)
+    if config is None:
+        setattr(queryset, CONFIG_KEY, (config := StrawberryDjangoQuerySetConfig()))
+    return config
 
 
 def run_type_get_queryset(

@@ -4,9 +4,15 @@ import contextvars
 import dataclasses
 import inspect
 import warnings
-from typing import Any, Optional, Union, cast
+from typing import (
+    Any,
+    Optional,
+    Union,
+    cast,
+)
 
 import strawberry
+from asgiref.sync import sync_to_async
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.client import AsyncClient, Client
 from django.test.utils import CaptureQueriesContext
@@ -86,19 +92,40 @@ def deep_tuple_to_list(data: tuple) -> list:
     return return_list
 
 
+class AsyncCaptureQueriesContext:
+    wrapped: CaptureQueriesContext
+
+    def __init__(self, using: str):
+        super().__init__()
+        self.using = using
+
+    @sync_to_async
+    def wrapped_enter(self):
+        self.wrapped = CaptureQueriesContext(connection=connections[self.using])
+        return self.wrapped.__enter__()  # noqa: PLC2801
+
+    def __enter__(self):
+        return asyncio.run(self.wrapped_enter())
+
+    def __exit__(self, exc_type, exc_value, traceback, /):
+        return asyncio.run(
+            sync_to_async(self.wrapped.__exit__)(exc_type, exc_value, traceback)
+        )
+
+
 @contextlib.contextmanager
 def assert_num_queries(n: int, *, using=DEFAULT_DB_ALIAS):
-    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
-        yield
+    is_async = (gql_client := _client.get(None)) is not None and gql_client.is_async
+
+    if is_async:
+        ctx_manager = AsyncCaptureQueriesContext(using)
+    else:
+        ctx_manager = CaptureQueriesContext(connection=connections[using])
+
+    with ctx_manager as ctx:
+        yield ctx
 
     executed = len(ctx)
-
-    # FIXME: Async will not have access to the correct number of queries without
-    # execing CaptureQueriesContext.(__enter__|__exit__) wrapped in sync_to_async
-    # How can we fix this?
-    with contextlib.suppress(LookupError):
-        if _client.get().is_async and executed == 0:
-            return
 
     assert executed == n, (
         "{} queries executed, {} expected\nCaptured queries were:\n{}".format(

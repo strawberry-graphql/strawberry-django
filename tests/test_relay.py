@@ -75,7 +75,7 @@ def test_relay_with_resolve_id_and_node_id():
         name: auto
 
         @classmethod
-        def resolve_id(cls, root: Self, *, info):
+        def resolve_id(cls, root: Self, *, info):  # type: ignore
             return str(root.id)
 
     @strawberry.type

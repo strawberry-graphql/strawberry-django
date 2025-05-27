@@ -1,16 +1,20 @@
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Annotated, Any, Optional
 
+import strawberry
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Prefetch, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
 
 from strawberry_django.descriptors import model_property
+from strawberry_django.optimizer import OptimizerStore, optimize
 from strawberry_django.utils.typing import UserType
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
+
+    from .schema import MilestoneType
 
 User = get_user_model()
 
@@ -59,6 +63,22 @@ class Project(NamedModel):
     def is_small(self) -> bool:
         return self._milestone_count < 3  # type: ignore
 
+    @model_property(
+        prefetch_related=lambda info: Prefetch(
+            "milestones",
+            queryset=optimize(
+                Milestone.objects.all(),
+                info,
+                store=OptimizerStore.with_hints(only="project_id"),
+            ),
+            to_attr="custom_milestones_property",
+        )
+    )
+    def custom_milestones_model_property(
+        self,
+    ) -> list[Annotated["MilestoneType", strawberry.lazy("tests.projects.schema")]]:
+        return self.custom_milestones_property  # type: ignore
+
 
 class Milestone(NamedModel):
     issues: "RelatedManager[Issue]"
@@ -93,6 +113,7 @@ class Favorite(models.Model):
 
     class Meta:
         # Needed to allow type's get_queryset() to access a model's custom QuerySet
+        ordering = ("name",)
         base_manager_name = "objects"
 
     id = models.BigAutoField(

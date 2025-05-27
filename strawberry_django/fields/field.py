@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import warnings
 from collections.abc import (
     AsyncIterable,
     AsyncIterator,
@@ -48,7 +49,11 @@ from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
 from strawberry_django.optimizer import OptimizerStore, is_optimized_by_prefetching
-from strawberry_django.ordering import ORDER_ARG, StrawberryDjangoFieldOrdering
+from strawberry_django.ordering import (
+    ORDER_ARG,
+    ORDERING_ARG,
+    StrawberryDjangoFieldOrdering,
+)
 from strawberry_django.pagination import (
     PAGINATION_ARG,
     OffsetPaginated,
@@ -161,6 +166,16 @@ class StrawberryDjangoField(
             for p in self.base_resolver.signature.parameters.values()
         )
 
+    @cached_property
+    def _need_remove_ordering_argument(self):
+        if not self.base_resolver or not self.is_connection:
+            return False
+
+        return not any(
+            p.name == ORDERING_ARG or p.kind == p.VAR_KEYWORD
+            for p in self.base_resolver.signature.parameters.values()
+        )
+
     def get_result(
         self,
         source: models.Model | None,
@@ -174,6 +189,8 @@ class StrawberryDjangoField(
             resolver_kwargs = kwargs.copy()
             if self._need_remove_order_argument:
                 resolver_kwargs.pop(ORDER_ARG, None)
+            if self._need_remove_ordering_argument:
+                resolver_kwargs.pop(ORDERING_ARG, None)
             if self._need_remove_filters_argument:
                 resolver_kwargs.pop(FILTERS_ARG, None)
 
@@ -323,8 +340,10 @@ class StrawberryDjangoField(
         )
 
         # If optimizer extension is enabled, optimize this queryset
-        ext = optimizer.optimizer.get()
-        if ext is not None:
+        if (
+            not self.disable_optimization
+            and (ext := optimizer.optimizer.get()) is not None
+        ):
             queryset = ext.optimize(queryset, info=info)
 
         return queryset
@@ -355,6 +374,13 @@ def _get_field_arguments_for_extensions(
         order = field.get_order()
         if order not in (None, UNSET):  # noqa: PLR6201
             args[ORDER_ARG] = argument(ORDER_ARG, order, is_optional=True)
+
+    if add_order and ORDERING_ARG not in args:
+        ordering = field.get_ordering()
+        if ordering not in (None, UNSET):  # noqa: PLR6201
+            args[ORDERING_ARG] = argument(
+                ORDERING_ARG, ordering, is_list=True, default=[]
+            )
 
     if add_pagination and PAGINATION_ARG not in args:
         pagination = field.get_pagination()
@@ -448,6 +474,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     after=after,
                     first=first,
                     last=last,
+                    max_results=self.max_results,
                 )
                 if inspect.isawaitable(resolved):
                     resolved = await resolved
@@ -463,6 +490,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
             after=after,
             first=first,
             last=last,
+            max_results=self.max_results,
         )
 
 
@@ -548,6 +576,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -576,6 +605,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -604,6 +634,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -631,6 +662,7 @@ def field(
     pagination: bool | UnsetType = UNSET,
     filters: type | UnsetType | None = UNSET,
     order: type | UnsetType | None = UNSET,
+    ordering: type | UnsetType | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -672,6 +704,7 @@ def field(
         filters=filters,
         pagination=pagination,
         order=order,
+        ordering=ordering,
         extensions=extensions,
         only=only,
         select_related=select_related,
@@ -679,6 +712,13 @@ def field(
         annotate=annotate,
         disable_optimization=disable_optimization,
     )
+
+    if order:
+        warnings.warn(
+            "strawberry_django.order is deprecated in favor of strawberry_django.ordering.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     if resolver:
         return f(resolver)
@@ -770,6 +810,7 @@ def connection(
     max_results: int | None = None,
     filters: type | None = UNSET,
     order: type | None = UNSET,
+    ordering: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -799,6 +840,7 @@ def connection(
     max_results: int | None = None,
     filters: type | None = UNSET,
     order: type | None = UNSET,
+    ordering: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -826,6 +868,7 @@ def connection(
     max_results: int | None = None,
     filters: type | None = UNSET,
     order: type | None = UNSET,
+    ordering: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -914,6 +957,7 @@ def connection(
         directives=directives or (),
         filters=filters,
         order=order,
+        ordering=ordering,
         extensions=extensions,
         only=only,
         select_related=select_related,
@@ -956,6 +1000,7 @@ def offset_paginated(
     extensions: Sequence[FieldExtension] = (),
     filters: type | None = UNSET,
     order: type | None = UNSET,
+    ordering: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -984,6 +1029,7 @@ def offset_paginated(
     extensions: Sequence[FieldExtension] = (),
     filters: type | None = UNSET,
     order: type | None = UNSET,
+    ordering: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -1010,6 +1056,7 @@ def offset_paginated(
     extensions: Sequence[FieldExtension] = (),
     filters: type | None = UNSET,
     order: type | None = UNSET,
+    ordering: type | None = UNSET,
     only: TypeOrSequence[str] | None = None,
     select_related: TypeOrSequence[str] | None = None,
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
@@ -1095,6 +1142,7 @@ def offset_paginated(
         directives=directives or (),
         filters=filters,
         order=order,
+        ordering=ordering,
         extensions=extensions,
         only=only,
         select_related=select_related,

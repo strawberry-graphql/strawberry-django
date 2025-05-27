@@ -46,6 +46,7 @@ jobs:
           - 4.2.*
           - 5.0.*
           - 5.1.*
+          - 5.2.*
         python-version:
           - '3.9'
           - '3.10'
@@ -74,6 +75,9 @@ jobs:
             python-version: '3.13'
           # Django 5.1 only supports python 3.10+
           - django-version: 5.1.*
+            python-version: '3.9'
+          # Django 5.2 only supports python 3.10+
+          - django-version: 5.2.*
             python-version: '3.9'
     steps:
       - name: Checkout

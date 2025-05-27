@@ -11,7 +11,7 @@ be converted into `.filter(...)` queries for the ORM:
 import strawberry_django
 from strawberry import auto
 
-@strawberry_django.filter(models.Fruit)
+@strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
@@ -69,7 +69,7 @@ Lookups can be added to all fields with `lookups=True`, which will
 add more options to resolve each type. For example:
 
 ```python title="types.py"
-@strawberry_django.filter(models.Fruit, lookups=True)
+@strawberry_django.filter_type(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto

@@ -26,7 +26,7 @@ from tests.types import (
 )
 
 
-@strawberry_django.filters.filter(models.Fruit, lookups=True)
+@strawberry_django.filters.filter_type(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto

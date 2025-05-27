@@ -3,7 +3,9 @@ from typing import Any, cast
 
 import pytest
 import strawberry
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.models import Prefetch
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
@@ -11,7 +13,7 @@ from strawberry.types import ExecutionResult, get_object_definition
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from tests.projects.schema import IssueType, MilestoneType, StaffType
+from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
 from . import utils
 from .projects.faker import (
@@ -308,14 +310,6 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                 }
                 ... milestoneFrag
               }
-              milestoneAgain: milestone {
-                name
-                project {
-                  id
-                  name
-                }
-                ... milestoneFrag
-              }
             }
           }
         }
@@ -341,7 +335,6 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                         "nameWithKind": f"{i.kind}: {i.name}",
                         "nameWithPriority": f"{i.kind}: {i.priority}",
                         "milestone": m_res,
-                        "milestoneAgain": m_res,
                     },
                 )
 
@@ -538,12 +531,6 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                 ... milestoneFrag
               }
             }
-            otherIssues: issues {
-              id
-              milestone {
-                ... milestoneFrag
-              }
-            }
           }
         }
       }
@@ -566,7 +553,6 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                     "name": p_res["name"],
                 },
                 "issues": [],
-                "otherIssues": [],
             }
             p_res["milestones"].append(m_res)
             for i in IssueFactory.create_batch(3, milestone=m):
@@ -585,22 +571,10 @@ def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
                         },
                     },
                 )
-                m_res["otherIssues"].append(
-                    {
-                        "id": to_base64("IssueType", i.id),
-                        "milestone": {
-                            "id": m_res["id"],
-                            "project": {
-                                "id": p_res["id"],
-                                "name": p_res["name"],
-                            },
-                        },
-                    },
-                )
 
     assert len(expected) == 3
     for e in expected:
-        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 8):
+        with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
             res = gql_client.query(query, {"node_id": e["id"]})
 
         assert res.data == {"project": e}
@@ -1087,6 +1061,52 @@ def test_query_nested_connection_with_filter(db, gql_client: GraphQLTestClient):
     assert {
         edge["node"]["id"] for edge in result["issuesWithFilters"]["edges"]
     } == expected
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_nested_connection_with_filter_and_alias(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          fooIssues: issuesWithFilters (filters: {search: "Foo"}) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          barIssues: issuesWithFilters (filters: {search: "Bar"}) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    issue1 = IssueFactory.create(milestone=milestone, name="Foo")
+    issue2 = IssueFactory.create(milestone=milestone, name="Foo Bar")
+    issue3 = IssueFactory.create(milestone=milestone, name="Bar Foo")
+    issue4 = IssueFactory.create(milestone=milestone, name="Bar Bin")
+
+    with assert_num_queries(3):
+        res = gql_client.query(query, {"id": to_base64("MilestoneType", milestone.pk)})
+
+    assert isinstance(res.data, dict)
+    result = res.data["milestone"]
+    assert isinstance(result, dict)
+
+    foo_expected = {to_base64("IssueType", i.pk) for i in [issue1, issue2, issue3]}
+    assert {edge["node"]["id"] for edge in result["fooIssues"]["edges"]} == foo_expected
+
+    bar_expected = {to_base64("IssueType", i.pk) for i in [issue2, issue3, issue4]}
+    assert {edge["node"]["id"] for edge in result["barIssues"]["edges"]} == bar_expected
 
 
 @pytest.mark.django_db(transaction=True)
@@ -1773,3 +1793,411 @@ def test_prefetch_multi_field_single_required_multiple_returned(
             "path": ["milestone", "firstIssueRequired"],
         }
     ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_no_window_function_for_normal_prefetch(
+    db,
+):
+    @strawberry_django.type(Project)
+    class ProjectType:
+        pk: strawberry.ID
+        name: str
+
+        @staticmethod
+        def get_queryset(qs, info):
+            # get_queryset exists to force the optimizer to use prefetch instead of select_related
+            return qs
+
+    @strawberry_django.type(Milestone)
+    class MilestoneType:
+        pk: strawberry.ID
+        project: ProjectType
+
+    @strawberry.type
+    class Query:
+        milestones: list[MilestoneType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    milestone1 = MilestoneFactory.create()
+    milestone2 = MilestoneFactory.create()
+
+    query = """\
+      query TestQuery {
+        milestones {
+          pk
+          project { pk name }
+        }
+      }
+    """
+
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        res = schema.execute_sync(query)
+        assert len(ctx.captured_queries) == 2
+        # Test that the Prefetch does not use Window pagination unnecessarily
+        assert not any(
+            '"_strawberry_row_number"' in q["sql"] for q in ctx.captured_queries
+        )
+
+    assert res.errors is None
+    assert res.data == {
+        "milestones": [
+            {
+                "pk": str(milestone1.pk),
+                "project": {
+                    "pk": str(milestone1.project.pk),
+                    "name": milestone1.project.name,
+                },
+            },
+            {
+                "pk": str(milestone2.pk),
+                "project": {
+                    "pk": str(milestone2.project.pk),
+                    "name": milestone2.project.name,
+                },
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_custom_prefetch_optimization(gql_client):
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project, name="Hello")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+          id
+          customMilestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(
+            query, variables={"id": project_id}, assert_no_errors=False
+        )
+    assert Milestone._meta.db_table in ctx.captured_queries[1]["sql"]
+    assert (
+        Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    )
+
+    assert res.errors is None
+    assert res.data == {
+        "project": {
+            "id": project_id,
+            "customMilestones": [{"id": milestone_id, "name": milestone.name}],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_custom_prefetch_optimization_nested(gql_client):
+    project = ProjectFactory.create()
+    milestone1 = MilestoneFactory.create(project=project, name="Hello1")
+    milestone2 = MilestoneFactory.create(project=project, name="Hello2")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone1_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone1.id)
+        )
+    )
+    milestone2_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone2.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          project {
+            id
+            customMilestones {
+                id name
+              }
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(
+            query, variables={"id": milestone1_id}, assert_no_errors=False
+        )
+    assert Milestone._meta.db_table in ctx.captured_queries[1]["sql"]
+    assert (
+        Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    )
+
+    assert res.errors is None
+    assert res.data == {
+        "milestone": {
+            "id": milestone1_id,
+            "project": {
+                "id": project_id,
+                "customMilestones": [
+                    {"id": milestone1_id, "name": milestone1.name},
+                    {"id": milestone2_id, "name": milestone2.name},
+                ],
+            },
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_custom_prefetch_model_property_optimization(gql_client):
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project, name="Hello")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+          id
+          customMilestonesModelProperty {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(
+            query, variables={"id": project_id}, assert_no_errors=False
+        )
+    assert Milestone._meta.db_table in ctx.captured_queries[1]["sql"]
+    assert (
+        Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    )
+
+    assert res.errors is None
+    assert res.data == {
+        "project": {
+            "id": project_id,
+            "customMilestonesModelProperty": [
+                {"id": milestone_id, "name": milestone.name}
+            ],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_custom_prefetch_optimization_model_property_nested(gql_client):
+    project = ProjectFactory.create()
+    milestone1 = MilestoneFactory.create(project=project, name="Hello1")
+    milestone2 = MilestoneFactory.create(project=project, name="Hello2")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone1_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone1.id)
+        )
+    )
+    milestone2_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone2.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          project {
+            id
+            customMilestonesModelProperty {
+                id name
+              }
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(
+            query, variables={"id": milestone1_id}, assert_no_errors=False
+        )
+    assert Milestone._meta.db_table in ctx.captured_queries[1]["sql"]
+    assert (
+        Milestone._meta.get_field("due_date").name not in ctx.captured_queries[1]["sql"]
+    )
+
+    assert res.errors is None
+    assert res.data == {
+        "milestone": {
+            "id": milestone1_id,
+            "project": {
+                "id": project_id,
+                "customMilestonesModelProperty": [
+                    {"id": milestone1_id, "name": milestone1.name},
+                    {"id": milestone2_id, "name": milestone2.name},
+                ],
+            },
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_correct_annotation_info(gql_client):
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project, name="Hello")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+          id
+          milestones {
+            id
+            graphqlPath
+          }
+        }
+      }
+    """
+
+    res = gql_client.query(query, variables={"id": project_id}, assert_no_errors=False)
+    assert res.errors is None
+    assert res.data == {
+        "project": {
+            "id": project_id,
+            "milestones": [
+                {
+                    "id": milestone_id,
+                    "graphqlPath": "project,0,milestones,0,graphqlPath",
+                }
+            ],
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_correct_annotation_info_nested(gql_client):
+    project = ProjectFactory.create()
+    milestone1 = MilestoneFactory.create(project=project, name="Hello1")
+    milestone2 = MilestoneFactory.create(project=project, name="Hello2")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    milestone1_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone1.id)
+        )
+    )
+    milestone2_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone2.id)
+        )
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        milestone(id: $id) {
+          id
+          graphqlPath
+          project {
+            id
+            milestones {
+                id
+                graphqlPath
+            }
+          }
+        }
+      }
+    """
+
+    res = gql_client.query(
+        query, variables={"id": milestone1_id}, assert_no_errors=False
+    )
+    assert res.errors is None
+    assert res.data == {
+        "milestone": {
+            "id": milestone1_id,
+            "graphqlPath": "milestone,0,graphqlPath",
+            "project": {
+                "id": project_id,
+                "milestones": [
+                    {
+                        "id": milestone1_id,
+                        "graphqlPath": "milestone,0,project,0,milestones,0,graphqlPath",
+                    },
+                    {
+                        "id": milestone2_id,
+                        "graphqlPath": "milestone,0,project,0,milestones,0,graphqlPath",
+                    },
+                ],
+            },
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_mixed_annotation_prefetch(gql_client):
+    project = ProjectFactory.create()
+    MilestoneFactory.create(project=project, name="Hello")
+
+    project_id = str(
+        GlobalID(get_object_definition(ProjectType, strict=True).name, str(project.id))
+    )
+    query = """\
+      query TestQuery($id: GlobalID!) {
+        project(id: $id) {
+          milestones {
+            mixedAnnotatedPrefetch
+            mixedPrefetchAnnotated
+          }
+        }
+      }
+    """
+
+    res = gql_client.query(query, variables={"id": project_id}, assert_no_errors=False)
+    assert res.errors is None
+    assert res.data == {
+        "project": {
+            "milestones": [
+                {
+                    "mixedAnnotatedPrefetch": "dummy",
+                    "mixedPrefetchAnnotated": "dummy",
+                }
+            ],
+        }
+    }
