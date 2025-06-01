@@ -315,7 +315,13 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                     argument(settings["DEFAULT_PK_FIELD_NAME"], strawberry.ID)
                 )
             elif filters is not None and self.is_list:
-                arguments.append(argument(FILTERS_ARG, filters, is_optional=True))
+                is_optional = True
+                from .mutations.fields import DjangoMutationBase
+                if isinstance(self, DjangoMutationBase):
+                    settings = strawberry_django_settings()
+                    is_optional = settings['ALLOW_MUTATIONS_WITHOUT_FILTERS']
+                arguments.append(argument(
+                    FILTERS_ARG, filters, is_optional=is_optional))
 
         return super().arguments + arguments
 

@@ -30,13 +30,13 @@ def test_create_one_to_many(mutation, color):
 
 def test_update_one_to_many(mutation, fruit, color):
     result = mutation(
-        "{ fruits: updateFruits(data: { color: { set: 1 } }) { color { name } } }",
+        "{ fruits: updateFruits(data: { color: { set: 1 } }, filters: {}) { color { name } } }",
     )
     assert not result.errors
     assert result.data["fruits"] == [{"color": {"name": color.name}}]
 
     result = mutation(
-        "{ fruits: updateFruits(data: { color: { set: null } }) { color { name } } }",
+        "{ fruits: updateFruits(data: { color: { set: null } }, filters: {}) { color { name } } }",
     )
     assert not result.errors
     assert result.data["fruits"] == [{"color": None}]
