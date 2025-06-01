@@ -162,7 +162,8 @@ def test_create_many(mutation):
 
 def test_update(mutation, fruits):
     result = mutation(
-        '{ fruits: updateFruits(data: { name: "orange" }, filters: {}) { id name } }')
+        '{ fruits: updateFruits(data: { name: "orange" }, filters: {}) { id name } }'
+    )
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "orange"},
