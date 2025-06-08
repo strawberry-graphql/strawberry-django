@@ -1,5 +1,5 @@
 import textwrap
-from typing import Optional
+from typing import Annotated, Optional
 
 import pytest
 import strawberry
@@ -27,13 +27,16 @@ from tests import models, utils
 from tests.types import Fruit
 
 
-@strawberry_django.order_type(models.Color)
-class ColorOrder:
+@strawberry_django.order_type(models.Color, name="ColorOrder")
+class _ColorOrder:
     pk: auto
 
     @strawberry_django.order_field
     def name(self, prefix, value: auto):
         return [value.resolve(f"{prefix}name")]
+
+
+ColorOrder = Annotated["_ColorOrder", strawberry.lazy("tests.test_ordering")]
 
 
 @strawberry_django.order_type(models.Fruit)

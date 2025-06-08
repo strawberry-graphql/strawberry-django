@@ -15,7 +15,7 @@ from django.db.models import F, OrderBy, QuerySet
 from graphql.language.ast import ObjectValueNode
 from strawberry import UNSET
 from strawberry.types import has_object_definition
-from strawberry.types.base import StrawberryOptional, WithStrawberryObjectDefinition
+from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
@@ -27,7 +27,7 @@ from strawberry_django.fields.filter_order import (
     FilterOrderField,
     FilterOrderFieldResolver,
 )
-from strawberry_django.utils.typing import is_auto
+from strawberry_django.utils.typing import is_auto, unwrap_type
 
 from .arguments import argument
 
@@ -225,9 +225,7 @@ def process_ordering_default(
         elif isinstance(f_value, Ordering):
             args.append(f_value.resolve(f"{prefix}{f.name}"))
         else:
-            ordering_cls = f.type
-            if isinstance(ordering_cls, StrawberryOptional):
-                ordering_cls = ordering_cls.of_type
+            ordering_cls = unwrap_type(f.type)
             assert isinstance(ordering_cls, type)
             assert has_object_definition(ordering_cls)
             queryset, subargs = process_ordering(
