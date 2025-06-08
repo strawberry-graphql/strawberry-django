@@ -46,7 +46,7 @@ class StrawberryDjangoSettings(TypedDict):
     #: to set it to unlimited.
     PAGINATION_DEFAULT_LIMIT: Optional[int]
 
-    # If True, filters used in mutations can be omitted
+    #: If True, filters used in mutations can be omitted
     ALLOW_MUTATIONS_WITHOUT_FILTERS: bool
 
 
