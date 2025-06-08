@@ -17,6 +17,7 @@ from strawberry import UNSET
 from strawberry.types import has_object_definition
 from strawberry.types.base import StrawberryOptional, WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
+from strawberry.types.lazy_type import LazyType
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Self, dataclass_transform, deprecated
@@ -226,8 +227,13 @@ def process_ordering_default(
             args.append(f_value.resolve(f"{prefix}{f.name}"))
         else:
             ordering_cls = f.type
+            if isinstance(ordering_cls, LazyType):
+                ordering_cls = ordering_cls.resolve_type()
             if isinstance(ordering_cls, StrawberryOptional):
                 ordering_cls = ordering_cls.of_type
+            # After resolving StrawberryOptional, the type can be a LazyType
+            if isinstance(ordering_cls, LazyType):
+                ordering_cls = ordering_cls.resolve_type()
             assert isinstance(ordering_cls, type)
             assert has_object_definition(ordering_cls)
             queryset, subargs = process_ordering(
