@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
 
 import django
 from django.db.models import ForeignKey
-from strawberry import LazyType, relay
+from strawberry import relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import get_object_definition
 from strawberry.types.auto import StrawberryAuto
@@ -88,10 +88,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
     def django_type(self) -> type[WithStrawberryDjangoObjectDefinition] | None:
         from strawberry_django.pagination import OffsetPaginated
 
-        origin = self.type
-
-        if isinstance(origin, LazyType):
-            origin = origin.resolve_type()
+        origin = unwrap_type(self.type)
 
         object_definition = get_object_definition(origin)
 
@@ -112,12 +109,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 )
                 origin = specialized_type_var_map["NodeType"]
 
-            if isinstance(origin, LazyType):
-                origin = origin.resolve_type()
-
         origin = unwrap_type(origin)
-        if isinstance(origin, LazyType):
-            origin = origin.resolve_type()
 
         if isinstance(origin, StrawberryUnion):
             origin_list: list[type[WithStrawberryDjangoObjectDefinition]] = []

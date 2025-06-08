@@ -45,7 +45,6 @@ from strawberry.schema.schema_converter import get_arguments
 from strawberry.types import get_object_definition, has_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
-from strawberry.types.lazy_type import LazyType
 from strawberry.types.object_type import StrawberryObjectDefinition
 from typing_extensions import assert_never, assert_type
 
@@ -76,6 +75,7 @@ from .utils.typing import (
     WithStrawberryDjangoObjectDefinition,
     get_django_definition,
     has_django_definition,
+    unwrap_type,
 )
 
 if TYPE_CHECKING:
@@ -454,14 +454,7 @@ class OptimizerStore:
 def _get_django_type(
     field: StrawberryField,
 ) -> type[WithStrawberryDjangoObjectDefinition] | None:
-    f_type = field.type
-    if isinstance(f_type, LazyType):
-        f_type = f_type.resolve_type()
-    if isinstance(f_type, StrawberryContainer):
-        f_type = f_type.of_type
-    if isinstance(f_type, LazyType):
-        f_type = f_type.resolve_type()
-
+    f_type = unwrap_type(field.type)
     return f_type if has_django_definition(f_type) else None
 
 
@@ -1296,9 +1289,7 @@ def _get_model_hints_from_connection(
 
         n_type = specialized_type_var_map["NodeType"]
 
-    if isinstance(n_type, LazyType):
-        n_type = n_type.resolve_type()
-
+    n_type = unwrap_type(n_type)
     n_definition = get_object_definition(n_type, strict=True)
 
     for edges in _get_selections(info, parent_type).values():
@@ -1380,11 +1371,7 @@ def _get_model_hints_from_paginated(
 ) -> OptimizerStore | None:
     store = None
 
-    n_type = object_definition.type_var_map.get("NodeType")
-
-    if isinstance(n_type, LazyType):
-        n_type = n_type.resolve_type()
-
+    n_type = unwrap_type(object_definition.type_var_map.get("NodeType"))
     n_definition = get_object_definition(n_type, strict=True)
 
     for selections in _get_selections(info, parent_type).values():

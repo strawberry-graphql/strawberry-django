@@ -22,6 +22,7 @@ from strawberry.types.base import (
     StrawberryType,
     WithStrawberryObjectDefinition,
 )
+from strawberry.types.lazy_type import LazyType
 from strawberry.utils.typing import is_classvar
 from typing_extensions import Protocol
 
@@ -115,11 +116,24 @@ def unwrap_type(type_: StrawberryContainer) -> StrawberryType | type: ...
 
 
 @overload
+def unwrap_type(type_: LazyType) -> StrawberryType | type: ...
+
+
+@overload
+def unwrap_type(type_: None) -> None: ...
+
+
+@overload
 def unwrap_type(type_: _Type) -> _Type: ...
 
 
 def unwrap_type(type_):
-    while isinstance(type_, StrawberryContainer):
-        type_ = type_.of_type
+    while True:
+        if isinstance(type_, LazyType):
+            type_ = type_.resolve_type()
+        elif isinstance(type_, StrawberryContainer):
+            type_ = type_.of_type
+        else:
+            break
 
     return type_
