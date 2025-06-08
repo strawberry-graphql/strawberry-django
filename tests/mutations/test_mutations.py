@@ -161,7 +161,9 @@ def test_create_many(mutation):
 
 
 def test_update(mutation, fruits):
-    result = mutation('{ fruits: updateFruits(data: { name: "orange" }) { id name } }')
+    result = mutation(
+        '{ fruits: updateFruits(data: { name: "orange" }, filters: {}) { id name } }'
+    )
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "orange"},
@@ -177,7 +179,7 @@ def test_update(mutation, fruits):
 
 def test_update_m2m_with_validation_error(mutation, fruit):
     result = mutation(
-        '{ fruits: updateFruits(data: { types: [{ name: "rotten"} ] }) { id types {'
+        '{ fruits: updateFruits(data: { types: [{ name: "rotten"} ] }, filters: {}) { id types {'
         " name } }}",
     )
     assert result.errors
@@ -186,7 +188,7 @@ def test_update_m2m_with_validation_error(mutation, fruit):
 
 def test_update_m2m_with_new_different_objects(mutation, fruit):
     result = mutation(
-        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "strawberry"}]}) { id types { id name }}}'
+        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "strawberry"}]}, filters: {}) { id types { id name }}}'
     )
     assert not result.errors
     assert result.data["fruits"][0]["types"] == [
@@ -195,7 +197,7 @@ def test_update_m2m_with_new_different_objects(mutation, fruit):
     ]
 
     result = mutation(
-        '{ fruits: updateFruits(data: { types: [{id: "1", name: "apple updated"}, {name: "raspberry"}]}) { id types { id name }}}'
+        '{ fruits: updateFruits(data: { types: [{id: "1", name: "apple updated"}, {name: "raspberry"}]}, filters: {}) { id types { id name }}}'
     )
 
     assert result.data["fruits"][0]["types"] == [
@@ -206,7 +208,7 @@ def test_update_m2m_with_new_different_objects(mutation, fruit):
 
 def test_update_m2m_with_duplicates(mutation, fruit):
     result = mutation(
-        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "apple"}]}) { id types { id name }}}'
+        '{ fruits: updateFruits(data: { types: [{name: "apple"}, {name: "apple"}]}, filters: {}) { id types { id name }}}'
     )
     assert not result.errors
     assert result.data["fruits"][0]["types"] == [
@@ -241,7 +243,7 @@ def test_update_with_filters(mutation, fruits):
 
 
 def test_delete(mutation, fruits):
-    result = mutation("{ fruits: deleteFruits { id name } }")
+    result = mutation("{ fruits: deleteFruits(filters: {}) { id name } }")
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "1", "name": "strawberry"},
