@@ -64,7 +64,12 @@ A dictionary with the following optional keys:
 
 - **`PAGINATION_DEFAULT_LIMIT`** (default: `100`)
 
-      Defualt limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
+      Default limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
+
+- **`ALLOW_MUTATIONS_WITHOUT_FILTERS`** (default: `False`)
+
+      If True, [CUD mutations](mutations.md#cud-mutations) will not require a filter to be specified.
+      This is useful for cases where you want to allow mutations without any filtering, but it can lead to unintended side effects if not used carefully.
 
 These features can be enabled by adding this code to your `settings.py` file, like:
 
@@ -78,5 +83,6 @@ STRAWBERRY_DJANGO = {
     "MAP_AUTO_ID_AS_GLOBAL_ID": True,
     "DEFAULT_PK_FIELD_NAME": "id",
     "PAGINATION_DEFAULT_LIMIT": 250,
+    "ALLOW_MUTATIONS_WITHOUT_FILTERS": True,
 }
 ```
