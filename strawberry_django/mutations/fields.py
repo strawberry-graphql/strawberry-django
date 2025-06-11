@@ -261,7 +261,7 @@ class DjangoMutationCUD(DjangoMutationBase):
         return resolved
 
 
-class DjangoCreateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
+class DjangoCreateMutation(DjangoMutationCUD):
     @django_resolver
     @transaction.atomic
     def resolver(
