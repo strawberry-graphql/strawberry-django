@@ -1,3 +1,5 @@
+from typing import cast
+
 import strawberry
 from strawberry import auto
 from strawberry.types import get_object_definition
@@ -17,7 +19,7 @@ def test_input():
 
     object_definition = get_object_definition(Input, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("boolean", bool),
         ("string", str),
     ]
@@ -35,7 +37,7 @@ def test_inherit(testtype):
 
     object_definition = get_object_definition(Input, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("boolean", bool),
         ("string", str),
     ]

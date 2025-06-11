@@ -312,7 +312,9 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
             ):
                 settings = strawberry_django_settings()
                 arguments.append(
-                    argument(settings["DEFAULT_PK_FIELD_NAME"], strawberry.ID)
+                    argument(
+                        settings["DEFAULT_PK_FIELD_NAME"], cast("type", strawberry.ID)
+                    )
                 )
             elif filters is not None and self.is_list:
                 is_optional = True

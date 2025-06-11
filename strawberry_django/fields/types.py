@@ -4,6 +4,7 @@ import enum
 import inspect
 import re
 import uuid
+from types import FunctionType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -233,7 +234,7 @@ field_type_map: dict[
         type[related.RelatedField],
         type[reverse_related.ForeignObjectRel],
     ],
-    type,
+    Union[type, FunctionType],
 ] = {
     fields.AutoField: strawberry.ID,
     fields.BigAutoField: strawberry.ID,
@@ -285,14 +286,14 @@ except ImproperlyConfigured:
     Geometry = None
 else:
     Point = strawberry.scalar(
-        NewType("Point", tuple[float, float, Optional[float]]),
+        cast("type", NewType("Point", tuple[float, float, Optional[float]])),
         serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
         parse_value=geos.Point,
         description="Represents a point as `(x, y, z)` or `(x, y)`.",
     )
 
     LineString = strawberry.scalar(
-        NewType("LineString", tuple[Point]),
+        cast("type", NewType("LineString", tuple[Point])),
         serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
         parse_value=geos.LineString,
         description=(
@@ -302,7 +303,7 @@ else:
     )
 
     LinearRing = strawberry.scalar(
-        NewType("LinearRing", tuple[Point]),
+        cast("type", NewType("LinearRing", tuple[Point])),
         serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
         parse_value=geos.LinearRing,
         description=(
@@ -313,7 +314,7 @@ else:
     )
 
     Polygon = strawberry.scalar(
-        NewType("Polygon", tuple[LinearRing]),
+        cast("type", NewType("Polygon", tuple[LinearRing])),
         serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
         parse_value=lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
         description=(
@@ -323,21 +324,21 @@ else:
     )
 
     MultiPoint = strawberry.scalar(
-        NewType("MultiPoint", tuple[Point]),
+        cast("type", NewType("MultiPoint", tuple[Point])),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
         parse_value=lambda v: geos.MultiPoint(*[geos.Point(x) for x in v]),
         description="A geographical object that contains multiple Points.",
     )
 
     MultiLineString = strawberry.scalar(
-        NewType("MultiLineString", tuple[LineString]),
+        cast("type", NewType("MultiLineString", tuple[LineString])),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiLineString) else v,
         parse_value=lambda v: geos.MultiLineString(*[geos.LineString(x) for x in v]),
         description="A geographical object that contains multiple line strings.",
     )
 
     MultiPolygon = strawberry.scalar(
-        NewType("MultiPolygon", tuple[Polygon]),
+        cast("type", NewType("MultiPolygon", tuple[Polygon])),
         serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
         parse_value=lambda v: geos.MultiPolygon(
             *[geos.Polygon(*list(x)) for x in v],
@@ -346,7 +347,7 @@ else:
     )
 
     Geometry = strawberry.scalar(
-        NewType("Geometry", geos.GEOSGeometry),
+        cast("type", NewType("Geometry", geos.GEOSGeometry)),
         serialize=lambda v: v.tuple if isinstance(v, geos.GEOSGeometry) else v,  # type: ignore
         parse_value=lambda v: geos.GeometryCollection,
         description=(
@@ -429,7 +430,7 @@ def _resolve_array_field_type(model_field: Field):
         return list[_resolve_array_field_type(model_field.base_field)]
 
     base_field = field_type_map.get(type(model_field), NotImplemented)
-    if base_field is NotImplemented:  # type: ignore
+    if base_field is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",
         )

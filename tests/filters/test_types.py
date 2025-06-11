@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 import pytest
 import strawberry
@@ -32,7 +32,7 @@ def test_filter():
 
     object_definition = get_object_definition(Filter, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("name", StrawberryOptional(str)),
         ("color", StrawberryOptional(DjangoModelFilterInput)),
         ("types", StrawberryOptional(DjangoModelFilterInput)),
@@ -81,7 +81,7 @@ def test_inherit(testtype):
 
     object_definition = get_object_definition(Filter, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("name", StrawberryOptional(str)),
         ("color", StrawberryOptional(DjangoModelFilterInput)),
         ("types", StrawberryOptional(DjangoModelFilterInput)),

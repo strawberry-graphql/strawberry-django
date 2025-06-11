@@ -1,3 +1,5 @@
+from typing import cast
+
 import strawberry
 from django.db import models
 from strawberry import auto
@@ -26,7 +28,7 @@ def test_input_type():
     assert [
         (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
     ] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("mandatory", int),
         ("default", StrawberryOptional(int)),
         ("blank", StrawberryOptional(int)),
@@ -46,7 +48,7 @@ def test_input_type_for_partial_update():
     assert [
         (f.name, f.type) for f in get_object_definition(InputType, strict=True).fields
     ] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("mandatory", StrawberryOptional(int)),
         ("default", StrawberryOptional(int)),
         ("blank", StrawberryOptional(int)),
@@ -117,6 +119,6 @@ def test_input_type_inheritance_from_type():
     assert [
         (f.name, f.type) for f in get_object_definition(UserInput, strict=True).fields
     ] == [
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("name", str),
     ]

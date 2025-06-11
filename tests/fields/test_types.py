@@ -446,7 +446,7 @@ def test_inherit_input():
             "many_to_many",
             StrawberryOptional(strawberry_django.ManyToManyInput),
         ),
-        ("id", StrawberryOptional(strawberry.ID)),
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
         ("my_data", str),
     ]
 

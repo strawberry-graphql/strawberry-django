@@ -1,6 +1,6 @@
 import io
 import textwrap
-from typing import Optional, cast
+from typing import Optional
 from unittest import mock
 
 import pytest
@@ -284,12 +284,9 @@ def test_field_name():
         @strawberry_django.field
         def fruit(self) -> Fruit:
             color = models.Color.objects.create(name="Yellow")
-            return cast(
-                "Fruit",
-                models.Fruit.objects.create(
-                    name="Banana",
-                    color=color,
-                ),
+            return models.Fruit.objects.create(  # type: ignore
+                name="Banana",
+                color=color,
             )
 
     schema = strawberry.Schema(query=Query)
