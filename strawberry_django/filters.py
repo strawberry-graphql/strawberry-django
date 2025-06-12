@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import operator
 import inspect
 import warnings
 from enum import Enum
@@ -194,19 +195,36 @@ def process_filters(
             if field_value:
                 queryset = queryset.distinct()
         elif field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
-            assert has_object_definition(field_value)
+            if isinstance(field_value, list):
+                values = field_value
+            else:
+                values = [field_value]
+            all_q = []
+            for value in values:
+                assert has_object_definition(value)
 
-            queryset, sub_q = process_filters(
-                cast("WithStrawberryObjectDefinition", field_value),
-                queryset,
-                info,
-                prefix,
-            )
+                queryset, sub_q_for_value = process_filters(
+                    cast("WithStrawberryObjectDefinition", value),
+                    queryset,
+                    info,
+                    prefix,
+                )
+                all_q.append(sub_q_for_value)
             if field_name == "AND":
+                sub_q = functools.reduce(operator.and_ , all_q)
                 q &= sub_q
             elif field_name == "OR":
-                q |= sub_q
+                sub_q = functools.reduce(operator.or_, all_q)
+                if isinstance(field_value, list):
+                    # The behavior of AND/OR/NOT with a list of values means AND/OR/NOT
+                    # with respect to the list members but AND with respect to other 
+                    # filters
+                    q &= sub_q
+                else:
+                    q |= sub_q
             elif field_name == "NOT":
+                # Whether this is an AND or OR operation is undefined in the spec and implementation specific
+                sub_q = functools.reduce(operator.or_, all_q)
                 q &= ~sub_q
             else:
                 assert_never(field_name)
