@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import functools
-import operator
 import inspect
+import operator
 import warnings
 from enum import Enum
 from types import FunctionType
@@ -211,13 +211,13 @@ def process_filters(
                 )
                 all_q.append(sub_q_for_value)
             if field_name == "AND":
-                sub_q = functools.reduce(operator.and_ , all_q)
+                sub_q = functools.reduce(operator.and_, all_q)
                 q &= sub_q
             elif field_name == "OR":
                 sub_q = functools.reduce(operator.or_, all_q)
                 if isinstance(field_value, list):
                     # The behavior of AND/OR/NOT with a list of values means AND/OR/NOT
-                    # with respect to the list members but AND with respect to other 
+                    # with respect to the list members but AND with respect to other
                     # filters
                     q &= sub_q
                 else:

@@ -1,6 +1,6 @@
 # ruff: noqa: B904, BLE001, F811, PT012, A001
 from enum import Enum
-from typing import Any, Optional, cast, Self
+from typing import Any, Optional, Self, cast
 
 import pytest
 import strawberry
@@ -34,6 +34,7 @@ class Version(Enum):
     TWO = "second"
     THREE = "third"
 
+
 @strawberry_django.filter_type(models.Vegetable, lookups=True)
 class VegetableFilter:
     id: auto
@@ -41,6 +42,7 @@ class VegetableFilter:
     AND: Optional[list[Self]] = strawberry.UNSET
     OR: Optional[list[Self]] = strawberry.UNSET
     NOT: Optional[list[Self]] = strawberry.UNSET
+
 
 @strawberry_django.filter_type(models.Color, lookups=True)
 class ColorFilter:
@@ -430,9 +432,15 @@ def test_filter_distinct(query, db, fruits):
 
 
 def test_filter_and_or_not(query, db):
-    v1 = models.Vegetable.objects.create(name="v1", description="d1", world_production=100)
-    v2 = models.Vegetable.objects.create(name="v2", description="d2", world_production=200)
-    v3 = models.Vegetable.objects.create(name="v3", description="d3", world_production=300)
+    v1 = models.Vegetable.objects.create(
+        name="v1", description="d1", world_production=100
+    )
+    v2 = models.Vegetable.objects.create(
+        name="v2", description="d2", world_production=200
+    )
+    v3 = models.Vegetable.objects.create(
+        name="v3", description="d3", world_production=300
+    )
 
     # Test impossible AND
     result = query("""
@@ -461,7 +469,10 @@ def test_filter_and_or_not(query, db):
     """)
     assert not result.errors
     assert len(result.data["vegetables"]) == 2
-    assert set([result.data["vegetables"][0]["id"], result.data["vegetables"][1]["id"]]) == {str(v1.id), str(v3.id)}
+    assert set([
+        result.data["vegetables"][0]["id"],
+        result.data["vegetables"][1]["id"],
+    ]) == {str(v1.id), str(v3.id)}
 
     # Test NOT
     result = query("""
@@ -474,23 +485,32 @@ def test_filter_and_or_not(query, db):
     assert result.data["vegetables"][0]["id"] == str(v3.id)
 
     # Test interaction with simple filters. No matches due to AND logic relative to simple filters.
-    result = query("""
+    result = query(
+        """
     {
-        vegetables(filters: { id: { exact: """+str(v1.id)+""" }, AND: [{ name: { exact: "v2" } }] }) { id }
+        vegetables(filters: { id: { exact: """
+        + str(v1.id)
+        + """ }, AND: [{ name: { exact: "v2" } }] }) { id }
     }
-    """)
+    """
+    )
     assert not result.errors
     assert len(result.data["vegetables"]) == 0
 
     # Test interaction with simple filters. Match on same record
-    result = query("""
+    result = query(
+        """
     {
-        vegetables(filters: { id: { exact: """+str(v1.id)+""" }, AND: [{ name: { exact: "v1" } }] }) { id }
+        vegetables(filters: { id: { exact: """
+        + str(v1.id)
+        + """ }, AND: [{ name: { exact: "v1" } }] }) { id }
     }
-    """)
+    """
+    )
     assert not result.errors
     assert len(result.data["vegetables"]) == 1
     assert result.data["vegetables"][0]["id"] == str(v1.id)
+
 
 def test_filter_none(query, db):
     yellow = models.Color.objects.create(name="yellow")

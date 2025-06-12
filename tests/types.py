@@ -37,6 +37,7 @@ class Vegetable:
     id: auto
     name: auto
 
+
 @strawberry_django.type(models.TomatoWithRequiredPicture, fields="__all__")
 class TomatoWithRequiredPictureType:
     pass
