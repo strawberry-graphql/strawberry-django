@@ -469,10 +469,10 @@ def test_filter_and_or_not(query, db):
     """)
     assert not result.errors
     assert len(result.data["vegetables"]) == 2
-    assert set([
+    assert {
         result.data["vegetables"][0]["id"],
         result.data["vegetables"][1]["id"],
-    ]) == {str(v1.id), str(v3.id)}
+    } == {str(v1.id), str(v3.id)}
 
     # Test NOT
     result = query("""

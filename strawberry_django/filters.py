@@ -196,7 +196,7 @@ def process_filters(
                 queryset = queryset.distinct()
         elif field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
             values = field_value if isinstance(field_value, list) else [field_value]
-            all_q = []
+            all_q = [Q()]
             for value in values:
                 assert has_object_definition(value)
 
