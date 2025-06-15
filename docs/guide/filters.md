@@ -63,6 +63,44 @@ To every filter `AND`, `OR`, `NOT` & `DISTINCT` fields are added to allow more c
 }
 ```
 
+## List-based AND/OR/NOT Filters
+
+The `AND`, `OR`, and `NOT` operators can also be declared as lists, allowing for more complex combinations of conditions. This is particularly useful when you need to combine multiple conditions in a single operation.
+
+```python title="types.py"
+@strawberry_django.filter_type(models.Vegetable, lookups=True)
+class VegetableFilter:
+    id: auto
+    name: auto
+    AND: Optional[list[Self]] = strawberry.UNSET
+    OR: Optional[list[Self]] = strawberry.UNSET
+    NOT: Optional[list[Self]] = strawberry.UNSET
+```
+
+This enables queries like:
+
+```graphql
+{
+  vegetables(
+    filters: {
+      AND: [
+        { name: { contains: "blue" } },
+        { name: { contains: "squash" } }
+      ]
+    }
+  ) { id }
+}
+```
+
+The list-based filtering system differs from the single object filter in a few ways:
+1. It allows combining multiple conditions in a single `AND`, `OR`, or `NOT` operation
+2. The conditions in a list are evaluated together as a group
+3. When using `AND`, all conditions in the list must be satisfied
+4. When using `OR`, any condition in the list can be satisfied
+5. When using `NOT`, none of the conditions in the list should be satisfied
+
+This is particularly useful for complex queries where you need to have multiple conditions against the same field.
+
 ## Lookups
 
 Lookups can be added to all fields with `lookups=True`, which will
