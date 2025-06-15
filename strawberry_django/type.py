@@ -119,16 +119,16 @@ def _process_type(
     if is_filter:
         cls_annotations.update(
             {
-                "AND": existing_annotations.get("AND").annotation # type: ignore
+                "AND": existing_annotations.get("AND").annotation  # type: ignore
                 if existing_annotations.get("AND")
                 else Optional[Self],  # type: ignore
-                "OR": existing_annotations.get("OR").annotation # type: ignore
+                "OR": existing_annotations.get("OR").annotation  # type: ignore
                 if existing_annotations.get("OR")
-                else Optional[Self],  # type: ignore    
-                "NOT": existing_annotations.get("NOT").annotation # type: ignore
+                else Optional[Self],  # type: ignore
+                "NOT": existing_annotations.get("NOT").annotation  # type: ignore
                 if existing_annotations.get("NOT")
                 else Optional[Self],  # type: ignore
-                "DISTINCT": existing_annotations.get("DISTINCT").annotation # type: ignore
+                "DISTINCT": existing_annotations.get("DISTINCT").annotation  # type: ignore
                 if existing_annotations.get("DISTINCT")
                 else Optional[bool],
             },
