@@ -83,16 +83,16 @@ This enables queries like:
 {
   vegetables(
     filters: {
-      AND: [
-        { name: { contains: "blue" } },
-        { name: { contains: "squash" } }
-      ]
+      AND: [{ name: { contains: "blue" } }, { name: { contains: "squash" } }]
     }
-  ) { id }
+  ) {
+    id
+  }
 }
 ```
 
 The list-based filtering system differs from the single object filter in a few ways:
+
 1. It allows combining multiple conditions in a single `AND`, `OR`, or `NOT` operation
 2. The conditions in a list are evaluated together as a group
 3. When using `AND`, all conditions in the list must be satisfied
