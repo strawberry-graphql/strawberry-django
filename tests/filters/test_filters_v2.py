@@ -1,6 +1,6 @@
 # ruff: noqa: B904, BLE001, F811, PT012, A001
 from enum import Enum
-from typing import Any, Optional, cast
+from typing import Annotated, Any, Optional, cast
 
 import pytest
 import strawberry
@@ -48,7 +48,9 @@ class ColorFilter:
 @strawberry_django.filter_type(models.FruitType, lookups=True)
 class FruitTypeFilter:
     name: auto
-    fruits: Optional["FruitFilter"]
+    fruits: Optional[
+        Annotated["FruitFilter", strawberry.lazy("tests.filters.test_filters_v2")]
+    ]
 
 
 @strawberry_django.filter_type(models.Fruit, lookups=True)
