@@ -1,6 +1,6 @@
 # ruff: noqa: B904, BLE001, F811, PT012, A001
 from enum import Enum
-from typing import Any, Optional, Self, cast
+from typing import Any, Optional, cast
 
 import pytest
 import strawberry
@@ -10,6 +10,7 @@ from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
 from strawberry.types import ExecutionResult, get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition, get_object_definition
+from typing_extensions import Self
 
 import strawberry_django
 from strawberry_django.exceptions import (
@@ -459,7 +460,7 @@ def test_filter_and_or_not(query, db):
     """)
     assert not result.errors
     assert len(result.data["vegetables"]) == 1
-    assert result.data["vegetables"][0]["id"] == str(v2.id)
+    assert result.data["vegetables"][0]["id"] == str(v2.pk)
 
     # Test OR
     result = query("""
@@ -472,7 +473,7 @@ def test_filter_and_or_not(query, db):
     assert {
         result.data["vegetables"][0]["id"],
         result.data["vegetables"][1]["id"],
-    } == {str(v1.id), str(v3.id)}
+    } == {str(v1.pk), str(v3.pk)}
 
     # Test NOT
     result = query("""
@@ -482,14 +483,14 @@ def test_filter_and_or_not(query, db):
     """)
     assert not result.errors
     assert len(result.data["vegetables"]) == 1
-    assert result.data["vegetables"][0]["id"] == str(v3.id)
+    assert result.data["vegetables"][0]["id"] == str(v3.pk)
 
     # Test interaction with simple filters. No matches due to AND logic relative to simple filters.
     result = query(
         """
     {
         vegetables(filters: { id: { exact: """
-        + str(v1.id)
+        + str(v1.pk)
         + """ }, AND: [{ name: { exact: "v2" } }] }) { id }
     }
     """
@@ -502,14 +503,14 @@ def test_filter_and_or_not(query, db):
         """
     {
         vegetables(filters: { id: { exact: """
-        + str(v1.id)
+        + str(v1.pk)
         + """ }, AND: [{ name: { exact: "v1" } }] }) { id }
     }
     """
     )
     assert not result.errors
     assert len(result.data["vegetables"]) == 1
-    assert result.data["vegetables"][0]["id"] == str(v1.id)
+    assert result.data["vegetables"][0]["id"] == str(v1.pk)
 
 
 def test_filter_none(query, db):
