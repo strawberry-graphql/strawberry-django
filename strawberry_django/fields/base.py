@@ -191,7 +191,10 @@ class StrawberryDjangoFieldBase(StrawberryField):
         if resolved is UNRESOLVED:
             return resolved
 
-        resolved_django_type = get_django_definition(unwrap_type(resolved))
+        try:
+            resolved_django_type = get_django_definition(unwrap_type(resolved))
+        except KeyError:
+            return UNRESOLVED
 
         if self.origin_django_type and (
             # FIXME: Why does this come as Any sometimes when using future annotations?
