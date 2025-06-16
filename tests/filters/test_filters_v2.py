@@ -10,6 +10,7 @@ from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
 from strawberry.types import ExecutionResult, get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition, get_object_definition
+from typing_extensions import Self
 
 import strawberry_django
 from strawberry_django.exceptions import (
@@ -25,7 +26,7 @@ from strawberry_django.fields.filter_order import (
 )
 from strawberry_django.filters import process_filters, resolve_value
 from tests import models, utils
-from tests.types import Fruit, FruitType
+from tests.types import Fruit, FruitType, Vegetable
 
 
 @strawberry.enum
@@ -33,6 +34,15 @@ class Version(Enum):
     ONE = "first"
     TWO = "second"
     THREE = "third"
+
+
+@strawberry_django.filter_type(models.Vegetable, lookups=True)
+class VegetableFilter:
+    id: auto
+    name: auto
+    AND: Optional[list[Self]] = strawberry.UNSET
+    OR: Optional[list[Self]] = strawberry.UNSET
+    NOT: Optional[list[Self]] = strawberry.UNSET
 
 
 @strawberry_django.filter_type(models.Color, lookups=True)
@@ -106,6 +116,7 @@ class FruitFilter:
 class Query:
     types: list[FruitType] = strawberry_django.field(filters=FruitTypeFilter)
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
+    vegetables: list[Vegetable] = strawberry_django.field(filters=VegetableFilter)
 
 
 @pytest.fixture
@@ -421,6 +432,87 @@ def test_filter_distinct(query, db, fruits):
     """)
     assert not result.errors
     assert len(result.data["fruits"]) == 1
+
+
+def test_filter_and_or_not(query, db):
+    v1 = models.Vegetable.objects.create(
+        name="v1", description="d1", world_production=100
+    )
+    v2 = models.Vegetable.objects.create(
+        name="v2", description="d2", world_production=200
+    )
+    v3 = models.Vegetable.objects.create(
+        name="v3", description="d3", world_production=300
+    )
+
+    # Test impossible AND
+    result = query("""
+    {
+        vegetables(filters: { AND: [{ name: { exact: "v1" } }, { name: { exact: "v2" } }] }) { id }
+    }
+    """)
+    assert not result.errors
+    assert len(result.data["vegetables"]) == 0
+
+    # Test AND with contains
+    result = query("""
+    {
+        vegetables(filters: { AND: [{ name: { contains: "v" } }, { name: { contains: "2" } }] }) { id }
+    }
+    """)
+    assert not result.errors
+    assert len(result.data["vegetables"]) == 1
+    assert result.data["vegetables"][0]["id"] == str(v2.pk)
+
+    # Test OR
+    result = query("""
+    {
+        vegetables(filters: { OR: [{ name: { exact: "v1" } }, { name: { exact: "v3" } }] }) { id }
+    }
+    """)
+    assert not result.errors
+    assert len(result.data["vegetables"]) == 2
+    assert {
+        result.data["vegetables"][0]["id"],
+        result.data["vegetables"][1]["id"],
+    } == {str(v1.pk), str(v3.pk)}
+
+    # Test NOT
+    result = query("""
+    {
+        vegetables(filters: { NOT: [{ name: { exact: "v1" } }, { name: { exact: "v2" } }] }) { id }
+    }
+    """)
+    assert not result.errors
+    assert len(result.data["vegetables"]) == 1
+    assert result.data["vegetables"][0]["id"] == str(v3.pk)
+
+    # Test interaction with simple filters. No matches due to AND logic relative to simple filters.
+    result = query(
+        """
+    {
+        vegetables(filters: { id: { exact: """
+        + str(v1.pk)
+        + """ }, AND: [{ name: { exact: "v2" } }] }) { id }
+    }
+    """
+    )
+    assert not result.errors
+    assert len(result.data["vegetables"]) == 0
+
+    # Test interaction with simple filters. Match on same record
+    result = query(
+        """
+    {
+        vegetables(filters: { id: { exact: """
+        + str(v1.pk)
+        + """ }, AND: [{ name: { exact: "v1" } }] }) { id }
+    }
+    """
+    )
+    assert not result.errors
+    assert len(result.data["vegetables"]) == 1
+    assert result.data["vegetables"][0]["id"] == str(v1.pk)
 
 
 def test_filter_none(query, db):
