@@ -108,7 +108,7 @@ def _process_type(
         model_fields = [f for f in model_fields if f.name != "id"]
 
     existing_annotations = get_annotations(cls)
-    cls_annotations = cls.__dict__.get("__annotations__", {})
+    cls_annotations = cls.__dict__.get("__annotations__", {})  # noqa: RUF063
     cls.__annotations__ = cls_annotations
 
     for f in model_fields:

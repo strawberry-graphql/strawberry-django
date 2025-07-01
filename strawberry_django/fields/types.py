@@ -535,7 +535,7 @@ def resolve_model_field_type(
             if force_global_id:
                 input_type_map = {**input_type_map, **relay_input_field_type_map}
 
-            field_type = input_type_map.get(model_field_type, None)
+            field_type = input_type_map.get(model_field_type)
 
         if field_type is None:
             type_map = field_type_map
