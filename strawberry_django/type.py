@@ -433,6 +433,7 @@ class StrawberryDjangoDefinition(Generic[_O, _M]):
 
 
 @dataclass_transform(
+    kw_only_default=True,
     order_default=True,
     field_specifiers=(
         StrawberryField,
@@ -504,6 +505,7 @@ def type(  # noqa: A001
 
 
 @dataclass_transform(
+    kw_only_default=True,
     order_default=True,
     field_specifiers=(
         StrawberryField,
@@ -548,6 +550,7 @@ def interface(
 
 
 @dataclass_transform(
+    kw_only_default=True,
     order_default=True,
     field_specifiers=(
         StrawberryField,
@@ -598,6 +601,7 @@ def input(  # noqa: A001
 
 
 @dataclass_transform(
+    kw_only_default=True,
     order_default=True,
     field_specifiers=(
         StrawberryField,
