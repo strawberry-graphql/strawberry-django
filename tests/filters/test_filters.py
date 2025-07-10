@@ -1,6 +1,6 @@
 import textwrap
 from enum import Enum
-from typing import Generic, Optional, TypeVar, cast
+from typing import Annotated, Generic, Optional, TypeVar, cast
 
 import pytest
 import strawberry
@@ -96,6 +96,11 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
         fruits: list[Fruit] = strawberry_django.field()
         field_filter: list[Fruit] = strawberry_django.field(filters=FieldFilter)
         type_filter: list[Fruit] = strawberry_django.field(filters=TypeFilter)
+        type_lazy_filter: list[Fruit] = strawberry_django.field(
+            filters=Annotated[
+                "TypeFilter", strawberry.lazy("tests.filters.test_filters")
+            ]
+        )
         enum_filter: list[Fruit] = strawberry_django.field(filters=EnumFilter)
         enum_lookup_filter: list[Fruit] = strawberry_django.field(
             filters=EnumLookupFilter
@@ -232,6 +237,14 @@ def test_field_filter_method(query, fruits):
 
 def test_type_filter_method(query, fruits):
     result = query('{ fruits: typeFilter(filters: { name: "anana" }) { id name } }')
+    assert not result.errors
+    assert result.data["fruits"] == [
+        {"id": "3", "name": "banana"},
+    ]
+
+
+def test_type_lazy_filter_method(query, fruits):
+    result = query('{ fruits: typeLazyFilter(filters: { name: "anana" }) { id name } }')
     assert not result.errors
     assert result.data["fruits"] == [
         {"id": "3", "name": "banana"},
