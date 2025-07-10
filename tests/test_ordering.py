@@ -101,6 +101,16 @@ class Query:
     fruits_with_order_connection: DjangoListConnection[FruitWithOrderNode] = (
         strawberry_django.connection()
     )
+    fruits_with_lazy_order_connection: DjangoListConnection[FruitWithOrderNode] = (
+        strawberry_django.connection(
+            order=Annotated["FruitOrder", strawberry.lazy("tests.test_ordering")]
+        )
+    )
+    fruits_with_lazy_ordering_connection: DjangoListConnection[FruitWithOrderNode] = (
+        strawberry_django.connection(
+            ordering=Annotated["FruitOrder", strawberry.lazy("tests.test_ordering")]
+        )
+    )
     fruits_with_order_paginated: OffsetPaginated[FruitWithOrder] = (
         strawberry_django.offset_paginated()
     )
@@ -193,6 +203,34 @@ def test_type_ordering_connection(query, fruits):
     )
     assert not result.errors
     assert result.data["fruitsWithOrderConnection"] == {
+        "edges": [
+            {"node": {"name": "banana"}},
+            {"node": {"name": "raspberry"}},
+            {"node": {"name": "strawberry"}},
+        ]
+    }
+
+
+def test_type_lazy_ordering_connection(query, fruits):
+    result = query(
+        "{ fruitsWithLazyOrderingConnection(ordering: [{ name: ASC }]) { edges { node { name } } } }"
+    )
+    assert not result.errors
+    assert result.data["fruitsWithLazyOrderingConnection"] == {
+        "edges": [
+            {"node": {"name": "banana"}},
+            {"node": {"name": "raspberry"}},
+            {"node": {"name": "strawberry"}},
+        ]
+    }
+
+
+def test_type_lazy_order_connection(query, fruits):
+    result = query(
+        "{ fruitsWithLazyOrderConnection(ordering: [{ name: ASC }]) { edges { node { name } } } }"
+    )
+    assert not result.errors
+    assert result.data["fruitsWithLazyOrderConnection"] == {
         "edges": [
             {"node": {"name": "banana"}},
             {"node": {"name": "raspberry"}},

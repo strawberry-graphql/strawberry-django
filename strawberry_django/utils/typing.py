@@ -9,7 +9,9 @@ from typing import (
     ClassVar,
     TypeVar,
     Union,
+    _AnnotatedAlias,
     cast,
+    get_args,
     overload,
 )
 
@@ -22,7 +24,7 @@ from strawberry.types.base import (
     StrawberryType,
     WithStrawberryObjectDefinition,
 )
-from strawberry.types.lazy_type import LazyType
+from strawberry.types.lazy_type import LazyType, StrawberryLazyReference
 from strawberry.utils.typing import is_classvar
 from typing_extensions import Protocol
 
@@ -137,3 +139,12 @@ def unwrap_type(type_):
             break
 
     return type_
+
+
+def get_type_from_lazy_annotation(type_: _AnnotatedAlias) -> type | None:
+    first, *rest = get_args(type_)
+    for arg in rest:
+        if isinstance(arg, StrawberryLazyReference):
+            return unwrap_type(arg.resolve_forward_ref(first))
+
+    return None
