@@ -30,7 +30,7 @@ class Fruit2:
 > [!TIP]
 > For choices using
 > [Django's TextChoices/IntegerChoices](https://docs.djangoproject.com/en/4.2/ref/models/fields/#enumeration-types)
-> it is recommented using the [django-choices-field](../integrations/choices-field.md) integration
+> it is recommended using the [django-choices-field](../integrations/choices-field.md) integration
 > enum handling.
 
 ## Relationships
