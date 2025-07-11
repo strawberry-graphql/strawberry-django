@@ -137,3 +137,39 @@ type Query {
   fruits: [Fruit!]!
 }
 ```
+
+## Contributing
+
+We use [poetry](https://github.com/sdispater/poetry) to manage dependencies, to
+get started follow these steps:
+
+```shell
+$ git clone https://github.com/strawberry-graphql/strawberry-django
+$ cd strawberry-django
+$ python -m pip install poetry
+$ make install
+```
+
+### Running tests
+
+Using [make](Makefile) to run the tests:
+
+```shell
+$ make test
+```
+
+To run tests in parallel:
+
+```shell
+$ make test-dist
+```
+
+### Pre commit
+
+We have a configuration for
+[pre-commit](https://github.com/pre-commit/pre-commit), to add the hook run the
+following command:
+
+```shell
+pre-commit install
+```
