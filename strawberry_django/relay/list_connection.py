@@ -9,11 +9,49 @@ from strawberry import Info, relay
 from strawberry.relay.types import NodeIterableType
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryContainer
+from strawberry.types.nodes import InlineFragment, Selection
 from strawberry.utils.await_maybe import AwaitableOrValue
+from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_total_count
+from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import django_resolver
+
+
+def _should_optimize_total_count(info: Info) -> bool:
+    """Check if the user requested to resolve the `totalCount` field of a connection.
+
+    Taken and adjusted from strawberry.relay.utils
+    """
+    resolve_for_field_names = {"totalCount"}
+
+    def _check_selection(selection: Selection) -> bool:
+        """Recursively inspect the selection to check if the user requested to resolve the `edges` field.
+
+        Args:
+            selection (Selection): The selection to check.
+
+        Returns:
+            bool: True if the user requested to resolve the `edges` field of a connection, False otherwise.
+
+        """
+        if (
+            not isinstance(selection, InlineFragment)
+            and selection.name in resolve_for_field_names
+        ):
+            return True
+        if selection.selections:
+            return any(
+                _check_selection(selection) for selection in selection.selections
+            )
+        return False
+
+    for selection_field in info.selected_fields:
+        for selection in selection_field.selections:
+            if _check_selection(selection):
+                return True
+    return False
 
 
 @strawberry.type(name="Connection", description="A connection to a list of items.")
@@ -24,6 +62,11 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
     @django_resolver
     def total_count(self) -> Optional[int]:
         assert self.nodes is not None
+
+        try:
+            return self.edges[0].node._strawberry_total_count  # type: ignore
+        except (IndexError, AttributeError):
+            pass
 
         if isinstance(self.nodes, models.QuerySet):
             return get_total_count(self.nodes)
@@ -42,9 +85,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         last: Optional[int] = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
-        from strawberry_django.optimizer import is_optimized_by_prefetching
-
-        if isinstance(nodes, models.QuerySet) and is_optimized_by_prefetching(nodes):
+        queryset_config = (
+            get_queryset_config(nodes) if isinstance(nodes, models.QuerySet) else None
+        )
+        if queryset_config and queryset_config.optimized_by_prefetching:
             try:
                 conn = cls.resolve_connection_from_cache(
                     nodes,
@@ -68,6 +112,58 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                 conn = cast("Self", conn)
                 conn.nodes = nodes
                 return conn
+
+        if queryset_config and queryset_config.optimized:
+            assert isinstance(nodes, models.QuerySet)
+
+            if (last or 0) > 0 and before is None:
+                # The idea here is to prevent fetching entire table by getting
+                # total_count and using it ad before
+                type_def = get_object_definition(cls)
+                assert type_def
+                field_def = type_def.get_field("edges")
+                assert field_def
+                field = field_def.resolve_type(type_definition=type_def)
+                while isinstance(field, StrawberryContainer):
+                    field = field.of_type
+                edge_class = cast("relay.Edge[relay.NodeType]", field)
+
+                if in_async_context():
+
+                    async def inject_before():
+                        total_count = await nodes.acount()
+                        before = relay.to_base64(edge_class.CURSOR_PREFIX, total_count)
+                        conn = cls.resolve_connection(
+                            nodes,
+                            info=info,
+                            before=before,
+                            after=after,
+                            first=first,
+                            last=last,
+                            **kwargs,
+                        )
+                        return await conn if inspect.isawaitable(conn) else conn
+
+                    return inject_before()
+
+                total_count = nodes.count()
+                before = relay.to_base64(edge_class.CURSOR_PREFIX, total_count)
+                return cls.resolve_connection(
+                    nodes,
+                    info=info,
+                    before=before,
+                    after=after,
+                    first=first,
+                    last=last,
+                    **kwargs,
+                )
+
+            if _should_optimize_total_count(info):
+                nodes = nodes.annotate(
+                    _strawberry_total_count=models.Window(
+                        expression=models.Count(1), partition_by=None
+                    )
+                )
 
         conn = super().resolve_connection(
             nodes,

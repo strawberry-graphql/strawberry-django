@@ -163,7 +163,7 @@ def test_nested_pagination_m2m(gql_client: utils.GraphQLTestClient):
     # This means that both tags share the 2nd issue
     tags[0].issues.set(issues[:2])
     tags[1].issues.set(issues[1:])
-    with utils.assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 6):
+    with utils.assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 6):
         result = gql_client.query(
             """
             query {
