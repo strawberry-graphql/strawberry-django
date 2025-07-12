@@ -172,6 +172,7 @@ def apply_window_pagination(
     offset: int = 0,
     limit: Optional[int] = UNSET,
     max_results: Optional[int] = None,
+    reverse: bool = False,
 ) -> _QS:
     """Apply pagination using window functions.
 
@@ -186,8 +187,17 @@ def apply_window_pagination(
         related_field_id: The related field id to apply pagination to.
         offset: The offset to start the pagination from.
         limit: The limit of items to return.
+        reverse: The need to reverse queryset ordering for backwards relay pagination
 
     """
+    if limit is UNSET:
+        settings = strawberry_django_settings()
+        limit = (
+            max_results
+            if max_results is not None
+            else settings["PAGINATION_DEFAULT_LIMIT"]
+        )
+
     order_by = [
         expr
         for expr, _ in queryset.query.get_compiler(
@@ -210,13 +220,23 @@ def apply_window_pagination(
     if offset:
         queryset = queryset.filter(_strawberry_row_number__gt=offset)
 
-    if limit is UNSET:
-        settings = strawberry_django_settings()
-        limit = (
-            max_results
-            if max_results is not None
-            else settings["PAGINATION_DEFAULT_LIMIT"]
+    if reverse:
+        order_by_reverse = [
+            expr
+            for expr, _ in queryset.reverse()
+            .query.get_compiler(
+                using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
+            )
+            .get_order_by()
+        ]
+        queryset = queryset.annotate(
+            _strawberry_row_number_reversed=_PaginationWindow(
+                RowNumber(),
+                partition_by=related_field_id,
+                order_by=order_by_reverse,
+            ),
         )
+        return queryset.filter(_strawberry_row_number_reversed__lte=limit)
 
     # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
     # from the end to as a way to mimic a "not limit" as well

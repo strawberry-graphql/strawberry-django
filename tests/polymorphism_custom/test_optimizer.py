@@ -186,7 +186,7 @@ def test_polymorphic_interface_connection():
     }
     """
 
-    with assert_num_queries(2):
+    with assert_num_queries(1):
         result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
