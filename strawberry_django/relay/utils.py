@@ -118,12 +118,7 @@ def resolve_model_nodes(
     required: bool = False,
     filter_perms: bool = False,
 ) -> AwaitableOrValue[
-    Union[
-        Iterable[_M],
-        models.QuerySet[_M],
-        Iterable[Optional[_M]],
-        Optional[models.QuerySet[_M]],
-    ]
+    Union[Iterable[_M], models.QuerySet[_M], Iterable[Optional[_M]], None]
 ]: ...
 
 
@@ -135,12 +130,7 @@ def resolve_model_nodes(
     required=False,
     filter_perms=False,
 ) -> AwaitableOrValue[
-    Union[
-        Iterable[_M],
-        models.QuerySet[_M],
-        Iterable[Optional[_M]],
-        Optional[models.QuerySet[_M]],
-    ]
+    Union[Iterable[_M], models.QuerySet[_M], Iterable[Optional[_M]], None]
 ]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
