@@ -366,6 +366,7 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
 
 
 @dataclass_transform(
+    kw_only_default=True,
     order_default=True,
     field_specifiers=(
         StrawberryField,
@@ -409,6 +410,7 @@ def order_type(
 
 
 @dataclass_transform(
+    kw_only_default=True,
     order_default=True,
     field_specifiers=(
         StrawberryField,
