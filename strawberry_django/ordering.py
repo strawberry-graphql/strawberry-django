@@ -4,6 +4,7 @@ import dataclasses
 import enum
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Optional,
     TypeVar,
@@ -19,7 +20,7 @@ from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
-from typing_extensions import Self, dataclass_transform, deprecated
+from typing_extensions import Self, dataclass_transform, deprecated, get_origin
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.fields.filter_order import (
@@ -27,7 +28,11 @@ from strawberry_django.fields.filter_order import (
     FilterOrderField,
     FilterOrderFieldResolver,
 )
-from strawberry_django.utils.typing import is_auto, unwrap_type
+from strawberry_django.utils.typing import (
+    get_type_from_lazy_annotation,
+    is_auto,
+    unwrap_type,
+)
 
 from .arguments import argument
 
@@ -282,6 +287,12 @@ class StrawberryDjangoFieldOrdering(StrawberryDjangoFieldBase):
         ordering: type | UnsetType | None = UNSET,
         **kwargs,
     ):
+        if order and get_origin(order) is Annotated:
+            order = get_type_from_lazy_annotation(order) or order
+
+        if ordering and get_origin(ordering) is Annotated:
+            ordering = get_type_from_lazy_annotation(ordering) or ordering
+
         if order and not has_object_definition(order):
             raise TypeError("order needs to be a strawberry type")
         if ordering and not has_object_definition(ordering):

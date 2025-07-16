@@ -8,10 +8,12 @@ from enum import Enum
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Generic,
     TypeVar,
     cast,
+    get_origin,
 )
 
 import strawberry
@@ -32,6 +34,7 @@ from strawberry_django.fields.filter_order import (
 )
 from strawberry_django.utils.typing import (
     WithStrawberryDjangoObjectDefinition,
+    get_type_from_lazy_annotation,
     has_django_definition,
 )
 
@@ -287,6 +290,9 @@ def apply(
 
 class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
     def __init__(self, filters: type | UnsetType | None = UNSET, **kwargs):
+        if filters and get_origin(filters) is Annotated:
+            filters = get_type_from_lazy_annotation(filters) or filters
+
         if filters and not has_object_definition(filters):
             raise TypeError("filters needs to be a strawberry type")
 
