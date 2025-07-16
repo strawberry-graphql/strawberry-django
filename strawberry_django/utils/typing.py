@@ -9,7 +9,7 @@ from typing import (
     ClassVar,
     TypeVar,
     Union,
-    _AnnotatedAlias,
+    _AnnotatedAlias,  # type: ignore
     cast,
     get_args,
     overload,
@@ -114,11 +114,11 @@ def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
 
 
 @overload
-def unwrap_type(type_: StrawberryContainer) -> StrawberryType | type: ...
+def unwrap_type(type_: StrawberryContainer) -> type: ...
 
 
 @overload
-def unwrap_type(type_: LazyType) -> StrawberryType | type: ...
+def unwrap_type(type_: LazyType) -> type: ...
 
 
 @overload
