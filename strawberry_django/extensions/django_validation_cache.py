@@ -19,5 +19,5 @@ class DjangoValidationCache(DjangoCacheBase):
                 OneOfInputValidationRule,
             ),
         )
-        execution_context.errors = errors
+        execution_context.pre_execution_errors = errors
         yield None
