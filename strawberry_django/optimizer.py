@@ -37,7 +37,7 @@ from graphql import (
 from graphql.execution.collect_fields import collect_sub_fields
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
-from strawberry import relay
+from strawberry import UNSET, relay
 from strawberry.extensions import SchemaExtension
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
@@ -82,9 +82,12 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from django.contrib.contenttypes.fields import GenericRelation
+    from strawberry.relay import Edge
     from strawberry.types.execution import ExecutionContext
     from strawberry.types.field import StrawberryField
     from strawberry.utils.await_maybe import AwaitableOrValue
+
+    from strawberry_django.pagination import OffsetPaginationInfo
 
 
 __all__ = [
@@ -582,19 +585,34 @@ def _optimize_prefetch_queryset(
                 connection_type is relay.ListConnection
                 or connection_type is DjangoListConnection
             ):
+                field_def_ = connection_type_def.get_field("edges")
+                assert field_def_
+                field_ = field_def_.resolve_type(type_definition=connection_type_def)
+                while isinstance(field_, StrawberryContainer):
+                    field_ = field_.of_type
+                edge_class = cast("Edge", field_)
+
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
                     first=field_kwargs.get("first"),
                     last=field_kwargs.get("last"),
                     before=field_kwargs.get("before"),
                     after=field_kwargs.get("after"),
+                    max_results=connection_extension.max_results,
+                    prefix=edge_class.CURSOR_PREFIX,
                 )
+                mark_reversed = slice_metadata.expected is None
                 qs = apply_window_pagination(
                     qs,
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
-                    limit=slice_metadata.end - slice_metadata.start,
+                    limit=(
+                        field_kwargs.get("last", UNSET)
+                        if mark_reversed
+                        else slice_metadata.end - slice_metadata.start
+                    ),
                     max_results=connection_extension.max_results,
+                    reverse=mark_reversed,
                 )
             elif connection_type is DjangoCursorConnection:
                 qs, _ = apply_cursor_pagination(
@@ -611,7 +629,7 @@ def _optimize_prefetch_queryset(
                 mark_optimized = False
 
         if isinstance(field.type, type) and issubclass(field.type, OffsetPaginated):
-            pagination = field_kwargs.get("pagination")
+            pagination: OffsetPaginationInfo | None = field_kwargs.get("pagination")
             qs = apply_window_pagination(
                 qs,
                 related_field_id=related_field_id,

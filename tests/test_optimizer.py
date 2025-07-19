@@ -206,7 +206,7 @@ def test_query_forward(db, gql_client: GraphQLTestClient):
                     r["milestone"]["asyncField"] = "value: foo"
                 expected.append(r)
 
-    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 18):
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 18):
         res = gql_client.query(query, {"isAsync": gql_client.is_async})
 
     assert res.data == {
@@ -268,7 +268,7 @@ def test_query_forward_with_interfaces(db, gql_client: GraphQLTestClient):
                     r["milestone"]["asyncField"] = "value: foo"
                 expected.append(r)
 
-    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 18):
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 18):
         res = gql_client.query(query, {"isAsync": gql_client.is_async})
 
     assert res.data == {
@@ -338,7 +338,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                     },
                 )
 
-    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 56):
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 56):
         res = gql_client.query(query)
 
     assert res.data == {
@@ -605,7 +605,7 @@ def test_query_connection_with_resolver(db, gql_client: GraphQLTestClient):
     for i in range(10):
         ProjectFactory.create(name=f"Project {i}")
 
-    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
         res = gql_client.query(query)
 
     assert res.data == {
