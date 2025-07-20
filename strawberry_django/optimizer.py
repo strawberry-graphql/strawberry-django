@@ -588,8 +588,7 @@ def _optimize_prefetch_queryset(
                 field_def_ = connection_type_def.get_field("edges")
                 assert field_def_
                 field_ = field_def_.resolve_type(type_definition=connection_type_def)
-                while isinstance(field_, StrawberryContainer):
-                    field_ = field_.of_type
+                field_ = unwrap_type(field_)
                 edge_class = cast("Edge", field_)
 
                 slice_metadata = SliceMetadata.from_arguments(

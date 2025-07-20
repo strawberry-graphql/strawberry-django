@@ -17,6 +17,7 @@ from typing_extensions import Self, deprecated
 from strawberry_django.pagination import get_total_count
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import django_resolver
+from strawberry_django.utils.typing import unwrap_type
 
 
 def _should_optimize_total_count(info: Info) -> bool:
@@ -85,85 +86,52 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         last: Optional[int] = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
-        queryset_config = (
-            get_queryset_config(nodes) if isinstance(nodes, models.QuerySet) else None
-        )
-        if queryset_config and queryset_config.optimized_by_prefetching:
-            try:
-                conn = cls.resolve_connection_from_cache(
-                    nodes,
-                    info=info,
-                    before=before,
-                    after=after,
-                    first=first,
-                    last=last,
-                    **kwargs,
-                )
-            except AttributeError:
-                warnings.warn(
-                    (
-                        "Pagination annotations not found, falling back to QuerySet resolution. "
-                        "This might cause N+1 issues..."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
-            else:
-                conn = cast("Self", conn)
-                conn.nodes = nodes
-                return conn
-
-        if queryset_config and queryset_config.optimized:
-            assert isinstance(nodes, models.QuerySet)
-
-            if (last or 0) > 0 and before is None:
-                # The idea here is to prevent fetching entire table by getting
-                # total_count and using it ad before
-                type_def = get_object_definition(cls)
-                assert type_def
-                field_def = type_def.get_field("edges")
-                assert field_def
-                field = field_def.resolve_type(type_definition=type_def)
-                while isinstance(field, StrawberryContainer):
-                    field = field.of_type
-                edge_class = cast("relay.Edge[relay.NodeType]", field)
-
-                if in_async_context():
-
-                    async def inject_before():
-                        total_count = await nodes.acount()
-                        before = relay.to_base64(edge_class.CURSOR_PREFIX, total_count)
-                        conn = cls.resolve_connection(
-                            nodes,
-                            info=info,
-                            before=before,
-                            after=after,
-                            first=first,
-                            last=last,
-                            **kwargs,
-                        )
-                        return await conn if inspect.isawaitable(conn) else conn
-
-                    return inject_before()
-
-                total_count = nodes.count()
-                before = relay.to_base64(edge_class.CURSOR_PREFIX, total_count)
-                return cls.resolve_connection(
-                    nodes,
-                    info=info,
-                    before=before,
-                    after=after,
-                    first=first,
-                    last=last,
-                    **kwargs,
-                )
-
-            if _should_optimize_total_count(info):
-                nodes = nodes.annotate(
-                    _strawberry_total_count=models.Window(
-                        expression=models.Count(1), partition_by=None
+        if isinstance(nodes, models.QuerySet) and (
+            queryset_config := get_queryset_config(nodes)
+        ):
+            if queryset_config.optimized_by_prefetching:
+                try:
+                    conn = cls.resolve_optimized_connection_by_prefetch(
+                        nodes,
+                        info=info,
+                        before=before,
+                        after=after,
+                        first=first,
+                        last=last,
+                        **kwargs,
                     )
-                )
+                except AttributeError:
+                    warnings.warn(
+                        (
+                            "Pagination annotations not found, falling back to QuerySet resolution. "
+                            "This might cause N+1 issues..."
+                        ),
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
+                else:
+                    conn = cast("Self", conn)
+                    conn.nodes = nodes
+                    return conn
+
+            if queryset_config.optimized:
+                if (last or 0) > 0 and before is None:
+                    return cls.resolve_optimized_last_connection(
+                        nodes,
+                        info=info,
+                        before=before,
+                        after=after,
+                        first=first,
+                        last=last,
+                        **kwargs,
+                    )
+
+                if _should_optimize_total_count(info):
+                    nodes = nodes.annotate(
+                        _strawberry_total_count=models.Window(
+                            expression=models.Count(1), partition_by=None
+                        )
+                    )
 
         conn = super().resolve_connection(
             nodes,
@@ -189,7 +157,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         return conn
 
     @classmethod
-    def resolve_connection_from_cache(
+    def resolve_optimized_connection_by_prefetch(
         cls,
         nodes: NodeIterableType[relay.NodeType],
         *,
@@ -241,6 +209,63 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                 has_previous_page=has_previous_page,
                 has_next_page=has_next_page,
             ),
+        )
+
+    @classmethod
+    def resolve_optimized_last_connection(
+        cls,
+        nodes: NodeIterableType[relay.NodeType],
+        *,
+        info: Info,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+        **kwargs: Any,
+    ) -> AwaitableOrValue[Self]:
+        """Resolve the connection being paginated only via `last`.
+
+        In order to prevent fetching the entire table, QuerySet is first counted & the
+        amount is used instead of `before=None`.
+        """
+        assert isinstance(nodes, models.QuerySet)
+
+        type_def = get_object_definition(cls)
+        assert type_def
+        field_def = type_def.get_field("edges")
+        assert field_def
+        field = field_def.resolve_type(type_definition=type_def)
+        field = unwrap_type(field)
+        edge_class = cast("relay.Edge[relay.NodeType]", field)
+
+        if in_async_context():
+
+            async def wrapper():
+                total_count = await nodes.acount()
+                before = relay.to_base64(edge_class.CURSOR_PREFIX, total_count)
+                conn = cls.resolve_connection(
+                    nodes,
+                    info=info,
+                    before=before,
+                    after=after,
+                    first=first,
+                    last=last,
+                    **kwargs,
+                )
+                return await conn if inspect.isawaitable(conn) else conn
+
+            return wrapper()
+
+        total_count = nodes.count()
+        before = relay.to_base64(edge_class.CURSOR_PREFIX, total_count)
+        return cls.resolve_connection(
+            nodes,
+            info=info,
+            before=before,
+            after=after,
+            first=first,
+            last=last,
+            **kwargs,
         )
 
 
