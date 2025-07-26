@@ -193,7 +193,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
 
         try:
             resolved_django_type = get_django_definition(unwrap_type(resolved))
-        except KeyError:
+        except (KeyError, ImportError):
             return UNRESOLVED
 
         if self.origin_django_type and (
