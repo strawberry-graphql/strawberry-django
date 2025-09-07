@@ -716,7 +716,7 @@ def field(
 
     if order:
         warnings.warn(
-            "strawberry_django.order is deprecated in favor of strawberry_django.ordering.",
+            "strawberry_django.order is deprecated in favor of strawberry_django.order_type.",
             DeprecationWarning,
             stacklevel=2,
         )

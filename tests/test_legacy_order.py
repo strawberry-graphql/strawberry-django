@@ -92,7 +92,7 @@ def test_legacy_order_argument_is_deprecated():
         assert issubclass(w[-1].category, DeprecationWarning)
         assert (
             str(w[-1].message)
-            == "strawberry_django.order is deprecated in favor of strawberry_django.ordering."
+            == "strawberry_django.order is deprecated in favor of strawberry_django.order_type."
         )
 
 
@@ -108,7 +108,7 @@ def test_legacy_order_type_is_deprecated():
         assert issubclass(w[-1].category, DeprecationWarning)
         assert (
             str(w[-1].message)
-            == "strawberry_django.order is deprecated in favor of strawberry_django.ordering."
+            == "strawberry_django.order is deprecated in favor of strawberry_django.order_type."
         )
 
 
