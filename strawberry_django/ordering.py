@@ -429,7 +429,7 @@ def order_type(
     ),
 )
 @deprecated(
-    "strawberry_django.order is deprecated in favor of strawberry_django.ordering."
+    "strawberry_django.order is deprecated in favor of strawberry_django.order_type."
 )
 def order(
     model: type[Model],
