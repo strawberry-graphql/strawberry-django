@@ -45,7 +45,7 @@ class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
         url_pattern: str = "^graphql",
     ):
         http_urls: list[URLPattern | URLResolver] = [
-            re_path(url_pattern, GraphQLHTTPConsumer.as_asgi(schema=schema)),
+            re_path(url_pattern, GraphQLHTTPConsumer.as_asgi(schema=schema)),  # type: ignore
         ]
         if django_application is not None:
             http_urls.append(re_path(r"^", django_application))
@@ -54,7 +54,7 @@ class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
             {
                 "http": AuthMiddlewareStack(
                     URLRouter(
-                        http_urls,
+                        http_urls,  # type: ignore
                     ),
                 ),
                 "websocket": AllowedHostsOriginValidator(
@@ -63,7 +63,7 @@ class AuthGraphQLProtocolTypeRouter(ProtocolTypeRouter):
                             [
                                 re_path(
                                     url_pattern,
-                                    GraphQLWSConsumer.as_asgi(schema=schema),
+                                    GraphQLWSConsumer.as_asgi(schema=schema),  # type: ignore
                                 ),
                             ],
                         ),
