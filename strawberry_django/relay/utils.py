@@ -209,7 +209,7 @@ def resolve_model_nodes(
             if required:
                 retval.append(results_map[str(node_id)])
             else:
-                retval.append(results_map.get(str(node_id), None))
+                retval.append(results_map.get(str(node_id)))
 
         return retval  # type: ignore
 
