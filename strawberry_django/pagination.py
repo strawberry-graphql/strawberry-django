@@ -261,19 +261,29 @@ def get_total_count(queryset: QuerySet) -> int:
             try:
                 return results[0]._strawberry_total_count
             except AttributeError:
-                warnings.warn(
-                    (
-                        "Pagination annotations not found, falling back to QuerySet resolution. "
-                        "This might cause n+1 issues..."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
+                queryset = remove_window_pagination(queryset)
+                return queryset.count()
+        else:
+              # Check if window pagination might have filtered out existing results
+              # Look for filters that could hide results (offset > 0 or restrictive limits)
+            has_restrictive_pagination = any(
+                hasattr(child, "lhs") and
+                isinstance(child.lhs, _PaginationWindow) and
+                (
+                    # Check for offset filters: _strawberry_row_number > offset (where offset > 0)
+                    (hasattr(child, "lookup_name") and child.lookup_name == "gt") or
+                    # Check for limit filters that might be restrictive
+                    (hasattr(child, "lookup_name") and child.lookup_name == "lte")
                 )
+                for child in queryset.query.where.children
+            )
 
-        # If we have no results, we can't get the total count from the cache.
-        # In this case we will remove the pagination filter to be able to `.count()`
-        # the whole queryset with its original filters.
-        queryset = remove_window_pagination(queryset)
+            if has_restrictive_pagination:
+                # Might have filtered out existing results, need to count
+                queryset = remove_window_pagination(queryset)
+                return queryset.count()
+
+            return 0
 
     return queryset.count()
 

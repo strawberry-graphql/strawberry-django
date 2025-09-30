@@ -596,11 +596,15 @@ def _optimize_prefetch_queryset(
                     before=field_kwargs.get("before"),
                     after=field_kwargs.get("after"),
                 )
+                # If the expected number of results is the same as the max results,
+                # we want to use -1 to indicate no limit.
+                # Otherwise, we want to use the number of results expected.
+                limit = -1 if slice_metadata.expected == info.schema.config.relay_max_results else slice_metadata.end - slice_metadata.start
                 qs = apply_window_pagination(
                     qs,
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
-                    limit=slice_metadata.end - slice_metadata.start,
+                    limit=limit,
                     max_results=connection_extension.max_results,
                 )
             elif connection_type is DjangoCursorConnection:
