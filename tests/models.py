@@ -27,9 +27,9 @@ class Vegetable(NameDescriptionMixin):
 
 
 class Fruit(models.Model):
-    id: Optional[int]
+    id: int | None
     name = models.CharField(max_length=20)
-    color_id: Optional[int]
+    color_id: int | None
     color = models.ForeignKey(
         "Color",
         null=True,
@@ -76,13 +76,13 @@ class Color(models.Model):
 
 
 class FruitType(models.Model):
-    id: Optional[int]
+    id: int | None
     name = models.CharField(max_length=20, validators=[validate_fruit_type])
 
 
 class User(models.Model):
     name = models.CharField(max_length=50)
-    group_id: Optional[int]
+    group_id: int | None
     group = models.ForeignKey(
         "Group",
         null=True,

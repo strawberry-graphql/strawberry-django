@@ -1,8 +1,9 @@
+from typing import Literal, TypeAlias
+
 import pytest
 from django.contrib.auth.models import Permission
 from guardian.shortcuts import assign_perm
 from strawberry.relay import to_base64
-from typing_extensions import Literal, TypeAlias
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
 

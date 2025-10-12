@@ -1,11 +1,9 @@
 import functools
 import inspect
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import (
-    Callable,
-    Optional,
+    Literal,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -17,7 +15,6 @@ from strawberry import relay
 from strawberry.relay.exceptions import NodeIDAnnotationError
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
-from typing_extensions import Literal
 
 from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.resolvers import django_getattr, django_resolver
@@ -38,7 +35,7 @@ __all__ = [
 ]
 
 
-def get_node_caster(origin: Optional[type]) -> Callable[[_T], _T]:
+def get_node_caster(origin: type | None) -> Callable[[_T], _T]:
     if origin is None:
         return lambda node: node
 
@@ -47,14 +44,10 @@ def get_node_caster(origin: Optional[type]) -> Callable[[_T], _T]:
 
 @overload
 def resolve_model_nodes(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
     *,
-    info: Optional[Info] = None,
-    node_ids: Iterable[Union[str, relay.GlobalID]],
+    info: Info | None = None,
+    node_ids: Iterable[str | relay.GlobalID],
     required: Literal[True],
     filter_perms: bool = False,
 ) -> AwaitableOrValue[Iterable[_M]]: ...
@@ -62,13 +55,9 @@ def resolve_model_nodes(
 
 @overload
 def resolve_model_nodes(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
     *,
-    info: Optional[Info] = None,
+    info: Info | None = None,
     node_ids: None = None,
     required: Literal[True],
     filter_perms: bool = False,
@@ -77,48 +66,36 @@ def resolve_model_nodes(
 
 @overload
 def resolve_model_nodes(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
     *,
-    info: Optional[Info] = None,
-    node_ids: Iterable[Union[str, relay.GlobalID]],
+    info: Info | None = None,
+    node_ids: Iterable[str | relay.GlobalID],
     required: Literal[False],
     filter_perms: bool = False,
-) -> AwaitableOrValue[Iterable[Optional[_M]]]: ...
+) -> AwaitableOrValue[Iterable[_M | None]]: ...
 
 
 @overload
 def resolve_model_nodes(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
     *,
-    info: Optional[Info] = None,
+    info: Info | None = None,
     node_ids: None = None,
     required: Literal[False],
     filter_perms: bool = False,
-) -> AwaitableOrValue[Optional[models.QuerySet[_M]]]: ...
+) -> AwaitableOrValue[models.QuerySet[_M] | None]: ...
 
 
 @overload
 def resolve_model_nodes(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
     *,
-    info: Optional[Info] = None,
-    node_ids: Optional[Iterable[Union[str, relay.GlobalID]]] = None,
+    info: Info | None = None,
+    node_ids: Iterable[str | relay.GlobalID] | None = None,
     required: bool = False,
     filter_perms: bool = False,
 ) -> AwaitableOrValue[
-    Union[Iterable[_M], models.QuerySet[_M], Iterable[Optional[_M]], None]
+    Iterable[_M] | models.QuerySet[_M] | Iterable[_M | None] | None
 ]: ...
 
 
@@ -129,9 +106,7 @@ def resolve_model_nodes(
     node_ids=None,
     required=False,
     filter_perms=False,
-) -> AwaitableOrValue[
-    Union[Iterable[_M], models.QuerySet[_M], Iterable[Optional[_M]], None]
-]:
+) -> AwaitableOrValue[Iterable[_M] | models.QuerySet[_M] | Iterable[_M | None] | None]:
     """Resolve model nodes, ensuring those are prefetched in a sync context.
 
     Args:
@@ -204,7 +179,7 @@ def resolve_model_nodes(
     def map_results(results: models.QuerySet[_M]) -> list[_M]:
         node_caster = get_node_caster(origin)
         results_map = {str(getattr(obj, id_attr)): node_caster(obj) for obj in results}
-        retval: list[Optional[_M]] = []
+        retval: list[_M | None] = []
         for node_id in node_ids:
             if required:
                 retval.append(results_map[str(node_id)])
@@ -225,29 +200,21 @@ def resolve_model_nodes(
 
 @overload
 def resolve_model_node(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
-    node_id: Union[str, relay.GlobalID],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
+    node_id: str | relay.GlobalID,
     *,
-    info: Optional[Info] = ...,
+    info: Info | None = ...,
     required: Literal[False] = ...,
     filter_perms: bool = False,
-) -> AwaitableOrValue[Optional[_M]]: ...
+) -> AwaitableOrValue[_M | None]: ...
 
 
 @overload
 def resolve_model_node(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
-    node_id: Union[str, relay.GlobalID],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
+    node_id: str | relay.GlobalID,
     *,
-    info: Optional[Info] = ...,
+    info: Info | None = ...,
     required: Literal[True],
     filter_perms: bool = False,
 ) -> AwaitableOrValue[_M]: ...
@@ -257,7 +224,7 @@ def resolve_model_node(
     source,
     node_id,
     *,
-    info: Optional[Info] = None,
+    info: Info | None = None,
     required=False,
     filter_perms=False,
 ):
@@ -337,14 +304,10 @@ def resolve_model_id_attr(source: type) -> str:
 
 
 def resolve_model_id(
-    source: Union[
-        type[WithStrawberryDjangoObjectDefinition],
-        type[relay.Node],
-        type[_M],
-    ],
+    source: type[WithStrawberryDjangoObjectDefinition] | type[relay.Node] | type[_M],
     root: models.Model,
     *,
-    info: Optional[Info] = None,
+    info: Info | None = None,
 ) -> AwaitableOrValue[str]:
     """Resolve the model id, ensuring it is retrieved in a sync context.
 

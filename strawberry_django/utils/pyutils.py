@@ -1,7 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, TypeVar
-
-from typing_extensions import TypeAlias
+from typing import Any, TypeAlias, TypeVar
 
 _K = TypeVar("_K", bound=Any)
 _V = TypeVar("_V", bound=Any)

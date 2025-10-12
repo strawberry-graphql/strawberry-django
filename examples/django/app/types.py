@@ -26,7 +26,7 @@ class FruitFilter:
 class ColorFilter:
     id: auto
     name: auto
-    fruits: Optional[FruitFilter]
+    fruits: FruitFilter | None
 
     @strawberry_django.filter_field
     def filter(self, prefix, queryset):

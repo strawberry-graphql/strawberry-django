@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import shutil
-from typing import Union, cast
+from typing import cast
 
 import pytest
 import strawberry
@@ -29,7 +29,7 @@ def _cleanup(request):
 @pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])
 def gql_client(request):
     client, path, with_optimizer = cast(
-        "dict[str, tuple[type[Union[Client, AsyncClient]], str, bool]]",
+        "dict[str, tuple[type[Client | AsyncClient], str, bool]]",
         {
             "sync": (Client, "/graphql/", True),
             "async": (AsyncClient, "/graphql_async/", True),
@@ -59,7 +59,7 @@ def vegetables(db):
     vegetable_world_production = [40.0e6, 75.2e6, 102.2e6]  # in tons
     return [
         models.Vegetable.objects.create(name=n, world_production=p)
-        for n, p in zip(vegetable_names, vegetable_world_production)
+        for n, p in zip(vegetable_names, vegetable_world_production, strict=False)
     ]
 
 

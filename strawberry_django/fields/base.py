@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import django
 from django.db.models import ForeignKey
@@ -30,10 +30,12 @@ from strawberry_django.utils.typing import (
 )
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from django.db import models
     from strawberry.types import Info
     from strawberry.types.object_type import StrawberryObjectDefinition
-    from typing_extensions import Literal, Self
+    from typing_extensions import Self
 
     from strawberry_django.type import StrawberryDjangoDefinition
 
@@ -236,7 +238,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 self.origin_django_type.is_input,
                 self.origin_django_type.is_partial,
             ):
-                resolved_type = Optional[resolved_type]
+                resolved_type |= None
 
             self.type_annotation = StrawberryAnnotation(resolved_type)
             resolved = super().type

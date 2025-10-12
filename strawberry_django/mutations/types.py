@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, TypeVar, Union
+from typing import Any, TypeAlias, TypeVar, Union
 
 import strawberry
 from django.db import models
 from django.db.models import Model
 from strawberry import UNSET
-from typing_extensions import TypeAlias, TypedDict
+from typing_extensions import TypedDict
 
 _T = TypeVar("_T")  # noqa: PYI018
 _M = TypeVar("_M", bound=Model)

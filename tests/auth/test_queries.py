@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pytest
 import strawberry
 from django.conf import settings
@@ -13,7 +11,7 @@ from .test_mutations import User
 
 @strawberry.type
 class Query:
-    current_user: Optional[User] = auth.current_user()  # type: ignore
+    current_user: User | None = auth.current_user()  # type: ignore
 
 
 @pytest.fixture

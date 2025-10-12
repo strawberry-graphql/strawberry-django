@@ -3,7 +3,6 @@ from typing import (
     Annotated,
     Any,
     ClassVar,
-    Optional,
 )
 
 import strawberry
@@ -56,8 +55,8 @@ class Query:
         permission_classes=[DummyPermission],
     )
     nodes: list[relay.Node] = strawberry_django.node()
-    node_optional: Optional[relay.Node] = strawberry_django.node()
-    nodes_optional: list[Optional[relay.Node]] = strawberry_django.node()
+    node_optional: relay.Node | None = strawberry_django.node()
+    nodes_optional: list[relay.Node | None] = strawberry_django.node()
     fruits: DjangoListConnection[Fruit] = strawberry_django.connection()
     fruits_lazy: DjangoListConnection[
         Annotated["Fruit", strawberry.lazy("tests.relay.schema")]

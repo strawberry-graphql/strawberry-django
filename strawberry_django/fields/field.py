@@ -16,8 +16,8 @@ from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
+    TypeAlias,
     TypeVar,
-    Union,
     _AnnotatedAlias,  # type: ignore
     cast,
     overload,
@@ -42,7 +42,6 @@ from strawberry.types.field import _RESOLVER_TYPE  # noqa: PLC2701
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import await_maybe
-from typing_extensions import TypeAlias
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument
@@ -72,6 +71,8 @@ from strawberry_django.resolvers import (
 )
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from graphql.pyutils import AwaitableOrValue
     from strawberry import BasePermission
     from strawberry.extensions.field_extension import SyncExtensionResolver
@@ -80,7 +81,7 @@ if TYPE_CHECKING:
     from strawberry.types.base import WithStrawberryObjectDefinition
     from strawberry.types.field import StrawberryField
     from strawberry.types.unset import UnsetType
-    from typing_extensions import Literal, Self
+    from typing_extensions import Self
 
     from strawberry_django.utils.typing import (
         AnnotateType,
@@ -974,12 +975,10 @@ def connection(
 
 
 _OFFSET_PAGINATED_RESOLVER_TYPE: TypeAlias = _RESOLVER_TYPE[
-    Union[
-        Iterator[models.Model],
-        Iterable[models.Model],
-        AsyncIterator[models.Model],
-        AsyncIterable[models.Model],
-    ]
+    Iterator[models.Model]
+    | Iterable[models.Model]
+    | AsyncIterator[models.Model]
+    | AsyncIterable[models.Model]
 ]
 
 

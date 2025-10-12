@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Final, Literal, Optional, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
@@ -95,7 +95,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
                 annotation = ordering.Ordering
 
-            return StrawberryAnnotation(Optional[annotation])
+            return StrawberryAnnotation(annotation | None)
 
         return None
 

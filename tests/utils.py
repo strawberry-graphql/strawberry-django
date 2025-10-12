@@ -6,8 +6,6 @@ import inspect
 import warnings
 from typing import (
     Any,
-    Optional,
-    Union,
     cast,
 )
 
@@ -142,10 +140,10 @@ class GraphQLTestClient(TestClient):
     def __init__(
         self,
         path: str,
-        client: Union[Client, AsyncClient],
+        client: Client | AsyncClient,
     ):
         super().__init__(path, client=cast("Client", client))
-        self._token: Optional[contextvars.Token] = None
+        self._token: contextvars.Token | None = None
         self.is_async = isinstance(client, AsyncClient)
 
     def __enter__(self):
@@ -159,8 +157,8 @@ class GraphQLTestClient(TestClient):
     def request(
         self,
         body: dict[str, object],
-        headers: Optional[dict[str, object]] = None,
-        files: Optional[dict[str, object]] = None,
+        headers: dict[str, object] | None = None,
+        files: dict[str, object] | None = None,
     ):
         kwargs: dict[str, object] = {"data": body}
         if files:  # pragma:nocover
@@ -177,11 +175,11 @@ class GraphQLTestClient(TestClient):
     def query(
         self,
         query: str,
-        variables: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, object]] = None,
-        asserts_errors: Optional[bool] = None,
-        files: Optional[dict[str, object]] = None,
-        assert_no_errors: Optional[bool] = True,
+        variables: dict[str, Any] | None = None,
+        headers: dict[str, object] | None = None,
+        asserts_errors: bool | None = None,
+        files: dict[str, object] | None = None,
+        assert_no_errors: bool | None = True,
     ) -> Response:
         body = self._build_body(query, variables, files)
 

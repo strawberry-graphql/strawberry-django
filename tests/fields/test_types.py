@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import django
 import pytest
@@ -148,7 +148,7 @@ def test_field_types():
         expected_types.append(("generated_decimal", decimal.Decimal))
 
         Type.__annotations__["generated_nullable_decimal"] = auto
-        expected_types.append(("generated_nullable_decimal", Optional[decimal.Decimal]))
+        expected_types.append(("generated_nullable_decimal", decimal.Decimal | None))
 
     type_to_test = _process_type(Type, model=FieldTypesModel)
     object_definition = get_object_definition(type_to_test, strict=True)
@@ -333,7 +333,7 @@ def test_related_input_fields():
         related_one_to_one: auto
         related_many_to_many: auto
 
-    expected_fields: dict[str, tuple[Union[type, StrawberryContainer], bool]] = {
+    expected_fields: dict[str, tuple[type | StrawberryContainer, bool]] = {
         "foreign_key": (
             strawberry_django.OneToManyInput,
             True,

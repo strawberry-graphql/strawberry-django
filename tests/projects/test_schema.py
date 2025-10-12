@@ -1,5 +1,4 @@
 import pathlib
-from typing import Optional
 
 import strawberry
 from pytest_snapshot.plugin import Snapshot
@@ -30,8 +29,8 @@ def test_schema_with_inheritance(snapshot: Snapshot):
 
     @strawberry.type
     class Query:
-        project: Optional[ProjectTypeSubclass] = strawberry_django.node()
-        milestone: Optional[MilestoneTypeSubclass] = strawberry_django.node()
+        project: ProjectTypeSubclass | None = strawberry_django.node()
+        milestone: MilestoneTypeSubclass | None = strawberry_django.node()
 
     @strawberry.type
     class Mutation:

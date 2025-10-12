@@ -1,5 +1,5 @@
 from collections.abc import Awaitable
-from typing import Any, Union
+from typing import Any
 
 import pytest
 import strawberry
@@ -18,7 +18,7 @@ async def test_with_async_permission(db):
             source: Any,
             info: Info,
             **kwargs: Any,
-        ) -> Union[bool, Awaitable[bool]]:
+        ) -> bool | Awaitable[bool]:
             return True
 
     @strawberry_django.type(models.Fruit)
@@ -82,7 +82,7 @@ async def test_with_async_permission_and_optimizer(db):
             source: Any,
             info: Info,
             **kwargs: Any,
-        ) -> Union[bool, Awaitable[bool]]:
+        ) -> bool | Awaitable[bool]:
             return True
 
     @strawberry_django.type(models.Fruit)
@@ -149,7 +149,7 @@ def test_with_sync_permission(db):
             source: Any,
             info: Info,
             **kwargs: Any,
-        ) -> Union[bool, Awaitable[bool]]:
+        ) -> bool | Awaitable[bool]:
             return True
 
     @strawberry_django.type(models.Fruit)
@@ -213,7 +213,7 @@ def test_with_sync_permission_and_optimizer(db):
             source: Any,
             info: Info,
             **kwargs: Any,
-        ) -> Union[bool, Awaitable[bool]]:
+        ) -> bool | Awaitable[bool]:
             return True
 
     @strawberry_django.type(models.Fruit)

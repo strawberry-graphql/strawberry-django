@@ -7,6 +7,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    ForwardRef,
     TypeVar,
     Union,
     _AnnotatedAlias,  # type: ignore
@@ -26,30 +27,31 @@ from strawberry.types.base import (
 )
 from strawberry.types.lazy_type import LazyType, StrawberryLazyReference
 from strawberry.utils.typing import is_classvar
-from typing_extensions import Protocol
+from typing_extensions import Protocol, get_annotations
 
 if TYPE_CHECKING:
+    from typing import Literal, TypeAlias, TypeGuard
+
     from django.contrib.auth.base_user import AbstractBaseUser
     from django.contrib.auth.models import AnonymousUser
     from django.db.models import Prefetch
-    from typing_extensions import Literal, TypeAlias, TypeGuard
 
     from strawberry_django.type import StrawberryDjangoDefinition
 
 _T = TypeVar("_T")
 _Type = TypeVar("_Type", bound="StrawberryType | type")
 
-TypeOrSequence: TypeAlias = Union[_T, Sequence[_T]]
-TypeOrMapping: TypeAlias = Union[_T, Mapping[str, _T]]
-TypeOrIterable: TypeAlias = Union[_T, Iterable[_T]]
+TypeOrSequence: TypeAlias = _T | Sequence[_T]
+TypeOrMapping: TypeAlias = _T | Mapping[str, _T]
+TypeOrIterable: TypeAlias = _T | Iterable[_T]
 UserType: TypeAlias = Union["AbstractBaseUser", "AnonymousUser"]
 PrefetchCallable: TypeAlias = Callable[[GraphQLResolveInfo], "Prefetch[Any]"]
 PrefetchType: TypeAlias = Union[str, "Prefetch[Any]", PrefetchCallable]
 AnnotateCallable: TypeAlias = Callable[
     [GraphQLResolveInfo],
-    Union[BaseExpression, Combinable],
+    BaseExpression | Combinable,
 ]
-AnnotateType: TypeAlias = Union[BaseExpression, Combinable, AnnotateCallable]
+AnnotateType: TypeAlias = BaseExpression | Combinable | AnnotateCallable
 
 
 class WithStrawberryDjangoObjectDefinition(WithStrawberryObjectDefinition, Protocol):
@@ -91,13 +93,16 @@ def get_django_definition(
 
 
 def is_auto(obj: Any) -> bool:
+    if isinstance(obj, ForwardRef):
+        obj = obj.__forward_arg__
+
     if isinstance(obj, str):
         return obj in {"auto", "strawberry.auto"}
 
     return isinstance(obj, StrawberryAuto)
 
 
-def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
+def get_strawberry_annotations(cls) -> dict[str, StrawberryAnnotation]:
     annotations: dict[str, StrawberryAnnotation] = {}
 
     for c in reversed(cls.__mro__):
@@ -106,7 +111,7 @@ def get_annotations(cls) -> dict[str, StrawberryAnnotation]:
             continue
 
         namespace = sys.modules[c.__module__].__dict__
-        for k, v in getattr(c, "__annotations__", {}).items():
+        for k, v in get_annotations(c).items():
             if not is_classvar(cast("type", c), v):
                 annotations[k] = StrawberryAnnotation(v, namespace=namespace)
 

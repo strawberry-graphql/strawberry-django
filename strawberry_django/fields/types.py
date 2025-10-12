@@ -10,9 +10,7 @@ from typing import (
     Any,
     Generic,
     NewType,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -78,26 +76,26 @@ class DjangoModelType:
 
 @strawberry.input
 class OneToOneInput:
-    set: Optional[strawberry.ID]
+    set: strawberry.ID | None
 
 
 @strawberry.input
 class OneToManyInput:
-    set: Optional[strawberry.ID]
+    set: strawberry.ID | None
 
 
 @strawberry.input
 class ManyToOneInput:
-    add: Optional[list[strawberry.ID]] = UNSET
-    remove: Optional[list[strawberry.ID]] = UNSET
-    set: Optional[list[strawberry.ID]] = UNSET
+    add: list[strawberry.ID] | None = UNSET
+    remove: list[strawberry.ID] | None = UNSET
+    set: list[strawberry.ID] | None = UNSET
 
 
 @strawberry.input
 class ManyToManyInput:
-    add: Optional[list[strawberry.ID]] = UNSET
-    remove: Optional[list[strawberry.ID]] = UNSET
-    set: Optional[list[strawberry.ID]] = UNSET
+    add: list[strawberry.ID] | None = UNSET
+    remove: list[strawberry.ID] | None = UNSET
+    set: list[strawberry.ID] | None = UNSET
 
 
 @strawberry.input(
@@ -123,9 +121,9 @@ class NodeInputPartial(NodeInput):
     # FIXME: Without this pyright will not let any class inherit from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        id: Optional[relay.GlobalID]  # type: ignore
+        id: relay.GlobalID | None  # type: ignore
     else:
-        id: Optional[relay.GlobalID] = UNSET
+        id: relay.GlobalID | None = UNSET
 
 
 @strawberry.input(description="Add/remove/set the selected nodes.")
@@ -142,13 +140,13 @@ class ListInput(Generic[K]):
     # FIXME: Without this pyright will not let any class inheric from this and define
     # a field that doesn't contain a default value...
     if TYPE_CHECKING:
-        set: Optional[list[K]]
-        add: Optional[list[K]]
-        remove: Optional[list[K]]
+        set: list[K] | None
+        add: list[K] | None
+        remove: list[K] | None
     else:
-        set: Optional[list[K]] = UNSET
-        add: Optional[list[K]] = UNSET
-        remove: Optional[list[K]] = UNSET
+        set: list[K] | None = UNSET
+        add: list[K] | None = UNSET
+        remove: list[K] | None = UNSET
 
     def __eq__(self, other: object):
         if not isinstance(other, ListInput):
@@ -183,14 +181,14 @@ class OperationMessage:
 
     kind: Kind = strawberry.field(description="The kind of this message.")
     message: str = strawberry.field(description="The error message.")
-    field: Optional[str] = strawberry.field(
+    field: str | None = strawberry.field(
         description=(
             "The field that caused the error, or `null` if it "
             "isn't associated with any particular field."
         ),
         default=None,
     )
-    code: Optional[str] = strawberry.field(
+    code: str | None = strawberry.field(
         description="The error code, or `null` if no error code was set.",
         default=None,
     )
@@ -229,12 +227,10 @@ class OperationInfo:
 
 
 field_type_map: dict[
-    Union[
-        type[fields.Field],
-        type[related.RelatedField],
-        type[reverse_related.ForeignObjectRel],
-    ],
-    Union[type, FunctionType],
+    type[fields.Field]
+    | type[related.RelatedField]
+    | type[reverse_related.ForeignObjectRel],
+    type | FunctionType,
 ] = {
     fields.AutoField: strawberry.ID,
     fields.BigAutoField: strawberry.ID,
@@ -286,7 +282,7 @@ except ImproperlyConfigured:
     Geometry = None
 else:
     Point = strawberry.scalar(
-        cast("type", NewType("Point", tuple[float, float, Optional[float]])),
+        cast("type", NewType("Point", tuple[float, float, float | None])),
         serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
         parse_value=geos.Point,
         description="Represents a point as `(x, y, z)` or `(x, y)`.",
@@ -370,11 +366,9 @@ else:
 
 
 input_field_type_map: dict[
-    Union[
-        type[fields.Field],
-        type[related.RelatedField],
-        type[reverse_related.ForeignObjectRel],
-    ],
+    type[fields.Field]
+    | type[related.RelatedField]
+    | type[reverse_related.ForeignObjectRel],
     type,
 ] = {
     files.FileField: Upload,
@@ -389,11 +383,9 @@ input_field_type_map: dict[
 
 
 relay_field_type_map: dict[
-    Union[
-        type[fields.Field],
-        type[related.RelatedField],
-        type[reverse_related.ForeignObjectRel],
-    ],
+    type[fields.Field]
+    | type[related.RelatedField]
+    | type[reverse_related.ForeignObjectRel],
     type,
 ] = {
     fields.AutoField: relay.GlobalID,
@@ -408,11 +400,9 @@ relay_field_type_map: dict[
 
 
 relay_input_field_type_map: dict[
-    Union[
-        type[fields.Field],
-        type[related.RelatedField],
-        type[reverse_related.ForeignObjectRel],
-    ],
+    type[fields.Field]
+    | type[related.RelatedField]
+    | type[reverse_related.ForeignObjectRel],
     type,
 ] = {
     related.ForeignKey: NodeInput,
@@ -439,7 +429,7 @@ def _resolve_array_field_type(model_field: Field):
 
 
 def resolve_model_field_type(
-    model_field: Union[Field, reverse_related.ForeignObjectRel],
+    model_field: Field | reverse_related.ForeignObjectRel,
     django_type: "StrawberryDjangoDefinition",
 ):
     settings = django_settings()
@@ -567,7 +557,7 @@ def resolve_model_field_type(
 
 
 def resolve_model_field_name(
-    model_field: Union[Field, reverse_related.ForeignObjectRel],
+    model_field: Field | reverse_related.ForeignObjectRel,
     is_input: bool = False,
     is_filter: bool = False,
     is_fk_id: bool = False,
@@ -605,7 +595,7 @@ def get_model_field(model: type[Model], field_name: str):
 
 
 def is_optional(
-    model_field: Union[Field, reverse_related.ForeignObjectRel],
+    model_field: Field | reverse_related.ForeignObjectRel,
     is_input: bool,
     partial: bool,
 ):

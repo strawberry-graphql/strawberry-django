@@ -11,9 +11,8 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Optional,
+    Literal,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -34,7 +33,7 @@ from strawberry.types.base import StrawberryList, StrawberryOptional
 from strawberry.types.field import StrawberryField
 from strawberry.types.info import Info
 from strawberry.types.union import StrawberryUnion
-from typing_extensions import Literal, assert_never
+from typing_extensions import assert_never
 
 from strawberry_django.auth.utils import aget_current_user, get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
@@ -54,7 +53,7 @@ _M = TypeVar("_M", bound=Model)
 
 
 @functools.lru_cache
-def _get_user_or_anonymous_getter() -> Optional[Callable[[UserType], UserType]]:
+def _get_user_or_anonymous_getter() -> Callable[[UserType], UserType] | None:
     try:
         from .integrations.guardian import get_user_or_anonymous
     except (ImportError, RuntimeError):  # pragma: no cover
@@ -155,7 +154,7 @@ def get_with_perms(
     required: bool = ...,
     model: type[_M],
     key_attr: str = ...,
-) -> Optional[_M]: ...
+) -> _M | None: ...
 
 
 @overload
@@ -177,7 +176,7 @@ def get_with_perms(
     required: bool = ...,
     model: type[_M],
     key_attr: str = ...,
-) -> Optional[_M]: ...
+) -> _M | None: ...
 
 
 @overload
@@ -197,7 +196,7 @@ def get_with_perms(
     *,
     required: bool = ...,
     key_attr: str = ...,
-) -> Optional[Any]: ...
+) -> Any | None: ...
 
 
 def get_with_perms(
@@ -257,12 +256,12 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User does not have permission."
     SCHEMA_DIRECTIVE_LOCATIONS: ClassVar[list[Location]] = [Location.FIELD_DEFINITION]
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = None
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = None
 
     def __init__(
         self,
         *,
-        message: Optional[str] = None,
+        message: str | None = None,
         use_directives: bool = True,
         fail_silently: bool = True,
     ):
@@ -428,7 +427,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
     def resolve_for_user(  # pragma: no cover
         self,
         resolver: Callable,
-        user: Optional[UserType],
+        user: UserType | None,
         *,
         info: Info,
         source: Any,
@@ -439,7 +438,7 @@ class IsAuthenticated(DjangoPermissionExtension):
     """Mark a field as only resolvable by authenticated users."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User is not authenticated."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = _desc(
         "Can only be resolved by authenticated users.",
     )
 
@@ -447,7 +446,7 @@ class IsAuthenticated(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: Optional[UserType],
+        user: UserType | None,
         *,
         info: Info,
         source: Any,
@@ -462,7 +461,7 @@ class IsStaff(DjangoPermissionExtension):
     """Mark a field as only resolvable by staff users."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User is not a staff member."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = _desc(
         "Can only be resolved by staff users.",
     )
 
@@ -470,7 +469,7 @@ class IsStaff(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: Optional[UserType],
+        user: UserType | None,
         *,
         info: Info,
         source: Any,
@@ -489,7 +488,7 @@ class IsSuperuser(DjangoPermissionExtension):
     """Mark a field as only resolvable by superuser users."""
 
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = "User is not a superuser."
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = _desc(
         "Can only be resolved by superuser users.",
     )
 
@@ -497,7 +496,7 @@ class IsSuperuser(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: Optional[UserType],
+        user: UserType | None,
         *,
         info: Info,
         source: Any,
@@ -525,13 +524,13 @@ class PermDefinition:
 
     """
 
-    app: Optional[str] = strawberry.field(
+    app: str | None = strawberry.field(
         description=(
             "The app to which we are requiring permission. If this is "
             "empty that means that we are checking the permission directly."
         ),
     )
-    permission: Optional[str] = strawberry.field(
+    permission: str | None = strawberry.field(
         description=(
             "The permission itself. If this is empty that means that we "
             "are checking for any permission for the given app."
@@ -637,25 +636,25 @@ class HasPerm(DjangoPermissionExtension):
     DEFAULT_ERROR_MESSAGE: ClassVar[str] = (
         "You don't have permission to access this app."
     )
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = _desc(
         "Will check if the user has any/all permissions to resolve this.",
     )
 
     def __init__(
         self,
-        perms: Union[list[str], str],
+        perms: list[str] | str,
         *,
-        message: Optional[str] = None,
+        message: str | None = None,
         use_directives: bool = True,
         fail_silently: bool = True,
-        target: Optional[PermTarget] = None,
+        target: PermTarget | None = None,
         any_perm: bool = True,
-        perm_checker: Optional[
-            Callable[[Info, UserType], Callable[[PermDefinition], bool]]
-        ] = None,
-        obj_perm_checker: Optional[
-            Callable[[Info, UserType], Callable[[PermDefinition, Any], bool]]
-        ] = None,
+        perm_checker: Callable[[Info, UserType], Callable[[PermDefinition], bool]]
+        | None = None,
+        obj_perm_checker: Callable[
+            [Info, UserType], Callable[[PermDefinition, Any], bool]
+        ]
+        | None = None,
         with_anonymous: bool = True,
         with_superuser: bool = False,
     ):
@@ -724,7 +723,7 @@ class HasPerm(DjangoPermissionExtension):
     def resolve_for_user(
         self,
         resolver: Callable,
-        user: Optional[UserType],
+        user: UserType | None,
         *,
         info: Info,
         source: Any,
@@ -749,7 +748,7 @@ class HasPerm(DjangoPermissionExtension):
     def resolve_for_user_with_perms(
         self,
         resolver: Callable,
-        user: Optional[UserType],
+        user: UserType | None,
         *,
         info: Info,
         source: Any,
@@ -896,7 +895,7 @@ class HasSourcePerm(HasPerm):
     """
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.SOURCE
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = _desc(
         "Will check if the user has any/all permissions for the parent "
         "of this field to resolve this.",
     )
@@ -926,7 +925,7 @@ class HasRetvalPerm(HasPerm):
     """
 
     DEFAULT_TARGET: ClassVar[PermTarget] = PermTarget.RETVAL
-    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[Optional[str]] = _desc(
+    SCHEMA_DIRECTIVE_DESCRIPTION: ClassVar[str | None] = _desc(
         "Will check if the user has any/all permissions for the resolved "
         "value of this field before returning it.",
     )

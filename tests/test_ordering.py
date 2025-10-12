@@ -1,5 +1,5 @@
 import textwrap
-from typing import Annotated, Optional
+from typing import Annotated
 
 import pytest
 import strawberry
@@ -44,7 +44,7 @@ class FruitOrder:
     color_id: auto
     name: auto
     sweetness: auto
-    color: Optional[ColorOrder]
+    color: ColorOrder | None
 
     @strawberry_django.order_field
     def types_number(self, queryset, prefix, value: auto):
@@ -322,7 +322,7 @@ def test_relationship(query, fruits):
         fruit.save()
 
     color_names = ["red", "dark red", "yellow"]
-    for fruit, color_name in zip(fruits, color_names):
+    for fruit, color_name in zip(fruits, color_names, strict=False):
         add_color(fruit, color_name)
     result = query(
         "{ fruits(ordering: [{ color: { name: DESC } }]) { id name color { name } } }",
