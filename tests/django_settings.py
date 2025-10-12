@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "strawberry_django",
 ]
 
+STATIC_URL = "/static/"
 
 ROOT_URLCONF = "tests.urls"
 

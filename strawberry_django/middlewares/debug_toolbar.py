@@ -1,79 +1,29 @@
 # Based on https://github.com/flavors/django-graphiql-debug-toolbar
 
-import asyncio
 import collections
-import contextlib
 import json
-import weakref
 
-from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
-from debug_toolbar import VERSION as _DEBUG_TOOLBAR_VERSION
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
 )
-from debug_toolbar.middleware import get_show_toolbar
-from debug_toolbar.panels.sql.panel import SQLPanel
-from debug_toolbar.panels.templates import TemplatesPanel
 from debug_toolbar.toolbar import DebugToolbar
-from django.core.exceptions import SynchronousOnlyOperation
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.encoding import force_str
 from strawberry.django.views import BaseView
+from typing_extensions import override
 
 _HTML_TYPES = {"text/html", "application/xhtml+xml"}
 
-_store_cache = weakref.WeakKeyDictionary()
-_debug_toolbar_51plus = [
-    int("".join(filter(str.isdigit, n)) or "0")
-    for n in _DEBUG_TOOLBAR_VERSION.split(".")
-] >= [5, 1]
-_debug_toolbar_map: "weakref.WeakKeyDictionary[HttpRequest, DebugToolbar]" = (
-    weakref.WeakKeyDictionary()
-)
 
-_original_store = DebugToolbar.store
-_original_debug_toolbar_init = DebugToolbar.__init__
-_original_store_template_info = TemplatesPanel._store_template_info
-
-
-def _is_websocket(request: HttpRequest):
-    return (
-        request.META.get("HTTP_UPGRADE") == "websocket"
-        and request.META.get("HTTP_CONNECTION") == "Upgrade"
-    )
-
-
-def _debug_toolbar_init(self, request, *args, **kwargs):
-    _debug_toolbar_map[request] = self
-    _original_debug_toolbar_init(self, request, *args, **kwargs)
-    self.config["RENDER_PANELS"] = False
-    self.config["SKIP_TEMPLATE_PREFIXES"] = (
-        *tuple(self.config.get("SKIP_TEMPLATE_PREFIXES", [])),
-        "graphql/",
-    )
-
-
-def _store(toolbar: DebugToolbar):
-    _debug_toolbar_map[toolbar.request] = toolbar
-    _original_store(toolbar)
-    _store_cache[toolbar.request] = toolbar.store_id
-
-
-def _store_template_info(*args, **kwargs):
-    with contextlib.suppress(SynchronousOnlyOperation):
-        return _original_store_template_info(*args, **kwargs)
-
-
-def _get_payload(request: HttpRequest, response: HttpResponse):
-    store_id = _store_cache.get(request)
-    if not store_id:
-        return None
-
-    toolbar: DebugToolbar | None = DebugToolbar.fetch(store_id)
-    if not toolbar:
+def _get_payload(
+    request: HttpRequest,
+    response: HttpResponse,
+    toolbar: DebugToolbar,
+) -> dict | None:
+    if not toolbar.request_id:
         return None
 
     content = force_str(response.content, encoding=response.charset)
@@ -81,7 +31,7 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
     payload["debugToolbar"] = collections.OrderedDict(
         [("panels", collections.OrderedDict())],
     )
-    payload["debugToolbar"]["storeId"] = toolbar.store_id
+    payload["debugToolbar"]["requestId"] = toolbar.request_id
 
     for p in reversed(toolbar.enabled_panels):
         if p.panel_id == "TemplatesPanel":
@@ -98,73 +48,21 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
     return payload
 
 
-DebugToolbar.__init__ = _debug_toolbar_init
-DebugToolbar.store = _store  # type: ignore
-TemplatesPanel._store_template_info = _store_template_info
-
-
 class DebugToolbarMiddleware(_DebugToolbarMiddleware):
-    sync_capable = True
-    async_capable = True
+    def process_view(self, request: HttpRequest, view_func, *args, **kwargs):
+        view = getattr(view_func, "view_class", None)
+        request._is_graphiql = bool(view and issubclass(view, BaseView))  # type: ignore
 
-    def __init__(self, get_response):
-        self._original_get_response = get_response
+    @override
+    def _postprocess(
+        self,
+        request: HttpRequest,
+        response: HttpResponse,
+        toolbar: DebugToolbar,
+    ) -> HttpResponse:
+        response = super()._postprocess(request, response, toolbar)
 
-        if iscoroutinefunction(get_response):
-            markcoroutinefunction(self)
-
-            def _get_response(request):
-                toolbar = _debug_toolbar_map.pop(request, None)
-                for panel in toolbar.enabled_panels if toolbar else []:
-                    if isinstance(panel, SQLPanel):
-                        sql_panel = panel
-                        break
-                else:
-                    sql_panel = None
-
-                async def _inner_get_response():
-                    if sql_panel:
-                        await sync_to_async(sql_panel.enable_instrumentation)()
-                    try:
-                        return await self._original_get_response(request)
-                    finally:
-                        if sql_panel:
-                            await sync_to_async(sql_panel.disable_instrumentation)()
-
-                return asyncio.run(_inner_get_response())
-
-            get_response = _get_response
-
-        super().__init__(get_response)
-
-    def __call__(self, request: HttpRequest):
-        if iscoroutinefunction(self):
-            return self.__acall__(request)
-
-        if _is_websocket(request):
-            return self._original_get_response(request)
-
-        return self.process_request(request)
-
-    async def __acall__(self, request: HttpRequest):  # noqa: PLW3201
-        if _is_websocket(request):
-            return await self._original_get_response(request)
-
-        return await sync_to_async(self.process_request, thread_sensitive=False)(
-            request,
-        )
-
-    def process_request(self, request: HttpRequest):
-        response = super().__call__(request)
-
-        if _debug_toolbar_51plus:
-            # async mode is handled on our side
-            show_toolbar = get_show_toolbar(async_mode=False)
-        else:
-            show_toolbar = get_show_toolbar()
-        if (
-            callable(show_toolbar) and not show_toolbar(request)
-        ) or DebugToolbar.is_toolbar_request(request):
+        if response.streaming:
             return response
 
         content_type = response.get("Content-Type", "").split(";")[0]
@@ -174,7 +72,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         if is_html and is_graphiql and response.status_code == 200:  # noqa: PLR2004
             template = render_to_string("strawberry_django/debug_toolbar.html")
             response.write(template)
-            if "Content-Length" in response:
+            if "Content-Length" in response:  # type: ignore
                 response["Content-Length"] = len(response.content)
 
         if is_html or not is_graphiql or content_type != "application/json":
@@ -189,19 +87,15 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         # apollo sandbox that query the introspection all the time will remove older
         # results from the history.
         payload = (
-            _get_payload(request, response)
+            _get_payload(request, response, toolbar)
             if operation_name != "IntrospectionQuery"
             else None
         )
         if payload is None:
             return response
 
-        response.content = json.dumps(payload, cls=DjangoJSONEncoder)
-        if "Content-Length" in response:
+        response.content = json.dumps(payload, cls=DjangoJSONEncoder)  # type: ignore
+        if "Content-Length" in response:  # type: ignore
             response["Content-Length"] = len(response.content)
 
         return response
-
-    def process_view(self, request: HttpRequest, view_func, *args, **kwargs):
-        view = getattr(view_func, "view_class", None)
-        request._is_graphiql = bool(view and issubclass(view, BaseView))  # type: ignore

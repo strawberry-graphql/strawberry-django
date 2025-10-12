@@ -26,7 +26,7 @@
             .querySelector("small").textContent = panel.subtitle;
         }
       });
-      djDebug.setAttribute("data-store-id", data.debugToolbar.storeId);
+      djDebug.setAttribute("data-request-id", data.debugToolbar.requestId);
 
       delete data.debugToolbar;
       return data;
