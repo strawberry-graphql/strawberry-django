@@ -5,7 +5,6 @@ import collections
 import contextlib
 import json
 import weakref
-from typing import Optional
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
 from debug_toolbar import VERSION as _DEBUG_TOOLBAR_VERSION
@@ -73,7 +72,7 @@ def _get_payload(request: HttpRequest, response: HttpResponse):
     if not store_id:
         return None
 
-    toolbar: Optional[DebugToolbar] = DebugToolbar.fetch(store_id)
+    toolbar: DebugToolbar | None = DebugToolbar.fetch(store_id)
     if not toolbar:
         return None
 

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import django.contrib.auth as django_auth
 import pytest
 import strawberry
@@ -28,7 +26,7 @@ class UserInput:
 
 @strawberry.type
 class Mutation:
-    login: Optional[User] = auth.login()  # type: ignore
+    login: User | None = auth.login()  # type: ignore
     logout = auth.logout()
     register: User = auth.register(UserInput)
 

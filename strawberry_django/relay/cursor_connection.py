@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from json import JSONDecodeError
-from typing import Any, ClassVar, Optional, cast
+from typing import Any, ClassVar, cast
 
 import strawberry
 from asgiref.sync import sync_to_async
@@ -43,7 +43,7 @@ class OrderingDescriptor:
     # we have to assume everything is nullable by default
     maybe_null: bool = True
 
-    def get_comparator(self, value: Any, before: bool) -> Optional[Q]:
+    def get_comparator(self, value: Any, before: bool) -> Q | None:
         if value is None:
             # 1. When nulls are first:
             #    1.1 there is nothing before "null"
@@ -139,11 +139,13 @@ def annotate_ordering_fields(
 
 def build_tuple_compare(
     descriptors: list[OrderingDescriptor],
-    cursor_values: list[Optional[str]],
+    cursor_values: list[str | None],
     before: bool,
 ) -> Q:
     current = None
-    for descriptor, field_value in zip(reversed(descriptors), reversed(cursor_values)):
+    for descriptor, field_value in zip(
+        reversed(descriptors), reversed(cursor_values), strict=False
+    ):
         if field_value is None:
             value_expr = None
         else:
@@ -164,7 +166,7 @@ class AttrHelper:
 
 def _extract_expression_value(
     model: models.Model, expr: Expression, attname: str
-) -> Optional[str]:
+) -> str | None:
     output_field = expr.output_field
     # Unfortunately Field.value_to_string operates on the object, not a direct value
     # So we have to potentially construct a fake object
@@ -192,13 +194,13 @@ def _extract_expression_value(
 def apply_cursor_pagination(
     qs: QuerySet,
     *,
-    related_field_id: Optional[str] = None,
+    related_field_id: str | None = None,
     info: Info,
-    before: Optional[str],
-    after: Optional[str],
-    first: Optional[int],
-    last: Optional[int],
-    max_results: Optional[int],
+    before: str | None,
+    after: str | None,
+    first: int | None,
+    last: int | None,
+    max_results: int | None,
 ) -> tuple[QuerySet, list[OrderingDescriptor]]:
     max_results = (
         max_results if max_results is not None else info.schema.config.relay_max_results
@@ -218,7 +220,7 @@ def apply_cursor_pagination(
             build_tuple_compare(ordering_descriptors, before_cursor.field_values, True)
         )
 
-    slice_: Optional[slice] = None
+    slice_: slice | None = None
     if first is not None and last is not None:
         if last > max_results:
             raise ValueError(f"Argument 'last' cannot be higher than {max_results}.")
@@ -313,7 +315,7 @@ class OrderedCollectionCursor:
         try:
             decoded_values = [
                 d.order_by.expression.output_field.to_python(v)
-                for d, v in zip(descriptors, string_values)
+                for d, v in zip(descriptors, string_values, strict=False)
             ]
         except ValidationError as e:
             raise ValueError("Invalid cursor") from e
@@ -333,7 +335,7 @@ class DjangoCursorEdge(relay.Edge[relay.NodeType]):
     name="CursorConnection", description="A connection to a list of items."
 )
 class DjangoCursorConnection(relay.Connection[relay.NodeType]):
-    total_count_qs: strawberry.Private[Optional[QuerySet]] = None
+    total_count_qs: strawberry.Private[QuerySet | None] = None
     edges: list[DjangoCursorEdge[NodeType]] = strawberry.field(  # type: ignore
         description="Contains the nodes in this connection"
     )
@@ -351,11 +353,11 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         nodes: NodeIterableType[NodeType],
         *,
         info: Info,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
-        max_results: Optional[int] = None,
+        before: str | None = None,
+        after: str | None = None,
+        first: int | None = None,
+        last: int | None = None,
+        max_results: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
         from strawberry_django.optimizer import is_optimized_by_prefetching

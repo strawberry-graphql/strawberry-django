@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import strawberry
 from graphql import GraphQLAbstractType, GraphQLResolveInfo
@@ -47,7 +47,7 @@ class ResearchProjectType(ProjectType):
 @strawberry_django.type(Company)
 class CompanyType:
     name: strawberry.auto
-    main_project: Optional[ProjectType]
+    main_project: ProjectType | None
     projects: list[ProjectType]
 
 

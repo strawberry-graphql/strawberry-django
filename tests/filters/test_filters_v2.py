@@ -1,6 +1,6 @@
 # ruff: noqa: B904, BLE001, F811, PT012, A001
 from enum import Enum
-from typing import Annotated, Any, Optional, cast
+from typing import Annotated, Any, cast
 
 import pytest
 import strawberry
@@ -40,9 +40,9 @@ class Version(Enum):
 class VegetableFilter:
     id: auto
     name: auto
-    AND: Optional[list[Self]] = strawberry.UNSET
-    OR: Optional[list[Self]] = strawberry.UNSET
-    NOT: Optional[list[Self]] = strawberry.UNSET
+    AND: list[Self] | None = strawberry.UNSET
+    OR: list[Self] | None = strawberry.UNSET
+    NOT: list[Self] | None = strawberry.UNSET
 
 
 @strawberry_django.filter_type(models.Color, lookups=True)
@@ -58,9 +58,10 @@ class ColorFilter:
 @strawberry_django.filter_type(models.FruitType, lookups=True)
 class FruitTypeFilter:
     name: auto
-    fruits: Optional[
+    fruits: (
         Annotated["FruitFilter", strawberry.lazy("tests.filters.test_filters_v2")]
-    ]
+        | None
+    )
 
 
 @strawberry_django.filter_type(models.Fruit, lookups=True)
@@ -68,8 +69,8 @@ class FruitFilter:
     color_id: auto
     name: auto
     sweetness: auto
-    types: Optional[FruitTypeFilter]
-    color: Optional[ColorFilter] = filter_field(filter_none=True)
+    types: FruitTypeFilter | None
+    color: ColorFilter | None = filter_field(filter_none=True)
 
     @strawberry_django.filter_field
     def types_number(
@@ -297,7 +298,7 @@ def test_filter_object_method():
 def test_filter_value_resolution():
     @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
-        id: Optional[strawberry_django.ComparisonFilterLookup[GlobalID]]
+        id: strawberry_django.ComparisonFilterLookup[GlobalID] | None
 
     gid = GlobalID("FruitNode", "125")
     filter_: Any = Filter(

@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, TypeAlias
 
 import strawberry
 from strawberry import relay
-from typing_extensions import TypeAlias
 
 import strawberry_django
 from strawberry_django.relay import DjangoListConnection

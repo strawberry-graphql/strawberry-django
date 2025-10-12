@@ -1,5 +1,5 @@
 import textwrap
-from typing import Optional, cast
+from typing import cast
 
 import pytest
 import strawberry
@@ -78,7 +78,7 @@ def test_foreign_key_id_with_auto(group, user):
 def test_foreign_key_id_with_explicit_type(group, user):
     @strawberry_django.type(models.User)
     class MyUser:
-        group_id: Optional[strawberry.ID]
+        group_id: strawberry.ID | None
 
     @strawberry.type
     class Query:

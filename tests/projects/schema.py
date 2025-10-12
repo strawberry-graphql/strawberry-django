@@ -152,7 +152,7 @@ class ProjectType(relay.Node, Named):
 class MilestoneFilter:
     name: strawberry.auto
     project: strawberry.auto
-    search: Optional[str]
+    search: str | None
 
     def filter_search(self, queryset: QuerySet[Milestone]):
         return queryset.filter(name__contains=self.search)
@@ -167,7 +167,7 @@ class ProjectOrder:
 @strawberry_django.order(Milestone)
 class MilestoneOrder:
     name: strawberry.auto
-    project: Optional[ProjectOrder]
+    project: ProjectOrder | None
 
 
 @strawberry_django.filter_type(Issue, lookups=True)
@@ -306,7 +306,7 @@ class IssueType(relay.Node, Named):
             ),
         },
     )
-    def private_name(self, root: Issue) -> Optional[str]:
+    def private_name(self, root: Issue) -> str | None:
         return root._private_name  # type: ignore
 
 
@@ -350,8 +350,8 @@ class IssueInput:
     milestone: "MilestoneInputPartial"
     priority: strawberry.auto
     kind: strawberry.auto
-    tags: Optional[list[NodeInput]]
-    extra: Optional[str] = strawberry.field(default=UNSET, graphql_type=Optional[int])
+    tags: list[NodeInput] | None
+    extra: str | None = strawberry.field(default=UNSET, graphql_type=int | None)
 
 
 @strawberry_django.type(Assignee)
@@ -362,32 +362,32 @@ class AssigneeType(relay.Node):
 
 @strawberry_django.partial(Assignee)
 class IssueAssigneeInputPartial(NodeInputPartial):
-    user: Optional[NodeInputPartial]
+    user: NodeInputPartial | None
     owner: strawberry.auto
 
 
 @strawberry.input
 class AssigneeThroughInputPartial:
-    owner: Optional[bool] = strawberry.UNSET
+    owner: bool | None = strawberry.UNSET
 
 
 @strawberry_django.partial(UserModel)
 class AssigneeInputPartial(NodeInputPartial):
-    through_defaults: Optional[AssigneeThroughInputPartial] = strawberry.UNSET
+    through_defaults: AssigneeThroughInputPartial | None = strawberry.UNSET
 
 
 @strawberry_django.partial(Issue)
 class IssueInputPartial(NodeInput, IssueInput):
-    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
+    tags: ListInput[TagInputPartial] | None = UNSET  # type: ignore
+    assignees: ListInput[AssigneeInputPartial] | None = UNSET
+    issue_assignees: ListInput[IssueAssigneeInputPartial] | None = UNSET
 
 
 @strawberry_django.partial(Issue)
 class IssueInputPartialWithoutId(IssueInput):
-    tags: Optional[ListInput[TagInputPartial]] = UNSET  # type: ignore
-    assignees: Optional[ListInput[AssigneeInputPartial]] = UNSET
-    issue_assignees: Optional[ListInput[IssueAssigneeInputPartial]] = UNSET
+    tags: ListInput[TagInputPartial] | None = UNSET  # type: ignore
+    assignees: ListInput[AssigneeInputPartial] | None = UNSET
+    issue_assignees: ListInput[IssueAssigneeInputPartial] | None = UNSET
 
 
 @strawberry_django.input(Issue)
@@ -398,27 +398,27 @@ class MilestoneIssueInput:
 @strawberry_django.partial(Issue)
 class MilestoneIssueInputPartial:
     name: strawberry.auto
-    tags: Optional[list[TagInputPartial]]
+    tags: list[TagInputPartial] | None
 
 
 @strawberry_django.partial(Project)
 class ProjectInputPartial(NodeInputPartial):
     name: strawberry.auto
-    milestones: Optional[list["MilestoneInputPartial"]]
+    milestones: list["MilestoneInputPartial"] | None
 
 
 @strawberry_django.input(Milestone)
 class MilestoneInput:
     name: strawberry.auto
     project: ProjectInputPartial
-    issues: Optional[list[MilestoneIssueInput]]
+    issues: list[MilestoneIssueInput] | None
 
 
 @strawberry_django.partial(Milestone)
 class MilestoneInputPartial(NodeInputPartial):
     name: strawberry.auto
-    issues: Optional[list[MilestoneIssueInputPartial]]
-    project: Optional[ProjectInputPartial]
+    issues: list[MilestoneIssueInputPartial] | None
+    project: ProjectInputPartial | None
 
 
 @strawberry.type
@@ -430,23 +430,23 @@ class ProjectConnection(DjangoListConnection[ProjectType]):
 class Query:
     """All available queries for this schema."""
 
-    node: Optional[relay.Node] = strawberry_django.node()
+    node: relay.Node | None = strawberry_django.node()
 
-    favorite: Optional[FavoriteType] = strawberry_django.node()
-    issue: Optional[IssueType] = strawberry_django.node(description="Foobar")
-    milestone: Optional[
-        Annotated["MilestoneType", strawberry.lazy("tests.projects.schema")]
-    ] = strawberry_django.node()
+    favorite: FavoriteType | None = strawberry_django.node()
+    issue: IssueType | None = strawberry_django.node(description="Foobar")
+    milestone: (
+        Annotated["MilestoneType", strawberry.lazy("tests.projects.schema")] | None
+    ) = strawberry_django.node()
     milestone_mandatory: MilestoneType = strawberry_django.node()
     milestones: list[MilestoneType] = strawberry_django.node()
-    project: Optional[ProjectType] = strawberry_django.node()
+    project: ProjectType | None = strawberry_django.node()
     project_mandatory: ProjectType = strawberry_django.node()
-    project_login_required: Optional[ProjectType] = strawberry_django.node(
+    project_login_required: ProjectType | None = strawberry_django.node(
         extensions=[IsAuthenticated()],
     )
-    tag: Optional[TagType] = strawberry_django.node()
-    staff: Optional[StaffType] = strawberry_django.node()
-    staff_list: list[Optional[StaffType]] = strawberry_django.node()
+    tag: TagType | None = strawberry_django.node()
+    staff: StaffType | None = strawberry_django.node()
+    staff_list: list[StaffType | None] = strawberry_django.node()
 
     issue_list: list[IssueType] = strawberry_django.field()
     issues_paginated: OffsetPaginated[IssueType] = strawberry_django.offset_paginated()
@@ -480,26 +480,26 @@ class Query:
     issue_login_required: IssueType = strawberry_django.node(
         extensions=[IsAuthenticated()],
     )
-    issue_login_required_optional: Optional[IssueType] = strawberry_django.node(
+    issue_login_required_optional: IssueType | None = strawberry_django.node(
         extensions=[IsAuthenticated()],
     )
     # Staff required to resolve
     issue_staff_required: IssueType = strawberry_django.node(extensions=[IsStaff()])
-    issue_staff_required_optional: Optional[IssueType] = strawberry_django.node(
+    issue_staff_required_optional: IssueType | None = strawberry_django.node(
         extensions=[IsStaff()],
     )
     # Superuser required to resolve
     issue_superuser_required: IssueType = strawberry_django.node(
         extensions=[IsSuperuser()],
     )
-    issue_superuser_required_optional: Optional[IssueType] = strawberry_django.node(
+    issue_superuser_required_optional: IssueType | None = strawberry_django.node(
         extensions=[IsSuperuser()],
     )
     # User permission on "projects.view_issue" to resolve
     issue_perm_required: IssueType = strawberry_django.node(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
-    issue_perm_required_optional: Optional[IssueType] = strawberry_django.node(
+    issue_perm_required_optional: IssueType | None = strawberry_django.node(
         extensions=[HasPerm(perms=["projects.view_issue"])],
     )
     issue_list_perm_required: list[IssueType] = strawberry_django.field(
@@ -519,7 +519,7 @@ class Query:
     issue_obj_perm_required: IssueType = strawberry_django.node(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
-    issue_obj_perm_required_optional: Optional[IssueType] = strawberry_django.node(
+    issue_obj_perm_required_optional: IssueType | None = strawberry_django.node(
         extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
     )
     issue_list_obj_perm_required: list[IssueType] = strawberry_django.field(
@@ -546,7 +546,7 @@ class Query:
         return True
 
     @strawberry_django.field
-    def me(self, info: Info) -> Optional[UserType]:
+    def me(self, info: Info) -> UserType | None:
         user = get_current_user(info, strict=True)
         if not user.is_authenticated:
             return None
@@ -614,7 +614,7 @@ class Mutation:
             decimal.Decimal,
             strawberry.argument(description="The project's cost"),
         ],
-        due_date: Optional[datetime.datetime] = None,
+        due_date: datetime.datetime | None = None,
     ) -> ProjectType:
         """Create project documentation."""
         if cost > 500:

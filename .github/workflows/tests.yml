@@ -48,11 +48,11 @@ jobs:
           - 5.1.*
           - 5.2.*
         python-version:
-          - '3.9'
           - '3.10'
           - '3.11'
           - '3.12'
           - '3.13'
+          - '3.14'
         mode:
           - std
           - geos
@@ -70,23 +70,15 @@ jobs:
             python-version: '3.13'
           # Django 5.0 only supports python 3.10-3.12
           - django-version: 5.0.*
-            python-version: '3.9'
-          - django-version: 5.0.*
             python-version: '3.13'
-          # Django 5.1 only supports python 3.10+
-          - django-version: 5.1.*
-            python-version: '3.9'
-          # Django 5.2 only supports python 3.10+
-          - django-version: 5.2.*
-            python-version: '3.9'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install OS Dependencies
         if: ${{ matrix.mode == 'geos' }}
-        uses: daaku/gh-action-apt-install@v4
-        with:
-          packages: binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils gdal-bin libproj-dev libsqlite3-mod-spatialite
       - name: Install Poetry
         run: pipx install poetry
       - name: Set up Python ${{ matrix.python-version }}

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import strawberry
 from django.db import models
 from strawberry import auto
@@ -45,7 +43,7 @@ class Membership:
 
 @strawberry.type
 class Query:
-    projects: Optional[list[Project]] = strawberry_django.field()
+    projects: list[Project] | None = strawberry_django.field()
 
 
 schema = strawberry.Schema(query=Query)

@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, cast
+from typing import cast
 
 import pytest
 import strawberry
@@ -74,7 +74,7 @@ class ProjectType(Node):
 
 @strawberry.type()
 class Query:
-    project: Optional[ProjectType] = strawberry_django.node()
+    project: ProjectType | None = strawberry_django.node()
     projects: DjangoCursorConnection[ProjectType] = strawberry_django.connection()
     milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
 

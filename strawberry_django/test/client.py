@@ -1,6 +1,6 @@
 import contextlib
 import warnings
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class TestClient(BaseGraphQLTestClient):
     __test__ = False
 
-    def __init__(self, path: str, client: Optional[Client] = None):
+    def __init__(self, path: str, client: Client | None = None):
         self.path = path
         super().__init__(client or Client())
 
@@ -27,8 +27,8 @@ class TestClient(BaseGraphQLTestClient):
     def request(
         self,
         body: dict[str, object],
-        headers: Optional[dict[str, object]] = None,
-        files: Optional[dict[str, object]] = None,
+        headers: dict[str, object] | None = None,
+        files: dict[str, object] | None = None,
     ):
         kwargs: dict[str, object] = {"data": body, "headers": headers}
         if files:
@@ -49,7 +49,7 @@ class TestClient(BaseGraphQLTestClient):
 
 
 class AsyncTestClient(TestClient):
-    def __init__(self, path: str, client: Optional[AsyncClient] = None):
+    def __init__(self, path: str, client: AsyncClient | None = None):
         super().__init__(
             path,
             client or AsyncClient(),  # type: ignore
@@ -63,11 +63,11 @@ class AsyncTestClient(TestClient):
     async def query(
         self,
         query: str,
-        variables: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, object]] = None,
-        asserts_errors: Optional[bool] = None,
-        files: Optional[dict[str, object]] = None,
-        assert_no_errors: Optional[bool] = True,
+        variables: dict[str, Any] | None = None,
+        headers: dict[str, object] | None = None,
+        asserts_errors: bool | None = None,
+        files: dict[str, object] | None = None,
+        assert_no_errors: bool | None = True,
     ) -> Response:
         body = self._build_body(query, variables, files)
 

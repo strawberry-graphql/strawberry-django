@@ -1,6 +1,6 @@
 import textwrap
 from enum import Enum
-from typing import Annotated, Generic, Optional, TypeVar, cast
+from typing import Annotated, Generic, TypeVar, cast
 
 import pytest
 import strawberry
@@ -33,7 +33,7 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
     class FruitFilter:
         id: auto
         name: auto
-        color: Optional[ColorFilter]
+        color: ColorFilter | None
 
     @strawberry.enum
     class FruitEnum(Enum):
@@ -42,18 +42,18 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
 
     @strawberry_django.filters.filter_type(models.Fruit)
     class EnumFilter:
-        name: Optional[FruitEnum] = strawberry.UNSET
+        name: FruitEnum | None = strawberry.UNSET
 
     _T = TypeVar("_T")
 
     @strawberry.input
     class FilterInLookup(Generic[_T]):
-        exact: Optional[_T] = strawberry.UNSET
-        in_list: Optional[list[_T]] = strawberry.UNSET
+        exact: _T | None = strawberry.UNSET
+        in_list: list[_T] | None = strawberry.UNSET
 
     @strawberry_django.filters.filter_type(models.Fruit)
     class EnumLookupFilter:
-        name: Optional[FilterInLookup[FruitEnum]] = strawberry.UNSET
+        name: FilterInLookup[FruitEnum] | None = strawberry.UNSET
 
     @strawberry.input
     class NonFilter:
@@ -542,7 +542,7 @@ def test_pk_inserted_for_root_field_only():
     @strawberry_django.type(models.User)
     class UserType:
         name: strawberry.auto
-        group: Optional[GroupType]
+        group: GroupType | None
         get_group: GroupType
         group_prop: GroupType
 

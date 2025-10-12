@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 import pytest
 import strawberry
@@ -99,7 +99,7 @@ def test_relationship():
 
     @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
-        color: Optional[ColorFilter]
+        color: ColorFilter | None
 
     object_definition = get_object_definition(Filter, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [
@@ -122,7 +122,7 @@ def test_relationship_with_inheritance():
 
     @strawberry_django.filters.filter_type(models.Fruit)
     class Filter(Base):
-        color: Optional[ColorFilter]
+        color: ColorFilter | None
 
     object_definition = get_object_definition(Filter, strict=True)
     assert [(f.name, f.type) for f in object_definition.fields] == [

@@ -6,13 +6,12 @@ from typing import (
     Generic,
     Optional,
     TypeVar,
-    Union,
     overload,
 )
 
 from django.db.models.base import Model
 from strawberry.exceptions import MissingFieldAnnotationError
-from typing_extensions import Self
+from typing_extensions import Self, get_annotations
 
 if TYPE_CHECKING:
     from strawberry_django.optimizer import OptimizerStore
@@ -40,7 +39,7 @@ class ModelProperty(Generic[_M, _R]):
         func: Callable[[_M], _R],
         *,
         cached: bool = False,
-        meta: Optional[dict[Any, Any]] = None,
+        meta: dict[Any, Any] | None = None,
         only: Optional["TypeOrSequence[str]"] = None,
         select_related: Optional["TypeOrSequence[str]"] = None,
         prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
@@ -86,14 +85,14 @@ class ModelProperty(Generic[_M, _R]):
         return ret
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         if not self.func.__doc__:
             return None
         return inspect.cleandoc(self.func.__doc__)
 
     @property
-    def type_annotation(self) -> Union[object, str]:
-        ret = self.func.__annotations__.get("return")
+    def type_annotation(self) -> object | str:
+        ret = get_annotations(self.func).get("return")
         if ret is None:
             raise MissingFieldAnnotationError(self.name, self.origin)
         return ret
@@ -104,7 +103,7 @@ def model_property(
     func: Callable[[_M], _R],
     *,
     cached: bool = False,
-    meta: Optional[dict[Any, Any]] = None,
+    meta: dict[Any, Any] | None = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
@@ -117,7 +116,7 @@ def model_property(
     func: None = ...,
     *,
     cached: bool = False,
-    meta: Optional[dict[Any, Any]] = None,
+    meta: dict[Any, Any] | None = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
@@ -129,7 +128,7 @@ def model_property(
     func=None,
     *,
     cached: bool = False,
-    meta: Optional[dict[Any, Any]] = None,
+    meta: dict[Any, Any] | None = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,
@@ -155,7 +154,7 @@ def model_property(
 def model_cached_property(
     func=None,
     *,
-    meta: Optional[dict[Any, Any]] = None,
+    meta: dict[Any, Any] | None = None,
     only: Optional["TypeOrSequence[str]"] = None,
     select_related: Optional["TypeOrSequence[str]"] = None,
     prefetch_related: Optional["TypeOrSequence[PrefetchType]"] = None,

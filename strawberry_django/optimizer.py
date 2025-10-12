@@ -10,7 +10,6 @@ from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Optional,
     TypeVar,
     cast,
 )
@@ -719,7 +718,7 @@ def _get_hints_from_field(
     prefix: str = "",
 ) -> OptimizerStore | None:
     if not (
-        field_store := cast("Optional[OptimizerStore]", getattr(field, "store", None))
+        field_store := cast("OptimizerStore | None", getattr(field, "store", None))
     ):
         return None
 

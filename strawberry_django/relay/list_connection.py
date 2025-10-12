@@ -1,7 +1,7 @@
 import inspect
 import warnings
 from collections.abc import Sized
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import strawberry
 from django.db import models
@@ -57,11 +57,11 @@ def _should_optimize_total_count(info: Info) -> bool:
 
 @strawberry.type(name="Connection", description="A connection to a list of items.")
 class DjangoListConnection(relay.ListConnection[relay.NodeType]):
-    nodes: strawberry.Private[Optional[NodeIterableType[relay.NodeType]]] = None
+    nodes: strawberry.Private[NodeIterableType[relay.NodeType] | None] = None
 
     @strawberry.field(description="Total quantity of existing nodes.")
     @django_resolver
-    def total_count(self) -> Optional[int]:
+    def total_count(self) -> int | None:
         assert self.nodes is not None
 
         try:
@@ -80,10 +80,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         nodes: NodeIterableType[relay.NodeType],
         *,
         info: Info,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
+        before: str | None = None,
+        after: str | None = None,
+        first: int | None = None,
+        last: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
         if isinstance(nodes, models.QuerySet) and (
@@ -162,10 +162,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         nodes: NodeIterableType[relay.NodeType],
         *,
         info: Info,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
+        before: str | None = None,
+        after: str | None = None,
+        first: int | None = None,
+        last: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
         """Resolve the connection from the prefetched cache.
@@ -217,10 +217,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         nodes: NodeIterableType[relay.NodeType],
         *,
         info: Info,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
+        before: str | None = None,
+        after: str | None = None,
+        first: int | None = None,
+        last: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
         """Resolve the connection being paginated only via `last`.

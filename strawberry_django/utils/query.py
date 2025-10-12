@@ -125,7 +125,7 @@ def filter_for_user_q(
         raise ValueError(f"Cannot mix app_labels ({app_labels!r})")
 
     # Small optimization if the user's permissions are cached
-    perm_cache: Optional[set[str]] = getattr(user, "_perm_cache", None)
+    perm_cache: set[str] | None = getattr(user, "_perm_cache", None)
     if perm_cache is not None:
         f = any if any_perm else all
         if f(p in perm_cache for p in perms_list):

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Annotated, Any, Optional
+from typing import TYPE_CHECKING, Annotated, Any
 
 import strawberry
 from django.contrib.auth import get_user_model
@@ -164,7 +164,7 @@ class Issue(NamedModel):
     priority = models.IntegerField(
         default=0,
     )
-    milestone_id: Optional[int]
+    milestone_id: int | None
     milestone = models.ForeignKey(
         Milestone,
         on_delete=models.SET_NULL,

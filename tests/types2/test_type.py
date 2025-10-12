@@ -1,5 +1,3 @@
-from typing import Union
-
 import strawberry
 from django.db import models
 from strawberry import auto
@@ -101,7 +99,7 @@ def test_relationship_inherit(testtype):
     class Type(Base):
         pass
 
-    expected_fields: dict[str, tuple[Union[type, StrawberryContainer], bool]] = {
+    expected_fields: dict[str, tuple[type | StrawberryContainer, bool]] = {
         "foreign_key": (strawberry_django.DjangoModelType, False),
         "related_foreign_key": (
             StrawberryList(strawberry_django.DjangoModelType),

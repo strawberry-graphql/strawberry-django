@@ -6,9 +6,9 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
-    Optional,
     TypeVar,
     cast,
+    get_origin,
 )
 
 import strawberry
@@ -20,7 +20,7 @@ from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from strawberry.utils.str_converters import to_camel_case
-from typing_extensions import Self, dataclass_transform, deprecated, get_origin
+from typing_extensions import Self, dataclass_transform, deprecated, get_annotations
 
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.fields.filter_order import (
@@ -393,17 +393,11 @@ def order_type(
     directives: Sequence[object] | None = (),
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
-        try:
-            cls.__annotations__  # noqa: B018
-        except AttributeError:
-            # FIXME: Manual creation for python 3.9 (remove when 3.9 is dropped)
-            cls.__annotations__ = {}
-
-        for fname, type_ in cls.__annotations__.items():
+        for fname, type_ in get_annotations(cls).items():
             if is_auto(type_):
                 type_ = Ordering  # noqa: PLW2901
 
-            cls.__annotations__[fname] = Optional[type_]
+            cls.__annotations__[fname] = type_ | None
 
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):
@@ -439,17 +433,11 @@ def order(
     directives: Sequence[object] | None = (),
 ) -> Callable[[_T], _T]:
     def wrapper(cls):
-        try:
-            cls.__annotations__  # noqa: B018
-        except AttributeError:
-            # FIXME: Manual creation for python 3.9 (remove when 3.9 is dropped)
-            cls.__annotations__ = {}
-
-        for fname, type_ in cls.__annotations__.items():
+        for fname, type_ in get_annotations(cls).items():
             if is_auto(type_):
                 type_ = Ordering  # noqa: PLW2901
 
-            cls.__annotations__[fname] = Optional[type_]
+            cls.__annotations__[fname] = type_ | None
 
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):

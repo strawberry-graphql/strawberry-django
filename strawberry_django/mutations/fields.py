@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import functools
 import inspect
-from typing import TYPE_CHECKING, Annotated, Any, TypeVar, Union
+import operator
+from typing import TYPE_CHECKING, Annotated, Any, TypeVar
 
 import strawberry
 from django.core.exceptions import (
@@ -32,6 +34,7 @@ from . import resolvers
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from graphql.pyutils import AwaitableOrValue
     from strawberry.types import Info
@@ -41,7 +44,7 @@ if TYPE_CHECKING:
         StrawberryType,
         WithStrawberryObjectDefinition,
     )
-    from typing_extensions import Literal, Self
+    from typing_extensions import Self
 
     from .types import FullCleanOptions
 
@@ -139,11 +142,11 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
         if self.handle_errors and not self._resolved_return_type:
             types_ = tuple(get_possible_types(resolved))
             if OperationInfo not in types_:
-                types_ = (*types_, OperationInfo)
+                types_ = functools.reduce(operator.__or__, (*types_, OperationInfo))
 
                 name = capitalize_first(to_camel_case(self.python_name))
                 resolved = Annotated[
-                    Union[types_],
+                    types_,
                     strawberry.union(f"{name}Payload"),
                 ]
                 self.type_annotation = StrawberryAnnotation(
