@@ -37,13 +37,13 @@ python = ">=3.10,<4.0"
 django = ">=4.2"
 asgiref = ">=3.8"
 django-choices-field = { version = ">=2.2.2", optional = true }
-django-debug-toolbar = { version = ">=3.4", optional = true }
+django-debug-toolbar = { version = ">=6.0.0", optional = true }
 strawberry-graphql = ">=0.283.2"
 
 [tool.poetry.group.dev.dependencies]
 channels = { version = ">=3.0.5" }
 django-choices-field = "^2.2.2"
-django-debug-toolbar = "^4.4.6"
+django-debug-toolbar = "^6.0.0"
 django-guardian = "^2.4.0"
 django-types = "^0.22.0"
 factory-boy = "^3.2.1"
