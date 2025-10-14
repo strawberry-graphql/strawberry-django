@@ -1,3 +1,5 @@
+from typing import Optional
+
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types.arguments import StrawberryArgument
@@ -15,7 +17,7 @@ def argument(
     if is_list:
         argument_type = list[type_]
     if is_optional:
-        argument_type = type_ | None
+        argument_type = Optional[type_]  # noqa: UP045
 
     return StrawberryArgument(
         default=default,

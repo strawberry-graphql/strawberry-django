@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
+    Optional,
     TypeVar,
     cast,
     get_origin,
@@ -397,7 +398,7 @@ def order_type(
             if is_auto(type_):
                 type_ = Ordering  # noqa: PLW2901
 
-            cls.__annotations__[fname] = type_ | None
+            cls.__annotations__[fname] = Optional[type_]  # noqa: UP045
 
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):
@@ -437,7 +438,7 @@ def order(
             if is_auto(type_):
                 type_ = Ordering  # noqa: PLW2901
 
-            cls.__annotations__[fname] = type_ | None
+            cls.__annotations__[fname] = Optional[type_]  # noqa: UP045
 
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):
