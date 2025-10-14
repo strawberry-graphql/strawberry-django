@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import functools
 import inspect
-import operator
-from typing import TYPE_CHECKING, Annotated, Any, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any, TypeVar, Union
 
 import strawberry
 from django.core.exceptions import (
@@ -142,11 +140,11 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
         if self.handle_errors and not self._resolved_return_type:
             types_ = tuple(get_possible_types(resolved))
             if OperationInfo not in types_:
-                types_ = functools.reduce(operator.__or__, (*types_, OperationInfo))
+                types_ = (*types_, OperationInfo)
 
                 name = capitalize_first(to_camel_case(self.python_name))
                 resolved = Annotated[
-                    types_,
+                    Union[types_],  # noqa: UP007
                     strawberry.union(f"{name}Payload"),
                 ]
                 self.type_annotation = StrawberryAnnotation(

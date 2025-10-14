@@ -52,7 +52,7 @@ class FruitOrder:
     color_id: auto
     name: auto
     sweetness: auto
-    color: ColorOrder | None
+    color: "ColorOrder | None"
 
     @strawberry_django.order_field
     def types_number(self, queryset, prefix, value: auto):
