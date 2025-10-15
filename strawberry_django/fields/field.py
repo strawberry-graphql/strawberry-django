@@ -477,6 +477,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     first=first,
                     last=last,
                     max_results=self.max_results,
+                    **kwargs,
                 )
                 if inspect.isawaitable(resolved):
                     resolved = await resolved
@@ -493,6 +494,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
             first=first,
             last=last,
             max_results=self.max_results,
+            **kwargs,
         )
 
 
