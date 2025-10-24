@@ -21,6 +21,7 @@ class ObjectPermissionModels:
 def get_object_permission_models(
     model: models.Model | type[models.Model],
 ) -> ObjectPermissionModels:
+    model = cast("models.Model", model)
     return ObjectPermissionModels(
         user=cast("UserObjectPermissionBase", get_user_obj_perms_model(model)),
         group=cast("GroupObjectPermissionBase", get_group_obj_perms_model(model)),
