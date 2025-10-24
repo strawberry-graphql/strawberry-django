@@ -183,7 +183,7 @@ class FruitOrder:
 
 @strawberry.type
 class Query:
-    @strawberry_django.offset_paginated(OffsetPaginated[Fruit], order=order)
+    @strawberry_django.offset_paginated(OffsetPaginated[Fruit], order=FruitOrder)
     def fruits(self, only_available: bool = True) -> QuerySet[Fruit]:
         queryset = models.Fruit.objects.all()
         if only_available:
