@@ -29,6 +29,15 @@ class Project(models.Model):
         base_manager_name = "base_objects"
 
 
+class ProjectNote(models.Model):
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="notes",
+    )
+    title = models.CharField(max_length=100)
+
+
 class ArtProject(Project):
     artist = models.CharField(max_length=30)
     art_style = models.CharField(max_length=30)
