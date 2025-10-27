@@ -13,6 +13,7 @@ from .models import (
     ResearchProject,
     SoftwareProject,
     ProjectNote,
+    ArtProjectNote,
 )
 from .schema import schema
 
@@ -546,6 +547,48 @@ def test_more_related_object_on_base():
                 "notes": [
                     {"__typename": "ProjectNoteType", "title": note3.title},
                     {"__typename": "ProjectNoteType", "title": note4.title},
+                ],
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_related_object_on_subtype():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    note1 = ArtProjectNote.objects.create(art_project=ap, title="Note1")
+    note2 = ArtProjectNote.objects.create(art_project=ap, title="Note2")
+    note3 = ArtProjectNote.objects.create(art_project=ap, title="Note3")
+    note4 = ArtProjectNote.objects.create(art_project=ap, title="Note4")
+
+    query = """\
+    query {
+      projects {
+        __typename
+        ... on ArtProjectType {
+          artNotes {
+            __typename
+            title
+          }
+        }
+      }
+    }
+    """
+
+    # j'ai mis le nombre de requette attendu a deux pour que l'on puisse visiualiser les requette en executant le test
+    # avec `-vv`. Le nombre de requettes devrait etre beaucoup plus bas que les 6 que je constate actuellement.
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "__typename": "ArtProjectType",
+                "artNotes": [
+                    {"__typename": "ArtProjectNoteType", "title": note1.title},
+                    {"__typename": "ArtProjectNoteType", "title": note2.title},
+                    {"__typename": "ArtProjectNoteType", "title": note3.title},
+                    {"__typename": "ArtProjectNoteType", "title": note4.title},
                 ],
             },
         ]
