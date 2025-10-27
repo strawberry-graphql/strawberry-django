@@ -1182,9 +1182,44 @@ def _get_model_hints(
                     prefix=prefix,
                 )
                 if subclass_store:
-                    # Merge only/select_related from subclass, discard prefetches
+                    # Merge only/select_related from subclass
                     store.only.extend(subclass_store.only)
                     store.select_related.extend(subclass_store.select_related)
+                    # Keep prefetches that point to the subclass path to avoid
+                    # duplicating base reverse relations (e.g. `notes`) while still
+                    # prefetching subclass-specific relations (e.g. `art_notes`).
+                    filtered_prefetches: list[PrefetchType] = []
+                    subclass_prefix = prefix + LOOKUP_SEP if prefix else ""
+                    base_field_names = set(get_model_fields(model).keys())
+                    def keep_after_prefix(path: str) -> bool:
+                        if not path.startswith(subclass_prefix):
+                            return False
+                        remainder = path[len(subclass_prefix):]
+                        if remainder.startswith(LOOKUP_SEP):
+                            remainder = remainder[len(LOOKUP_SEP):]
+                        root = remainder.split(LOOKUP_SEP, 1)[0]
+                        # Drop if the root field exists on the base model; it will be
+                        # optimized at the base level (e.g., 'notes'). Keep otherwise
+                        # (e.g., 'art_notes').
+                        return root not in base_field_names
+                    for pf in subclass_store.prefetch_related:
+                        try:
+                            from django.db.models import Prefetch as _DJPrefetch
+                        except Exception:  # pragma: no cover
+                            _DJPrefetch = Prefetch  # type: ignore[assignment]
+                        if isinstance(pf, str):
+                            if keep_after_prefix(pf):
+                                filtered_prefetches.append(pf)
+                        elif isinstance(pf, _DJPrefetch):
+                            to = getattr(pf, "prefetch_to", None)
+                            if isinstance(to, str) and keep_after_prefix(to):
+                                filtered_prefetches.append(pf)
+                        else:
+                            # For callables or unknown types, be conservative and drop
+                            # them here to avoid duplicating base-level prefetches.
+                            # They can still be applied at the subclass level later.
+                            continue
+                    store.prefetch_related.extend(filtered_prefetches)
                 # Do not return here; continue processing base model normally
                 # so that base-level relations are optimized once.
                 return store
@@ -1537,6 +1572,54 @@ def optimize(
     if store:
         if inheritance_qs and subclasses:
             qs = qs.select_subclasses(*subclasses)
+            # When using InheritanceManager we generate prefetch paths that go through
+            # the parent->subclass accessor (e.g. "artproject__art_notes"). After
+            # select_subclasses(), instances are of the subclass type and Django will
+            # expect prefetch paths relative to the subclass ("art_notes"). Rewrite
+            # those prefetch lookups accordingly to prevent redundant per-object
+            # queries on subclass relations.
+            prefixes: list[str] = []
+            for sub in subclasses:
+                path_from_parent = sub._meta.get_path_from_parent(qs.model)
+                if path_from_parent:
+                    prefix = LOOKUP_SEP.join(
+                        p.join_field.get_accessor_name() for p in path_from_parent
+                    )
+                    if prefix:
+                        prefixes.append(prefix + LOOKUP_SEP)
+            if prefixes and store.prefetch_related:
+                new_prefetches: list[PrefetchType] = []
+                for pf in store.prefetch_related:
+                    try:
+                        from django.db.models import Prefetch as _DJPrefetch
+                    except Exception:  # pragma: no cover
+                        _DJPrefetch = Prefetch  # type: ignore[assignment]
+                    if isinstance(pf, str):
+                        new_to = pf
+                        for pref in prefixes:
+                            if new_to.startswith(pref):
+                                new_to = new_to[len(pref) :]
+                                break
+                        new_prefetches.append(new_to)
+                    elif isinstance(pf, _DJPrefetch):
+                        to = getattr(pf, "prefetch_to", None)
+                        new_to = to
+                        if isinstance(to, str):
+                            for pref in prefixes:
+                                if to.startswith(pref):
+                                    new_to = to[len(pref) :]
+                                    break
+                        if isinstance(new_to, str) and new_to != to:
+                            new_pf = Prefetch(new_to, queryset=pf.queryset, to_attr=pf.to_attr)
+                            if getattr(pf, "_optimizer_sentinel", None) is _sentinel:
+                                new_pf._optimizer_sentinel = _sentinel  # type: ignore[attr-defined]
+                            new_prefetches.append(new_pf)
+                        else:
+                            new_prefetches.append(pf)
+                    else:
+                        # Leave callables/unknown types as-is
+                        new_prefetches.append(pf)
+                store.prefetch_related = new_prefetches
         qs = store.apply(qs, info=info, config=config)
         qs_config = get_queryset_config(qs)
         qs_config.optimized = True
