@@ -429,7 +429,18 @@ class OptimizerStore:
         only_set = set(self.only) | extra_only_set
 
         if config.enable_only and only_set:
-            qs = qs.only(*only_set)
+            # Always include foreign key columns to avoid Django issuing
+            # per-row queries when accessing related pointers (especially
+            # for reverse-prefetched relations).
+            try:
+                fk_attnames = [
+                    f.attname for f in qs.model._meta.fields if isinstance(f, models.ForeignKey)
+                ]
+            except Exception:
+                fk_attnames = []
+
+            expanded_only = set(only_set) | set(fk_attnames)
+            qs = qs.only(*expanded_only)
 
         return qs
 
