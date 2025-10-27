@@ -1152,10 +1152,16 @@ def _get_model_hints(
                     model
                 )
             ):
+                # For django-model-utils InheritanceManager we need to account for fields
+                # that live on the subclass tables by prefixing through the parent links.
+                # However, we should not propagate prefetch_related hints from the
+                # subclass back to the base, otherwise reverse relations defined on the
+                # base (e.g. `notes`) end up being prefetched twice: once at base path
+                # and once via the subclass prefix, causing duplicate queries.
                 prefix = LOOKUP_SEP.join(
                     p.join_field.get_accessor_name() for p in path_from_parent
                 )
-                return _get_model_hints(
+                subclass_store = _get_model_hints(
                     dj_definition.model,
                     schema,
                     object_definition,
@@ -1164,6 +1170,13 @@ def _get_model_hints(
                     config=config,
                     prefix=prefix,
                 )
+                if subclass_store:
+                    # Merge only/select_related from subclass, discard prefetches
+                    store.only.extend(subclass_store.only)
+                    store.select_related.extend(subclass_store.select_related)
+                # Do not return here; continue processing base model normally
+                # so that base-level relations are optimized once.
+                return store
 
         return None
 
