@@ -656,6 +656,27 @@ def _get_selections(
     info: GraphQLResolveInfo,
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ) -> dict[str, list[FieldNode]]:
+    # collect_sub_fields requires the concrete GraphQLObjectType that is being resolved.
+    # When the parent_type is an interface, we need to merge the selections from all
+    # possible implementing object types so that fields selected inside inline
+    # fragments (e.g., `... on SomeType { rel { ... } }`) are visible to the optimizer.
+    if isinstance(parent_type, GraphQLInterfaceType):
+        merged: dict[str, list[FieldNode]] = {}
+        for concrete in info.schema.get_possible_types(parent_type):
+            sub = collect_sub_fields(
+                info.schema,
+                info.fragments,
+                info.variable_values,
+                concrete,
+                info.field_nodes,
+            )
+            for name, nodes in sub.items():
+                if name in merged:
+                    merged[name].extend(nodes)
+                else:
+                    merged[name] = list(nodes)
+        return merged
+
     return collect_sub_fields(
         info.schema,
         info.fragments,
