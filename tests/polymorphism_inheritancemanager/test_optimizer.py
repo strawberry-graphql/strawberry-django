@@ -655,3 +655,56 @@ def test_more_related_object_on_subtype():
             },
         ]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_related_object_on_base_called_in_fragment():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    note1 = ProjectNote.objects.create(project=ap.project_ptr, title="Note1")
+    note2 = ProjectNote.objects.create(project=ap.project_ptr, title="Note2")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+    note3 = ProjectNote.objects.create(project=rp.project_ptr, title="Note3")
+    note4 = ProjectNote.objects.create(project=rp.project_ptr, title="Note4")
+
+
+    query = """\
+    query {
+      projects {
+        __typename
+        ... on ArtProjectType {
+          notes {
+            __typename
+            title
+          }
+        }
+        ... on ResearchProjectType {
+          notes {
+            __typename
+            title
+          }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "__typename": "ArtProjectType",
+                "notes": [
+                    {"__typename": "ProjectNoteType", "title": note1.title},
+                    {"__typename": "ProjectNoteType", "title": note2.title},
+                ],
+            },
+            {
+                "__typename": "ResearchProjectType",
+                "notes": [
+                    {"__typename": "ProjectNoteType", "title": note3.title},
+                    {"__typename": "ProjectNoteType", "title": note4.title},
+                ],
+            },
+        ]
+    }
