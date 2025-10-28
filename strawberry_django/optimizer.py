@@ -1204,8 +1204,28 @@ def _get_model_hints(
                 )
                 if subclass_store:
                     # Merge only/select_related from subclass
-                    store.only.extend(subclass_store.only)
-                    store.select_related.extend(subclass_store.select_related)
+                    subclass_prefix = prefix + LOOKUP_SEP if prefix else ""
+
+                    # Ensure entries referencing subclass-only fields (like parent links
+                    # such as `project_ptr_id`) are correctly namespaced when merged
+                    # back into the base model hints. Otherwise, Django will try to
+                    # resolve them on the base model (e.g. `Project.project_ptr_id`),
+                    # which does not exist.
+                    def _prefixed(items: list[str]) -> list[str]:
+                        if not subclass_prefix:
+                            return items
+                        out: list[str] = []
+                        for it in items:
+                            if it.startswith(subclass_prefix) or it.split(LOOKUP_SEP, 1)[0] in ("",):
+                                # Already prefixed (or invalid empty), keep as is
+                                out.append(it)
+                            else:
+                                out.append(f"{subclass_prefix}{it}")
+                        return out
+
+                    store.only.extend(_prefixed(subclass_store.only))
+                    store.select_related.extend(_prefixed(subclass_store.select_related))
+
                     # Keep prefetches that point to the subclass path to avoid
                     # duplicating base reverse relations (e.g. `notes`) while still
                     # prefetching subclass-specific relations (e.g. `art_notes`).
