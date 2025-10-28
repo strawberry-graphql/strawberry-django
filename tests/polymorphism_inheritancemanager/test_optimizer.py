@@ -708,3 +708,123 @@ def test_related_object_on_base_called_in_fragment():
             },
         ]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reverse_relation_polymorphic_resolution_on_note_project():
+    """
+    Couverture de la résolution polymorphe sur la relation inverse
+    `ProjectNote.project` (le `project` d'une note est un `ProjectType`).
+
+    On interroge: projects -> notes -> project { ... fragments ... }
+    et on vérifie que le type concret est correctement résolu, sans N+1.
+    """
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+
+    note_a = ProjectNote.objects.create(project=ap.project_ptr, title="NoteA")
+    note_r = ProjectNote.objects.create(project=rp.project_ptr, title="NoteR")
+
+    query = """\
+    query {
+      projects {
+        __typename
+        notes {
+          title
+          project {
+            __typename
+            topic
+            ... on ArtProjectType { artist }
+            ... on ResearchProjectType { supervisor }
+          }
+        }
+      }
+    }
+    """
+
+    # 1 requête pour les projets, 1 pour précharger les notes et/ou la relation project
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "__typename": "ArtProjectType",
+                "notes": [
+                    {
+                        "title": note_a.title,
+                        "project": {
+                            "__typename": "ArtProjectType",
+                            "topic": ap.topic,
+                            "artist": ap.artist,
+                        },
+                    }
+                ],
+            },
+            {
+                "__typename": "ResearchProjectType",
+                "notes": [
+                    {
+                        "title": note_r.title,
+                        "project": {
+                            "__typename": "ResearchProjectType",
+                            "topic": rp.topic,
+                            "supervisor": rp.supervisor,
+                        },
+                    }
+                ],
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
+    """
+    Valide l'absence de N+1 quand plusieurs notes pointent vers des projets de
+    sous-types différents, et vérifie qu'aucune colonne spécifique non demandée
+    n'est sélectionnée (ex.: pas de `research_notes`, pas de `art_style`).
+    """
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+
+    # Plusieurs notes pour chaque projet
+    ProjectNote.objects.bulk_create(
+        [
+            ProjectNote(project=ap.project_ptr, title=f"A{i}") for i in range(3)
+        ]
+        + [
+            ProjectNote(project=rp.project_ptr, title=f"R{i}") for i in range(3)
+        ]
+    )
+
+    query = """\
+    query {
+      projects {
+        __typename
+        notes {
+          title
+          project {
+            __typename
+            topic
+            ... on ArtProjectType { artist }
+            ... on ResearchProjectType { supervisor }
+          }
+        }
+      }
+    }
+    """
+
+    # Vérifie l'absence de colonnes inutiles
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        # Compte de requêtes constant (pas de N+1 malgré plusieurs notes)
+        with assert_num_queries(3):
+            result = schema.execute_sync(query)
+        captured = "\n".join(q["sql"] for q in ctx.captured_queries)
+        assert "research_notes" not in captured
+        assert "art_style" not in captured
+
+    assert not result.errors
+    # On ne vérifie pas la forme exacte des données ici, l'objectif est
+    # principalement la stabilité du nombre de requêtes et des colonnes SQL.
