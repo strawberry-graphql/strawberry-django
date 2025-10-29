@@ -23,6 +23,15 @@ class Project(PolymorphicModel):
     topic = models.CharField(max_length=30)
 
 
+class ProjectNote(models.Model):
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="notes",
+    )
+    title = models.CharField(max_length=100)
+
+
 class ArtProject(Project):
     artist = models.CharField(max_length=30)
     art_style = models.CharField(max_length=30)
@@ -30,6 +39,15 @@ class ArtProject(Project):
     @model_property(only=("art_style",))
     def art_style_upper(self) -> str:
         return self.art_style.upper()
+
+
+class ArtProjectNote(models.Model):
+    art_project = models.ForeignKey(
+        ArtProject,
+        on_delete=models.CASCADE,
+        related_name="art_notes",
+    )
+    title = models.CharField(max_length=100)
 
 
 class ResearchProject(Project):

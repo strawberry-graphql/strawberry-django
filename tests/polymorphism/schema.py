@@ -14,28 +14,39 @@ from .models import (
     Project,
     ResearchProject,
     SoftwareProject,
-    TechnicalProject,
+    TechnicalProject, ProjectNote, ArtProjectNote,
 )
 
 
 @strawberry_django.interface(Project)
 class ProjectType:
     topic: strawberry.auto
+    notes: list["ProjectNoteType"] = strawberry_django.field()
 
     @strawberry_django.field(only=("topic",))
     def topic_upper(self) -> str:
         return self.topic.upper()
 
+@strawberry_django.type(ProjectNote)
+class ProjectNoteType:
+    project: ProjectType
+    title: strawberry.auto
 
 @strawberry_django.type(ArtProject)
 class ArtProjectType(ProjectType):
     artist: strawberry.auto
     art_style_upper: strawberry.auto
 
+    art_notes: list["ArtProjectNoteType"] = strawberry_django.field()
+
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
         return self.artist.upper()
 
+@strawberry_django.type(ArtProjectNote)
+class ArtProjectNoteType:
+    art_project: "ArtProjectType"
+    title: strawberry.auto
 
 @strawberry_django.type(ResearchProject)
 class ResearchProjectType(ProjectType):
