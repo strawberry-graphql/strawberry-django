@@ -1165,20 +1165,35 @@ def _get_model_hints(
             if subclass_collection is not None:
                 subclass_collection.add(dj_definition.model)
             if is_polymorphic_model(model):
-                # These must be prefixed with app_label__ModelName___ (note three underscores)
-                # This is a special syntax for django-polymorphic:
-                # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
-                # "prefix" however is written in terms of not including the final LOOKUP_SEP (i.e. "__")
-                # So we don't include the final __ here.
-                return _get_model_hints(
+                # For django-polymorphic, use the special subclass prefix only for
+                # field selection (only/select_related) and never for prefetch_related.
+                # See: https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
+                subclass_store = _get_model_hints(
                     dj_definition.model,
                     schema,
                     object_definition,
                     parent_type=parent_type,
                     info=info,
                     config=config,
-                    prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}_",
+                    prefix=prefix,
                 )
+                if subclass_store:
+                    # Build the polymorphic triple-underscore prefix:
+                    base_lookup_prefix = prefix + LOOKUP_SEP if prefix else ""
+                    poly_prefix = (
+                        f"{base_lookup_prefix}{dj_definition.model._meta.app_label}__"
+                        f"{dj_definition.model._meta.model_name}___"
+                    )
+                    # Apply the polymorphic prefix to only/select_related paths
+                    store.only.extend([f"{poly_prefix}{i}" for i in subclass_store.only])
+                    store.select_related.extend(
+                        [f"{poly_prefix}{i}" for i in subclass_store.select_related]
+                    )
+                    # Do NOT propagate subclass prefetches using the polymorphic prefix,
+                    # as Django does not support that in prefetch_related and it causes
+                    # invalid lookups like 'polymorphism__artproject___art_notes'.
+                    # We intentionally drop them here.
+                return store
             if is_inheritance_manager(model._default_manager) and (
                 path_from_parent := dj_definition.model._meta.get_path_from_parent(
                     model
