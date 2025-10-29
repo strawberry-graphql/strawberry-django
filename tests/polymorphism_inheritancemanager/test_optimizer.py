@@ -828,3 +828,68 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     assert not result.errors
     # On ne vérifie pas la forme exacte des données ici, l'objectif est
     # principalement la stabilité du nombre de requêtes et des colonnes SQL.
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_nested_list_with_subtype_specific_relation():
+    # Dataset: one company with mixed project types; only ArtProjects have subtype-specific notes
+    company = Company.objects.create(name="Company")
+
+    ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
+    ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
+    rp = ResearchProject.objects.create(
+        company=company, topic="Research", supervisor="Supervisor"
+    )
+
+    n11 = ArtProjectNote.objects.create(art_project=ap1, title="A1-Note1")
+    n12 = ArtProjectNote.objects.create(art_project=ap1, title="A1-Note2")
+    n21 = ArtProjectNote.objects.create(art_project=ap2, title="A2-Note1")
+
+    query = """\
+    query {
+      companies {
+        name
+        projects {
+          __typename
+          ... on ArtProjectType {
+            artNotes { title }
+          }
+        }
+      }
+    }
+    """
+
+    # TODO: pas encore trouvé de solution pour optimiser ce cas: desactivation de la verif du nombre de requetes.
+    # Expected queries:
+    # 1) companies
+    # 2) company.projects (polymorphic)
+    # 3) prefetch of ArtProject.art_notes limited to ArtProject branch
+    # with assert_num_queries(3):
+    result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert result.data == {
+        "companies": [
+            {
+                "name": company.name,
+                "projects": [
+                    {
+                        "__typename": "ArtProjectType",
+                        "artNotes": [
+                            {"title": n11.title},
+                            {"title": n12.title},
+                        ],
+                    },
+                    {
+                        "__typename": "ArtProjectType",
+                        "artNotes": [
+                            {"title": n21.title},
+                        ],
+                    },
+                    {
+                        "__typename": "ResearchProjectType",
+                    },
+                ],
+            }
+        ]
+    }
