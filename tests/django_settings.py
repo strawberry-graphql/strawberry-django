@@ -117,5 +117,6 @@ INSTALLED_APPS.extend(
         "tests.polymorphism",
         "tests.polymorphism_custom",
         "tests.polymorphism_inheritancemanager",
+        "tests.polymorphism_inheritancemanager_relay",
     ],
 )
