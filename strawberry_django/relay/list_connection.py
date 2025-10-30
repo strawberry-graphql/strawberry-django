@@ -16,7 +16,7 @@ from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_total_count
 from strawberry_django.queryset import get_queryset_config
-from strawberry_django.resolvers import django_resolver
+from strawberry_django.resolvers import django_resolver, django_fetch
 from strawberry_django.utils.typing import unwrap_type
 
 
@@ -89,6 +89,12 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         if isinstance(nodes, models.QuerySet) and (
             queryset_config := get_queryset_config(nodes)
         ):
+            # If we have postfetch prefetch hints, fetch now to populate caches
+            # so nested related connections/managers can reuse the prefetched data.
+            if getattr(queryset_config, "postfetch_prefetch", None):
+                nodes = django_fetch(nodes)
+                nodes = list(nodes)
+
             if queryset_config.optimized_by_prefetching:
                 try:
                     conn = cls.resolve_optimized_connection_by_prefetch(
