@@ -22,6 +22,8 @@ class StrawberryDjangoQuerySetConfig:
     optimized_by_prefetching: bool = False
     type_get_queryset_did_run: bool = False
     ordering_descriptors: list[OrderingDescriptor] | None = None
+    # Post-fetch prefetch hints: map concrete model class to a set of relation lookups
+    postfetch_prefetch: dict[type[Model], set[str]] = dataclasses.field(default_factory=dict)
 
 
 def get_queryset_config(queryset: QuerySet) -> StrawberryDjangoQuerySetConfig:

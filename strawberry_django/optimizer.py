@@ -146,6 +146,9 @@ class OptimizerStore:
             Set of values to optimize using `QuerySet.prefetch_related`
         annotate:
             Dict of values to use in `QuerySet.annotate`
+        postfetch_prefetch:
+            Map of concrete model classes to a set of relation roots to be prefetched
+            after queryset evaluation (used for django-polymorphic subtype reverse relations).
 
     """
 
@@ -153,10 +156,17 @@ class OptimizerStore:
     select_related: list[str] = dataclasses.field(default_factory=list)
     prefetch_related: list[PrefetchType] = dataclasses.field(default_factory=list)
     annotate: dict[str, AnnotateType] = dataclasses.field(default_factory=dict)
+    postfetch_prefetch: dict[type[models.Model], set[str]] = dataclasses.field(default_factory=dict)
 
     def __bool__(self):
         return any(
-            [self.only, self.select_related, self.prefetch_related, self.annotate],
+            [
+                self.only,
+                self.select_related,
+                self.prefetch_related,
+                self.annotate,
+                bool(self.postfetch_prefetch),
+            ],
         )
 
     def __ior__(self, other: OptimizerStore):
@@ -164,6 +174,12 @@ class OptimizerStore:
         self.select_related.extend(other.select_related)
         self.prefetch_related.extend(other.prefetch_related)
         self.annotate.update(other.annotate)
+        # merge postfetch hints
+        for mdl, rels in other.postfetch_prefetch.items():
+            if mdl in self.postfetch_prefetch:
+                self.postfetch_prefetch[mdl].update(rels)
+            else:
+                self.postfetch_prefetch[mdl] = set(rels)
         return self
 
     def __or__(self, other: OptimizerStore):
@@ -178,6 +194,7 @@ class OptimizerStore:
             select_related=self.select_related[:],
             prefetch_related=self.prefetch_related[:],
             annotate=self.annotate.copy(),
+            postfetch_prefetch={k: set(v) for k, v in self.postfetch_prefetch.items()},
         )
 
     @classmethod
@@ -304,6 +321,15 @@ class OptimizerStore:
             config=config,
         )
 
+        # Merge postfetch prefetch hints into queryset config for post-fetch optimization
+        from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+        if self.postfetch_prefetch:
+            cfg = _get_qs_cfg(qs)
+            for mdl, rels in self.postfetch_prefetch.items():
+                if mdl in cfg.postfetch_prefetch:
+                    cfg.postfetch_prefetch[mdl].update(rels)
+                else:
+                    cfg.postfetch_prefetch[mdl] = set(rels)
         return qs  # noqa: RET504
 
     def _apply_prefetch_related(
@@ -1192,7 +1218,28 @@ def _get_model_hints(
                     # Do NOT propagate subclass prefetches using the polymorphic prefix,
                     # as Django does not support that in prefetch_related and it causes
                     # invalid lookups like 'polymorphism__artproject___art_notes'.
-                    # We intentionally drop them here.
+                    # Instead, record the roots of subclass prefetches to be applied
+                    # post-fetch via prefetch_related_objects on grouped subclass instances.
+                    if subclass_store.prefetch_related:
+                        try:
+                            from django.db.models import Prefetch as _DJPrefetch
+                        except Exception:  # pragma: no cover
+                            _DJPrefetch = Prefetch  # type: ignore[assignment]
+                        base_field_names = set(get_model_fields(model).keys())
+                        rel_roots: set[str] = set()
+                        for pf in subclass_store.prefetch_related:
+                            if isinstance(pf, str):
+                                root = pf.split(LOOKUP_SEP, 1)[0]
+                                if root not in base_field_names:
+                                    rel_roots.add(root)
+                            elif isinstance(pf, _DJPrefetch):
+                                to = getattr(pf, "prefetch_to", getattr(pf, "lookup", None))
+                                if isinstance(to, str):
+                                    root = to.split(LOOKUP_SEP, 1)[0]
+                                    if root not in base_field_names:
+                                        rel_roots.add(root)
+                        if rel_roots:
+                            store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_roots)
                 return store
             if is_inheritance_manager(model._default_manager) and (
                 path_from_parent := dj_definition.model._meta.get_path_from_parent(
