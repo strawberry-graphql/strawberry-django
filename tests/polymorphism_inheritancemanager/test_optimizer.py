@@ -859,13 +859,11 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
     }
     """
 
-    # TODO: pas encore trouvé de solution pour optimiser ce cas: desactivation de la verif du nombre de requetes.
-    # Expected queries:
-    # 1) companies
-    # 2) company.projects (polymorphic)
-    # 3) prefetch of ArtProject.art_notes limited to ArtProject branch
-    # with assert_num_queries(3):
-    result = schema.execute_sync(query)
+    # Optimisé: on évite le N+1 sur artNotes en regroupant un seul prefetch post-fetch.
+    # Requêtes stables attendues:
+    # 1) companies, 2) projects (polymorphes), 3) artprojectnote IN (...)
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
 
     assert not result.errors
     assert result.data == {
