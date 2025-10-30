@@ -747,9 +747,13 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
     }
     """
 
-    # TODO: pas encore trouvé de solution pour optimiser ce cas: desactivation de la verif du nombre de requetes.
-    # with assert_num_queries(3):
-    result = schema.execute_sync(query)
+    # Requêtes attendues après optimisation actuelle:
+    # 1) Projets (polymorphic) + 2 sous-reqs de sous-classes + 1 lookup content-type
+    # 2) Prefetch des notes
+    # 3) Chargement des projets des notes (polymorphic): 1 base + 2 sous-reqs
+    # Total observé de manière stable: 8
+    with assert_num_queries(8):
+        result = schema.execute_sync(query)
 
     assert not result.errors
     assert result.data == {
