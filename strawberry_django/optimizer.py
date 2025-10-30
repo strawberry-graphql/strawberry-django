@@ -1288,15 +1288,17 @@ def _get_model_hints(
                     store.only.extend(_prefixed(subclass_store.only))
                     store.select_related.extend(_prefixed(subclass_store.select_related))
 
-                    # Keep prefetches that point to the subclass path to avoid
-                    # duplicating base reverse relations (e.g. `notes`) while still
-                    # prefetching subclass-specific relations (e.g. `art_notes`).
-                    filtered_prefetches: list[PrefetchType] = []
+                    # Keep subclass-specific reverse relation roots to be prefetched
+                    # after evaluation. Prefetching through the subclass prefix can
+                    # lead to cache misses when using InheritanceManager because the
+                    # downcasted instances differ from the ones used during the
+                    # prefetch phase. Using postfetch batching avoids N+1 reliably.
+                    rel_roots: set[str] = set()
                     subclass_prefix = prefix + LOOKUP_SEP if prefix else ""
                     base_field_names = set(get_model_fields(model).keys())
-                    def keep_after_prefix(path: str) -> bool:
+                    def keep_after_prefix(path: str) -> str | None:
                         if not path.startswith(subclass_prefix):
-                            return False
+                            return None
                         remainder = path[len(subclass_prefix):]
                         if remainder.startswith(LOOKUP_SEP):
                             remainder = remainder[len(LOOKUP_SEP):]
@@ -1304,25 +1306,29 @@ def _get_model_hints(
                         # Drop if the root field exists on the base model; it will be
                         # optimized at the base level (e.g., 'notes'). Keep otherwise
                         # (e.g., 'art_notes').
-                        return root not in base_field_names
+                        return root if root and root not in base_field_names else None
                     for pf in subclass_store.prefetch_related:
                         try:
                             from django.db.models import Prefetch as _DJPrefetch
                         except Exception:  # pragma: no cover
                             _DJPrefetch = Prefetch  # type: ignore[assignment]
                         if isinstance(pf, str):
-                            if keep_after_prefix(pf):
-                                filtered_prefetches.append(pf)
+                            root = keep_after_prefix(pf)
+                            if root:
+                                rel_roots.add(root)
                         elif isinstance(pf, _DJPrefetch):
                             to = getattr(pf, "prefetch_to", None)
-                            if isinstance(to, str) and keep_after_prefix(to):
-                                filtered_prefetches.append(pf)
+                            if isinstance(to, str):
+                                root = keep_after_prefix(to)
+                                if root:
+                                    rel_roots.add(root)
                         else:
                             # For callables or unknown types, be conservative and drop
                             # them here to avoid duplicating base-level prefetches.
                             # They can still be applied at the subclass level later.
                             continue
-                    store.prefetch_related.extend(filtered_prefetches)
+                    if rel_roots:
+                        store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_roots)
                 # Do not return here; continue processing base model normally
                 # so that base-level relations are optimized once.
                 return store
