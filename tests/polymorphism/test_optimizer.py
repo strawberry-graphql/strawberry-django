@@ -629,9 +629,9 @@ def test_more_related_object_on_subtype():
     }
     """
 
-    # TODO: pas encore trouvé de solution pour optimiser ce cas: desactivation de la verif du nombre de requetes.
-    # with assert_num_queries(2):
-    result = schema.execute_sync(query)
+    # Optimized to 4 queries total: base list + content type + downcast join + batched notes
+    with assert_num_queries(4):
+        result = schema.execute_sync(query)
     assert not result.errors
     assert result.data == {
         "projects": [
