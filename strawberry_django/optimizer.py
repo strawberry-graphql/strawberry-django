@@ -1226,20 +1226,43 @@ def _get_model_hints(
                         except Exception:  # pragma: no cover
                             _DJPrefetch = Prefetch  # type: ignore[assignment]
                         base_field_names = set(get_model_fields(model).keys())
-                        rel_roots: set[str] = set()
+                        rel_paths: set[str] = set()
+
+                        def _flatten_prefetch_paths(pf_obj: _DJPrefetch) -> list[str]:  # type: ignore[name-defined]
+                            paths: list[str] = []
+                            to = getattr(pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None))
+                            if not isinstance(to, str):
+                                return paths
+                            root = to.split(LOOKUP_SEP, 1)[0]
+                            if root not in base_field_names:
+                                paths.append(to)
+                                # Inspect nested prefetches on the queryset, if any
+                                qs = getattr(pf_obj, "queryset", None)
+                                if qs is not None:
+                                    inner = getattr(qs, "_prefetch_related_lookups", None)
+                                    if isinstance(inner, (list, tuple)):
+                                        for inner_pf in inner:
+                                            if isinstance(inner_pf, str):
+                                                paths.append(f"{to}{LOOKUP_SEP}{inner_pf}")
+                                            elif isinstance(inner_pf, _DJPrefetch):
+                                                for nested in _flatten_prefetch_paths(inner_pf):
+                                                    # nested already includes its own 'to'; join with current 'to'
+                                                    suffix = nested[len(getattr(inner_pf, "prefetch_to", getattr(inner_pf, "lookup", ""))):]
+                                                    if suffix.startswith(LOOKUP_SEP):
+                                                        suffix = suffix[len(LOOKUP_SEP):]
+                                                    paths.append(f"{to}{LOOKUP_SEP}{suffix}" if suffix else to)
+                            return paths
+
                         for pf in subclass_store.prefetch_related:
                             if isinstance(pf, str):
                                 root = pf.split(LOOKUP_SEP, 1)[0]
                                 if root not in base_field_names:
-                                    rel_roots.add(root)
+                                    rel_paths.add(pf)
                             elif isinstance(pf, _DJPrefetch):
-                                to = getattr(pf, "prefetch_to", getattr(pf, "lookup", None))
-                                if isinstance(to, str):
-                                    root = to.split(LOOKUP_SEP, 1)[0]
-                                    if root not in base_field_names:
-                                        rel_roots.add(root)
-                        if rel_roots:
-                            store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_roots)
+                                for p in _flatten_prefetch_paths(pf):
+                                    rel_paths.add(p)
+                        if rel_paths:
+                            store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_paths)
                 return store
             if is_inheritance_manager(model._default_manager) and (
                 path_from_parent := dj_definition.model._meta.get_path_from_parent(
@@ -1293,42 +1316,73 @@ def _get_model_hints(
                     # lead to cache misses when using InheritanceManager because the
                     # downcasted instances differ from the ones used during the
                     # prefetch phase. Using postfetch batching avoids N+1 reliably.
-                    rel_roots: set[str] = set()
+                    rel_paths: set[str] = set()
                     subclass_prefix = prefix + LOOKUP_SEP if prefix else ""
                     base_field_names = set(get_model_fields(model).keys())
+
                     def keep_after_prefix(path: str) -> str | None:
                         if not path.startswith(subclass_prefix):
                             return None
                         remainder = path[len(subclass_prefix):]
                         if remainder.startswith(LOOKUP_SEP):
                             remainder = remainder[len(LOOKUP_SEP):]
-                        root = remainder.split(LOOKUP_SEP, 1)[0]
-                        # Drop if the root field exists on the base model; it will be
-                        # optimized at the base level (e.g., 'notes'). Keep otherwise
-                        # (e.g., 'art_notes').
-                        return root if root and root not in base_field_names else None
+                        first = remainder.split(LOOKUP_SEP, 1)[0]
+                        return remainder if first and first not in base_field_names else None
+
+                    try:
+                        from django.db.models import Prefetch as _DJPrefetch
+                    except Exception:  # pragma: no cover
+                        _DJPrefetch = Prefetch  # type: ignore[assignment]
+
+                    def _flatten_after_prefix(pf_obj: _DJPrefetch) -> list[str]:  # type: ignore[name-defined]
+                        out: list[str] = []
+                        to = getattr(pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None))
+                        if not isinstance(to, str):
+                            return out
+                        rem = keep_after_prefix(to)
+                        if not rem:
+                            return out
+                        out.append(rem)
+
+                        def _append_nested(base_rem: str, child_pf: _DJPrefetch):  # type: ignore[name-defined]
+                            # child_pf.to is relative to the child queryset model; join under base_rem
+                            child_to = getattr(child_pf, "prefetch_to", getattr(child_pf, "lookup", None))
+                            if isinstance(child_to, str) and child_to:
+                                out.append(f"{base_rem}{LOOKUP_SEP}{child_to}")
+                                # Recurse deeper
+                                child_qs = getattr(child_pf, "queryset", None)
+                                if child_qs is not None:
+                                    grand = getattr(child_qs, "_prefetch_related_lookups", None)
+                                    if isinstance(grand, (list, tuple)):
+                                        for g in grand:
+                                            if isinstance(g, str):
+                                                out.append(f"{base_rem}{LOOKUP_SEP}{child_to}{LOOKUP_SEP}{g}")
+                                            elif isinstance(g, _DJPrefetch):
+                                                _append_nested(f"{base_rem}{LOOKUP_SEP}{child_to}", g)
+
+                        qs = getattr(pf_obj, "queryset", None)
+                        if qs is not None:
+                            inner = getattr(qs, "_prefetch_related_lookups", None)
+                            if isinstance(inner, (list, tuple)):
+                                for inner_pf in inner:
+                                    if isinstance(inner_pf, str):
+                                        out.append(f"{rem}{LOOKUP_SEP}{inner_pf}")
+                                    elif isinstance(inner_pf, _DJPrefetch):
+                                        _append_nested(rem, inner_pf)
+                        return out
+
                     for pf in subclass_store.prefetch_related:
-                        try:
-                            from django.db.models import Prefetch as _DJPrefetch
-                        except Exception:  # pragma: no cover
-                            _DJPrefetch = Prefetch  # type: ignore[assignment]
                         if isinstance(pf, str):
-                            root = keep_after_prefix(pf)
-                            if root:
-                                rel_roots.add(root)
+                            rem = keep_after_prefix(pf)
+                            if rem:
+                                rel_paths.add(rem)
                         elif isinstance(pf, _DJPrefetch):
-                            to = getattr(pf, "prefetch_to", None)
-                            if isinstance(to, str):
-                                root = keep_after_prefix(to)
-                                if root:
-                                    rel_roots.add(root)
+                            for pth in _flatten_after_prefix(pf):
+                                rel_paths.add(pth)
                         else:
-                            # For callables or unknown types, be conservative and drop
-                            # them here to avoid duplicating base-level prefetches.
-                            # They can still be applied at the subclass level later.
                             continue
-                    if rel_roots:
-                        store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_roots)
+                    if rel_paths:
+                        store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_paths)
                 # Do not return here; continue processing base model normally
                 # so that base-level relations are optimized once.
                 return store

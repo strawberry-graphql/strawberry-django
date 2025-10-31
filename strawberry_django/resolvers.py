@@ -57,39 +57,103 @@ def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
             # Perform a manual batch prefetch and cache injection to handle
             # django-polymorphic downcasting creating new instances, which do not
             # share identity with the ones used during prefetch_related_objects.
-            for mdl, rels in cfg.postfetch_prefetch.items():
+            for mdl, rel_paths in cfg.postfetch_prefetch.items():
                 # Collect only instances of this subclass
                 instances = [obj for obj in result_list if isinstance(obj, mdl)]
                 if not instances:
                     continue
                 id_to_instance = {obj.pk: obj for obj in instances}
-                for rel in rels:
-                    # Find the related object descriptor on the subclass
+                # Group requested paths by root accessor to avoid refetching roots
+                grouped_paths: dict[str, set[str]] = defaultdict(set)
+                for path in rel_paths:
+                    if not isinstance(path, str) or not path:
+                        continue
+                    root, remainder = (path.split("__", 1) + [""])[:2]
+                    if not root:
+                        continue
+                    if remainder:
+                        grouped_paths[root].add(remainder)
+                    else:
+                        grouped_paths.setdefault(root, set())
+                for root, remainders in grouped_paths.items():
+                    # Prefer delegating to Django's prefetch machinery from the subclass
+                    # instances themselves, as these are already downcasted.
                     try:
-                        related = next(
-                            ro for ro in mdl._meta.related_objects
-                            if ro.get_accessor_name() == rel
-                        )
-                    except StopIteration:
-                        # Unknown relation name; skip
-                        continue
-                    note_model = related.related_model
-                    fk_attname = related.field.attname
-                    ids = [obj.pk for obj in instances]
-                    if not ids:
-                        continue
-                    # Fetch all related objects in a single query and group by fk
-                    batch = note_model._default_manager.filter(**{f"{fk_attname}__in": ids})
-                    grouped: dict[int, list] = defaultdict(list)
-                    for item in batch:
-                        grouped[getattr(item, fk_attname)].append(item)
-                    # Assign into each instance's prefetched cache under the accessor name
-                    for pk, obj in id_to_instance.items():
-                        cache = getattr(obj, "_prefetched_objects_cache", None)
-                        if cache is None:
-                            cache = {}
-                            setattr(obj, "_prefetched_objects_cache", cache)
-                        cache[rel] = grouped.get(pk, [])
+                        # Build nested paths starting at the subclass instances
+                        nested = [f"{root}__{r}" for r in sorted(remainders)] if remainders else []
+                        prefetch_related_objects(instances, root, *nested)
+                    except Exception:
+                        # Fallback: manual batch for the root only (reverse FK)
+                        try:
+                            related = next(
+                                ro for ro in mdl._meta.related_objects
+                                if ro.get_accessor_name() == root
+                            )
+                        except StopIteration:
+                            continue
+                        root_model = related.related_model
+                        fk_attname = getattr(related.field, "attname", None)
+                        if not fk_attname:
+                            # Likely a M2M reverse; cannot manual batch easily
+                            continue
+                        ids = [obj.pk for obj in instances]
+                        if not ids:
+                            continue
+                        # Fetch all root related objects and group by foreign key
+                        root_batch = root_model._default_manager.filter(**{f"{fk_attname}__in": ids})
+                        grouped_root: dict[int, list] = defaultdict(list)
+                        for item in root_batch:
+                            grouped_root[getattr(item, fk_attname)].append(item)
+                        # Assign first-level cache and aggregate for potential nested batching
+                        related_instances_all: list = []
+                        for pk, obj in id_to_instance.items():
+                            cache = getattr(obj, "_prefetched_objects_cache", None)
+                            if cache is None:
+                                cache = {}
+                                setattr(obj, "_prefetched_objects_cache", cache)
+                            items = grouped_root.get(pk, [])
+                            cache[root] = items
+                            if items:
+                                related_instances_all.extend(items)
+                        # Manual nested batching for single-segment remainders (e.g., 'details')
+                        if related_instances_all and remainders:
+                            for rem in sorted(remainders):
+                                # Only support a single hop here; deeper hops will be attempted via Django below
+                                if "__" in rem:
+                                    continue
+                                try:
+                                    nested_rel = next(
+                                        ro for ro in root_model._meta.related_objects
+                                        if ro.get_accessor_name() == rem
+                                    )
+                                except StopIteration:
+                                    continue
+                                nested_model = nested_rel.related_model
+                                nested_fk = getattr(nested_rel.field, "attname", None)
+                                if not nested_fk:
+                                    continue
+                                parent_ids = [getattr(it, "pk") for it in related_instances_all]
+                                if not parent_ids:
+                                    continue
+                                nested_batch = nested_model._default_manager.filter(**{f"{nested_fk}__in": parent_ids})
+                                # Group nested by parent fk
+                                nested_grouped: dict[int, list] = defaultdict(list)
+                                for n in nested_batch:
+                                    nested_grouped[getattr(n, nested_fk)].append(n)
+                                # Inject into each parent cache
+                                for parent in related_instances_all:
+                                    cache = getattr(parent, "_prefetched_objects_cache", None)
+                                    if cache is None:
+                                        cache = {}
+                                        setattr(parent, "_prefetched_objects_cache", cache)
+                                    cache[rem] = nested_grouped.get(parent.pk, [])
+                            # For any remaining deeper paths, try Django prefetch starting at the batched roots
+                            deeper = [r for r in remainders if "__" in r]
+                            if deeper:
+                                try:
+                                    prefetch_related_objects(related_instances_all, *sorted(deeper))
+                                except Exception:
+                                    pass
         # Clear hints to avoid leaking into subsequent, unrelated queries
         cfg.postfetch_prefetch.clear()
 

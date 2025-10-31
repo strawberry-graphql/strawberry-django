@@ -277,6 +277,30 @@ class StrawberryDjangoField(
             if "info" not in kwargs:
                 kwargs["info"] = info
 
+            # If we have a prefetched cache for this reverse accessor on the source instance,
+            # pass a hint so the queryset hook can short-circuit to the cached list without
+            # re-optimizing/requerying.
+            try:
+                attname = self.django_name or self.python_name
+                if (
+                    source is not None
+                    and hasattr(source, "_prefetched_objects_cache")
+                    and isinstance(source._prefetched_objects_cache, dict)
+                    and attname in source._prefetched_objects_cache
+                ):
+                    kwargs = dict(kwargs)
+                    kwargs["__use_prefetched_cache__"] = attname
+            except Exception:
+                pass
+
+            # Provide source instance in kwargs so the queryset hook can use prefetched cache
+            if source is not None:
+                try:
+                    kwargs = dict(kwargs)
+                    kwargs["__source__"] = source
+                except Exception:
+                    pass
+
             result = django_resolver(
                 self.get_queryset_hook(**kwargs),
                 qs_hook=lambda qs: qs,
@@ -286,13 +310,41 @@ class StrawberryDjangoField(
 
     def get_queryset_hook(self, info: Info, **kwargs):
         if self.is_connection or self.is_paginated:
-            # We don't want to fetch results yet, those will be done by the connection/pagination
+            # For connections/paginated fields, avoid DB hits when we already have
+            # a prefetched cache for this reverse accessor on the source instance.
+            # Otherwise, just return the queryset and let the connection handle it.
             def qs_hook(qs: models.QuerySet):  # type: ignore
+                # If the resolver passed a hint to use the source's prefetched cache,
+                # return the cached list so the connection can operate on a Python list
+                # (preventing per-node LIMIT queries on reverse relations).
+                use_cache_key = kwargs.pop("__use_prefetched_cache__", None)
+                source_obj = kwargs.pop("__source__", None)
+                if use_cache_key and source_obj is not None:
+                    cache = getattr(source_obj, "_prefetched_objects_cache", None)
+                    if isinstance(cache, dict) and use_cache_key in cache:
+                        return cache[use_cache_key]
                 return self.get_queryset(qs, info, **kwargs)
 
         elif self.is_list:
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
+                # If the source instance has a prefetched cache for this accessor, short-circuit
+                use_cache_key = kwargs.pop("__use_prefetched_cache__", None)
+                source_obj = kwargs.pop("__source__", None)
+                if use_cache_key and source_obj is not None:
+                    cache = getattr(source_obj, "_prefetched_objects_cache", None)
+                    if isinstance(cache, dict) and use_cache_key in cache:
+                        # Only short-circuit to the cache if the queryset does NOT carry
+                        # postfetch hints. If it does, we must run the default_qs_hook so
+                        # nested postfetch can execute on this queryset.
+                        try:
+                            from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+                            cfg = _get_qs_cfg(qs)
+                            if not getattr(cfg, "postfetch_prefetch", None):
+                                return cache[use_cache_key]
+                        except Exception:
+                            # If we cannot inspect the config, be conservative and do not short-circuit
+                            pass
                 qs = self.get_queryset(qs, info, **kwargs)
                 if not self.disable_fetch_list_results:
                     qs = default_qs_hook(qs)
