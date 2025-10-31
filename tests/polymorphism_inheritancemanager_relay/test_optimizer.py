@@ -13,7 +13,7 @@ from .models import (
     ResearchProject,
     SoftwareProject,
     ProjectNote,
-    ArtProjectNote,
+    ArtProjectNote, ArtProjectNoteDetails,
 )
 from .schema import schema
 
@@ -766,6 +766,172 @@ def test_more_related_object_on_subtype():
         }
     }
 
+@pytest.mark.django_db(transaction=True)
+def test_more_related_object_on_subtype2():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    note1 = ArtProjectNote.objects.create(art_project=ap, title="Note1")
+    note2 = ArtProjectNote.objects.create(art_project=ap, title="Note2")
+    note3 = ArtProjectNote.objects.create(art_project=ap, title="Note3")
+    note4 = ArtProjectNote.objects.create(art_project=ap, title="Note4")
+    ap2 = ArtProject.objects.create(topic="Art2", artist="Artist2")
+    note5 = ArtProjectNote.objects.create(art_project=ap2, title="Note5")
+    note6 = ArtProjectNote.objects.create(art_project=ap2, title="Note6")
+    ap3 = ArtProject.objects.create(topic="Art3", artist="Artist3")
+    note7 = ArtProjectNote.objects.create(art_project=ap3, title="Note7")
+    note8 = ArtProjectNote.objects.create(art_project=ap3, title="Note8")
+
+    notedetail1 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details1")
+    notedetail2 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details2")
+    notedetail3 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details3")
+
+    notedetail4 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details4")
+    notedetail5 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details5")
+    notedetail6 = ArtProjectNoteDetails.objects.create(art_project_note=note3, text="details6")
+
+    query = """\
+    query {
+      projects {
+        edges {
+          node {
+            __typename
+            ... on ArtProjectType {
+              artNotes { edges { node { 
+                __typename
+                title
+                details { edges { node { __typename text } } } 
+              } } }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    # j'ai mis le nombre de requette attendu a deux pour que l'on puisse visiualiser les requette en executant le test
+    # avec `-vv`. Le nombre de requettes devrait etre beaucoup plus bas que les 6 que je constate actuellement.
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": {
+            "edges": [
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "artNotes": {
+                            "edges": [
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note1.title,
+                                        "details": {
+                                            "edges": [
+                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
+                                                          "text": notedetail1.text}},
+                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
+                                                          "text": notedetail2.text}},
+                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
+                                                          "text": notedetail3.text}},
+                                            ]
+                                        },
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note2.title,
+                                        "details": {
+                                            "edges": [
+                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
+                                                          "text": notedetail4.text}},
+                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
+                                                          "text": notedetail5.text}},
+                                            ]
+                                        },
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note3.title,
+                                        "details": {
+                                            "edges": [
+                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
+                                                          "text": notedetail6.text}},
+                                            ]
+                                        },
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note4.title,
+                                        "details": {
+                                            "edges": []
+                                        },
+                                    }
+                                },
+                            ]
+                        },
+                    }
+                },
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "artNotes": {
+                            "edges": [
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note5.title,
+                                        "details": {
+                                            "edges": []
+                                        },
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note6.title,
+                                        "details": {
+                                            "edges": []
+                                        },
+                                    }
+                                },
+                            ]
+                        },
+                    }
+                },
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "artNotes": {
+                            "edges": [
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note7.title,
+                                        "details": {
+                                            "edges": []
+                                        },
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note8.title,
+                                        "details": {
+                                            "edges": []
+                                        },
+                                    }
+                                },
+                            ]
+                        },
+                    }
+                },
+            ]
+        }
+    }
 
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base_called_in_fragment():

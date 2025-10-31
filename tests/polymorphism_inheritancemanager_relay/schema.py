@@ -16,7 +16,7 @@ from .models import (
     SoftwareProject,
     TechnicalProject,
     ProjectNote,
-    ArtProjectNote,
+    ArtProjectNote, ArtProjectNoteDetails,
 )
 
 
@@ -53,6 +53,14 @@ class ArtProjectType(ProjectType):
 class ArtProjectNoteType(strawberry.relay.Node):
     art_project: "ArtProjectType"
     title: strawberry.auto
+
+    details: DjangoListConnection["ArtProjectNoteDetailsType"] = strawberry_django.connection()
+
+
+@strawberry_django.type(ArtProjectNoteDetails)
+class ArtProjectNoteDetailsType:
+    art_project_note: ArtProjectNoteType
+    text: strawberry.auto
 
 
 @strawberry_django.type(ResearchProject)
