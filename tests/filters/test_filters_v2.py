@@ -164,6 +164,10 @@ def test_resolve_value_maybe():
     maybe_gid = Maybe(value=GlobalID("FruitNode", "42"))
     assert resolve_value(maybe_gid) == "42"
 
+    # Test Maybe with deeply nested None value
+    maybe_deep_none = Maybe(value=Maybe(value=None))
+    assert resolve_value(maybe_deep_none) is None
+
     # Test Maybe in a list
     maybe_list = [
         Maybe(value=1),
@@ -177,6 +181,14 @@ def test_resolve_value_maybe():
     # Test nested Maybe
     nested_maybe = Maybe(value=Maybe(value="nested"))
     assert resolve_value(nested_maybe) == "nested"
+
+    # Test list containing nested Maybes
+    nested_maybe_list = [
+        Maybe(value=Maybe(value="foo")),
+        Maybe(value=None),
+    ]
+    resolved_nested_list = resolve_value(nested_maybe_list)
+    assert resolved_nested_list == ["foo", None]
 
 
 def test_filter_field_missing_prefix():

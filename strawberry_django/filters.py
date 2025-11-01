@@ -26,6 +26,13 @@ from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform, deprecated
 
+# Try to import Maybe at module level for performance
+try:
+    from strawberry import Maybe
+except ImportError:
+    # Maybe type not available in this version of strawberry
+    Maybe = None  # type: ignore[assignment, misc]
+
 from strawberry_django.fields.filter_order import (
     RESOLVE_VALUE_META,
     WITH_NONE_META,
@@ -123,17 +130,10 @@ def resolve_value(value: Any) -> Any:
         return [resolve_value(v) for v in value]
 
     # Handle strawberry.Maybe type if available
-    try:
-        from strawberry import Maybe
-
-        if isinstance(value, Maybe):
-            # Extract .value from Maybe, handling both present and None values
-            # Recursively resolve the extracted value in case it's nested
-            maybe_value = getattr(value, "value", None)
-            return resolve_value(maybe_value) if maybe_value is not None else None
-    except ImportError:
-        # Maybe type not available in this version of strawberry
-        pass
+    if Maybe is not None and isinstance(value, Maybe):
+        # Extract .value from Maybe and recursively resolve it
+        # resolve_value(None) already returns None, so no need for explicit check
+        return resolve_value(getattr(value, "value", None))
 
     if isinstance(value, relay.GlobalID):
         return value.node_id
