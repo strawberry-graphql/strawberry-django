@@ -122,6 +122,19 @@ def resolve_value(value: Any) -> Any:
     if isinstance(value, list):
         return [resolve_value(v) for v in value]
 
+    # Handle strawberry.Maybe type if available
+    try:
+        from strawberry import Maybe
+
+        if isinstance(value, Maybe):
+            # Extract .value from Maybe, handling both present and None values
+            # Recursively resolve the extracted value in case it's nested
+            maybe_value = getattr(value, "value", None)
+            return resolve_value(maybe_value) if maybe_value is not None else None
+    except ImportError:
+        # Maybe type not available in this version of strawberry
+        pass
+
     if isinstance(value, relay.GlobalID):
         return value.node_id
 

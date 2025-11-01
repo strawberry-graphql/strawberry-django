@@ -142,6 +142,43 @@ def test_resolve_value(value, resolved):
     assert resolve_value(value) == resolved
 
 
+def test_resolve_value_maybe():
+    """Test that strawberry.Maybe type is properly handled in resolve_value."""
+    try:
+        from strawberry import Maybe
+    except ImportError:
+        pytest.skip("strawberry.Maybe is not available in this version")
+
+    # Test Maybe with a value
+    maybe_with_value = Maybe(value="test_string")
+    assert resolve_value(maybe_with_value) == "test_string"
+
+    # Test Maybe with None
+    maybe_none = Maybe(value=None)
+    assert resolve_value(maybe_none) is None
+
+    # Test Maybe with nested types
+    maybe_enum = Maybe(value=Version.TWO)
+    assert resolve_value(maybe_enum) == Version.TWO.value
+
+    maybe_gid = Maybe(value=GlobalID("FruitNode", "42"))
+    assert resolve_value(maybe_gid) == "42"
+
+    # Test Maybe in a list
+    maybe_list = [
+        Maybe(value=1),
+        Maybe(value="test"),
+        Maybe(value=None),
+        Maybe(value=Version.ONE),
+    ]
+    resolved_list = resolve_value(maybe_list)
+    assert resolved_list == [1, "test", None, Version.ONE.value]
+
+    # Test nested Maybe
+    nested_maybe = Maybe(value=Maybe(value="nested"))
+    assert resolve_value(nested_maybe) == "nested"
+
+
 def test_filter_field_missing_prefix():
     with pytest.raises(
         MissingFieldArgumentError, match=r".*\"prefix\".*\"field_method\".*"
