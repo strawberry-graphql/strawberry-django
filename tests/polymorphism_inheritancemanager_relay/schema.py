@@ -16,7 +16,7 @@ from .models import (
     SoftwareProject,
     TechnicalProject,
     ProjectNote,
-    ArtProjectNote, ArtProjectNoteDetails,
+    ArtProjectNote, ArtProjectNoteDetails, CompanyProjectLink,
 )
 
 
@@ -98,11 +98,19 @@ class IOSProjectType(AppProjectType):
     ios_version: strawberry.auto
 
 
+@strawberry_django.type(CompanyProjectLink)
+class CompanyProjectLinkType:
+    company: "CompanyType"
+    project: ProjectType
+    label: strawberry.auto
+
+
 @strawberry_django.type(Company)
 class CompanyType(strawberry.relay.Node):
     name: strawberry.auto
     projects: DjangoListConnection[ProjectType] = strawberry_django.connection()
     main_project: ProjectType | None
+    project_links: DjangoListConnection["CompanyProjectLinkType"] = strawberry_django.connection()
 
 
 @strawberry.type

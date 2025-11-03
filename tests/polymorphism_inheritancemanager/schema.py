@@ -17,6 +17,7 @@ from .models import (
     TechnicalProject,
     ProjectNote,
     ArtProjectNote, ArtProjectNoteDetails,
+    CompanyProjectLink,
 )
 
 
@@ -98,11 +99,19 @@ class IOSProjectType(AppProjectType):
     ios_version: strawberry.auto
 
 
+@strawberry_django.type(CompanyProjectLink)
+class CompanyProjectLinkType:
+    company: "CompanyType"
+    project: ProjectType
+    label: strawberry.auto
+
+
 @strawberry_django.type(Company)
 class CompanyType:
     name: strawberry.auto
     projects: list[ProjectType]
     main_project: ProjectType | None
+    project_links: list["CompanyProjectLinkType"] = strawberry_django.field()
 
 
 @strawberry.type

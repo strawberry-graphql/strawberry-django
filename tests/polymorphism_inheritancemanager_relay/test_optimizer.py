@@ -13,7 +13,7 @@ from .models import (
     ResearchProject,
     SoftwareProject,
     ProjectNote,
-    ArtProjectNote, ArtProjectNoteDetails,
+    ArtProjectNote, ArtProjectNoteDetails, CompanyProjectLink,
 )
 from .schema import schema
 
@@ -1299,3 +1299,69 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     ]
     titles = {t["title"] for p in art_projects for t in (p.get("artNotes", {}).get("edges", [])) for t in ([t["node"]] if isinstance(t, dict) and "node" in t else [])}
     assert {"A1-Note1", "A1-Note2", "A2-Note1"}.issubset(titles)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_optimizer_chain_company_links_to_polymorphic_project_no_n_plus_one():
+    # A -> B -> polymorphic C
+    # Company (A) -> CompanyProjectLink (B) -> Project (C, polymorphic via InheritanceManager)
+    company = Company.objects.create(name="Company")
+
+    ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
+    ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
+    rp1 = ResearchProject.objects.create(
+        company=company, topic="Research1", supervisor="Boss1"
+    )
+
+    # Create links (B) pointing to polymorphic projects (C)
+    l1 = CompanyProjectLink.objects.create(company=company, project=ap1, label="L1")
+    l2 = CompanyProjectLink.objects.create(company=company, project=ap2, label="L2")
+    l3 = CompanyProjectLink.objects.create(company=company, project=rp1, label="L3")
+
+    query = """
+    query {
+      companies {
+        edges {
+          node {
+        name
+        projectLinks {
+                  edges {
+          node {
+          label
+          project {
+            __typename
+            topic
+            ... on ArtProjectType { artist }
+            ... on ResearchProjectType { supervisor }
+          }
+        }
+          }}}
+        }
+      }
+    }
+    """
+
+    # Expected stable queries (no N+1):
+    # 1) companies
+    # 2) companyprojectlink for those companies
+    # 3) projects (polymorphic) for those links
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    data = result.data["companies"]["edges"][0]["node"]
+    assert data["name"] == company.name
+    # Ensure we received 3 links and correct project payloads
+    links = {item["node"]["label"]: item["node"] for item in data["projectLinks"]["edges"]}
+
+    assert links["L1"]["project"]["__typename"] == "ArtProjectType"
+    assert links["L1"]["project"]["topic"] == ap1.topic
+    assert links["L1"]["project"]["artist"] == ap1.artist
+
+    assert links["L2"]["project"]["__typename"] == "ArtProjectType"
+    assert links["L2"]["project"]["topic"] == ap2.topic
+    assert links["L2"]["project"]["artist"] == ap2.artist
+
+    assert links["L3"]["project"]["__typename"] == "ResearchProjectType"
+    assert links["L3"]["project"]["topic"] == rp1.topic
+    assert links["L3"]["project"]["supervisor"] == rp1.supervisor

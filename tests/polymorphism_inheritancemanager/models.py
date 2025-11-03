@@ -95,3 +95,12 @@ class AndroidProject(AppProject):
 
 class IOSProject(AppProject):
     ios_version = models.CharField(max_length=15)
+
+class CompanyProjectLink(models.Model):
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="project_links"
+    )
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="company_links"
+    )
+    label = models.CharField(max_length=100, blank=True, default="")
