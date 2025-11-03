@@ -425,6 +425,31 @@ in your schema.
 > Either change your base manager to also be an `InheritanceManager` or set Strawberry Django to use the default
 > manager: `DjangoOptimizerExtension(prefetch_custom_queryset=True)`.
 
+### Interface fields and polymorphism
+
+When working with GraphQL interfaces backed by a polymorphic Django base model or using InheritanceManager, make sure that any fields defined on the base model and needed by your queries are also declared on the GraphQL interface. If a base-model field is only declared on concrete subtype GraphQL types (and omitted on the interface), the optimizer cannot see that field when resolving the interface and therefore cannot reliably optimize it. This can result in missing `only()` pruning or missing `select_related()`/`prefetch_related()` calls, leading to extra queries (N+1) and larger payloads.
+
+Recommendations:
+
+- Declare base-model fields on the interface itself so the optimizer can select them up front when resolving the interface type.
+- If you intentionally omit a base field from the interface, add explicit optimizer hints where appropriate (e.g., `only=...`, `select_related=...`, `prefetch_related=...`) using `strawberry_django.field(...)`, or tailor your queries to avoid relying on automatic optimization for that field.
+
+Example:
+
+```python
+@strawberry_django.interface(models.Project)
+class ProjectType:
+    # Base-model field declared on the interface so it can be optimized
+    topic: strawberry.auto
+
+@strawberry_django.type(models.ArtProject)
+class ArtProjectType(ProjectType):
+    # Subtype-only fields remain on the subtype
+    artist: strawberry.auto
+```
+
+
+
 ### Custom polymorphic solution
 
 The optimizer also supports polymorphism even if your models are not polymorphic.
