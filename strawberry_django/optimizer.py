@@ -102,6 +102,40 @@ _M = TypeVar("_M", bound=models.Model)
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
 
+def _lift_child_postfetch_to_parent(
+    parent_store: "OptimizerStore",
+    child_store: "OptimizerStore",
+    accessor_path: str,
+) -> "OptimizerStore":
+    """Lift child-level postfetch hints/branches to the parent accessor.
+
+    Returns a shallow copy of child_store with postfetch-related hints cleared,
+    so that execution happens once at the parent level instead of per-parent.
+    """
+    # Operate on a copy to avoid mutating the original reference
+    new_child = child_store.copy()
+
+    # Lift child postfetch_prefetch (model -> set(paths)) into parent branches
+    if getattr(child_store, "postfetch_prefetch", None):
+        dest = parent_store.parent_postfetch_branches.setdefault(accessor_path, {})
+        for mdl, rels in child_store.postfetch_prefetch.items():
+            dest.setdefault(mdl, set()).update(rels)
+        new_child.postfetch_prefetch.clear()
+
+    # Merge any existing child parent_postfetch_branches into this accessor
+    if getattr(child_store, "parent_postfetch_branches", None):
+        merged: dict[type[models.Model], set[str]] = {}
+        for _acc, mapping in child_store.parent_postfetch_branches.items():
+            for mdl, rels in mapping.items():
+                merged.setdefault(mdl, set()).update(rels)
+        if merged:
+            dest = parent_store.parent_postfetch_branches.setdefault(accessor_path, {})
+            for mdl, rels in merged.items():
+                dest.setdefault(mdl, set()).update(rels)
+        new_child.parent_postfetch_branches.clear()
+
+    return new_child
+
 
 @dataclasses.dataclass
 class OptimizerConfig:
@@ -157,6 +191,8 @@ class OptimizerStore:
     prefetch_related: list[PrefetchType] = dataclasses.field(default_factory=list)
     annotate: dict[str, AnnotateType] = dataclasses.field(default_factory=dict)
     postfetch_prefetch: dict[type[models.Model], set[str]] = dataclasses.field(default_factory=dict)
+    # Parent-level postfetch branches: accessor -> { subclass model -> set(paths) }
+    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = dataclasses.field(default_factory=dict)
 
     def __bool__(self):
         return any(
@@ -166,6 +202,7 @@ class OptimizerStore:
                 self.prefetch_related,
                 self.annotate,
                 bool(self.postfetch_prefetch),
+                bool(self.parent_postfetch_branches),
             ],
         )
 
@@ -180,6 +217,11 @@ class OptimizerStore:
                 self.postfetch_prefetch[mdl].update(rels)
             else:
                 self.postfetch_prefetch[mdl] = set(rels)
+        # merge parent-level postfetch branches
+        for acc, mapping in other.parent_postfetch_branches.items():
+            dest = self.parent_postfetch_branches.setdefault(acc, {})
+            for mdl, rels in mapping.items():
+                dest.setdefault(mdl, set()).update(rels)
         return self
 
     def __or__(self, other: OptimizerStore):
@@ -195,6 +237,7 @@ class OptimizerStore:
             prefetch_related=self.prefetch_related[:],
             annotate=self.annotate.copy(),
             postfetch_prefetch={k: set(v) for k, v in self.postfetch_prefetch.items()},
+            parent_postfetch_branches={acc: {k: set(v) for k, v in mp.items()} for acc, mp in self.parent_postfetch_branches.items()},
         )
 
     @classmethod
@@ -323,13 +366,20 @@ class OptimizerStore:
 
         # Merge postfetch prefetch hints into queryset config for post-fetch optimization
         from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
-        if self.postfetch_prefetch:
+        cfg = None
+        if self.postfetch_prefetch or self.parent_postfetch_branches:
             cfg = _get_qs_cfg(qs)
+        if self.postfetch_prefetch:
             for mdl, rels in self.postfetch_prefetch.items():
                 if mdl in cfg.postfetch_prefetch:
                     cfg.postfetch_prefetch[mdl].update(rels)
                 else:
                     cfg.postfetch_prefetch[mdl] = set(rels)
+        if self.parent_postfetch_branches:
+            for acc, mapping in self.parent_postfetch_branches.items():
+                dest = cfg.parent_postfetch_branches.setdefault(acc, {})
+                for mdl, rels in mapping.items():
+                    dest.setdefault(mdl, set()).update(rels)
         return qs  # noqa: RET504
 
     def _apply_prefetch_related(
@@ -1033,7 +1083,12 @@ def _get_hints_from_django_relation(
     )
     if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
-    field_qs = field_store.apply(base_qs, info=field_info, config=config)
+    # Lift any child-level postfetch hints/branches to the parent accessor so batching
+    # happens once for all parents, and clear them from the child copy to avoid
+    # per-parent execution later.
+    child_store = _lift_child_postfetch_to_parent(store, field_store, path)
+
+    field_qs = child_store.apply(base_qs, info=field_info, config=config)
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)
@@ -1321,11 +1376,15 @@ def _get_model_hints(
                     base_field_names = set(get_model_fields(model).keys())
 
                     def keep_after_prefix(path: str) -> str | None:
-                        if not path.startswith(subclass_prefix):
-                            return None
-                        remainder = path[len(subclass_prefix):]
-                        if remainder.startswith(LOOKUP_SEP):
-                            remainder = remainder[len(LOOKUP_SEP):]
+                        # Accept prefetch paths that are either absolute (already prefixed
+                        # with the parent accessor) or relative to the subclass model.
+                        if subclass_prefix and path.startswith(subclass_prefix):
+                            remainder = path[len(subclass_prefix):]
+                            if remainder.startswith(LOOKUP_SEP):
+                                remainder = remainder[len(LOOKUP_SEP):]
+                        else:
+                            # Treat as relative to subclass
+                            remainder = path
                         first = remainder.split(LOOKUP_SEP, 1)[0]
                         return remainder if first and first not in base_field_names else None
 
@@ -1381,7 +1440,21 @@ def _get_model_hints(
                                 rel_paths.add(pth)
                         else:
                             continue
+                    # Also consider subclass-level postfetch hints that are relative to the subclass
+                    if getattr(subclass_store, "postfetch_prefetch", None):
+                        rels = subclass_store.postfetch_prefetch.get(dj_definition.model)
+                        if rels:
+                            for r in rels:
+                                rem = keep_after_prefix(r)
+                                if rem:
+                                    rel_paths.add(rem)
                     if rel_paths:
+                        # Always record subclass reverse relation roots as child-level
+                        # postfetch hints here. The proper parent accessor (e.g. 'projects')
+                        # is only known by the relation handler, which will lift these
+                        # hints to the correct parent level. Using the inheritance
+                        # accessor (e.g. 'artproject') as a parent key would cause
+                        # incorrect prefetching.
                         store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_paths)
                 # Do not return here; continue processing base model normally
                 # so that base-level relations are optimized once.

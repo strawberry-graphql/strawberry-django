@@ -323,7 +323,20 @@ class StrawberryDjangoField(
                     cache = getattr(source_obj, "_prefetched_objects_cache", None)
                     if isinstance(cache, dict) and use_cache_key in cache:
                         return cache[use_cache_key]
-                return self.get_queryset(qs, info, **kwargs)
+                qs2 = self.get_queryset(qs, info, **kwargs)
+                # If the connection queryset carries parent-level postfetch branches,
+                # we need to trigger evaluation now so the optimizer's postfetch hook
+                # can batch nested reverse relations across the page. This will not
+                # bypass pagination because the queryset already carries LIMIT/OFFSET.
+                try:
+                    from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+                    cfg = _get_qs_cfg(qs2)
+                    if getattr(cfg, "parent_postfetch_branches", None):
+                        from strawberry_django.resolvers import default_qs_hook as _dqsh
+                        qs2 = _dqsh(qs2)
+                except Exception:
+                    pass
+                return qs2
 
         elif self.is_list:
 
