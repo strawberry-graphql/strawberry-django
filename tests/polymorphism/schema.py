@@ -14,7 +14,7 @@ from .models import (
     Project,
     ResearchProject,
     SoftwareProject,
-    TechnicalProject, ProjectNote, ArtProjectNote,
+    TechnicalProject, ProjectNote, ArtProjectNote, ArtProjectNoteDetails,
 )
 
 
@@ -47,6 +47,14 @@ class ArtProjectType(ProjectType):
 class ArtProjectNoteType:
     art_project: "ArtProjectType"
     title: strawberry.auto
+
+    details: list["ArtProjectNoteDetailsType"] = strawberry_django.field()
+
+
+@strawberry_django.type(ArtProjectNoteDetails)
+class ArtProjectNoteDetailsType:
+    art_project_note: "ArtProjectNoteType"
+    text: strawberry.auto
 
 @strawberry_django.type(ResearchProject)
 class ResearchProjectType(ProjectType):

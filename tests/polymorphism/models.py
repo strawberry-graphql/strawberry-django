@@ -50,6 +50,15 @@ class ArtProjectNote(models.Model):
     title = models.CharField(max_length=100)
 
 
+class ArtProjectNoteDetails(models.Model):
+    art_project_note = models.ForeignKey(
+        ArtProjectNote,
+        on_delete=models.CASCADE,
+        related_name="details",
+    )
+    text = models.CharField(max_length=255)
+
+
 class ResearchProject(Project):
     supervisor = models.CharField(max_length=30)
     research_notes = models.TextField()

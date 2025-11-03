@@ -11,7 +11,7 @@ from .models import (
     EngineeringProject,
     IOSProject,
     ResearchProject,
-    SoftwareProject, ProjectNote, ArtProjectNote,
+    SoftwareProject, ProjectNote, ArtProjectNote, ArtProjectNoteDetails,
 )
 from .schema import schema
 
@@ -837,3 +837,235 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     assert not result.errors
     # On ne vérifie pas la forme exacte des données ici, l'objectif est
     # principalement la stabilité du nombre de requêtes et des colonnes SQL.
+
+
+
+@pytest.mark.django_db(transaction=True)
+def test_more_related_object_on_subtype2():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    note1 = ArtProjectNote.objects.create(art_project=ap, title="Note1")
+    note2 = ArtProjectNote.objects.create(art_project=ap, title="Note2")
+    note3 = ArtProjectNote.objects.create(art_project=ap, title="Note3")
+    note4 = ArtProjectNote.objects.create(art_project=ap, title="Note4")
+    ap2 = ArtProject.objects.create(topic="Art2", artist="Artist2")
+    note5 = ArtProjectNote.objects.create(art_project=ap2, title="Note5")
+    note6 = ArtProjectNote.objects.create(art_project=ap2, title="Note6")
+    ap3 = ArtProject.objects.create(topic="Art3", artist="Artist3")
+    note7 = ArtProjectNote.objects.create(art_project=ap3, title="Note7")
+    note8 = ArtProjectNote.objects.create(art_project=ap3, title="Note8")
+
+    notedetail1 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details1")
+    notedetail2 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details2")
+    notedetail3 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details3")
+
+    notedetail4 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details4")
+    notedetail5 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details5")
+    notedetail6 = ArtProjectNoteDetails.objects.create(art_project_note=note3, text="details6")
+
+    query = """
+    query {
+      projects {
+        __typename
+        ... on ArtProjectType {
+          artNotes {
+            __typename
+            title
+            details {
+              __typename
+              text
+            }
+          }
+        }
+      }
+    }
+    """
+
+    # Nombre de requêtes indicatif, peut évoluer selon l'optimizer; on cible la stabilité et l'absence de N+1.
+    with assert_num_queries(5):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "__typename": "ArtProjectType",
+                "artNotes": [
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note1.title,
+                        "details": [
+                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail1.text},
+                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail2.text},
+                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail3.text},
+                        ],
+                    },
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note2.title,
+                        "details": [
+                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail4.text},
+                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail5.text},
+                        ],
+                    },
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note3.title,
+                        "details": [
+                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail6.text},
+                        ],
+                    },
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note4.title,
+                        "details": [],
+                    },
+                ],
+            },
+            {
+                "__typename": "ArtProjectType",
+                "artNotes": [
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note5.title,
+                        "details": [],
+                    },
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note6.title,
+                        "details": [],
+                    },
+                ],
+            },
+            {
+                "__typename": "ArtProjectType",
+                "artNotes": [
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note7.title,
+                        "details": [],
+                    },
+                    {
+                        "__typename": "ArtProjectNoteType",
+                        "title": note8.title,
+                        "details": [],
+                    },
+                ],
+            },
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_nested_list_with_subtype_specific_relation():
+    # Dataset: one company with mixed project types; only ArtProjects have subtype-specific notes
+    company = Company.objects.create(name="Company")
+
+    ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
+    ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
+    rp = ResearchProject.objects.create(
+        company=company, topic="Research", supervisor="Supervisor"
+    )
+
+    n11 = ArtProjectNote.objects.create(art_project=ap1, title="A1-Note1")
+    n12 = ArtProjectNote.objects.create(art_project=ap1, title="A1-Note2")
+    n21 = ArtProjectNote.objects.create(art_project=ap2, title="A2-Note1")
+
+    query = """\
+    query {
+      companies {
+        name
+        projects {
+          __typename
+          ... on ArtProjectType {
+            artNotes { title }
+          }
+        }
+      }
+    }
+    """
+
+    # Optimisé: on évite le N+1 sur artNotes en regroupant un seul prefetch post-fetch.
+    # Requêtes stables attendues:
+    # 1) companies, 2) projects (polymorphes), 3) artprojectnote IN (...)
+    with assert_num_queries(6):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert result.data == {
+        "companies": [
+            {
+                "name": company.name,
+                "projects": [
+                    {
+                        "__typename": "ArtProjectType",
+                        "artNotes": [
+                            {"title": n11.title},
+                            {"title": n12.title},
+                        ],
+                    },
+                    {
+                        "__typename": "ArtProjectType",
+                        "artNotes": [
+                            {"title": n21.title},
+                        ],
+                    },
+                    {
+                        "__typename": "ResearchProjectType",
+                    },
+                ],
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
+    """
+    Reproduit un cas proche de l'usage réel:
+    - Liste polymorphe (Company.projects) de la classe de base Project
+    - Fragment inline sur le sous-type ArtProjectType pour une relation reverse (artNotes)
+
+    On s'attend à éviter le N+1 grâce à l'optimizer:
+    - Prefetch groupé des notes d'art depuis le queryset racine (postfetch via accessor parent)
+
+    Nombre de requêtes attendu:
+      1) SELECT companies
+      2) SELECT projects polymorphes pour la company
+      3) SELECT artprojectnote IN (...) (prefetch groupé)
+    """
+    company = Company.objects.create(name="Company")
+
+    ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
+    ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
+    rp = ResearchProject.objects.create(
+        company=company, topic="Research", supervisor="Supervisor"
+    )
+
+    ArtProjectNote.objects.create(art_project=ap1, title="A1-Note1")
+    ArtProjectNote.objects.create(art_project=ap1, title="A1-Note2")
+    ArtProjectNote.objects.create(art_project=ap2, title="A2-Note1")
+
+    query = """
+    query {
+      companies {
+        name
+        projects {
+          __typename
+          topic
+          ... on ArtProjectType {
+            artNotes { title }
+          }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(6):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    # Vérifications minimales sur la structure des données
+    data = result.data["companies"][0]
+    assert data["name"] == company.name
+    # Les artNotes ont été préfetchées sans N+1
+    art_projects = [p for p in data["projects"] if p["__typename"] == "ArtProjectType"]
+    titles = {t["title"] for p in art_projects for t in p.get("artNotes", [])}
+    assert {"A1-Note1", "A1-Note2", "A2-Note1"}.issubset(titles)
