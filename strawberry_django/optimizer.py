@@ -1013,13 +1013,6 @@ def _get_hints_from_django_relation(
         remote_model, schema, f_type
     ):
         django_definition = get_django_definition(concrete_field_type.origin)
-        if (
-            django_definition
-            and django_definition.model != remote_model
-            and not django_definition.model._meta.abstract
-            and issubclass(django_definition.model, remote_model)
-        ):
-            subclasses.append(django_definition.model)
         concrete_store = _get_model_hints(
             remote_model,
             schema,
@@ -1031,6 +1024,15 @@ def _get_hints_from_django_relation(
             level=level + 1,
         )
         if concrete_store is not None:
+            # Only include subclasses that actually have selected fields/prefetches.
+            if (
+                django_definition
+                and django_definition.model != remote_model
+                and not django_definition.model._meta.abstract
+                and issubclass(django_definition.model, remote_model)
+                and bool(concrete_store)
+            ):
+                subclasses.append(django_definition.model)
             field_store = (
                 concrete_store if field_store is None else field_store | concrete_store
             )
@@ -1290,6 +1292,7 @@ def _get_model_hints(
                                 return paths
                             root = to.split(LOOKUP_SEP, 1)[0]
                             if root not in base_field_names:
+                                # Always include the root path itself
                                 paths.append(to)
                                 # Inspect nested prefetches on the queryset, if any
                                 qs = getattr(pf_obj, "queryset", None)
@@ -1298,14 +1301,17 @@ def _get_model_hints(
                                     if isinstance(inner, (list, tuple)):
                                         for inner_pf in inner:
                                             if isinstance(inner_pf, str):
+                                                # Simple nested string path
                                                 paths.append(f"{to}{LOOKUP_SEP}{inner_pf}")
                                             elif isinstance(inner_pf, _DJPrefetch):
+                                                # Append the first hop and then recurse into deeper levels
+                                                inner_to = getattr(inner_pf, "prefetch_to", getattr(inner_pf, "lookup", None))
+                                                if isinstance(inner_to, str) and inner_to:
+                                                    paths.append(f"{to}{LOOKUP_SEP}{inner_to}")
+                                                # Recurse to capture any deeper nested paths under the inner prefetch
                                                 for nested in _flatten_prefetch_paths(inner_pf):
-                                                    # nested already includes its own 'to'; join with current 'to'
-                                                    suffix = nested[len(getattr(inner_pf, "prefetch_to", getattr(inner_pf, "lookup", ""))):]
-                                                    if suffix.startswith(LOOKUP_SEP):
-                                                        suffix = suffix[len(LOOKUP_SEP):]
-                                                    paths.append(f"{to}{LOOKUP_SEP}{suffix}" if suffix else to)
+                                                    # nested is relative to the inner prefetch root; join under current 'to'
+                                                    paths.append(f"{to}{LOOKUP_SEP}{nested}")
                             return paths
 
                         for pf in subclass_store.prefetch_related:
