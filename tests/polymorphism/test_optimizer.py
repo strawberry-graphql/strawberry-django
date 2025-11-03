@@ -718,11 +718,11 @@ def test_related_object_on_base_called_in_fragment():
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_resolution_on_note_project():
     """
-    Couverture de la résolution polymorphe sur la relation inverse
-    `ProjectNote.project` (le `project` d'une note est un `ProjectType`).
+    Covers polymorphic resolution on the reverse relation
+    `ProjectNote.project` (a note's `project` is a `ProjectType`).
 
-    On interroge: projects -> notes -> project { ... fragments ... }
-    et on vérifie que le type concret est correctement résolu, sans N+1.
+    We query: projects -> notes -> project { ... fragments ... }
+    and verify that the concrete type is resolved correctly without N+1.
     """
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
@@ -747,11 +747,11 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
     }
     """
 
-    # Requêtes attendues après optimisation actuelle:
-    # 1) Projets (polymorphic) + 2 sous-reqs de sous-classes + 1 lookup content-type
-    # 2) Prefetch des notes
-    # 3) Chargement des projets des notes (polymorphic): 1 base + 2 sous-reqs
-    # Total observé de manière stable: 8
+    # Expected queries after current optimization:
+    # 1) Projects (polymorphic) + 2 subtype subqueries + 1 content-type lookup
+    # 2) Prefetch of notes
+    # 3) Loading note projects (polymorphic): 1 base + 2 subtype subqueries
+    # Stable total observed: 8
     with assert_num_queries(8):
         result = schema.execute_sync(query)
 
@@ -791,9 +791,9 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     """
-    Valide l'absence de N+1 quand plusieurs notes pointent vers des projets de
-    sous-types différents, et vérifie qu'aucune colonne spécifique non demandée
-    n'est sélectionnée (ex.: pas de `research_notes`, pas de `art_style`).
+    Validates absence of N+1 when multiple notes point to projects of
+    different subtypes, and verifies that no unnecessary subtype-specific
+    columns are selected (e.g., no `research_notes`, no `art_style`).
     """
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
@@ -825,9 +825,9 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     }
     """
 
-    # Vérifie l'absence de colonnes inutiles
+    # Check that no unnecessary columns are selected
     with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
-        # Compte de requêtes constant (pas de N+1 malgré plusieurs notes)
+        # Constant query count (no N+1 despite multiple notes)
         # with assert_num_queries(3):
         result = schema.execute_sync(query)
         captured = "\n".join(q["sql"] for q in ctx.captured_queries)
@@ -983,9 +983,9 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
     }
     """
 
-    # Optimisé: on évite le N+1 sur artNotes en regroupant un seul prefetch post-fetch.
-    # Requêtes stables attendues:
-    # 1) companies, 2) projects (polymorphes), 3) artprojectnote IN (...)
+    # Optimized: avoid N+1 on artNotes by performing a single grouped post-fetch prefetch.
+    # Expected stable queries:
+    # 1) companies, 2) projects (polymorphic), 3) artprojectnote IN (...)
     with assert_num_queries(6):
         result = schema.execute_sync(query)
 
@@ -1020,17 +1020,17 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
 @pytest.mark.django_db(transaction=True)
 def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     """
-    Reproduit un cas proche de l'usage réel:
-    - Liste polymorphe (Company.projects) de la classe de base Project
-    - Fragment inline sur le sous-type ArtProjectType pour une relation reverse (artNotes)
+    Reproduces a scenario close to real usage:
+    - Polymorphic list (Company.projects) of the base class Project
+    - Inline fragment on the subtype ArtProjectType for a reverse relation (artNotes)
 
-    On s'attend à éviter le N+1 grâce à l'optimizer:
-    - Prefetch groupé des notes d'art depuis le queryset racine (postfetch via accessor parent)
+    We expect to avoid N+1 due to the optimizer by:
+    - Grouped prefetch of art notes from the root queryset (postfetch via parent accessor)
 
-    Nombre de requêtes attendu:
+    Expected queries:
       1) SELECT companies
-      2) SELECT projects polymorphes pour la company
-      3) SELECT artprojectnote IN (...) (prefetch groupé)
+      2) SELECT polymorphic projects for the company
+      3) SELECT artprojectnote IN (...) (grouped prefetch)
     """
     company = Company.objects.create(name="Company")
 
@@ -1062,10 +1062,10 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     with assert_num_queries(6):
         result = schema.execute_sync(query)
     assert not result.errors
-    # Vérifications minimales sur la structure des données
+    # Minimal checks on the data structure
     data = result.data["companies"][0]
     assert data["name"] == company.name
-    # Les artNotes ont été préfetchées sans N+1
+    # artNotes were prefetched without N+1
     art_projects = [p for p in data["projects"] if p["__typename"] == "ArtProjectType"]
     titles = {t["title"] for p in art_projects for t in p.get("artNotes", [])}
     assert {"A1-Note1", "A1-Note2", "A2-Note1"}.issubset(titles)

@@ -826,11 +826,11 @@ def test_related_object_on_base_called_in_fragment():
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_resolution_on_note_project():
     """
-    Couverture de la résolution polymorphe sur la relation inverse
-    `ProjectNote.project` (le `project` d'une note est un `ProjectType`).
+    Covers polymorphic resolution on the reverse relation
+    `ProjectNote.project` (a note's `project` is a `ProjectType`).
 
-    On interroge: projects -> notes -> project { ... fragments ... }
-    et on vérifie que le type concret est correctement résolu, sans N+1.
+    We query: projects -> notes -> project { ... fragments ... }
+    and verify that the concrete type is resolved correctly without N+1.
     """
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
@@ -895,9 +895,9 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     """
-    Valide l'absence de N+1 quand plusieurs notes pointent vers des projets de
-    sous-types différents, et vérifie qu'aucune colonne spécifique non demandée
-    n'est sélectionnée (ex.: pas de `research_notes`, pas de `art_style`).
+    Validates absence of N+1 when multiple notes point to projects of
+    different subtypes, and verifies that no unnecessary subtype-specific
+    columns are selected (e.g., no `research_notes`, no `art_style`).
     """
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
