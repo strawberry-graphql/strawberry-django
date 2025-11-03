@@ -1220,3 +1220,82 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
             ]
         }
     }
+
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
+    """
+    Reproduit un cas proche de l'usage réel en version Relay:
+    - Liste polymorphe (Company.projects) de la classe de base Project via une connection
+    - Fragment inline sur le sous-type ArtProjectType pour une relation reverse (artNotes)
+    - + (facultatif ici) Chaîne de FK parallèle (Company.mainProject) reliée côté ORM
+
+    On s'attend à éviter le N+1 grâce à l'optimizer:
+    - Prefetch groupé des notes d'art depuis le queryset racine (postfetch via accessor parent)
+
+    Nombre de requêtes attendu:
+      1) SELECT companies (avec potentiellement select_related(main_project))
+      2) SELECT projects polymorphes pour la company
+      3) SELECT artprojectnote IN (...) (prefetch groupé)
+    """
+    company = Company.objects.create(name="Company")
+
+    ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
+    ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
+    rp = ResearchProject.objects.create(
+        company=company, topic="Research", supervisor="Supervisor"
+    )
+
+    ArtProjectNote.objects.create(art_project=ap1, title="A1-Note1")
+    ArtProjectNote.objects.create(art_project=ap1, title="A1-Note2")
+    ArtProjectNote.objects.create(art_project=ap2, title="A2-Note1")
+
+    # Lier un main_project polymorphe (FK vers Project) à la company
+    company.main_project = ap1.project_ptr
+    company.save(update_fields=["main_project"])
+
+    # Une autre company pour s'assurer que la requête reste stable
+    company2 = Company.objects.create(name="Company2")
+    ap3 = ArtProject.objects.create(company=company2, topic="Art3", artist="Artist3")
+
+    query = """
+    query {
+      companies {
+        edges {
+          node {
+            name
+            projects {
+              edges {
+                node {
+                  __typename
+                  topic
+                  ... on ArtProjectType {
+                    artNotes { edges { node { title } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+
+    # Vérifications minimales sur la structure des données
+    data = result.data["companies"]["edges"][0]["node"]
+    assert data["name"] == company.name
+
+    # Les artNotes ont été préfetchées sans N+1
+    art_projects = [
+        edge["node"]
+        for edge in data["projects"]["edges"]
+        if edge["node"]["__typename"] == "ArtProjectType"
+    ]
+    titles = {t["title"] for p in art_projects for t in (p.get("artNotes", {}).get("edges", [])) for t in ([t["node"]] if isinstance(t, dict) and "node" in t else [])}
+    assert {"A1-Note1", "A1-Note2", "A2-Note1"}.issubset(titles)
