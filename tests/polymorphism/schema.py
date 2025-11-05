@@ -8,13 +8,16 @@ from .models import (
     AndroidProject,
     AppProject,
     ArtProject,
+    ArtProjectNote,
+    ArtProjectNoteDetails,
     Company,
     EngineeringProject,
     IOSProject,
     Project,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
-    TechnicalProject, ProjectNote, ArtProjectNote, ArtProjectNoteDetails,
+    TechnicalProject,
 )
 
 
@@ -27,10 +30,12 @@ class ProjectType:
     def topic_upper(self) -> str:
         return self.topic.upper()
 
+
 @strawberry_django.type(ProjectNote)
 class ProjectNoteType:
     project: ProjectType
     title: strawberry.auto
+
 
 @strawberry_django.type(ArtProject)
 class ArtProjectType(ProjectType):
@@ -42,6 +47,7 @@ class ArtProjectType(ProjectType):
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
         return self.artist.upper()
+
 
 @strawberry_django.type(ArtProjectNote)
 class ArtProjectNoteType:
@@ -55,6 +61,7 @@ class ArtProjectNoteType:
 class ArtProjectNoteDetailsType:
     art_project_note: "ArtProjectNoteType"
     text: strawberry.auto
+
 
 @strawberry_django.type(ResearchProject)
 class ResearchProjectType(ProjectType):

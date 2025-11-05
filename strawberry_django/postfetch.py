@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django.db import models
 
@@ -28,7 +28,7 @@ def _ensure_prefetch_cache(obj: Any) -> dict:
     cache = getattr(obj, "_prefetched_objects_cache", None)
     if cache is None or not isinstance(cache, dict):
         cache = {}
-        setattr(obj, "_prefetched_objects_cache", cache)
+        obj._prefetched_objects_cache = cache
     return cache
 
 
@@ -90,7 +90,9 @@ def _manual_nested_batch_single_hop(
 
     try:
         nested_rel = next(
-            ro for ro in root_model._meta.related_objects if ro.get_accessor_name() == rem
+            ro
+            for ro in root_model._meta.related_objects
+            if ro.get_accessor_name() == rem
         )
     except StopIteration:
         return
@@ -100,11 +102,13 @@ def _manual_nested_batch_single_hop(
     if not nested_fk:
         return
 
-    parent_ids = [getattr(it, "pk") for it in related_instances_all]
+    parent_ids = [it.pk for it in related_instances_all]
     if not parent_ids:
         return
 
-    nested_batch = nested_model._default_manager.filter(**{f"{nested_fk}__in": parent_ids})
+    nested_batch = nested_model._default_manager.filter(**{
+        f"{nested_fk}__in": parent_ids
+    })
 
     # Group nested by parent fk
     nested_grouped: dict[int, list] = {}
@@ -126,8 +130,9 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
     new QuerySet; callers can keep using the original `qs`.
     """
     try:
-        from strawberry_django.queryset import get_queryset_config
         from django.db.models import prefetch_related_objects
+
+        from strawberry_django.queryset import get_queryset_config
     except Exception:  # pragma: no cover
         return
 
@@ -155,7 +160,7 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                             if mgr is None:
                                 continue
                             try:
-                                items = list(getattr(mgr, "all", lambda: [])())
+                                items = list(getattr(mgr, "all", list)())
                             except Exception:
                                 items = []
                             if items:
@@ -178,7 +183,9 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                             get_real = getattr(manager, "get_real_instances", None)
                             if callable(get_real):
                                 down = list(get_real(children_all))
-                                instances_for_query = [obj for obj in down if isinstance(obj, mdl)]
+                                instances_for_query = [
+                                    obj for obj in down if isinstance(obj, mdl)
+                                ]
                         except Exception:
                             pass
                     if not instances_for_query:
@@ -187,12 +194,16 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                     if not grouped_paths:
                         continue
                     for root, remainders in grouped_paths.items():
-                        related_instances_all, root_model = _manual_batch_reverse_fk_assign(
-                            mdl, root, instances_for_query, id_to_original
+                        related_instances_all, root_model = (
+                            _manual_batch_reverse_fk_assign(
+                                mdl, root, instances_for_query, id_to_original
+                            )
                         )
                         if related_instances_all and remainders:
                             for rem in sorted(remainders):
-                                _manual_nested_batch_single_hop(related_instances_all, root_model, rem)
+                                _manual_nested_batch_single_hop(
+                                    related_instances_all, root_model, rem
+                                )
             cfg.parent_postfetch_branches.clear()
 
     # Child-level postfetch hints
@@ -207,21 +218,31 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                 grouped_paths = _group_prefetch_paths(rel_paths)
                 for root, remainders in grouped_paths.items():
                     try:
-                        nested = [f"{root}__{r}" for r in sorted(remainders)] if remainders else []
+                        nested = (
+                            [f"{root}__{r}" for r in sorted(remainders)]
+                            if remainders
+                            else []
+                        )
                         prefetch_related_objects(instances, root, *nested)
                     except Exception:
-                        related_instances_all, root_model = _manual_batch_reverse_fk_assign(
-                            mdl, root, instances, id_to_instance
+                        related_instances_all, root_model = (
+                            _manual_batch_reverse_fk_assign(
+                                mdl, root, instances, id_to_instance
+                            )
                         )
                         if related_instances_all and remainders:
                             for rem in sorted(remainders):
                                 if "__" in rem:
                                     continue
-                                _manual_nested_batch_single_hop(related_instances_all, root_model, rem)
+                                _manual_nested_batch_single_hop(
+                                    related_instances_all, root_model, rem
+                                )
                         deeper = [r for r in remainders if "__" in r]
                         if deeper:
                             try:
-                                prefetch_related_objects(related_instances_all, *sorted(deeper))
+                                prefetch_related_objects(
+                                    related_instances_all, *sorted(deeper)
+                                )
                             except Exception:
                                 pass
         cfg.postfetch_prefetch.clear()

@@ -448,8 +448,6 @@ class ArtProjectType(ProjectType):
     artist: strawberry.auto
 ```
 
-
-
 ### Custom polymorphic solution
 
 The optimizer also supports polymorphism even if your models are not polymorphic.

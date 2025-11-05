@@ -1,22 +1,24 @@
 import strawberry
-from strawberry_django.relay import DjangoListConnection
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.relay import DjangoListConnection
 
 from .models import (
     AndroidProject,
     AppProject,
     ArtProject,
+    ArtProjectNote,
+    ArtProjectNoteDetails,
     Company,
+    CompanyProjectLink,
     EngineeringProject,
     IOSProject,
     Project,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
     TechnicalProject,
-    ProjectNote,
-    ArtProjectNote, ArtProjectNoteDetails, CompanyProjectLink,
 )
 
 
@@ -41,8 +43,9 @@ class ArtProjectType(ProjectType):
     artist: strawberry.auto
     art_style_upper: strawberry.auto
 
-    art_notes: DjangoListConnection["ArtProjectNoteType"] = strawberry_django.connection()
-
+    art_notes: DjangoListConnection["ArtProjectNoteType"] = (
+        strawberry_django.connection()
+    )
 
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
@@ -54,7 +57,9 @@ class ArtProjectNoteType(strawberry.relay.Node):
     art_project: "ArtProjectType"
     title: strawberry.auto
 
-    details: DjangoListConnection["ArtProjectNoteDetailsType"] = strawberry_django.connection()
+    details: DjangoListConnection["ArtProjectNoteDetailsType"] = (
+        strawberry_django.connection()
+    )
 
 
 @strawberry_django.type(ArtProjectNoteDetails)
@@ -110,7 +115,9 @@ class CompanyType(strawberry.relay.Node):
     name: strawberry.auto
     projects: DjangoListConnection[ProjectType] = strawberry_django.connection()
     main_project: ProjectType | None
-    project_links: DjangoListConnection["CompanyProjectLinkType"] = strawberry_django.connection()
+    project_links: DjangoListConnection["CompanyProjectLinkType"] = (
+        strawberry_django.connection()
+    )
 
 
 @strawberry.type

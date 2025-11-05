@@ -1,19 +1,15 @@
 import pytest
 
-from strawberry_django.optimizer import optimize
-
+from strawberry_django.optimizer import OptimizerConfig, OptimizerStore
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import default_qs_hook
-
 from tests.polymorphism.models import (
     ArtProject,
-    ResearchProject,
-    Project,
     ArtProjectNote,
+    Project,
+    ResearchProject,
 )
 from tests.polymorphism.schema import schema
-
-from strawberry_django.optimizer import OptimizerStore, OptimizerConfig
 
 
 @pytest.mark.django_db(transaction=True)
@@ -96,7 +92,9 @@ def test_postfetch_skip_when_no_instances_for_subclass():
     result = schema.execute_sync(query)
     assert not result.errors
     # All returned items should be of ResearchProjectType
-    assert all(p["__typename"] == "ResearchProjectType" for p in result.data["projects"])  # type: ignore[index]
+    assert all(
+        p["__typename"] == "ResearchProjectType" for p in result.data["projects"]
+    )  # type: ignore[index]
 
 
 @pytest.mark.django_db(transaction=True)

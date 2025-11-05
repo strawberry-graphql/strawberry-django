@@ -1,14 +1,14 @@
 import pytest
 
-from strawberry_django.optimizer import OptimizerStore, OptimizerConfig
+from strawberry_django.optimizer import OptimizerConfig, OptimizerStore
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import default_qs_hook
 
 from .models import (
     ArtProject,
-    ResearchProject,
-    Project,
     ArtProjectNote,
+    Project,
+    ResearchProject,
 )
 from .schema import schema
 
@@ -67,7 +67,10 @@ def test_polymorphic_postfetch_prefetch_roots_from_strings():
     assert not result.errors
     # Sanity check response shape to ensure the query actually executed paths
     # that collect subclass hints for ArtProject.
-    assert any(e["node"]["__typename"] == "ArtProjectType" for e in result.data["projects"]["edges"])  # type: ignore[index]
+    assert any(
+        e["node"]["__typename"] == "ArtProjectType"
+        for e in result.data["projects"]["edges"]
+    )  # type: ignore[index]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -95,7 +98,10 @@ def test_postfetch_skip_when_no_instances_for_subclass():
     result = schema.execute_sync(query)
     assert not result.errors
     # All returned items should be of ResearchProjectType
-    assert all(e["node"]["__typename"] == "ResearchProjectType" for e in result.data["projects"]["edges"])  # type: ignore[index]
+    assert all(
+        e["node"]["__typename"] == "ResearchProjectType"
+        for e in result.data["projects"]["edges"]
+    )  # type: ignore[index]
 
 
 @pytest.mark.django_db(transaction=True)
