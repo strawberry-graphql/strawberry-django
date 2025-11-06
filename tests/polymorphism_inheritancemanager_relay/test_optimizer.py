@@ -348,6 +348,142 @@ def test_polymorphic_paginated_query():
         }
     }
 
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_paginated_query_with_subtype():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+    note = ArtProjectNote.objects.create(art_project=ap, title="Note")
+
+
+    query = """\
+    query {
+      projects {
+        totalCount
+        edges {
+          node {
+            __typename
+            topic
+            ... on ArtProjectType {
+              artist
+              artNotes { edges { node { __typename title } } }
+            }
+            ... on ResearchProjectType {
+              supervisor
+            }
+          }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": {
+            "totalCount": 2,
+            "edges": [
+                {"node": {
+                    "__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist,
+                    "artNotes": {"edges": [{"node": {"__typename": "ArtProjectNoteType", "title": note.title}}]}
+                }},
+                {
+                    "node": {
+                        "__typename": "ResearchProjectType",
+                        "topic": rp.topic,
+                        "supervisor": rp.supervisor,
+                    }
+                },
+            ]
+        }
+    }
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_paginated_query_with_subtype_first():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+    note = ArtProjectNote.objects.create(art_project=ap, title="Note")
+
+
+    query = """\
+    query {
+      projects (first: 1) {
+        totalCount
+        edges {
+          node {
+            __typename
+            topic
+            ... on ArtProjectType {
+              artist
+              artNotes { edges { node { __typename title } } }
+            }
+            ... on ResearchProjectType {
+              supervisor
+            }
+          }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": {
+            "totalCount": 2,
+            "edges": [
+                {"node": {
+                    "__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist,
+                    "artNotes": {"edges": [{"node": {"__typename": "ArtProjectNoteType", "title": note.title}}]}
+                }},
+            ]
+        }
+    }
+
+@pytest.mark.django_db(transaction=True)
+def test_polymorphic_paginated_query_with_subtype_last():
+    ap = ArtProject.objects.create(topic="Art", artist="Artist")
+    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+    note = ArtProjectNote.objects.create(art_project=ap, title="Note")
+
+
+    query = """\
+    query {
+      projects (last: 1) {
+        totalCount
+        edges {
+          node {
+            __typename
+            topic
+            ... on ArtProjectType {
+              artist
+              artNotes { edges { node { __typename title } } }
+            }
+            ... on ResearchProjectType {
+              supervisor
+            }
+          }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": {
+            "totalCount": 2,
+            "edges": [
+                {"node": {
+                    "__typename": "ResearchProjectType",
+                    "topic": rp.topic,
+                    "supervisor": rp.supervisor,
+                }},
+            ]
+        }
+    }
 
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_offset_paginated_query():
