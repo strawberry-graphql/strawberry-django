@@ -102,7 +102,7 @@ def test_postfetch_unknown_relation_name_is_skipped():
     # Create an ArtProject but seed the queryset configuration with an unknown
     # relation name so that resolvers default_qs_hook hits the StopIteration path
     # and skips it gracefully.
-    ap = ArtProject.objects.create(topic="Art", artist="A")
+    ArtProject.objects.create(topic="Art", artist="A")
 
     qs = Project.objects.all()
     cfg = get_queryset_config(qs)

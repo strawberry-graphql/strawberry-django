@@ -389,7 +389,7 @@ def test_polymorphic_nested_list():
 @pytest.mark.django_db(transaction=True)
 def test_optimizer_hints_polymorphic():
     ap = ArtProject.objects.create(topic="Art", artist="Artist", art_style="abstract")
-    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+    ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
 
     query = """\
     query {
@@ -1026,7 +1026,7 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
 
     ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
     ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
-    rp = ResearchProject.objects.create(
+    ResearchProject.objects.create(
         company=company, topic="Research", supervisor="Supervisor"
     )
 

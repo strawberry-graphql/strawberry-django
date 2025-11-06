@@ -441,7 +441,7 @@ def test_polymorphic_paginated_query_with_subtype():
 @pytest.mark.django_db(transaction=True)
 def test_polymorphic_paginated_query_with_subtype_first():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
-    rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
+    ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
     note = ArtProjectNote.objects.create(art_project=ap, title="Note")
 
     query = """\
@@ -498,7 +498,7 @@ def test_polymorphic_paginated_query_with_subtype_first():
 def test_polymorphic_paginated_query_with_subtype_last():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
-    note = ArtProjectNote.objects.create(art_project=ap, title="Note")
+    ArtProjectNote.objects.create(art_project=ap, title="Note")
 
     query = """\
     query {
@@ -1349,7 +1349,8 @@ def test_related_object_on_base_called_in_fragment():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_resolution_on_note_project():
-    """Couverture de la résolution polymorphe sur la relation inverse
+    """Couverture de la résolution polymorphe sur la relation inverse.
+
     `ProjectNote.project` (le `project` d'une note est un `ProjectType`).
 
     On interroge: projects -> notes -> project { ... fragments ... }
@@ -1439,9 +1440,11 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
-    """Valide l'absence de N+1 quand plusieurs notes pointent vers des projets de
-    sous-types différents, et vérifie qu'aucune colonne spécifique non demandée
-    n'est sélectionnée (ex.: pas de `research_notes`, pas de `art_style`).
+    """Valide l'absence de N+1 et de colonnes inutiles.
+
+    Quand plusieurs notes pointent vers des projets de sous-types différents,
+    vérifie qu'aucune colonne spécifique non demandée n'est sélectionnée (ex.:
+    pas de `research_notes`, pas de `art_style`).
     """
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
@@ -1498,7 +1501,7 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
 
     ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
     ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
-    rp = ResearchProject.objects.create(
+    ResearchProject.objects.create(
         company=company, topic="Research", supervisor="Supervisor"
     )
 
@@ -1578,7 +1581,8 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
 
 @pytest.mark.django_db(transaction=True)
 def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
-    """Reproduit un cas proche de l'usage réel en version Relay:
+    """Reproduit un cas proche de l'usage réel en version Relay.
+
     - Liste polymorphe (Company.projects) de la classe de base Project via une connection
     - Fragment inline sur le sous-type ArtProjectType pour une relation reverse (artNotes)
     - + (facultatif ici) Chaîne de FK parallèle (Company.mainProject) reliée côté ORM
@@ -1595,7 +1599,7 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
 
     ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
     ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
-    rp = ResearchProject.objects.create(
+    ResearchProject.objects.create(
         company=company, topic="Research", supervisor="Supervisor"
     )
 
@@ -1609,7 +1613,7 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
 
     # Une autre company pour s'assurer que la requête reste stable
     company2 = Company.objects.create(name="Company2")
-    ap3 = ArtProject.objects.create(company=company2, topic="Art3", artist="Artist3")
+    ArtProject.objects.create(company=company2, topic="Art3", artist="Artist3")
 
     query = """
     query {
@@ -1671,9 +1675,9 @@ def test_optimizer_chain_company_links_to_polymorphic_project_no_n_plus_one():
     )
 
     # Create links (B) pointing to polymorphic projects (C)
-    l1 = CompanyProjectLink.objects.create(company=company, project=ap1, label="L1")
-    l2 = CompanyProjectLink.objects.create(company=company, project=ap2, label="L2")
-    l3 = CompanyProjectLink.objects.create(company=company, project=rp1, label="L3")
+    CompanyProjectLink.objects.create(company=company, project=ap1, label="L1")
+    CompanyProjectLink.objects.create(company=company, project=ap2, label="L2")
+    CompanyProjectLink.objects.create(company=company, project=rp1, label="L3")
 
     query = """
     query {

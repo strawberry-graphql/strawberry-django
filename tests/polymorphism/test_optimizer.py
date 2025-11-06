@@ -720,7 +720,8 @@ def test_related_object_on_base_called_in_fragment():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_resolution_on_note_project():
-    """Covers polymorphic resolution on the reverse relation
+    """Covers polymorphic resolution on the reverse relation.
+
     `ProjectNote.project` (a note's `project` is a `ProjectType`).
 
     We query: projects -> notes -> project { ... fragments ... }
@@ -792,9 +793,11 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
-    """Validates absence of N+1 when multiple notes point to projects of
-    different subtypes, and verifies that no unnecessary subtype-specific
-    columns are selected (e.g., no `research_notes`, no `art_style`).
+    """Validates absence of N+1 and unnecessary columns.
+
+    When multiple notes point to projects of different subtypes, verifies that no
+    unnecessary subtype-specific columns are selected (e.g., no `research_notes`,
+    no `art_style`).
     """
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
@@ -987,7 +990,7 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
 
     ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
     ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
-    rp = ResearchProject.objects.create(
+    ResearchProject.objects.create(
         company=company, topic="Research", supervisor="Supervisor"
     )
 
@@ -1045,7 +1048,8 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
 
 @pytest.mark.django_db(transaction=True)
 def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
-    """Reproduces a scenario close to real usage:
+    """Reproduces a scenario close to real usage.
+
     - Polymorphic list (Company.projects) of the base class Project
     - Inline fragment on the subtype ArtProjectType for a reverse relation (artNotes)
 
@@ -1061,7 +1065,7 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
 
     ap1 = ArtProject.objects.create(company=company, topic="Art1", artist="Artist1")
     ap2 = ArtProject.objects.create(company=company, topic="Art2", artist="Artist2")
-    rp = ResearchProject.objects.create(
+    ResearchProject.objects.create(
         company=company, topic="Research", supervisor="Supervisor"
     )
 
