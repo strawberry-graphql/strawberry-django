@@ -7,13 +7,15 @@ from tests.utils import assert_num_queries
 from .models import (
     AndroidProject,
     ArtProject,
+    ArtProjectNote,
+    ArtProjectNoteDetails,
     Company,
+    CompanyProjectLink,
     EngineeringProject,
     IOSProject,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
-    ProjectNote,
-    ArtProjectNote, ArtProjectNoteDetails, CompanyProjectLink,
 )
 from .schema import schema
 
@@ -48,7 +50,13 @@ def test_polymorphic_interface_query():
     assert result.data == {
         "projects": {
             "edges": [
-                {"node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}},
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    }
+                },
                 {
                     "node": {
                         "__typename": "ResearchProjectType",
@@ -102,7 +110,13 @@ def test_polymorphic_query_abstract_model():
     assert result.data == {
         "projects": {
             "edges": [
-                {"node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}},
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    }
+                },
                 {
                     "node": {
                         "__typename": "SoftwareProjectType",
@@ -291,7 +305,13 @@ def test_polymorphic_query_optimization_working():
     assert result.data == {
         "projects": {
             "edges": [
-                {"node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}},
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    }
+                },
                 {
                     "node": {
                         "__typename": "ResearchProjectType",
@@ -336,7 +356,13 @@ def test_polymorphic_paginated_query():
         "projects": {
             "totalCount": 2,
             "edges": [
-                {"node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}},
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    }
+                },
                 {
                     "node": {
                         "__typename": "ResearchProjectType",
@@ -344,7 +370,7 @@ def test_polymorphic_paginated_query():
                         "supervisor": rp.supervisor,
                     }
                 },
-            ]
+            ],
         }
     }
 
@@ -513,8 +539,20 @@ def test_polymorphic_offset_paginated_query():
         "projects": {
             "totalCount": 2,
             "edges": [
-                {"node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}},
-                {"node": {"__typename": "ResearchProjectType", "topic": rp.topic, "supervisor": rp.supervisor}},
+                {
+                    "node": {
+                        "__typename": "ArtProjectType",
+                        "topic": ap.topic,
+                        "artist": ap.artist,
+                    }
+                },
+                {
+                    "node": {
+                        "__typename": "ResearchProjectType",
+                        "topic": rp.topic,
+                        "supervisor": rp.supervisor,
+                    }
+                },
             ],
         }
     }
@@ -622,8 +660,20 @@ def test_polymorphic_nested_list():
                         "name": "Company",
                         "projects": {
                             "edges": [
-                                {"node": {"__typename": "ArtProjectType", "topic": ap.topic, "artist": ap.artist}},
-                                {"node": {"__typename": "ResearchProjectType", "topic": rp.topic, "supervisor": rp.supervisor}},
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectType",
+                                        "topic": ap.topic,
+                                        "artist": ap.artist,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ResearchProjectType",
+                                        "topic": rp.topic,
+                                        "supervisor": rp.supervisor,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -679,6 +729,7 @@ def test_optimizer_hints_polymorphic():
         }
     }
 
+
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
@@ -711,8 +762,18 @@ def test_related_object_on_base():
                         "__typename": "ArtProjectType",
                         "notes": {
                             "edges": [
-                                {"node": {"__typename": "ProjectNoteType", "title": note1.title}},
-                                {"node": {"__typename": "ProjectNoteType", "title": note2.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note1.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note2.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -755,8 +816,18 @@ def test_more_related_object_on_base():
                         "__typename": "ArtProjectType",
                         "notes": {
                             "edges": [
-                                {"node": {"__typename": "ProjectNoteType", "title": note1.title}},
-                                {"node": {"__typename": "ProjectNoteType", "title": note2.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note1.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note2.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -766,8 +837,18 @@ def test_more_related_object_on_base():
                         "__typename": "ResearchProjectType",
                         "notes": {
                             "edges": [
-                                {"node": {"__typename": "ProjectNoteType", "title": note3.title}},
-                                {"node": {"__typename": "ProjectNoteType", "title": note4.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note3.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note4.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -813,10 +894,30 @@ def test_related_object_on_subtype():
                         "__typename": "ArtProjectType",
                         "artNotes": {
                             "edges": [
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note1.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note2.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note3.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note4.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note1.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note2.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note3.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note4.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -868,10 +969,30 @@ def test_more_related_object_on_subtype():
                         "__typename": "ArtProjectType",
                         "artNotes": {
                             "edges": [
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note1.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note2.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note3.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note4.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note1.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note2.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note3.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note4.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -881,8 +1002,18 @@ def test_more_related_object_on_subtype():
                         "__typename": "ArtProjectType",
                         "artNotes": {
                             "edges": [
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note5.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note6.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note5.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note6.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -892,8 +1023,18 @@ def test_more_related_object_on_subtype():
                         "__typename": "ArtProjectType",
                         "artNotes": {
                             "edges": [
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note7.title}},
-                                {"node": {"__typename": "ArtProjectNoteType", "title": note8.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note7.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ArtProjectNoteType",
+                                        "title": note8.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -901,6 +1042,7 @@ def test_more_related_object_on_subtype():
             ]
         }
     }
+
 
 @pytest.mark.django_db(transaction=True)
 def test_more_related_object_on_subtype2():
@@ -916,13 +1058,25 @@ def test_more_related_object_on_subtype2():
     note7 = ArtProjectNote.objects.create(art_project=ap3, title="Note7")
     note8 = ArtProjectNote.objects.create(art_project=ap3, title="Note8")
 
-    notedetail1 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details1")
-    notedetail2 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details2")
-    notedetail3 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details3")
+    notedetail1 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note1, text="details1"
+    )
+    notedetail2 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note1, text="details2"
+    )
+    notedetail3 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note1, text="details3"
+    )
 
-    notedetail4 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details4")
-    notedetail5 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details5")
-    notedetail6 = ArtProjectNoteDetails.objects.create(art_project_note=note3, text="details6")
+    notedetail4 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note2, text="details4"
+    )
+    notedetail5 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note2, text="details5"
+    )
+    notedetail6 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note3, text="details6"
+    )
 
     query = """\
     query {
@@ -931,10 +1085,10 @@ def test_more_related_object_on_subtype2():
           node {
             __typename
             ... on ArtProjectType {
-              artNotes { edges { node { 
+              artNotes { edges { node {
                 __typename
                 title
-                details { edges { node { __typename text } } } 
+                details { edges { node { __typename text } } }
               } } }
             }
           }
@@ -962,12 +1116,24 @@ def test_more_related_object_on_subtype2():
                                         "title": note1.title,
                                         "details": {
                                             "edges": [
-                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
-                                                          "text": notedetail1.text}},
-                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
-                                                          "text": notedetail2.text}},
-                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
-                                                          "text": notedetail3.text}},
+                                                {
+                                                    "node": {
+                                                        "__typename": "ArtProjectNoteDetailsType",
+                                                        "text": notedetail1.text,
+                                                    }
+                                                },
+                                                {
+                                                    "node": {
+                                                        "__typename": "ArtProjectNoteDetailsType",
+                                                        "text": notedetail2.text,
+                                                    }
+                                                },
+                                                {
+                                                    "node": {
+                                                        "__typename": "ArtProjectNoteDetailsType",
+                                                        "text": notedetail3.text,
+                                                    }
+                                                },
                                             ]
                                         },
                                     }
@@ -978,10 +1144,18 @@ def test_more_related_object_on_subtype2():
                                         "title": note2.title,
                                         "details": {
                                             "edges": [
-                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
-                                                          "text": notedetail4.text}},
-                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
-                                                          "text": notedetail5.text}},
+                                                {
+                                                    "node": {
+                                                        "__typename": "ArtProjectNoteDetailsType",
+                                                        "text": notedetail4.text,
+                                                    }
+                                                },
+                                                {
+                                                    "node": {
+                                                        "__typename": "ArtProjectNoteDetailsType",
+                                                        "text": notedetail5.text,
+                                                    }
+                                                },
                                             ]
                                         },
                                     }
@@ -992,8 +1166,12 @@ def test_more_related_object_on_subtype2():
                                         "title": note3.title,
                                         "details": {
                                             "edges": [
-                                                {"node": {"__typename": "ArtProjectNoteDetailsType",
-                                                          "text": notedetail6.text}},
+                                                {
+                                                    "node": {
+                                                        "__typename": "ArtProjectNoteDetailsType",
+                                                        "text": notedetail6.text,
+                                                    }
+                                                },
                                             ]
                                         },
                                     }
@@ -1002,9 +1180,7 @@ def test_more_related_object_on_subtype2():
                                     "node": {
                                         "__typename": "ArtProjectNoteType",
                                         "title": note4.title,
-                                        "details": {
-                                            "edges": []
-                                        },
+                                        "details": {"edges": []},
                                     }
                                 },
                             ]
@@ -1020,18 +1196,14 @@ def test_more_related_object_on_subtype2():
                                     "node": {
                                         "__typename": "ArtProjectNoteType",
                                         "title": note5.title,
-                                        "details": {
-                                            "edges": []
-                                        },
+                                        "details": {"edges": []},
                                     }
                                 },
                                 {
                                     "node": {
                                         "__typename": "ArtProjectNoteType",
                                         "title": note6.title,
-                                        "details": {
-                                            "edges": []
-                                        },
+                                        "details": {"edges": []},
                                     }
                                 },
                             ]
@@ -1047,18 +1219,14 @@ def test_more_related_object_on_subtype2():
                                     "node": {
                                         "__typename": "ArtProjectNoteType",
                                         "title": note7.title,
-                                        "details": {
-                                            "edges": []
-                                        },
+                                        "details": {"edges": []},
                                     }
                                 },
                                 {
                                     "node": {
                                         "__typename": "ArtProjectNoteType",
                                         "title": note8.title,
-                                        "details": {
-                                            "edges": []
-                                        },
+                                        "details": {"edges": []},
                                     }
                                 },
                             ]
@@ -1069,6 +1237,7 @@ def test_more_related_object_on_subtype2():
         }
     }
 
+
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base_called_in_fragment():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
@@ -1077,7 +1246,6 @@ def test_related_object_on_base_called_in_fragment():
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
     note3 = ProjectNote.objects.create(project=rp.project_ptr, title="Note3")
     note4 = ProjectNote.objects.create(project=rp.project_ptr, title="Note4")
-
 
     query = """\
     query {
@@ -1108,8 +1276,18 @@ def test_related_object_on_base_called_in_fragment():
                         "__typename": "ArtProjectType",
                         "notes": {
                             "edges": [
-                                {"node": {"__typename": "ProjectNoteType", "title": note1.title}},
-                                {"node": {"__typename": "ProjectNoteType", "title": note2.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note1.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note2.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -1119,8 +1297,18 @@ def test_related_object_on_base_called_in_fragment():
                         "__typename": "ResearchProjectType",
                         "notes": {
                             "edges": [
-                                {"node": {"__typename": "ProjectNoteType", "title": note3.title}},
-                                {"node": {"__typename": "ProjectNoteType", "title": note4.title}},
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note3.title,
+                                    }
+                                },
+                                {
+                                    "node": {
+                                        "__typename": "ProjectNoteType",
+                                        "title": note4.title,
+                                    }
+                                },
                             ]
                         },
                     }
@@ -1132,8 +1320,7 @@ def test_related_object_on_base_called_in_fragment():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_resolution_on_note_project():
-    """
-    Couverture de la résolution polymorphe sur la relation inverse
+    """Couverture de la résolution polymorphe sur la relation inverse
     `ProjectNote.project` (le `project` d'une note est un `ProjectType`).
 
     On interroge: projects -> notes -> project { ... fragments ... }
@@ -1223,8 +1410,7 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
-    """
-    Valide l'absence de N+1 quand plusieurs notes pointent vers des projets de
+    """Valide l'absence de N+1 quand plusieurs notes pointent vers des projets de
     sous-types différents, et vérifie qu'aucune colonne spécifique non demandée
     n'est sélectionnée (ex.: pas de `research_notes`, pas de `art_style`).
     """
@@ -1233,12 +1419,8 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
 
     # Plusieurs notes pour chaque projet
     ProjectNote.objects.bulk_create(
-        [
-            ProjectNote(project=ap.project_ptr, title=f"A{i}") for i in range(3)
-        ]
-        + [
-            ProjectNote(project=rp.project_ptr, title=f"R{i}") for i in range(3)
-        ]
+        [ProjectNote(project=ap.project_ptr, title=f"A{i}") for i in range(3)]
+        + [ProjectNote(project=rp.project_ptr, title=f"R{i}") for i in range(3)]
     )
 
     query = """\
@@ -1335,13 +1517,20 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
                                 {
                                     "node": {
                                         "__typename": "ArtProjectType",
-                                        "artNotes": {"edges": [{"node": {"title": n11.title}}, {"node": {"title": n12.title}}]},
+                                        "artNotes": {
+                                            "edges": [
+                                                {"node": {"title": n11.title}},
+                                                {"node": {"title": n12.title}},
+                                            ]
+                                        },
                                     }
                                 },
                                 {
                                     "node": {
                                         "__typename": "ArtProjectType",
-                                        "artNotes": {"edges": [{"node": {"title": n21.title}}]},
+                                        "artNotes": {
+                                            "edges": [{"node": {"title": n21.title}}]
+                                        },
                                     }
                                 },
                                 {
@@ -1358,11 +1547,9 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
     }
 
 
-
 @pytest.mark.django_db(transaction=True)
 def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
-    """
-    Reproduit un cas proche de l'usage réel en version Relay:
+    """Reproduit un cas proche de l'usage réel en version Relay:
     - Liste polymorphe (Company.projects) de la classe de base Project via une connection
     - Fragment inline sur le sous-type ArtProjectType pour une relation reverse (artNotes)
     - + (facultatif ici) Chaîne de FK parallèle (Company.mainProject) reliée côté ORM
@@ -1433,7 +1620,12 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
         for edge in data["projects"]["edges"]
         if edge["node"]["__typename"] == "ArtProjectType"
     ]
-    titles = {t["title"] for p in art_projects for t in (p.get("artNotes", {}).get("edges", [])) for t in ([t["node"]] if isinstance(t, dict) and "node" in t else [])}
+    titles = {
+        t["title"]
+        for p in art_projects
+        for t in (p.get("artNotes", {}).get("edges", []))
+        for t in ([t["node"]] if isinstance(t, dict) and "node" in t else [])
+    }
     assert {"A1-Note1", "A1-Note2", "A2-Note1"}.issubset(titles)
 
 
@@ -1488,7 +1680,9 @@ def test_optimizer_chain_company_links_to_polymorphic_project_no_n_plus_one():
     data = result.data["companies"]["edges"][0]["node"]
     assert data["name"] == company.name
     # Ensure we received 3 links and correct project payloads
-    links = {item["node"]["label"]: item["node"] for item in data["projectLinks"]["edges"]}
+    links = {
+        item["node"]["label"]: item["node"] for item in data["projectLinks"]["edges"]
+    }
 
     assert links["L1"]["project"]["__typename"] == "ArtProjectType"
     assert links["L1"]["project"]["topic"] == ap1.topic

@@ -7,14 +7,15 @@ from tests.utils import assert_num_queries
 from .models import (
     AndroidProject,
     ArtProject,
+    ArtProjectNote,
+    ArtProjectNoteDetails,
     Company,
+    CompanyProjectLink,
     EngineeringProject,
     IOSProject,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
-    ProjectNote,
-    ArtProjectNote, ArtProjectNoteDetails,
-    CompanyProjectLink,
 )
 from .schema import schema
 
@@ -476,6 +477,7 @@ def test_optimizer_hints_polymorphic():
         ]
     }
 
+
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
@@ -657,6 +659,7 @@ def test_more_related_object_on_subtype():
         ]
     }
 
+
 @pytest.mark.django_db(transaction=True)
 def test_more_related_object_on_subtype2():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
@@ -671,13 +674,25 @@ def test_more_related_object_on_subtype2():
     note7 = ArtProjectNote.objects.create(art_project=ap3, title="Note7")
     note8 = ArtProjectNote.objects.create(art_project=ap3, title="Note8")
 
-    notedetail1 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details1")
-    notedetail2 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details2")
-    notedetail3 = ArtProjectNoteDetails.objects.create(art_project_note=note1, text="details3")
+    notedetail1 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note1, text="details1"
+    )
+    notedetail2 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note1, text="details2"
+    )
+    notedetail3 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note1, text="details3"
+    )
 
-    notedetail4 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details4")
-    notedetail5 = ArtProjectNoteDetails.objects.create(art_project_note=note2, text="details5")
-    notedetail6 = ArtProjectNoteDetails.objects.create(art_project_note=note3, text="details6")
+    notedetail4 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note2, text="details4"
+    )
+    notedetail5 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note2, text="details5"
+    )
+    notedetail6 = ArtProjectNoteDetails.objects.create(
+        art_project_note=note3, text="details6"
+    )
 
     query = """\
     query {
@@ -711,24 +726,42 @@ def test_more_related_object_on_subtype2():
                         "__typename": "ArtProjectNoteType",
                         "title": note1.title,
                         "details": [
-                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail1.text},
-                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail2.text},
-                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail3.text},
+                            {
+                                "__typename": "ArtProjectNoteDetailsType",
+                                "text": notedetail1.text,
+                            },
+                            {
+                                "__typename": "ArtProjectNoteDetailsType",
+                                "text": notedetail2.text,
+                            },
+                            {
+                                "__typename": "ArtProjectNoteDetailsType",
+                                "text": notedetail3.text,
+                            },
                         ],
                     },
                     {
                         "__typename": "ArtProjectNoteType",
                         "title": note2.title,
                         "details": [
-                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail4.text},
-                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail5.text},
+                            {
+                                "__typename": "ArtProjectNoteDetailsType",
+                                "text": notedetail4.text,
+                            },
+                            {
+                                "__typename": "ArtProjectNoteDetailsType",
+                                "text": notedetail5.text,
+                            },
                         ],
                     },
                     {
                         "__typename": "ArtProjectNoteType",
                         "title": note3.title,
                         "details": [
-                            {"__typename": "ArtProjectNoteDetailsType", "text": notedetail6.text},
+                            {
+                                "__typename": "ArtProjectNoteDetailsType",
+                                "text": notedetail6.text,
+                            },
                         ],
                     },
                     {
@@ -771,6 +804,7 @@ def test_more_related_object_on_subtype2():
         ]
     }
 
+
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base_called_in_fragment():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
@@ -779,7 +813,6 @@ def test_related_object_on_base_called_in_fragment():
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
     note3 = ProjectNote.objects.create(project=rp.project_ptr, title="Note3")
     note4 = ProjectNote.objects.create(project=rp.project_ptr, title="Note4")
-
 
     query = """\
     query {
@@ -826,8 +859,7 @@ def test_related_object_on_base_called_in_fragment():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_resolution_on_note_project():
-    """
-    Covers polymorphic resolution on the reverse relation
+    """Covers polymorphic resolution on the reverse relation
     `ProjectNote.project` (a note's `project` is a `ProjectType`).
 
     We query: projects -> notes -> project { ... fragments ... }
@@ -895,8 +927,7 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
 
 @pytest.mark.django_db(transaction=True)
 def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
-    """
-    Validates absence of N+1 when multiple notes point to projects of
+    """Validates absence of N+1 when multiple notes point to projects of
     different subtypes, and verifies that no unnecessary subtype-specific
     columns are selected (e.g., no `research_notes`, no `art_style`).
     """
@@ -905,12 +936,8 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
 
     # Plusieurs notes pour chaque projet
     ProjectNote.objects.bulk_create(
-        [
-            ProjectNote(project=ap.project_ptr, title=f"A{i}") for i in range(3)
-        ]
-        + [
-            ProjectNote(project=rp.project_ptr, title=f"R{i}") for i in range(3)
-        ]
+        [ProjectNote(project=ap.project_ptr, title=f"A{i}") for i in range(3)]
+        + [ProjectNote(project=rp.project_ptr, title=f"R{i}") for i in range(3)]
     )
 
     query = """\
@@ -1007,11 +1034,9 @@ def test_polymorphic_nested_list_with_subtype_specific_relation():
     }
 
 
-
 @pytest.mark.django_db(transaction=True)
 def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
-    """
-    Reproduit un cas proche de l'usage réel:
+    """Reproduit un cas proche de l'usage réel:
     - Liste polymorphe (Company.projects) de la classe de base Project
     - Fragment inline sur le sous-type ArtProjectType pour une relation reverse (artNotes)
     - + Accès à une chaîne de FK parallèle au même niveau (Company.mainProject)
@@ -1044,7 +1069,6 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     company2 = Company.objects.create(name="Company2")
     ap3 = ArtProject.objects.create(company=company2, topic="Art3", artist="Artist3")
 
-
     query = """
     query {
       companies {
@@ -1072,6 +1096,7 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     art_projects = [p for p in data["projects"] if p["__typename"] == "ArtProjectType"]
     titles = {t["title"] for p in art_projects for t in p.get("artNotes", [])}
     assert {"A1-Note1", "A1-Note2", "A2-Note1"}.issubset(titles)
+
 
 @pytest.mark.django_db(transaction=True)
 def test_optimizer_chain_company_links_to_polymorphic_project_no_n_plus_one():

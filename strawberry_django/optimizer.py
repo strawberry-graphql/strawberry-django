@@ -102,11 +102,12 @@ _M = TypeVar("_M", bound=models.Model)
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
 
+
 def _lift_child_postfetch_to_parent(
-    parent_store: "OptimizerStore",
-    child_store: "OptimizerStore",
+    parent_store: OptimizerStore,
+    child_store: OptimizerStore,
     accessor_path: str,
-) -> "OptimizerStore":
+) -> OptimizerStore:
     """Lift child-level postfetch hints/branches to the parent accessor.
 
     Returns a shallow copy of child_store with postfetch-related hints cleared,
@@ -190,9 +191,13 @@ class OptimizerStore:
     select_related: list[str] = dataclasses.field(default_factory=list)
     prefetch_related: list[PrefetchType] = dataclasses.field(default_factory=list)
     annotate: dict[str, AnnotateType] = dataclasses.field(default_factory=dict)
-    postfetch_prefetch: dict[type[models.Model], set[str]] = dataclasses.field(default_factory=dict)
+    postfetch_prefetch: dict[type[models.Model], set[str]] = dataclasses.field(
+        default_factory=dict
+    )
     # Parent-level postfetch branches: accessor -> { subclass model -> set(paths) }
-    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = dataclasses.field(default_factory=dict)
+    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = (
+        dataclasses.field(default_factory=dict)
+    )
 
     def __bool__(self):
         return any(
@@ -237,7 +242,10 @@ class OptimizerStore:
             prefetch_related=self.prefetch_related[:],
             annotate=self.annotate.copy(),
             postfetch_prefetch={k: set(v) for k, v in self.postfetch_prefetch.items()},
-            parent_postfetch_branches={acc: {k: set(v) for k, v in mp.items()} for acc, mp in self.parent_postfetch_branches.items()},
+            parent_postfetch_branches={
+                acc: {k: set(v) for k, v in mp.items()}
+                for acc, mp in self.parent_postfetch_branches.items()
+            },
         )
 
     @classmethod
@@ -366,6 +374,7 @@ class OptimizerStore:
 
         # Merge postfetch prefetch hints into queryset config for post-fetch optimization
         from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+
         cfg = None
         if self.postfetch_prefetch or self.parent_postfetch_branches:
             cfg = _get_qs_cfg(qs)
@@ -380,7 +389,7 @@ class OptimizerStore:
                 dest = cfg.parent_postfetch_branches.setdefault(acc, {})
                 for mdl, rels in mapping.items():
                     dest.setdefault(mdl, set()).update(rels)
-        return qs  # noqa: RET504
+        return qs
 
     def _apply_prefetch_related(
         self,
@@ -510,7 +519,9 @@ class OptimizerStore:
             # for reverse-prefetched relations).
             try:
                 fk_attnames = [
-                    f.attname for f in qs.model._meta.fields if isinstance(f, models.ForeignKey)
+                    f.attname
+                    for f in qs.model._meta.fields
+                    if isinstance(f, models.ForeignKey)
                 ]
             except Exception:
                 fk_attnames = []
@@ -1268,10 +1279,12 @@ def _get_model_hints(
                         f"{dj_definition.model._meta.model_name}___"
                     )
                     # Apply the polymorphic prefix to only/select_related paths
-                    store.only.extend([f"{poly_prefix}{i}" for i in subclass_store.only])
-                    store.select_related.extend(
-                        [f"{poly_prefix}{i}" for i in subclass_store.select_related]
-                    )
+                    store.only.extend([
+                        f"{poly_prefix}{i}" for i in subclass_store.only
+                    ])
+                    store.select_related.extend([
+                        f"{poly_prefix}{i}" for i in subclass_store.select_related
+                    ])
                     # Do NOT propagate subclass prefetches using the polymorphic prefix,
                     # as Django does not support that in prefetch_related and it causes
                     # invalid lookups like 'polymorphism__artproject___art_notes'.
@@ -1287,7 +1300,9 @@ def _get_model_hints(
 
                         def _flatten_prefetch_paths(pf_obj: _DJPrefetch) -> list[str]:  # type: ignore[name-defined]
                             paths: list[str] = []
-                            to = getattr(pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None))
+                            to = getattr(
+                                pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None)
+                            )
                             if not isinstance(to, str):
                                 return paths
                             root = to.split(LOOKUP_SEP, 1)[0]
@@ -1297,21 +1312,38 @@ def _get_model_hints(
                                 # Inspect nested prefetches on the queryset, if any
                                 qs = getattr(pf_obj, "queryset", None)
                                 if qs is not None:
-                                    inner = getattr(qs, "_prefetch_related_lookups", None)
+                                    inner = getattr(
+                                        qs, "_prefetch_related_lookups", None
+                                    )
                                     if isinstance(inner, (list, tuple)):
                                         for inner_pf in inner:
                                             if isinstance(inner_pf, str):
                                                 # Simple nested string path
-                                                paths.append(f"{to}{LOOKUP_SEP}{inner_pf}")
+                                                paths.append(
+                                                    f"{to}{LOOKUP_SEP}{inner_pf}"
+                                                )
                                             elif isinstance(inner_pf, _DJPrefetch):
                                                 # Append the first hop and then recurse into deeper levels
-                                                inner_to = getattr(inner_pf, "prefetch_to", getattr(inner_pf, "lookup", None))
-                                                if isinstance(inner_to, str) and inner_to:
-                                                    paths.append(f"{to}{LOOKUP_SEP}{inner_to}")
+                                                inner_to = getattr(
+                                                    inner_pf,
+                                                    "prefetch_to",
+                                                    getattr(inner_pf, "lookup", None),
+                                                )
+                                                if (
+                                                    isinstance(inner_to, str)
+                                                    and inner_to
+                                                ):
+                                                    paths.append(
+                                                        f"{to}{LOOKUP_SEP}{inner_to}"
+                                                    )
                                                 # Recurse to capture any deeper nested paths under the inner prefetch
-                                                for nested in _flatten_prefetch_paths(inner_pf):
+                                                for nested in _flatten_prefetch_paths(
+                                                    inner_pf
+                                                ):
                                                     # nested is relative to the inner prefetch root; join under current 'to'
-                                                    paths.append(f"{to}{LOOKUP_SEP}{nested}")
+                                                    paths.append(
+                                                        f"{to}{LOOKUP_SEP}{nested}"
+                                                    )
                             return paths
 
                         for pf in subclass_store.prefetch_related:
@@ -1320,10 +1352,11 @@ def _get_model_hints(
                                 if root not in base_field_names:
                                     rel_paths.add(pf)
                             elif isinstance(pf, _DJPrefetch):
-                                for p in _flatten_prefetch_paths(pf):
-                                    rel_paths.add(p)
+                                rel_paths.update(_flatten_prefetch_paths(pf))
                         if rel_paths:
-                            store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_paths)
+                            store.postfetch_prefetch.setdefault(
+                                dj_definition.model, set()
+                            ).update(rel_paths)
                 return store
             if is_inheritance_manager(model._default_manager) and (
                 path_from_parent := dj_definition.model._meta.get_path_from_parent(
@@ -1362,7 +1395,9 @@ def _get_model_hints(
                             return items
                         out: list[str] = []
                         for it in items:
-                            if it.startswith(subclass_prefix) or it.split(LOOKUP_SEP, 1)[0] in ("",):
+                            if it.startswith(subclass_prefix) or it.split(
+                                LOOKUP_SEP, 1
+                            )[0] in ("",):
                                 # Already prefixed (or invalid empty), keep as is
                                 out.append(it)
                             else:
@@ -1370,7 +1405,9 @@ def _get_model_hints(
                         return out
 
                     store.only.extend(_prefixed(subclass_store.only))
-                    store.select_related.extend(_prefixed(subclass_store.select_related))
+                    store.select_related.extend(
+                        _prefixed(subclass_store.select_related)
+                    )
 
                     # Keep subclass-specific reverse relation roots to be prefetched
                     # after evaluation. Prefetching through the subclass prefix can
@@ -1385,14 +1422,17 @@ def _get_model_hints(
                         # Accept prefetch paths that are either absolute (already prefixed
                         # with the parent accessor) or relative to the subclass model.
                         if subclass_prefix and path.startswith(subclass_prefix):
-                            remainder = path[len(subclass_prefix):]
-                            if remainder.startswith(LOOKUP_SEP):
-                                remainder = remainder[len(LOOKUP_SEP):]
+                            remainder = path[len(subclass_prefix) :]
+                            remainder = remainder.removeprefix(LOOKUP_SEP)
                         else:
                             # Treat as relative to subclass
                             remainder = path
                         first = remainder.split(LOOKUP_SEP, 1)[0]
-                        return remainder if first and first not in base_field_names else None
+                        return (
+                            remainder
+                            if first and first not in base_field_names
+                            else None
+                        )
 
                     try:
                         from django.db.models import Prefetch as _DJPrefetch
@@ -1401,7 +1441,9 @@ def _get_model_hints(
 
                     def _flatten_after_prefix(pf_obj: _DJPrefetch) -> list[str]:  # type: ignore[name-defined]
                         out: list[str] = []
-                        to = getattr(pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None))
+                        to = getattr(
+                            pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None)
+                        )
                         if not isinstance(to, str):
                             return out
                         rem = keep_after_prefix(to)
@@ -1411,19 +1453,30 @@ def _get_model_hints(
 
                         def _append_nested(base_rem: str, child_pf: _DJPrefetch):  # type: ignore[name-defined]
                             # child_pf.to is relative to the child queryset model; join under base_rem
-                            child_to = getattr(child_pf, "prefetch_to", getattr(child_pf, "lookup", None))
+                            child_to = getattr(
+                                child_pf,
+                                "prefetch_to",
+                                getattr(child_pf, "lookup", None),
+                            )
                             if isinstance(child_to, str) and child_to:
                                 out.append(f"{base_rem}{LOOKUP_SEP}{child_to}")
                                 # Recurse deeper
                                 child_qs = getattr(child_pf, "queryset", None)
                                 if child_qs is not None:
-                                    grand = getattr(child_qs, "_prefetch_related_lookups", None)
+                                    grand = getattr(
+                                        child_qs, "_prefetch_related_lookups", None
+                                    )
                                     if isinstance(grand, (list, tuple)):
                                         for g in grand:
                                             if isinstance(g, str):
-                                                out.append(f"{base_rem}{LOOKUP_SEP}{child_to}{LOOKUP_SEP}{g}")
+                                                out.append(
+                                                    f"{base_rem}{LOOKUP_SEP}{child_to}{LOOKUP_SEP}{g}"
+                                                )
                                             elif isinstance(g, _DJPrefetch):
-                                                _append_nested(f"{base_rem}{LOOKUP_SEP}{child_to}", g)
+                                                _append_nested(
+                                                    f"{base_rem}{LOOKUP_SEP}{child_to}",
+                                                    g,
+                                                )
 
                         qs = getattr(pf_obj, "queryset", None)
                         if qs is not None:
@@ -1442,13 +1495,14 @@ def _get_model_hints(
                             if rem:
                                 rel_paths.add(rem)
                         elif isinstance(pf, _DJPrefetch):
-                            for pth in _flatten_after_prefix(pf):
-                                rel_paths.add(pth)
+                            rel_paths.update(_flatten_after_prefix(pf))
                         else:
                             continue
                     # Also consider subclass-level postfetch hints that are relative to the subclass
                     if getattr(subclass_store, "postfetch_prefetch", None):
-                        rels = subclass_store.postfetch_prefetch.get(dj_definition.model)
+                        rels = subclass_store.postfetch_prefetch.get(
+                            dj_definition.model
+                        )
                         if rels:
                             for r in rels:
                                 rem = keep_after_prefix(r)
@@ -1461,7 +1515,9 @@ def _get_model_hints(
                         # hints to the correct parent level. Using the inheritance
                         # accessor (e.g. 'artproject') as a parent key would cause
                         # incorrect prefetching.
-                        store.postfetch_prefetch.setdefault(dj_definition.model, set()).update(rel_paths)
+                        store.postfetch_prefetch.setdefault(
+                            dj_definition.model, set()
+                        ).update(rel_paths)
                 # Do not return here; continue processing base model normally
                 # so that base-level relations are optimized once.
                 return store
@@ -1852,7 +1908,9 @@ def optimize(
                                     new_to = to[len(pref) :]
                                     break
                         if isinstance(new_to, str) and new_to != to:
-                            new_pf = Prefetch(new_to, queryset=pf.queryset, to_attr=pf.to_attr)
+                            new_pf = Prefetch(
+                                new_to, queryset=pf.queryset, to_attr=pf.to_attr
+                            )
                             if getattr(pf, "_optimizer_sentinel", None) is _sentinel:
                                 new_pf._optimizer_sentinel = _sentinel  # type: ignore[attr-defined]
                             new_prefetches.append(new_pf)

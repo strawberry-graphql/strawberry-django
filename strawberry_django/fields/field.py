@@ -329,10 +329,14 @@ class StrawberryDjangoField(
                 # can batch nested reverse relations across the page. This will not
                 # bypass pagination because the queryset already carries LIMIT/OFFSET.
                 try:
-                    from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+                    from strawberry_django.queryset import (
+                        get_queryset_config as _get_qs_cfg,
+                    )
+
                     cfg = _get_qs_cfg(qs2)
                     if getattr(cfg, "parent_postfetch_branches", None):
                         from strawberry_django.resolvers import default_qs_hook as _dqsh
+
                         qs2 = _dqsh(qs2)
                 except Exception:
                     pass
@@ -351,7 +355,10 @@ class StrawberryDjangoField(
                         # postfetch hints. If it does, we must run the default_qs_hook so
                         # nested postfetch can execute on this queryset.
                         try:
-                            from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+                            from strawberry_django.queryset import (
+                                get_queryset_config as _get_qs_cfg,
+                            )
+
                             cfg = _get_qs_cfg(qs)
                             if not getattr(cfg, "postfetch_prefetch", None):
                                 return cache[use_cache_key]

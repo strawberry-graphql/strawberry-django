@@ -16,7 +16,7 @@ from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_total_count
 from strawberry_django.queryset import get_queryset_config
-from strawberry_django.resolvers import django_resolver, django_fetch
+from strawberry_django.resolvers import django_fetch, django_resolver
 from strawberry_django.utils.typing import unwrap_type
 
 

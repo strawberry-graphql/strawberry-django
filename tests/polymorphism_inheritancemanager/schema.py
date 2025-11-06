@@ -8,16 +8,17 @@ from .models import (
     AndroidProject,
     AppProject,
     ArtProject,
+    ArtProjectNote,
+    ArtProjectNoteDetails,
     Company,
+    CompanyProjectLink,
     EngineeringProject,
     IOSProject,
     Project,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
     TechnicalProject,
-    ProjectNote,
-    ArtProjectNote, ArtProjectNoteDetails,
-    CompanyProjectLink,
 )
 
 
@@ -43,7 +44,6 @@ class ArtProjectType(ProjectType):
     art_style_upper: strawberry.auto
 
     art_notes: list["ArtProjectNoteType"] = strawberry_django.field()
-
 
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
