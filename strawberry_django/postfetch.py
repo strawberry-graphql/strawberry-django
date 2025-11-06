@@ -7,6 +7,7 @@ from django.db import models
 
 if TYPE_CHECKING:
     from django.db.models.query import QuerySet
+    from .queryset import StrawberryDjangoQuerySetConfig
 
 
 def _group_prefetch_paths(rel_paths: Iterable[str]) -> dict[str, set[str]]:
@@ -114,6 +115,129 @@ def _manual_nested_batch_single_hop(
     # Inject into each parent cache
     for parent in related_instances_all:
         _inject_prefetch_cache(parent, rem, nested_grouped.get(parent.pk, []))
+
+
+def __group_by_type(objs: list[Any]) -> dict[type, list[Any]]:
+    grouped: dict[type, list[Any]] = {}
+    for obj in objs:
+        grouped.setdefault(type(obj), []).append(obj)
+    return grouped
+
+
+def __postfetch_child_for_instances(
+    instances_by_model: dict[type[models.Model], list[Any]],
+    rel_paths_by_model: dict[type[models.Model], set[str]],
+) -> None:
+    """Prefetch child-level relations for given instances per model.
+
+    Best-effort: ignores failures; no queryset evaluation here.
+    """
+    try:
+        from django.db.models import prefetch_related_objects
+    except Exception:  # pragma: no cover
+        return
+
+    for mdl, rel_paths in rel_paths_by_model.items():
+        instances = instances_by_model.get(mdl) or []
+        if not instances:
+            continue
+        grouped = _group_prefetch_paths(rel_paths)
+        for root, remainders in grouped.items():
+            nested = [f"{root}__{r}" for r in sorted(remainders)] if remainders else []
+            try:
+                prefetch_related_objects(instances, root, *nested)
+            except Exception:
+                # Best-effort: ignore failures
+                pass
+
+
+def __postfetch_parent_for_parents(
+    parents_by_model: dict[type[models.Model], list[Any]],
+    branches: dict[str, dict[type[models.Model], set[str]]],
+) -> None:
+    """Batch reverse-FK assignment for page/query parents and prefetch nested remainders.
+
+    This operates only on provided parent instances. Best-effort semantics.
+    """
+    try:
+        from django.db.models import prefetch_related_objects
+    except Exception:  # pragma: no cover
+        prefetch_related_objects = None  # type: ignore
+
+    for accessor, mapping in list(branches.items()):
+        # Union all remainders from mapping values
+        remainders_all: set[str] = set()
+        for rel_paths in mapping.values():
+            for path in rel_paths or []:
+                if not isinstance(path, str) or not path:
+                    continue
+                parts = path.split("__", 1)
+                if len(parts) == 2:
+                    remainders_all.add(parts[1])
+
+        for parent_model, parents in parents_by_model.items():
+            # Find reverse relation on this concrete model by accessor name
+            try:
+                rel = next(
+                    ro
+                    for ro in parent_model._meta.related_objects
+                    if ro.get_accessor_name() == accessor
+                )
+            except StopIteration:
+                continue
+            except Exception:
+                continue
+
+            child_model = rel.related_model
+            fk_attname = getattr(rel.field, "attname", None)
+            if not fk_attname:
+                continue
+
+            parent_ids = [getattr(p, "pk", None) for p in parents]
+            parent_ids = [pid for pid in parent_ids if pid is not None]
+            if not parent_ids:
+                continue
+
+            try:
+                children = list(
+                    child_model._default_manager.filter(
+                        **{f"{fk_attname}__in": parent_ids}
+                    )
+                )
+            except Exception:
+                children = []
+
+            grouped_children: dict[int, list] = {}
+            for ch in children:
+                try:
+                    grouped_children.setdefault(getattr(ch, fk_attname), []).append(ch)
+                except Exception:
+                    continue
+
+            # Inject into each parent's prefetched cache
+            for p in parents:
+                try:
+                    pid = getattr(p, "pk", None)
+                    items = grouped_children.get(pid, [])
+                    cache = getattr(p, "_prefetched_objects_cache", None)
+                    if not isinstance(cache, dict):
+                        cache = {}
+                        setattr(p, "_prefetched_objects_cache", cache)
+                    cache[accessor] = items
+                except Exception:
+                    pass
+
+            # If nested remainders exist, prefetch them on the children collection
+            if children and remainders_all and prefetch_related_objects:
+                try:
+                    single_hop = [r for r in remainders_all if "__" not in r]
+                    deeper = [r for r in remainders_all if "__" in r]
+                    if single_hop:
+                        prefetch_related_objects(children, *sorted(single_hop))
+                    if deeper:
+                        prefetch_related_objects(children, *sorted(deeper))
+                except Exception:
+                    pass
 
 
 def apply_postfetch(qs: QuerySet[Any]) -> None:
@@ -225,3 +349,54 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                             except Exception:
                                 pass
         cfg.postfetch_prefetch.clear()
+
+
+def apply_page_postfetch(
+    edge_nodes: list[Any],
+    cfg: "StrawberryDjangoQuerySetConfig",
+    *,
+    clear_parent_branches: bool = True,
+    clear_child_prefetch: bool = False,
+) -> None:
+    """Apply post-fetch optimizations on a page (list of nodes).
+
+    This is a page-aware counterpart of `apply_postfetch(qs)` that operates only on
+    the current page's nodes. It never evaluates the original QuerySet; callers
+    must pass the already materialized edge nodes (connection page).
+
+    Behavior parity with the inlined logic previously placed in
+    DjangoListConnection.resolve_connection:
+    - Executes child-level `postfetch_prefetch` using `prefetch_related_objects` on
+      the subset of instances of each model present in the page.
+    - Executes parent-level `parent_postfetch_branches` by batching reverse-FK
+      assignments to fill parent caches and optionally prefetch nested remainders.
+    - Clears `parent_postfetch_branches` by default to avoid repeated work.
+      Does NOT clear `postfetch_prefetch` by default.
+    """
+    if not edge_nodes or cfg is None:
+        return
+
+    # Parent-level first (consistent ordering), then child-level
+    if getattr(cfg, "parent_postfetch_branches", None):
+        try:
+            parents_by_model = __group_by_type(edge_nodes)
+            __postfetch_parent_for_parents(parents_by_model, cfg.parent_postfetch_branches)
+            if clear_parent_branches:
+                cfg.parent_postfetch_branches.clear()
+        except Exception:
+            pass
+
+    if getattr(cfg, "postfetch_prefetch", None):
+        try:
+            # Build instances_by_model only for models that have rel paths in cfg
+            instances_by_model: dict[type[models.Model], list[Any]] = {}
+            for mdl in cfg.postfetch_prefetch.keys():
+                try:
+                    instances_by_model[mdl] = [n for n in edge_nodes if isinstance(n, mdl)]
+                except Exception:
+                    instances_by_model[mdl] = []
+            __postfetch_child_for_instances(instances_by_model, cfg.postfetch_prefetch)
+            if clear_child_prefetch:
+                cfg.postfetch_prefetch.clear()
+        except Exception:
+            pass
