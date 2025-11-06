@@ -92,6 +92,7 @@ def test_polymorphic_query_abstract_model():
     with assert_num_queries(5):
         result = schema.execute_sync(query)
     assert not result.errors
+    assert result.data is not None
     # Only validate that the expected shapes are present for sp and ep
     nodes = [edge["node"] for edge in result.data["projects"]["edges"]]
     assert any(
@@ -409,6 +410,7 @@ def test_optimizer_hints_polymorphic():
     with assert_num_queries(4):
         result = schema.execute_sync(query)
     assert not result.errors
+    assert result.data is not None
     data_nodes = [e["node"] for e in result.data["projects"]["edges"]]
     # Find ArtProjectType and validate upper fields
     art = next(n for n in data_nodes if n["__typename"] == "ArtProjectType")
@@ -1125,6 +1127,7 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     with assert_num_queries(6):
         result = schema.execute_sync(query)
     assert not result.errors
+    assert result.data is not None
     data = result.data["companies"]["edges"][0]["node"]
     assert data["name"] == company.name
     art_projects = [

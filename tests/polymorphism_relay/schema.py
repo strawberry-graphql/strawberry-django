@@ -62,7 +62,7 @@ class ArtProjectNoteType(strawberry.relay.Node):
 
 
 @strawberry_django.type(ArtProjectNoteDetails)
-class ArtProjectNoteDetailsType:
+class ArtProjectNoteDetailsType(strawberry.relay.Node):
     art_project_note: ArtProjectNoteType
     text: strawberry.auto
 

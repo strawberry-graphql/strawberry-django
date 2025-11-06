@@ -1091,6 +1091,7 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     with assert_num_queries(6):
         result = schema.execute_sync(query)
     assert not result.errors
+    assert result.data is not None
     # Minimal checks on the data structure
     data = result.data["companies"][0]
     assert data["name"] == company.name

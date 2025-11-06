@@ -63,7 +63,7 @@ class ArtProjectNoteType(strawberry.relay.Node):
 
 
 @strawberry_django.type(ArtProjectNoteDetails)
-class ArtProjectNoteDetailsType:
+class ArtProjectNoteDetailsType(strawberry.relay.Node):
     art_project_note: ArtProjectNoteType
     text: strawberry.auto
 
@@ -104,7 +104,7 @@ class IOSProjectType(AppProjectType):
 
 
 @strawberry_django.type(CompanyProjectLink)
-class CompanyProjectLinkType:
+class CompanyProjectLinkType(strawberry.relay.Node):
     company: "CompanyType"
     project: ProjectType
     label: strawberry.auto

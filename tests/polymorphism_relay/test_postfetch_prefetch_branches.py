@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 import pytest
 
 from strawberry_django.optimizer import OptimizerConfig, OptimizerStore
@@ -32,7 +34,7 @@ def test_merge_postfetch_prefetch_hints_triggers_update():
 
     # Apply the store to the queryset. We pass a dummy info since none of the
     # other optimizers run (store has no select/prefetch/only/annotate entries).
-    qs2 = store.apply(qs, info=None, config=OptimizerConfig())
+    qs2 = store.apply(qs, info=cast("Any", None), config=OptimizerConfig())
 
     # The config on the cloned queryset must contain the merged set
     merged_cfg = get_queryset_config(qs2)
@@ -65,12 +67,13 @@ def test_polymorphic_postfetch_prefetch_roots_from_strings():
 
     result = schema.execute_sync(query)
     assert not result.errors
+    assert result.data is not None
     # Sanity check response shape to ensure the query actually executed paths
     # that collect subclass hints for ArtProject.
     assert any(
         e["node"]["__typename"] == "ArtProjectType"
         for e in result.data["projects"]["edges"]
-    )  # type: ignore[index]
+    )
 
 
 @pytest.mark.django_db(transaction=True)
@@ -97,11 +100,12 @@ def test_postfetch_skip_when_no_instances_for_subclass():
 
     result = schema.execute_sync(query)
     assert not result.errors
+    assert result.data is not None
     # All returned items should be of ResearchProjectType
     assert all(
         e["node"]["__typename"] == "ResearchProjectType"
         for e in result.data["projects"]["edges"]
-    )  # type: ignore[index]
+    )
 
 
 @pytest.mark.django_db(transaction=True)
