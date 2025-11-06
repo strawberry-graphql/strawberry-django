@@ -16,7 +16,7 @@ from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_total_count
 from strawberry_django.queryset import get_queryset_config
-from strawberry_django.resolvers import django_fetch, django_resolver
+from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import unwrap_type
 
 
@@ -113,7 +113,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                     conn = cast("Self", conn)
                     # Page-level postfetch: apply only to current page nodes
                     try:
-                        from strawberry_django.postfetch import apply_page_postfetch as _apply_page_postfetch
+                        from strawberry_django.postfetch import (
+                            apply_page_postfetch as _apply_page_postfetch,
+                        )
+
                         cfg = queryset_config
                         edge_nodes = [getattr(e, "node", None) for e in conn.edges]
                         edge_nodes = [n for n in edge_nodes if n is not None]
@@ -162,7 +165,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                 # Page-level postfetch also for non-optimized connections
                 try:
                     if isinstance(nodes, models.QuerySet):
-                        from strawberry_django.postfetch import apply_page_postfetch as _apply_page_postfetch
+                        from strawberry_django.postfetch import (
+                            apply_page_postfetch as _apply_page_postfetch,
+                        )
+
                         cfg = get_queryset_config(nodes)
                         edge_nodes = [getattr(e, "node", None) for e in resolved.edges]
                         edge_nodes = [n for n in edge_nodes if n is not None]
@@ -178,7 +184,10 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         # Page-level postfetch also for non-optimized connections (sync path)
         try:
             if isinstance(nodes, models.QuerySet):
-                from strawberry_django.postfetch import apply_page_postfetch as _apply_page_postfetch
+                from strawberry_django.postfetch import (
+                    apply_page_postfetch as _apply_page_postfetch,
+                )
+
                 cfg = get_queryset_config(nodes)
                 edge_nodes = [getattr(e, "node", None) for e in conn.edges]
                 edge_nodes = [n for n in edge_nodes if n is not None]

@@ -7,6 +7,7 @@ from django.db import models
 
 if TYPE_CHECKING:
     from django.db.models.query import QuerySet
+
     from .queryset import StrawberryDjangoQuerySetConfig
 
 
@@ -204,9 +205,9 @@ def __postfetch_parent_for_parents(
 
             try:
                 children = list(
-                    child_model._default_manager.filter(
-                        **{f"{fk_attname}__in": parent_ids}
-                    )
+                    child_model._default_manager.filter(**{
+                        f"{fk_attname}__in": parent_ids
+                    })
                 )
             except Exception:
                 children = []
@@ -226,7 +227,7 @@ def __postfetch_parent_for_parents(
                     cache = getattr(p, "_prefetched_objects_cache", None)
                     if not isinstance(cache, dict):
                         cache = {}
-                        setattr(p, "_prefetched_objects_cache", cache)
+                        p._prefetched_objects_cache = cache
                     cache[accessor] = items
                 except Exception:
                     pass
@@ -374,7 +375,7 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
 
 def apply_page_postfetch(
     edge_nodes: list[Any],
-    cfg: "StrawberryDjangoQuerySetConfig",
+    cfg: StrawberryDjangoQuerySetConfig,
     *,
     clear_parent_branches: bool = True,
     clear_child_prefetch: bool = False,
@@ -401,7 +402,9 @@ def apply_page_postfetch(
     if getattr(cfg, "parent_postfetch_branches", None):
         try:
             parents_by_model = __group_by_type(edge_nodes)
-            __postfetch_parent_for_parents(parents_by_model, cfg.parent_postfetch_branches)
+            __postfetch_parent_for_parents(
+                parents_by_model, cfg.parent_postfetch_branches
+            )
             if clear_parent_branches:
                 cfg.parent_postfetch_branches.clear()
         except Exception:
@@ -413,7 +416,9 @@ def apply_page_postfetch(
             instances_by_model: dict[type[models.Model], list[Any]] = {}
             for mdl in cfg.postfetch_prefetch.keys():
                 try:
-                    instances_by_model[mdl] = [n for n in edge_nodes if isinstance(n, mdl)]
+                    instances_by_model[mdl] = [
+                        n for n in edge_nodes if isinstance(n, mdl)
+                    ]
                 except Exception:
                     instances_by_model[mdl] = []
             __postfetch_child_for_instances(instances_by_model, cfg.postfetch_prefetch)
