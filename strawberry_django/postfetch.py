@@ -136,6 +136,46 @@ def __group_by_type(objs: list[Any]) -> dict[type, list[Any]]:
     return grouped
 
 
+def __prefetch_child_root(
+    instances: list[Any],
+    mdl: type[models.Model],
+    root: str,
+    remainders: set[str],
+    id_to_instance: dict[Any, Any],
+) -> None:
+    """Prefetch a single root for child-level postfetch on given instances.
+
+    Tries `prefetch_related_objects` first; falls back to manual reverse-FK batching
+    and optional single-hop nested prefetch when required.
+    """
+    try:
+        from django.db.models import prefetch_related_objects
+    except ImportError:  # pragma: no cover
+        return
+
+    nested = [f"{root}__{r}" for r in sorted(remainders)] if remainders else []
+    try:
+        prefetch_related_objects(instances, root, *nested)
+    except (FieldError, DatabaseError, AttributeError, ValueError):
+        pass
+    else:
+        return
+
+    related_instances_all, root_model = _manual_batch_reverse_fk_assign(
+        mdl, root, instances, id_to_instance
+    )
+    if related_instances_all and remainders:
+        for rem in sorted(remainders):
+            if "__" in rem:
+                continue
+            _manual_nested_batch_single_hop(related_instances_all, root_model, rem)
+
+    deeper = [r for r in remainders if "__" in r]
+    if deeper:
+        with contextlib.suppress(Exception):
+            prefetch_related_objects(related_instances_all, *sorted(deeper))
+
+
 def __postfetch_child_for_instances(
     instances_by_model: dict[type[models.Model], list[Any]],
     rel_paths_by_model: dict[type[models.Model], set[str]],
@@ -257,8 +297,6 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
     new QuerySet; callers can keep using the original `qs`.
     """
     try:
-        from django.db.models import prefetch_related_objects
-
         from strawberry_django.queryset import get_queryset_config
     except ImportError:  # pragma: no cover
         return
@@ -339,32 +377,7 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                 id_to_instance = {obj.pk: obj for obj in instances}
                 grouped_paths = _group_prefetch_paths(rel_paths)
                 for root, remainders in grouped_paths.items():
-                    try:
-                        nested = (
-                            [f"{root}__{r}" for r in sorted(remainders)]
-                            if remainders
-                            else []
-                        )
-                        prefetch_related_objects(instances, root, *nested)
-                    except (FieldError, DatabaseError, AttributeError, ValueError):
-                        related_instances_all, root_model = (
-                            _manual_batch_reverse_fk_assign(
-                                mdl, root, instances, id_to_instance
-                            )
-                        )
-                        if related_instances_all and remainders:
-                            for rem in sorted(remainders):
-                                if "__" in rem:
-                                    continue
-                                _manual_nested_batch_single_hop(
-                                    related_instances_all, root_model, rem
-                                )
-                        deeper = [r for r in remainders if "__" in r]
-                        if deeper:
-                            with contextlib.suppress(Exception):
-                                prefetch_related_objects(
-                                    related_instances_all, *sorted(deeper)
-                                )
+                    __prefetch_child_root(instances, mdl, root, remainders, id_to_instance)
         cfg.postfetch_prefetch.clear()
 
 
