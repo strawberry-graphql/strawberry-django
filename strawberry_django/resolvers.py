@@ -46,7 +46,7 @@ def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
 
     # Post-fetch optimization: delegate to postfetch.apply_postfetch
     # which will evaluate and clear hints as needed.
-    apply_postfetch(qs)  # type: ignore
+    apply_postfetch(qs)
 
     return qs
 

@@ -280,26 +280,17 @@ class StrawberryDjangoField(
             # If we have a prefetched cache for this reverse accessor on the source instance,
             # pass a hint so the queryset hook can short-circuit to the cached list without
             # re-optimizing/requerying.
-            try:
-                attname = self.django_name or self.python_name
-                if (
-                    source is not None
-                    and hasattr(source, "_prefetched_objects_cache")
-                    and isinstance(source._prefetched_objects_cache, dict)
-                    and attname in source._prefetched_objects_cache
-                ):
+            attname = self.django_name or self.python_name
+            if source is not None:
+                cache = getattr(source, "_prefetched_objects_cache", None)
+                if isinstance(cache, dict) and attname in cache:
                     kwargs = dict(kwargs)
                     kwargs["__use_prefetched_cache__"] = attname
-            except Exception:
-                pass
 
             # Provide source instance in kwargs so the queryset hook can use prefetched cache
             if source is not None:
-                try:
-                    kwargs = dict(kwargs)
-                    kwargs["__source__"] = source
-                except Exception:
-                    pass
+                kwargs = dict(kwargs)
+                kwargs["__source__"] = source
 
             result = django_resolver(
                 self.get_queryset_hook(**kwargs),
@@ -328,18 +319,15 @@ class StrawberryDjangoField(
                 # we need to trigger evaluation now so the optimizer's postfetch hook
                 # can batch nested reverse relations across the page. This will not
                 # bypass pagination because the queryset already carries LIMIT/OFFSET.
-                try:
-                    from strawberry_django.queryset import (
-                        get_queryset_config as _get_qs_cfg,
-                    )
+                from strawberry_django.queryset import (
+                    get_queryset_config as _get_qs_cfg,
+                )
 
-                    cfg = _get_qs_cfg(qs2)
-                    if getattr(cfg, "parent_postfetch_branches", None):
-                        from strawberry_django.resolvers import default_qs_hook as _dqsh
+                cfg = _get_qs_cfg(qs2)
+                if getattr(cfg, "parent_postfetch_branches", None):
+                    from strawberry_django.resolvers import default_qs_hook as _dqsh
 
-                        qs2 = _dqsh(qs2)
-                except Exception:
-                    pass
+                    qs2 = _dqsh(qs2)
                 return qs2
 
         elif self.is_list:
@@ -354,17 +342,13 @@ class StrawberryDjangoField(
                         # Only short-circuit to the cache if the queryset does NOT carry
                         # postfetch hints. If it does, we must run the default_qs_hook so
                         # nested postfetch can execute on this queryset.
-                        try:
-                            from strawberry_django.queryset import (
-                                get_queryset_config as _get_qs_cfg,
-                            )
+                        from strawberry_django.queryset import (
+                            get_queryset_config as _get_qs_cfg,
+                        )
 
-                            cfg = _get_qs_cfg(qs)
-                            if not getattr(cfg, "postfetch_prefetch", None):
-                                return cache[use_cache_key]
-                        except Exception:
-                            # If we cannot inspect the config, be conservative and do not short-circuit
-                            pass
+                        cfg = _get_qs_cfg(qs)
+                        if not getattr(cfg, "postfetch_prefetch", None):
+                            return cache[use_cache_key]
                 qs = self.get_queryset(qs, info, **kwargs)
                 if not self.disable_fetch_list_results:
                     qs = default_qs_hook(qs)
