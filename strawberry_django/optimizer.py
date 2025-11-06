@@ -105,7 +105,10 @@ _annotate_placeholder = "__annotated_placeholder__"
 
 # --- Helper utilities to keep function nesting shallow (ruff PLR1702 friendly) ---
 
-def _flatten_prefetch_paths_for_subclass(pf_obj: Prefetch, base_field_names: set[str]) -> list[str]:
+
+def _flatten_prefetch_paths_for_subclass(
+    pf_obj: Prefetch, base_field_names: set[str]
+) -> list[str]:
     """Flatten nested Prefetch objects into dot paths for subclass postfetching.
 
     Only returns paths whose root is NOT a field on the base model (so they must
@@ -140,7 +143,9 @@ def _flatten_prefetch_paths_for_subclass(pf_obj: Prefetch, base_field_names: set
                         # Recurse to capture any deeper nested paths under the inner prefetch
                         paths.extend(
                             f"{to}{LOOKUP_SEP}{nested}"
-                            for nested in _flatten_prefetch_paths_for_subclass(inner_pf, base_field_names)
+                            for nested in _flatten_prefetch_paths_for_subclass(
+                                inner_pf, base_field_names
+                            )
                         )
     return paths
 
@@ -227,6 +232,7 @@ def _extract_rel_paths_for_inheritance_manager(
     and paths relative to the subclass model. Filters out relations that point back
     to base model fields.
     """
+
     def keep_after_prefix(path: str) -> str | None:
         # Accept prefetch paths that are either absolute (already prefixed
         # with the parent accessor) or relative to the subclass model.
@@ -263,7 +269,9 @@ def _extract_rel_paths_for_inheritance_manager(
                     if isinstance(grand, (list, tuple)):
                         for g in grand:
                             if isinstance(g, str):
-                                out.append(f"{base_rem}{LOOKUP_SEP}{child_to}{LOOKUP_SEP}{g}")
+                                out.append(
+                                    f"{base_rem}{LOOKUP_SEP}{child_to}{LOOKUP_SEP}{g}"
+                                )
                             elif isinstance(g, Prefetch):
                                 _append_nested(f"{base_rem}{LOOKUP_SEP}{child_to}", g)
 
@@ -381,7 +389,9 @@ class OptimizerStore:
         default_factory=dict
     )
     # Parent-level postfetch branches: accessor -> { subclass model -> set(paths) }
-    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = dataclasses.field(default_factory=dict)
+    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = (
+        dataclasses.field(default_factory=dict)
+    )
 
     def __bool__(self):
         return any(
@@ -1471,7 +1481,9 @@ def _get_model_hints(
                     # Instead, record the roots of subclass prefetches to be applied post-fetch
                     # via prefetch_related_objects on grouped subclass instances.
                     if subclass_store.prefetch_related:
-                        base_field_names = set(get_model_fields(cast("Any", model)).keys())
+                        base_field_names = set(
+                            get_model_fields(cast("Any", model)).keys()
+                        )
                         rel_paths = _extract_rel_paths_from_prefetches(
                             subclass_store.prefetch_related, base_field_names
                         )
@@ -1528,7 +1540,9 @@ def _get_model_hints(
                     base_field_names = set(get_model_fields(model).keys())
 
                     rel_paths: set[str] = _extract_rel_paths_for_inheritance_manager(
-                        subclass_store.prefetch_related, subclass_prefix, base_field_names
+                        subclass_store.prefetch_related,
+                        subclass_prefix,
+                        base_field_names,
                     )
 
                     # Also consider subclass-level postfetch hints that are relative to the subclass

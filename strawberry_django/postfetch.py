@@ -344,7 +344,9 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                             manager = getattr(type(children_all[0]), "objects", None)
                             get_real = getattr(manager, "get_real_instances", None)
                             if callable(get_real):
-                                down = list(cast("Iterable[Any]", get_real(children_all)))
+                                down = list(
+                                    cast("Iterable[Any]", get_real(children_all))
+                                )
                                 instances_for_query = [
                                     obj for obj in down if isinstance(obj, mdl)
                                 ]
@@ -377,7 +379,9 @@ def apply_postfetch(qs: QuerySet[Any]) -> None:
                 id_to_instance = {obj.pk: obj for obj in instances}
                 grouped_paths = _group_prefetch_paths(rel_paths)
                 for root, remainders in grouped_paths.items():
-                    __prefetch_child_root(instances, mdl, root, remainders, id_to_instance)
+                    __prefetch_child_root(
+                        instances, mdl, root, remainders, id_to_instance
+                    )
         cfg.postfetch_prefetch.clear()
 
 
@@ -422,7 +426,9 @@ def apply_page_postfetch(
             instances_by_model: dict[type[models.Model], list[Any]] = {}
             for mdl in cfg.postfetch_prefetch:
                 with contextlib.suppress(Exception):
-                    instances_by_model[mdl] = [n for n in edge_nodes if isinstance(n, mdl)]
+                    instances_by_model[mdl] = [
+                        n for n in edge_nodes if isinstance(n, mdl)
+                    ]
                 if mdl not in instances_by_model:
                     instances_by_model[mdl] = []
             __postfetch_child_for_instances(instances_by_model, cfg.postfetch_prefetch)
