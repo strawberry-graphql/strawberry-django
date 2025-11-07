@@ -422,8 +422,8 @@ def test_optimizer_hints_polymorphic():
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
-    note1 = ProjectNote.objects.create(project=ap.project_ptr, title="Note1")
-    note2 = ProjectNote.objects.create(project=ap.project_ptr, title="Note2")
+    note1 = ProjectNote.objects.create(project_id=ap.pk, title="Note1")
+    note2 = ProjectNote.objects.create(project_id=ap.pk, title="Note2")
 
     query = """\
     query {
@@ -471,11 +471,11 @@ def test_related_object_on_base():
 @pytest.mark.django_db(transaction=True)
 def test_more_related_object_on_base():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
-    note1 = ProjectNote.objects.create(project=ap.project_ptr, title="Note1")
-    note2 = ProjectNote.objects.create(project=ap.project_ptr, title="Note2")
+    note1 = ProjectNote.objects.create(project_id=ap.pk, title="Note1")
+    note2 = ProjectNote.objects.create(project_id=ap.pk, title="Note2")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
-    note3 = ProjectNote.objects.create(project=rp.project_ptr, title="Note3")
-    note4 = ProjectNote.objects.create(project=rp.project_ptr, title="Note4")
+    note3 = ProjectNote.objects.create(project_id=rp.pk, title="Note3")
+    note4 = ProjectNote.objects.create(project_id=rp.pk, title="Note4")
 
     query = """\
     query {
@@ -911,8 +911,8 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
 
-    note_a = ProjectNote.objects.create(project=ap.project_ptr, title="NoteA")
-    note_r = ProjectNote.objects.create(project=rp.project_ptr, title="NoteR")
+    note_a = ProjectNote.objects.create(project_id=ap.pk, title="NoteA")
+    note_r = ProjectNote.objects.create(project_id=rp.pk, title="NoteR")
 
     query = """\
     query {
@@ -989,8 +989,8 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
 
     ProjectNote.objects.bulk_create(
-        [ProjectNote(project=ap.project_ptr, title=f"A{i}") for i in range(3)]
-        + [ProjectNote(project=rp.project_ptr, title=f"R{i}") for i in range(3)]
+        [ProjectNote(project_id=ap.pk, title=f"A{i}") for i in range(3)]
+        + [ProjectNote(project_id=rp.pk, title=f"R{i}") for i in range(3)]
     )
 
     query = """\
@@ -1236,11 +1236,11 @@ def test_polymorphic_offset_paginated_query():
 @pytest.mark.django_db(transaction=True)
 def test_related_object_on_base_called_in_fragment():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
-    note1 = ProjectNote.objects.create(project=ap.project_ptr, title="Note1")
-    note2 = ProjectNote.objects.create(project=ap.project_ptr, title="Note2")
+    note1 = ProjectNote.objects.create(project_id=ap.pk, title="Note1")
+    note2 = ProjectNote.objects.create(project_id=ap.pk, title="Note2")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
-    note3 = ProjectNote.objects.create(project=rp.project_ptr, title="Note3")
-    note4 = ProjectNote.objects.create(project=rp.project_ptr, title="Note4")
+    note3 = ProjectNote.objects.create(project_id=rp.pk, title="Note3")
+    note4 = ProjectNote.objects.create(project_id=rp.pk, title="Note4")
 
     query = """\
     query {
