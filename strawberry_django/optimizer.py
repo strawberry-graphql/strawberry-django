@@ -389,9 +389,8 @@ class OptimizerStore:
         default_factory=dict
     )
     # Parent-level postfetch branches: accessor -> { subclass model -> set(paths) }
-    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = (
+    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = \
         dataclasses.field(default_factory=dict)
-    )
 
     def __bool__(self):
         return any(
