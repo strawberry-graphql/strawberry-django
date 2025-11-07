@@ -1,4 +1,3 @@
-from typing import Any, cast
 
 import pytest
 from django.db import DEFAULT_DB_ALIAS, connections
@@ -484,10 +483,10 @@ def test_optimizer_hints_polymorphic():
 def test_related_object_on_base():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     note1 = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="Note1"
+        project_id=ap.pk, title="Note1"
     )
     note2 = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="Note2"
+        project_id=ap.pk, title="Note2"
     )
 
     query = """\
@@ -522,17 +521,17 @@ def test_related_object_on_base():
 def test_more_related_object_on_base():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     note1 = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="Note1"
+        project_id=ap.pk, title="Note1"
     )
     note2 = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="Note2"
+        project_id=ap.pk, title="Note2"
     )
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
     note3 = ProjectNote.objects.create(
-        project=cast("Any", rp).project_ptr, title="Note3"
+        project_id=rp.pk, title="Note3"
     )
     note4 = ProjectNote.objects.create(
-        project=cast("Any", rp).project_ptr, title="Note4"
+        project_id=rp.pk, title="Note4"
     )
 
     query = """\
@@ -823,17 +822,17 @@ def test_more_related_object_on_subtype2():
 def test_related_object_on_base_called_in_fragment():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     note1 = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="Note1"
+        project_id=ap.pk, title="Note1"
     )
     note2 = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="Note2"
+        project_id=ap.pk, title="Note2"
     )
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
     note3 = ProjectNote.objects.create(
-        project=cast("Any", rp).project_ptr, title="Note3"
+        project_id=rp.pk, title="Note3"
     )
     note4 = ProjectNote.objects.create(
-        project=cast("Any", rp).project_ptr, title="Note4"
+        project_id=rp.pk, title="Note4"
     )
 
     query = """\
@@ -892,10 +891,10 @@ def test_reverse_relation_polymorphic_resolution_on_note_project():
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
 
     note_a = ProjectNote.objects.create(
-        project=cast("Any", ap).project_ptr, title="NoteA"
+        project_id=ap.pk, title="NoteA"
     )
     note_r = ProjectNote.objects.create(
-        project=cast("Any", rp).project_ptr, title="NoteR"
+        project_id=rp.pk, title="NoteR"
     )
 
     query = """\
@@ -966,11 +965,11 @@ def test_reverse_relation_polymorphic_no_extra_columns_and_no_n_plus_one():
     # Plusieurs notes pour chaque projet
     ProjectNote.objects.bulk_create(
         [
-            ProjectNote(project=cast("Any", ap).project_ptr, title=f"A{i}")
+            ProjectNote(project_id=ap.pk, title=f"A{i}")
             for i in range(3)
         ]
         + [
-            ProjectNote(project=cast("Any", rp).project_ptr, title=f"R{i}")
+            ProjectNote(project_id=rp.pk, title=f"R{i}")
             for i in range(3)
         ]
     )
@@ -1099,8 +1098,8 @@ def test_inline_fragment_reverse_relation_and_fk_chain_no_n_plus_one():
     ArtProjectNote.objects.create(art_project=ap2, title="A2-Note1")
 
     # Lier un main_project polymorphe (FK vers Project) à la company
-    company.main_project = cast("Any", ap1).project_ptr
-    company.save(update_fields=["main_project"])
+    Company.objects.filter(pk=company.pk).update(main_project_id=ap1.pk)
+    company.refresh_from_db(fields=["main_project"])
 
     company2 = Company.objects.create(name="Company2")
     ArtProject.objects.create(company=company2, topic="Art3", artist="Artist3")
