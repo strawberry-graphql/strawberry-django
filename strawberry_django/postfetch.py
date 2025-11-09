@@ -4,7 +4,7 @@ import contextlib
 from typing import TYPE_CHECKING, Any, cast
 
 from django.core.exceptions import FieldError
-from django.db import models
+from django.db import DEFAULT_DB_ALIAS, models
 from django.db.utils import DatabaseError
 
 if TYPE_CHECKING:
@@ -51,6 +51,7 @@ def _manual_batch_reverse_fk_assign(
     root: str,
     instances_for_query: list[Any],
     id_to_original: dict[Any, Any],
+    db_alias: str | None = None,
 ) -> tuple[list[Any], type[models.Model]]:
     try:
         related = next(
@@ -68,9 +69,22 @@ def _manual_batch_reverse_fk_assign(
     if not ids:
         return ([], root_model)
 
+    # Determine DB alias
+    alias = db_alias
+    if not alias:
+        with contextlib.suppress(Exception):
+            alias = getattr(instances_for_query[0], "_state", None).db  # type: ignore[attr-defined]
+    if not alias:
+        alias = DEFAULT_DB_ALIAS
+
     # Fetch all root related objects and group by foreign key
-    root_batch = root_model._default_manager.filter(**{f"{fk_attname}__in": ids})
-    grouped_root: dict[int, list] = {}
+    manager = root_model._default_manager
+    try:
+        manager = manager.using(alias)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    root_batch = manager.filter(**{f"{fk_attname}__in": ids})
+    grouped_root: dict[Any, list] = {}
     for item in root_batch:
         grouped_root.setdefault(getattr(item, fk_attname), []).append(item)
 
@@ -93,6 +107,7 @@ def _manual_nested_batch_single_hop(
     related_instances_all: list[Any],
     root_model: type[models.Model],
     rem: str,
+    db_alias: str | None = None,
 ) -> None:
     if not related_instances_all or not rem or "__" in rem:
         return
@@ -115,12 +130,23 @@ def _manual_nested_batch_single_hop(
     if not parent_ids:
         return
 
-    nested_batch = nested_model._default_manager.filter(**{
-        f"{nested_fk}__in": parent_ids
-    })
+    # Determine DB alias
+    alias = db_alias
+    if not alias:
+        with contextlib.suppress(Exception):
+            alias = getattr(related_instances_all[0], "_state", None).db  # type: ignore[attr-defined]
+    if not alias:
+        alias = DEFAULT_DB_ALIAS
+
+    manager = nested_model._default_manager
+    try:
+        manager = manager.using(alias)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    nested_batch = manager.filter(**{f"{nested_fk}__in": parent_ids})
 
     # Group nested by parent fk
-    nested_grouped: dict[int, list] = {}
+    nested_grouped: dict[Any, list] = {}
     for n in nested_batch:
         nested_grouped.setdefault(getattr(n, nested_fk), []).append(n)
 
@@ -242,49 +268,64 @@ def __postfetch_parent_for_parents(
             if not fk_attname:
                 continue
 
-            parent_ids = [getattr(p, "pk", None) for p in parents]
-            parent_ids = [pid for pid in parent_ids if pid is not None]
-            if not parent_ids:
-                continue
-
-            try:
-                children = list(
-                    child_model._default_manager.filter(**{
-                        f"{fk_attname}__in": parent_ids
-                    })
-                )
-            except (FieldError, DatabaseError):
-                children = []
-
-            grouped_children: dict[int, list] = {}
-            for ch in children:
-                try:
-                    key = getattr(ch, fk_attname)
-                except AttributeError:
-                    continue
-                grouped_children.setdefault(key, []).append(ch)
-
-            # Inject into each parent's prefetched cache
+            # Group parents by DB alias to ensure queries use the correct database
+            parents_by_alias: dict[str, list[Any]] = {}
             for p in parents:
-                pid = getattr(p, "pk", None)
-                if not isinstance(pid, int):
+                alias = DEFAULT_DB_ALIAS
+                with contextlib.suppress(Exception):
+                    alias = getattr(getattr(p, "_state", None), "db", None) or DEFAULT_DB_ALIAS
+                parents_by_alias.setdefault(alias, []).append(p)
+
+            all_children: list[Any] = []
+            grouped_children_by_alias: dict[str, dict[Any, list[Any]]] = {}
+
+            for alias, parents_for_alias in parents_by_alias.items():
+                parent_ids = [getattr(p, "pk", None) for p in parents_for_alias]
+                parent_ids = [pid for pid in parent_ids if pid is not None]
+                if not parent_ids:
                     continue
-                items = grouped_children.get(pid, [])
-                cache = getattr(p, "_prefetched_objects_cache", None)
-                if not isinstance(cache, dict):
-                    cache = {}
-                    p._prefetched_objects_cache = cache
-                cache[accessor] = items
+
+                manager = child_model._default_manager
+                with contextlib.suppress(Exception):
+                    manager = manager.using(alias)  # type: ignore[attr-defined]
+                try:
+                    children = list(
+                        manager.filter(**{f"{fk_attname}__in": parent_ids})
+                    )
+                except (FieldError, DatabaseError):
+                    children = []
+                if children:
+                    all_children.extend(children)
+
+                grouped_children: dict[Any, list[Any]] = {}
+                for ch in children:
+                    try:
+                        key = getattr(ch, fk_attname)
+                    except AttributeError:
+                        continue
+                    grouped_children.setdefault(key, []).append(ch)
+
+                grouped_children_by_alias[alias] = grouped_children
+
+                # Inject into each parent's prefetched cache for this alias
+                for p in parents_for_alias:
+                    pid = getattr(p, "pk", None)
+                    items = grouped_children.get(pid, [])
+                    cache = getattr(p, "_prefetched_objects_cache", None)
+                    if not isinstance(cache, dict):
+                        cache = {}
+                        p._prefetched_objects_cache = cache
+                    cache[accessor] = items
 
             # If nested remainders exist, prefetch them on the children collection
-            if children and remainders_all and prefetch_related_objects:
+            if all_children and remainders_all and prefetch_related_objects:
                 single_hop = [r for r in remainders_all if "__" not in r]
                 deeper = [r for r in remainders_all if "__" in r]
                 with contextlib.suppress(Exception):
                     if single_hop:
-                        prefetch_related_objects(children, *sorted(single_hop))
+                        prefetch_related_objects(all_children, *sorted(single_hop))
                     if deeper:
-                        prefetch_related_objects(children, *sorted(deeper))
+                        prefetch_related_objects(all_children, *sorted(deeper))
 
 
 def apply_postfetch(qs: QuerySet[Any]) -> None:
