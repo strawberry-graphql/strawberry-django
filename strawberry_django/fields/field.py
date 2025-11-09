@@ -520,13 +520,62 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
         assert self.connection_type is not None
         nodes = cast("Iterable[relay.Node]", next_(source, info, **kwargs))
 
+        # Helper to apply early SQL pagination for simple forward root connections
+        def _apply_early_pagination(qs: models.QuerySet):
+            try:
+                # Only for root connections (source is None), forward pagination with `first`,
+                # and no cursors
+                if source is not None:
+                    return qs
+                if first in (None, 0) or before is not None or after is not None or last is not None:
+                    return qs
+
+                # Cap by max_results when provided
+                page_limit = first
+                if isinstance(self.max_results, int) and page_limit is not None:
+                    page_limit = min(page_limit, self.max_results)
+
+                # Ensure deterministic ordering
+                if not qs.ordered:
+                    qs = qs.order_by("pk")
+
+                # Build ORDER BY expressions as Django does for window pagination
+                from django.db import DEFAULT_DB_ALIAS
+                compiler = qs.query.get_compiler(using=qs._db or DEFAULT_DB_ALIAS)
+                order_by_exprs = [expr for expr, _ in compiler.get_order_by()]
+
+                # Annotate row number and total count (global partition)
+                from django.db.models import Count, Window
+                from django.db.models.functions import RowNumber
+
+                qs = qs.annotate(
+                    _strawberry_row_number=Window(
+                        RowNumber(),
+                        partition_by=None,
+                        order_by=order_by_exprs,
+                    ),
+                    _strawberry_total_count=Window(
+                        Count(1),
+                        partition_by=None,
+                    ),
+                )
+
+                # Fetch one extra row so super().resolve_connection can compute hasNextPage
+                return qs.filter(_strawberry_row_number__lte=(page_limit + 1)) if page_limit is not None else qs
+            except Exception:
+                # Best-effort: on any failure, return original queryset
+                return qs
+
         # We have a single resolver for both sync and async, so we need to check if
         # nodes is awaitable or not and resolve it accordingly
         if inspect.isawaitable(nodes):
 
             async def async_resolver():
+                awaited = await nodes
+                if isinstance(awaited, models.QuerySet):
+                    awaited = _apply_early_pagination(awaited)
                 resolved = self.connection_type.resolve_connection(
-                    await nodes,
+                    awaited,
                     info=info,
                     before=before,
                     after=after,
@@ -541,6 +590,9 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                 return resolved
 
             return async_resolver()
+
+        if isinstance(nodes, models.QuerySet):
+            nodes = _apply_early_pagination(nodes)
 
         return self.connection_type.resolve_connection(
             nodes,
