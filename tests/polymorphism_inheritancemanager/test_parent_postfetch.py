@@ -6,11 +6,10 @@ from .models import ArtProject, ArtProjectNote, Company, ResearchProject
 from .schema import schema
 
 
-
 @pytest.mark.django_db(transaction=True)
 def test_parent_postfetch_deep_nested_reverse_paths_baseline():
-    """
-    Parent→enfants avec reverse imbriquée sur 2 sauts:
+    """Parent→enfants avec reverse imbriquée sur 2 sauts.
+
     ArtProject -> artNotes -> details
 
     On vérifie que les chemins imbriqués sont préchargés sans N+1.
@@ -51,8 +50,10 @@ def test_parent_postfetch_deep_nested_reverse_paths_baseline():
         result = schema.execute_sync(query)
 
     assert not result.errors
+    assert result.data is not None
     companies = result.data["companies"]
-    assert companies and isinstance(companies, list)
+    assert isinstance(companies, list)
+    assert companies
     art_projects = [p for p in companies[0]["projects"] if p["__typename"] == "ArtProjectType"]
     details_texts = {d["text"] for p in art_projects for n in p.get("artNotes", []) for d in n.get("details", [])}
     assert {"d11", "d12", "d21"}.issubset(details_texts)

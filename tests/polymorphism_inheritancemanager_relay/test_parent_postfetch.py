@@ -8,8 +8,8 @@ from .schema import schema
 
 @pytest.mark.django_db(transaction=True)
 def test_parent_postfetch_deep_nested_reverse_paths_relay():
-    """
-    Variante Relay (Connection) du scénario non‑Relay:
+    """Variante Relay (Connection) du scénario non-Relay.
+
     Company -> projects (Connection) -> ArtProjectType -> artNotes (Connection) -> details (Connection)
 
     On vérifie que les relations inverses imbriquées sont préchargées en batch
@@ -57,8 +57,10 @@ def test_parent_postfetch_deep_nested_reverse_paths_relay():
         result = schema.execute_sync(query)
 
     assert not result.errors
+    assert result.data is not None
     companies = result.data["companies"]["edges"]
-    assert companies and isinstance(companies, list)
+    assert isinstance(companies, list)
+    assert companies
 
     # Collect all details.text under ArtProjectType nodes
     details_texts = set()

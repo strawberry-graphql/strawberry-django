@@ -16,8 +16,7 @@ from .schema import schema
 
 @pytest.mark.django_db(transaction=True)
 def test_excessive_materialization_before_pagination_on_connection():
-    """
-    Public API test demonstrating excessive materialization before pagination.
+    """Public API test demonstrating excessive materialization before pagination.
 
     Context:
       - When querying a Connection field (Relay) and selecting nested reverse
@@ -38,11 +37,10 @@ def test_excessive_materialization_before_pagination_on_connection():
         `company_id IN (...)` with multiple values, i.e., batching across ALL
         companies, even though we requested only the first page (1 company).
     """
-
     # Seed data: N companies, each with one ArtProject -> note -> detail
-    N = 5
+    n = 5
     companies = []
-    for i in range(N):
+    for i in range(n):
         c = Company.objects.create(name=f"C{i}")
         ap = ArtProject.objects.create(company=c, topic=f"Topic{i}", artist=f"A{i}")
         note = ArtProjectNote.objects.create(art_project=ap, title=f"N{i}")
@@ -75,8 +73,10 @@ def test_excessive_materialization_before_pagination_on_connection():
         result = schema.execute_sync(query)
 
     assert not result.errors
+    assert result.data is not None
     edges = result.data["companies"]["edges"]
-    assert isinstance(edges, list) and len(edges) == 1, "Pagination (first: 1) should return exactly one edge"
+    assert isinstance(edges, list)
+    assert len(edges) == 1, "Pagination (first: 1) should return exactly one edge"
 
     # Gather all SQL for debugging on failure
     all_sql = [q["sql"] for q in ctx]
@@ -96,7 +96,6 @@ def test_excessive_materialization_before_pagination_on_connection():
         )
 
     if companies_sql:
-        parent_sql = "\n".join(companies_sql)
         assert any(_has_sql_level_pagination(s) for s in companies_sql), (
             "Parent Connection base queryset was materialized without pagination. "
             "Expected a LIMIT/ROW_NUMBER pagination on companies selection when requesting first: 1.\n\n"

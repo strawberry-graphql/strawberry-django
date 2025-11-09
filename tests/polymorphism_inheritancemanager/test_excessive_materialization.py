@@ -17,9 +17,9 @@ from .schema import schema
 @pytest.mark.django_db(transaction=True)
 def test_excessive_materialization_before_pagination_on_connection():
     # Seed data: N companies, each with one ArtProject -> note -> detail
-    N = 5
+    n = 5
     companies = []
-    for i in range(N):
+    for i in range(n):
         c = Company.objects.create(name=f"C{i}")
         ap = ArtProject.objects.create(company=c, topic=f"Topic{i}", artist=f"A{i}")
         note = ArtProjectNote.objects.create(art_project=ap, title=f"N{i}")
@@ -45,8 +45,10 @@ def test_excessive_materialization_before_pagination_on_connection():
         result = schema.execute_sync(query)
 
     assert not result.errors
+    assert result.data is not None
     companies = result.data["companiesPaginated"]
-    assert isinstance(companies, list) and len(companies) == 1, "Pagination (first: 1) should return exactly one element"
+    assert isinstance(companies, list)
+    assert len(companies) == 1, "Pagination (first: 1) should return exactly one element"
 
     # Gather all SQL for debugging on failure
     all_sql = [q["sql"] for q in ctx]
@@ -66,7 +68,6 @@ def test_excessive_materialization_before_pagination_on_connection():
         )
 
     if companies_sql:
-        parent_sql = "\n".join(companies_sql)
         assert any(_has_sql_level_pagination(s) for s in companies_sql), (
             "Parent Connection base queryset was materialized without pagination. "
             "Expected a LIMIT/ROW_NUMBER pagination on companies selection when requesting first: 1.\n\n"
