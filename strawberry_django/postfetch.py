@@ -72,17 +72,15 @@ def _manual_batch_reverse_fk_assign(
     # Determine DB alias
     alias = db_alias
     if not alias:
-        with contextlib.suppress(Exception):
-            alias = getattr(instances_for_query[0], "_state", None).db  # type: ignore[attr-defined]
+        state = getattr(instances_for_query[0], "_state", None)
+        alias = getattr(state, "db", None) or alias
     if not alias:
         alias = DEFAULT_DB_ALIAS
 
     # Fetch all root related objects and group by foreign key
     manager = root_model._default_manager
-    try:
-        manager = manager.using(alias)  # type: ignore[attr-defined]
-    except Exception:
-        pass
+    if hasattr(manager, "using"):
+        manager = manager.using(alias)
     root_batch = manager.filter(**{f"{fk_attname}__in": ids})
     grouped_root: dict[Any, list] = {}
     for item in root_batch:
@@ -133,16 +131,14 @@ def _manual_nested_batch_single_hop(
     # Determine DB alias
     alias = db_alias
     if not alias:
-        with contextlib.suppress(Exception):
-            alias = getattr(related_instances_all[0], "_state", None).db  # type: ignore[attr-defined]
+        state = getattr(related_instances_all[0], "_state", None)
+        alias = getattr(state, "db", None) or alias
     if not alias:
         alias = DEFAULT_DB_ALIAS
 
     manager = nested_model._default_manager
-    try:
-        manager = manager.using(alias)  # type: ignore[attr-defined]
-    except Exception:
-        pass
+    if hasattr(manager, "using"):
+        manager = manager.using(alias)
     nested_batch = manager.filter(**{f"{nested_fk}__in": parent_ids})
 
     # Group nested by parent fk
@@ -286,8 +282,8 @@ def __postfetch_parent_for_parents(
                     continue
 
                 manager = child_model._default_manager
-                with contextlib.suppress(Exception):
-                    manager = manager.using(alias)  # type: ignore[attr-defined]
+                if hasattr(manager, "using"):
+                    manager = manager.using(alias)
                 try:
                     children = list(
                         manager.filter(**{f"{fk_attname}__in": parent_ids})
