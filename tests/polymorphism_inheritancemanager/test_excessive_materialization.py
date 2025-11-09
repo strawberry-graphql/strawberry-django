@@ -48,7 +48,9 @@ def test_excessive_materialization_before_pagination_on_connection():
     assert result.data is not None
     companies = result.data["companiesPaginated"]
     assert isinstance(companies, list)
-    assert len(companies) == 1, "Pagination (first: 1) should return exactly one element"
+    assert len(companies) == 1, (
+        "Pagination (first: 1) should return exactly one element"
+    )
 
     # Gather all SQL for debugging on failure
     all_sql = [q["sql"] for q in ctx]
@@ -64,7 +66,8 @@ def test_excessive_materialization_before_pagination_on_connection():
             re.search(r"\bLIMIT\s+1\b", sql, flags=re.IGNORECASE) is not None
             or "_strawberry_row_number" in sql  # window pagination
             or "ROW_NUMBER()" in sql
-            or re.search(r"FETCH\s+FIRST\s+1\s+ROW", sql, flags=re.IGNORECASE) is not None
+            or re.search(r"FETCH\s+FIRST\s+1\s+ROW", sql, flags=re.IGNORECASE)
+            is not None
         )
 
     if companies_sql:
@@ -88,7 +91,11 @@ def test_excessive_materialization_before_pagination_on_connection():
     if projects_sql:
         joined_sql = "\n".join(projects_sql)
         # Look for IN (...) over company_id
-        m = re.search(r"company_id\s+IN\s*\(([^)]*)\)", joined_sql, flags=re.IGNORECASE | re.DOTALL)
+        m = re.search(
+            r"company_id\s+IN\s*\(([^)]*)\)",
+            joined_sql,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
         if m is not None:
             in_content = m.group(1)
             # If digits are present, ensure only one distinct id; otherwise ensure no comma

@@ -523,11 +523,17 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
         # Helper to apply early SQL pagination for simple forward root connections
         def _apply_early_pagination(qs: models.QuerySet):
             import contextlib
+
             # Only for root connections (source is None), forward pagination with `first`,
             # and no cursors
             if source is not None:
                 return qs
-            if first in {None, 0} or before is not None or after is not None or last is not None:
+            if (
+                first in {None, 0}
+                or before is not None
+                or after is not None
+                or last is not None
+            ):
                 return qs
 
             # Cap by max_results when provided
@@ -541,6 +547,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
             # Build ORDER BY expressions as Django does for window pagination
             from django.db import DEFAULT_DB_ALIAS
+
             # Use the public `db` property instead of the private `_db` attribute
             with contextlib.suppress(Exception):
                 compiler = qs.query.get_compiler(using=(qs.db or DEFAULT_DB_ALIAS))
@@ -563,7 +570,11 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                 )
 
                 # Fetch one extra row so super().resolve_connection can compute hasNextPage
-                return qs.filter(_strawberry_row_number__lte=(page_limit + 1)) if page_limit is not None else qs
+                return (
+                    qs.filter(_strawberry_row_number__lte=(page_limit + 1))
+                    if page_limit is not None
+                    else qs
+                )
 
             # Best-effort: on any failure above, return original queryset
             return qs

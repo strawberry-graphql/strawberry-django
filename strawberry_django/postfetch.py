@@ -269,7 +269,10 @@ def __postfetch_parent_for_parents(
             for p in parents:
                 alias = DEFAULT_DB_ALIAS
                 with contextlib.suppress(Exception):
-                    alias = getattr(getattr(p, "_state", None), "db", None) or DEFAULT_DB_ALIAS
+                    alias = (
+                        getattr(getattr(p, "_state", None), "db", None)
+                        or DEFAULT_DB_ALIAS
+                    )
                 parents_by_alias.setdefault(alias, []).append(p)
 
             all_children: list[Any] = []
@@ -285,9 +288,7 @@ def __postfetch_parent_for_parents(
                 if hasattr(manager, "using"):
                     manager = manager.using(alias)
                 try:
-                    children = list(
-                        manager.filter(**{f"{fk_attname}__in": parent_ids})
-                    )
+                    children = list(manager.filter(**{f"{fk_attname}__in": parent_ids}))
                 except (FieldError, DatabaseError):
                     children = []
                 if children:

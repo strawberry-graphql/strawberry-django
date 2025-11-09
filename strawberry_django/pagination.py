@@ -225,9 +225,7 @@ def apply_window_pagination(
         order_by_reverse = [
             expr
             for expr, _ in queryset.reverse()
-            .query.get_compiler(
-                using=(queryset.db or DEFAULT_DB_ALIAS)
-            )
+            .query.get_compiler(using=(queryset.db or DEFAULT_DB_ALIAS))
             .get_order_by()
         ]
         queryset = queryset.annotate(
