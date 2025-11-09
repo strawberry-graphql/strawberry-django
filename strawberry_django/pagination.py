@@ -1,3 +1,4 @@
+import contextlib
 import sys
 import warnings
 from typing import Generic, TypeVar, cast
@@ -201,7 +202,7 @@ def apply_window_pagination(
     order_by = [
         expr
         for expr, _ in queryset.query.get_compiler(
-            using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
+            using=(queryset.db or DEFAULT_DB_ALIAS)
         ).get_order_by()
     ]
 
@@ -225,7 +226,7 @@ def apply_window_pagination(
             expr
             for expr, _ in queryset.reverse()
             .query.get_compiler(
-                using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
+                using=(queryset.db or DEFAULT_DB_ALIAS)
             )
             .get_order_by()
         ]
@@ -282,41 +283,35 @@ def get_total_count(queryset: QuerySet) -> int:
     from strawberry_django.optimizer import is_optimized_by_prefetching
 
     # 1) Prefer the annotation, using cache if available, otherwise evaluate once
-    try:
-        annotations = getattr(queryset.query, "annotations", {}) or {}
-        if "_strawberry_total_count" in annotations:
-            # If queryset is already evaluated, read from cache
-            results = getattr(queryset, "_result_cache", None)
-            if results:
-                try:
-                    return int(getattr(results[0], "_strawberry_total_count"))
-                except Exception:
-                    pass
-            # If the annotation was produced by root/cursor pagination (plain Window)
-            # and not by our nested window pagination (_PaginationWindow), we can
-            # safely read it with a single `values_list(...).first()` without forcing
-            # evaluation of the whole queryset or causing per-parent extra queries.
-            expr = annotations.get("_strawberry_total_count")
-            if expr is not None and not isinstance(expr, _PaginationWindow):
-                try:
-                    val = queryset.values_list("_strawberry_total_count", flat=True).first()
-                    if val is not None:
-                        return int(val)
-                except Exception:
-                    pass
-            # Otherwise, do not force evaluation here; fall through to other strategies
-            # so that nested/empty pages can execute an explicit count when needed.
-    except Exception:
-        # Best-effort: ignore and continue with other strategies
-        pass
+    annotations = getattr(getattr(queryset, "query", None), "annotations", {}) or {}
+    if "_strawberry_total_count" in annotations:
+        # If queryset is already evaluated, read from cache
+        results = getattr(queryset, "_result_cache", None)
+        if results:
+            try:
+                return int(results[0]._strawberry_total_count)
+            except (AttributeError, IndexError, TypeError, ValueError):
+                pass
+        # If the annotation was produced by root/cursor pagination (plain Window)
+        # and not by our nested window pagination (_PaginationWindow), we can
+        # safely read it with a single `values_list(...).first()` without forcing
+        # evaluation of the whole queryset or causing per-parent extra queries.
+        expr = annotations.get("_strawberry_total_count")
+        if expr is not None and not isinstance(expr, _PaginationWindow):
+            with contextlib.suppress(Exception):
+                val = queryset.values_list("_strawberry_total_count", flat=True).first()
+                if val is not None:
+                    return int(val)
+        # Otherwise, do not force evaluation here; fall through to other strategies
+        # so that nested/empty pages can execute an explicit count when needed.
 
     # 2) If optimized via prefetching, try reading from the result cache.
     if is_optimized_by_prefetching(queryset):
         results = getattr(queryset, "_result_cache", None)
         if results:
             try:
-                return int(getattr(results[0], "_strawberry_total_count"))
-            except Exception:
+                return int(results[0]._strawberry_total_count)
+            except (AttributeError, IndexError, TypeError, ValueError):
                 warnings.warn(
                     (
                         "Pagination annotations not found, falling back to QuerySet resolution. "
@@ -326,10 +321,8 @@ def get_total_count(queryset: QuerySet) -> int:
                     stacklevel=2,
                 )
         # Not evaluated or empty: remove window filter and count whole set
-        try:
+        with contextlib.suppress(Exception):
             queryset = remove_window_pagination(queryset)
-        except Exception:
-            pass
 
     # 3) Fallback: standard count
     return queryset.count()
