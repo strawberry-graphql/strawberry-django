@@ -117,6 +117,7 @@ class CompanyType:
 @strawberry.type
 class Query:
     companies: list[CompanyType] = strawberry_django.field()
+    companies_paginated: list[CompanyType] = strawberry_django.field(pagination=True)
     projects: list[ProjectType] = strawberry_django.field()
     projects_paginated: list[ProjectType] = strawberry_django.field(pagination=True)
     projects_offset_paginated: OffsetPaginated[ProjectType] = (
