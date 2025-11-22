@@ -1,16 +1,24 @@
-from strawberry.django.views import AsyncGraphQLView, GraphQLView
+"""URL configuration for example project."""
 
 from django.conf.urls.static import static
-from django.urls import path
-from django.urls.conf import include
-from django.views.generic.base import RedirectView
+from django.contrib import admin
+from django.urls import include, path
 
+from . import settings
 from .schema import schema
+from .views import GraphQLView
 
 urlpatterns = [
-    path("", RedirectView.as_view(url="graphql")),
-    path("graphql/sync", GraphQLView.as_view(schema=schema)),
-    path("graphql", AsyncGraphQLView.as_view(schema=schema)),
-    path("__debug__/", include("debug_toolbar.urls")),
-    *static("/media"),
+    path("admin/", admin.site.urls),
+    path(
+        "graphql/",
+        GraphQLView.as_view(
+            graphiql=settings.DEBUG,
+            schema=schema,
+        ),
+    ),
+    *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]
+
+if settings.DEBUG:
+    urlpatterns.append(path("__debug__/", include("debug_toolbar.urls")))

@@ -1,15 +1,19 @@
 [tool.poetry]
-name = "testapp"
+name = "strawberry-django-example"
 version = "0.1.0"
-description = ""
-authors = ["Lauri Hintsala <lauri.hintsala@verkkopaja.fi>"]
+description = "Strawberry GraphQL Django Example Application"
+authors = ["Strawberry GraphQL <hello@strawberry.rocks>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-strawberry-graphql-django = {path = "../.."}
+python = "^3.12"
+django = "^5.0"
+django-choices-field = "^2.2.2"
+pillow = "^10.0.0"
+strawberry-graphql-django = {path = "../..", develop = true}
 
-[tool.poetry.dev-dependencies]
-django-debug-toolbar = ">=3.4"
+[tool.poetry.group.dev.dependencies]
+django-debug-toolbar = "^4.1.0"
+django-extensions = "^3.2.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
