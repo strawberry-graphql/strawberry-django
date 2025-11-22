@@ -54,9 +54,10 @@ This example showcases:
 mutation {
   login(username: "testuser", password: "test123") {
     id
-    username
     name
-    email
+    firstName
+    lastName
+    emails
   }
 }
 ```
@@ -133,7 +134,6 @@ query {
       total
     }
     total
-    status
   }
 }
 ```
@@ -147,7 +147,7 @@ mutation {
   cartCheckout {
     id
     user {
-      username
+      name
     }
     items {
       product {

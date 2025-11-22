@@ -39,7 +39,7 @@ class Command(BaseCommand):
             sys.stdout.write(f"* Created test user: {user.username}\n")
 
         # Create brands
-        brands_data = ["Apple", "Samsung", "Google", "Microsoft", "Sony"]
+        brands_data = ["Apple", "Samsung", "Google", "Microsoft", "Sony", "Adobe"]
         brands = {}
         for brand_name in brands_data:
             brand, created = Brand.objects.get_or_create(name=brand_name)

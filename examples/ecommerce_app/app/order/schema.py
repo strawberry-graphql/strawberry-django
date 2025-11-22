@@ -77,7 +77,7 @@ class Mutation:
         if cart is None:
             cart = Cart.objects.create()
             transaction.on_commit(
-                lambda: info.context.request.session.update({"cart_pk": cart.pk})
+                lambda pk=cart.pk: info.context.request.session.update({"cart_pk": pk})
             )
 
         product_obj = product.id.resolve_node_sync(info, ensure_type=Product)
