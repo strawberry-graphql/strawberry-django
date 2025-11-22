@@ -19,7 +19,7 @@ class Command(BaseCommand):
             admin = User.objects.create_superuser(
                 username="admin",
                 email="admin@example.com",
-                password="admin",
+                password="admin",  # nosec B106  # gitleaks:allow
                 first_name="Admin",
                 last_name="User",
             )
@@ -30,7 +30,7 @@ class Command(BaseCommand):
             user = User.objects.create_user(
                 username="testuser",
                 email="test@example.com",
-                password="test123",
+                password="test123",  # nosec B106  # gitleaks:allow
                 first_name="Test",
                 last_name="User",
                 birth_date=datetime.now(tz=timezone.utc).date()
@@ -122,7 +122,7 @@ class Command(BaseCommand):
         sys.stdout.write(self.style.SUCCESS("\n✓ Database populated successfully!\n"))
         sys.stdout.write("\nYou can now login with:\n")
         sys.stdout.write("  Username: admin\n")
-        sys.stdout.write("  Password: admin\n\n")
+        sys.stdout.write("  Password: admin\n\n")  # gitleaks:allow
         sys.stdout.write("Or use test user:\n")
         sys.stdout.write("  Username: testuser\n")
-        sys.stdout.write("  Password: test123\n")
+        sys.stdout.write("  Password: test123\n")  # gitleaks:allow

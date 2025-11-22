@@ -21,6 +21,23 @@ from .models import Cart, CartItem, Order
 from .types import CartItemType, CartType, OrderType
 
 
+def get_current_cart(info: Info) -> Cart | None:
+    """Get the current cart from session, handling stale/invalid cart_pk."""
+    cart_pk = info.context.request.session.get("cart_pk")
+    if cart_pk is None:
+        return None
+
+    # Use first() instead of get() to handle stale/deleted carts gracefully
+    return (
+        optimize(Cart.objects.all(), info)
+        .filter(
+            pk=cart_pk,
+            status=Cart.Status.PENDING,
+        )
+        .first()
+    )
+
+
 @strawberry.type
 class Query:
     orders_conn: strawberry_django.relay.DjangoListConnection[OrderType] = (
@@ -37,15 +54,8 @@ class Query:
 
     @strawberry_django.field
     def my_cart(self, info: Info) -> CartType | None:
-        cart_pk = info.context.request.session.get("cart_pk", None)
-        if cart_pk is None:
-            return None
-
-        cart = optimize(Cart.objects.all(), info).get(pk=cart_pk)
-        if cart.status == Cart.Status.FINISHED:
-            return None
-
-        return cast("CartType", cart)
+        cart = get_current_cart(info)
+        return cast("CartType | None", cart)
 
 
 @strawberry.type
@@ -63,12 +73,7 @@ class Mutation:
                 "quantity": _("Quantity needs to be equal or greater than 1")
             })
 
-        cart_pk = info.context.request.session.get("cart_pk", None)
-        if cart_pk is not None:
-            cart = Cart.objects.filter(pk=cart_pk, status=Cart.Status.PENDING).first()
-        else:
-            cart = None
-
+        cart = get_current_cart(info)
         if cart is None:
             cart = Cart.objects.create()
             transaction.on_commit(
@@ -103,12 +108,7 @@ class Mutation:
             })
 
         cart_item = item.resolve_node_sync(info, ensure_type=CartItem)
-
-        cart_pk = info.context.request.session.get("cart_pk", None)
-        if cart_pk is not None:
-            cart = Cart.objects.filter(pk=cart_pk, status=Cart.Status.PENDING).first()
-        else:
-            cart = None
+        cart = get_current_cart(info)
 
         if cart is None or cart_item.cart != cart:
             raise PermissionDenied(_("You are not authorized to change this cart item"))
@@ -126,12 +126,7 @@ class Mutation:
         item: relay.GlobalID,
     ) -> CartItemType:
         cart_item = item.resolve_node_sync(info, ensure_type=CartItem)
-
-        cart_pk = info.context.request.session.get("cart_pk", None)
-        if cart_pk is not None:
-            cart = Cart.objects.filter(pk=cart_pk, status=Cart.Status.PENDING).first()
-        else:
-            cart = None
+        cart = get_current_cart(info)
 
         if cart is None or cart_item.cart != cart:
             raise PermissionDenied(_("You are not authorized to change this cart item"))
@@ -147,12 +142,7 @@ class Mutation:
     @transaction.atomic
     def cart_checkout(self, info: Info) -> OrderType:
         user = info.context.get_user(required=True)
-
-        cart_pk = info.context.request.session.get("cart_pk", None)
-        if cart_pk is not None:
-            cart = Cart.objects.filter(pk=cart_pk, status=Cart.Status.PENDING).first()
-        else:
-            cart = None
+        cart = get_current_cart(info)
 
         if cart is None:
             raise ValidationError(_("You don't have a cart to checkout"))

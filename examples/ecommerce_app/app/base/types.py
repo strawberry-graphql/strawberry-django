@@ -20,7 +20,7 @@ Info = info.Info["Context", None]
 
 @dataclasses.dataclass
 class Context(StrawberryDjangoContext):
-    dataloaders: DataLoaders  # type: ignore
+    dataloaders: DataLoaders
 
     @overload
     def get_user(self, *, required: Literal[True]) -> User: ...
@@ -28,8 +28,8 @@ class Context(StrawberryDjangoContext):
     @overload
     def get_user(self, *, required: None = ...) -> User | None: ...
 
-    def get_user(self, *, required: Literal[True] | None = None) -> User | None:  # type: ignore
-        user = self.request.user  # type: ignore
+    def get_user(self, *, required: Literal[True] | None = None) -> User | None:
+        user = self.request.user
 
         if not user or not user.is_authenticated or not user.is_active:
             if required:
@@ -45,5 +45,8 @@ class Context(StrawberryDjangoContext):
     @overload
     async def aget_user(self, *, required: None = ...) -> User | None: ...
 
-    async def aget_user(self, *, required: Literal[True] | None = None) -> User | None:  # type: ignore
-        return await sync_to_async(self.get_user)(required=required)  # type: ignore
+    async def aget_user(self, *, required: Literal[True] | None = None) -> User | None:
+        # Wrap the sync method properly to handle the overload signature
+        if required:
+            return await sync_to_async(lambda: self.get_user(required=True))()
+        return await sync_to_async(self.get_user)()

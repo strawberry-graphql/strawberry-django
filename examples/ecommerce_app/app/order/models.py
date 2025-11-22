@@ -44,7 +44,7 @@ class Order(models.Model):
 
     @model_property(prefetch_related=["items"])
     def total(self) -> decimal.Decimal:
-        return decimal.Decimal(sum(item.total for item in self.items.all()))
+        return sum((item.total for item in self.items.all()), start=decimal.Decimal(0))
 
 
 class OrderItem(models.Model):
@@ -53,7 +53,7 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = _("Item")
         verbose_name_plural = _("Items")
-        unique_together = [  # noqa: RUF012  # noqa: RUF012
+        unique_together = [  # noqa: RUF012
             ("order", "product"),
         ]
 
@@ -112,7 +112,7 @@ class Cart(models.Model):
 
     @model_property(prefetch_related=["items"])
     def total(self) -> decimal.Decimal:
-        return decimal.Decimal(sum(item.total for item in self.items.all()))
+        return sum((item.total for item in self.items.all()), start=decimal.Decimal(0))
 
     @transaction.atomic
     def checkout(self, user: User) -> Order:
@@ -136,7 +136,7 @@ class CartItem(models.Model):
     class Meta:
         verbose_name = _("Item")
         verbose_name_plural = _("Items")
-        unique_together = [  # noqa: RUF012  # noqa: RUF012
+        unique_together = [  # noqa: RUF012
             ("cart", "product"),
         ]
 
