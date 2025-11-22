@@ -449,20 +449,29 @@ class CreditCardType:
 ### CSRF Protection
 
 ```python
+# Django's built-in CSRF protection works with GraphQL views
+# For session-based authentication, ensure CSRF middleware is enabled
+
 # settings.py
-STRAWBERRY_DJANGO = {
-    'CSRF_ENABLED': True,  # Enable CSRF for mutations
-}
+MIDDLEWARE = [
+    'django.middleware.csrf.CsrfViewMiddleware',  # Ensure this is included
+    # ... other middleware
+]
 
-# In your GraphQL view
-from strawberry_django.views import GraphQLView as BaseGraphQLView
-from django.views.decorators.csrf import csrf_protect
+# For GraphQL mutations with session auth, include CSRF token in requests
+# The view will automatically check CSRF for POST requests
 
-class GraphQLView(BaseGraphQLView):
-    @csrf_protect
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
+# urls.py
+from strawberry_django.views import GraphQLView
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+
+urlpatterns = [
+    # Ensure CSRF cookie is set
+    path('graphql/', ensure_csrf_cookie(GraphQLView.as_view(schema=schema))),
+]
 ```
+
+**Note**: If using token-based authentication (JWT, API tokens), CSRF protection is typically not needed as tokens in headers aren't vulnerable to CSRF attacks.
 
 ## Error Handling
 
@@ -572,22 +581,12 @@ schema = strawberry.Schema(
 ```python
 # tests/test_queries.py
 import pytest
-from strawberry.test import BaseGraphQLTestClient
-from django.test import RequestFactory
-from myproject.schema import schema
+from strawberry_django.test.client import TestClient
 
 @pytest.fixture
 def graphql_client(db):
     """GraphQL test client"""
-    factory = RequestFactory()
-    request = factory.get('/graphql/')
-
-    class Client(BaseGraphQLTestClient):
-        def __init__(self):
-            super().__init__(schema)
-            self.request = request
-
-    return Client()
+    return TestClient("/graphql")
 
 def test_user_query(graphql_client, user):
     """Test user query"""
@@ -673,11 +672,11 @@ def test_unauthorized_access(graphql_client):
 
 ```python
 from django.test import TestCase
-from graphene.test import Client
+from strawberry_django.test.client import TestClient
 
 class GraphQLIntegrationTest(TestCase):
     def setUp(self):
-        self.client = Client(schema)
+        self.client = TestClient("/graphql")
         self.user = User.objects.create_user(
             email='test@example.com',
             username='testuser'
@@ -686,22 +685,22 @@ class GraphQLIntegrationTest(TestCase):
     def test_full_workflow(self):
         """Test complete user workflow"""
         # 1. Create user
-        create_result = self.client.execute(create_user_mutation)
-        user_id = create_result['data']['createUser']['id']
+        create_result = self.client.query(create_user_mutation)
+        user_id = create_result.data['createUser']['id']
 
         # 2. Query user
-        query_result = self.client.execute(
+        query_result = self.client.query(
             get_user_query,
             variables={'id': user_id}
         )
-        assert query_result['data']['user']['id'] == user_id
+        assert query_result.data['user']['id'] == user_id
 
         # 3. Update user
-        update_result = self.client.execute(
+        update_result = self.client.query(
             update_user_mutation,
             variables={'id': user_id, 'username': 'newname'}
         )
-        assert update_result['data']['updateUser']['username'] == 'newname'
+        assert update_result.data['updateUser']['username'] == 'newname'
 ```
 
 ### Performance Testing

@@ -343,6 +343,25 @@ type Product {
 
 6. **Test with the optimizer**: Ensure your optimization hints actually work by checking the generated SQL queries.
 
+7. **Use `len()` instead of `.count()` with prefetch_related**: When accessing prefetched relationships, use `len()` to avoid bypassing the prefetch cache:
+
+```python
+# ❌ Bad: .count() bypasses prefetch cache and hits database
+@model_property(prefetch_related=["books"])
+def book_count(self) -> int:
+    return self.books.count()  # Issues a COUNT(*) query!
+
+# ✅ Good: len() uses prefetch cache
+@model_property(prefetch_related=["books"])
+def book_count(self) -> int:
+    return len(self.books.all())  # Uses prefetched data
+
+# ✅ Best: Use database annotation when prefetch not needed
+@model_property(annotate={"_book_count": Count("books")})
+def book_count(self) -> int:
+    return self._book_count  # type: ignore
+```
+
 ## Troubleshooting
 
 ### Property triggers extra queries

@@ -32,10 +32,16 @@ Strawberry Django integrates with Django's validation system at multiple levels:
 import strawberry
 from strawberry_django import mutations
 
+@strawberry.input
+class UserInput:
+    email: str
+    username: str
+    age: int
+
 @strawberry.type
 class Mutation:
     create_user: User = mutations.create(
-        models.User,
+        UserInput,
         handle_django_errors=True  # Validation happens automatically
     )
 ```
@@ -79,10 +85,16 @@ import strawberry
 from strawberry_django import mutations
 from . import models
 
+@strawberry_django.input(models.User)
+class UserInput:
+    email: str
+    username: str
+    age: int
+
 @strawberry.type
 class Mutation:
     create_user: User = mutations.create(
-        models.User,
+        UserInput,
         handle_django_errors=True  # Automatically calls full_clean()
     )
 ```
@@ -414,15 +426,20 @@ class UserForm(forms.ModelForm):
 ```python
 # Using forms in mutations
 import strawberry
-from strawberry_django import mutations
+from django.core.exceptions import ValidationError
 from . import models, forms
 
 @strawberry.type
 class Mutation:
-    @mutations.create(models.User, handle_django_errors=True)
-    def create_user(self, info, data) -> User:
+    @strawberry.mutation
+    def create_user(self, email: str, username: str, password: str, password_confirm: str) -> User:
         # Validate using form
-        form = forms.UserForm(data)
+        form = forms.UserForm({
+            'email': email,
+            'username': username,
+            'password': password,
+            'password_confirm': password_confirm
+        })
         if not form.is_valid():
             # Convert form errors to ValidationError
             errors = {}
@@ -626,16 +643,16 @@ class Article(models.Model):
 
 ```python
 import strawberry
-from strawberry_django import mutations
 from asgiref.sync import sync_to_async
+from django.core.exceptions import ValidationError
 from . import models
 
 @strawberry.type
 class Mutation:
-    @mutations.create(models.Article, handle_django_errors=True)
-    async def create_article(self, info, data) -> Article:
+    @strawberry.mutation
+    async def create_article(self, title: str, content: str) -> Article:
         # Create instance
-        instance = models.Article(**data)
+        instance = models.Article(title=title, content=content)
 
         # Async validation
         await instance.aclean()
@@ -680,7 +697,7 @@ class Mutation:
 
 ## Validation Extensions
 
-Use the Django validation cache extension for performance.
+The Django validation cache extension can improve performance by caching GraphQL input validation.
 
 ### Setup Validation Cache Extension
 
@@ -692,7 +709,7 @@ schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
     extensions=[
-        DjangoValidationCache(),  # Cache validation results
+        DjangoValidationCache(),  # Cache GraphQL validation
     ]
 )
 ```
@@ -701,22 +718,24 @@ schema = strawberry.Schema(
 
 The validation cache extension:
 
-1. Caches `full_clean()` results during a request
-2. Prevents duplicate validation calls
-3. Improves performance for complex mutations
+1. Caches GraphQL input type validation during a request
+2. Prevents duplicate validation of the same input structures
+3. Improves performance when the same input types are validated multiple times
 4. Automatically cleared after each request
+
+**Note**: This extension caches GraphQL-level input validation, not Django model `full_clean()` results. Model validation still occurs for each save operation.
 
 ```python
 @strawberry.type
 class Mutation:
     create_user: User = mutations.create(
-        models.User,
-        handle_django_errors=True  # Uses cached validation
+        UserInput,
+        handle_django_errors=True
     )
 
     update_user: User = mutations.update(
-        models.User,
-        handle_django_errors=True  # Uses cached validation
+        UserInputPartial,
+        handle_django_errors=True
     )
 ```
 
@@ -729,14 +748,14 @@ class Mutation:
 @strawberry.type
 class Mutation:
     create_user: User = mutations.create(
-        models.User,
+        UserInput,
         handle_django_errors=True
     )
 
 # Avoid
 @strawberry.type
 class Mutation:
-    create_user: User = mutations.create(models.User)
+    create_user: User = mutations.create(UserInput)
 ```
 
 ### 2. Put Business Logic in Model.clean()
@@ -966,7 +985,7 @@ user.save()
 
 # Or use mutations (calls full_clean automatically)
 create_user: User = mutations.create(
-    models.User,
+    UserInput,
     handle_django_errors=True  # Calls full_clean()
 )
 ```
@@ -977,11 +996,11 @@ create_user: User = mutations.create(
 
 ```python
 # Problem: Missing handle_django_errors
-create_user: User = mutations.create(models.User)
+create_user: User = mutations.create(UserInput)
 
 # Solution: Enable error handling
 create_user: User = mutations.create(
-    models.User,
+    UserInput,
     handle_django_errors=True
 )
 ```

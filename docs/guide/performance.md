@@ -101,9 +101,9 @@ schema = strawberry.Schema(
 
 The optimizer automatically:
 
-- Uses `select_related()` for foreign keys and one-to-one
+- Uses `select_related()` for foreign keys and one-to-one relationships
 - Uses `prefetch_related()` for many-to-many and reverse foreign keys
-- Adds `only()` to fetch only requested fields
+- Adds `only()` to fetch only requested fields (disabled for mutations)
 - Handles nested relationships
 
 ## Query Optimizer

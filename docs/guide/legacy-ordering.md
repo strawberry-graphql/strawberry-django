@@ -3,20 +3,22 @@ title: Ordering
 ---
 
 > [!WARNING]
-> The legacy `@strawberry_django.order` implementation is only provided for backwards compatibility.
-> You should prefer [Ordering](ordering) instead.
+> The legacy ordering behavior described in this document is provided for backwards compatibility.
+> You should prefer the new [Ordering](ordering) system instead.
+>
+> Note: The `@strawberry_django.order` decorator is deprecated. Use `@strawberry_django.order_type` instead.
 
 # Order (Legacy)
 
-`@strawberry_django.order` allows sorting by multiple fields only by specifying the object keys in the order input
+The legacy ordering system created with `@strawberry_django.order_type` allows sorting by multiple fields only by specifying the object keys in the order input
 in the desired order. This is not always feasible and contradicts the way objects are supposed to be used.
 
 ```python title="types.py"
-@strawberry_django.order(models.Color)
+@strawberry_django.order_type(models.Color)
 class ColorOrder:
     name: auto
 
-@strawberry_django.order(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
     color: ColorOrder | None
@@ -54,7 +56,7 @@ input FruitOrder {
 You can define custom order method by defining your own resolver.
 
 ```python title="types.py"
-@strawberry_django.order(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
 
@@ -116,12 +118,12 @@ input FruitOrder {
   - In code bellow custom order `name` ends up ordering `Fruit` instead of `Color` without applying `prefix`
 
 ```python title="Why prefix?"
-@strawberry_django.order(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
     color: ColorOrder | None
 
-@strawberry_django.order(models.Color)
+@strawberry_django.order_type(models.Color)
 class ColorOrder:
     @strawberry_django.order_field
     def name(self, value: bool, prefix: str):
@@ -176,7 +178,7 @@ Works similar to field order method, but:
 - should probaly use `sequence`
 
 ```python title="types.py"
-@strawberry_django.order(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
 

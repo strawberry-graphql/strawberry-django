@@ -275,27 +275,32 @@ from strawberry_django import mutations
 from .types import Fruit
 from . import models
 
-@strawberry.input
-class CreateFruitInput:
-    name: str
-    category: str
-    color_id: strawberry.ID
+@strawberry_django.input(models.Fruit)
+class FruitInput:
+    name: auto
+    category: auto
+    color_id: auto
+
+@strawberry_django.partial(models.Fruit)
+class FruitInputPartial(strawberry.relay.NodeInput):
+    name: auto
+    category: auto
+    color_id: auto
 
 @strawberry.type
 class Mutation:
     # Automatic CRUD mutations with Django error handling
     create_fruit: Fruit = mutations.create(
-        models.Fruit,
+        FruitInput,
         handle_django_errors=True
     )
 
     update_fruit: Fruit = mutations.update(
-        models.Fruit,
+        FruitInputPartial,
         handle_django_errors=True
     )
 
     delete_fruit: Fruit = mutations.delete(
-        models.Fruit,
         handle_django_errors=True
     )
 
@@ -463,7 +468,7 @@ Handle validation and database errors gracefully:
 @strawberry.type
 class Mutation:
     create_fruit: Fruit = mutations.create(
-        models.Fruit,
+        FruitInput,
         handle_django_errors=True  # Automatically returns structured errors
     )
 ```
@@ -546,12 +551,12 @@ class Query:
 class Mutation:
     # CRUD operations with automatic error handling
     create_fruit: Fruit = mutations.create(
-        models.Fruit,
+        FruitInput,
         handle_django_errors=True
     )
 
     update_fruit: Fruit = mutations.update(
-        models.Fruit,
+        FruitInputPartial,
         handle_django_errors=True
     )
 

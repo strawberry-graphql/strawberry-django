@@ -175,7 +175,7 @@ class Fruit:
     price: auto
 
 
-@strawberry_django.order(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
     price: auto
