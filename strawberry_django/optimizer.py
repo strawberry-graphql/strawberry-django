@@ -1324,11 +1324,24 @@ def _get_model_hints_from_connection(
             e_definition = get_object_definition(e_definition, strict=True)
         assert isinstance(e_definition, StrawberryObjectDefinition)
 
+        # Get the GraphQL definition first, then look it up in the schema
+        # to ensure we get the properly specialized/registered type
         e_gql_definition = _get_gql_definition(
             schema,
             e_definition,
         )
         assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
+
+        # For generic Edge types, we need to get the actual specialized type from the GraphQL schema
+        # Otherwise fragments defined on the concrete Edge type (e.g. UserTypeEdge) won't match
+        edge_type_name = f"{n_definition.name}Edge"
+        if edge_type_name in schema.schema_converter.type_map:
+            specialized_edge = schema.schema_converter.type_map[edge_type_name]
+            if hasattr(specialized_edge, "implementation"):
+                specialized_edge = specialized_edge.implementation
+            if isinstance(specialized_edge, (GraphQLObjectType, GraphQLInterfaceType)):
+                e_gql_definition = specialized_edge
+
         e_info = _generate_selection_resolve_info(
             info,
             edges,
