@@ -100,7 +100,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Adobe Creative Cloud",
-                "brand": "Apple",
+                "brand": "Adobe",
                 "kind": "virtual",
                 "description": "Complete creative software suite",
                 "price": 54.99,

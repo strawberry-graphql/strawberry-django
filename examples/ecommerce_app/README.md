@@ -220,13 +220,10 @@ Each Django app has its own GraphQL schema that gets merged into the root schema
 
 ```python
 # app/schema.py
-@strawberry.type
-class Query(
-    UserQuery,
-    ProductQuery,
-    OrderQuery,
-):
-    pass
+from strawberry.tools import merge_types
+
+Query = merge_types("Query", (UserQuery, ProductQuery, OrderQuery))
+Mutation = merge_types("Mutation", (UserMutation, ProductMutation, OrderMutation))
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 ```
@@ -254,6 +251,7 @@ Usage in resolvers:
 @strawberry_django.field
 def my_field(self, info: Info) -> SomeType:
     user = info.context.get_user(required=True)  # Type-safe!
+    # Note: This is an illustrative example - dataloaders are not yet implemented in this demo
     brand = await info.context.dataloaders.brand_loader.load(brand_id)
 ```
 
@@ -355,7 +353,7 @@ def cart_add_item(
 Implement the Node interface for global object identification:
 
 ```python
-@strawberry_django.type(Product, is_interface=False)
+@strawberry_django.type(Product)
 class ProductType(relay.Node):
     # Fields are automatically exposed
     pass

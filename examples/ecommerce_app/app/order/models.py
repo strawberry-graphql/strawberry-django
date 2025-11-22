@@ -105,7 +105,7 @@ class Cart(models.Model):
     items: RelatedManager[CartItem]
 
     status = TextChoicesField(
-        verbose_name=_("Category"),
+        verbose_name=_("Status"),
         choices_enum=Status,
         default=Status.PENDING,
     )

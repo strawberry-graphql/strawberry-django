@@ -46,7 +46,7 @@ class Product(models.Model):
         max_length=255,
     )
     kind = TextChoicesField(
-        verbose_name=_("Category"),
+        verbose_name=_("Kind"),
         choices_enum=Kind,
         default=Kind.PHYSICAL,
     )
