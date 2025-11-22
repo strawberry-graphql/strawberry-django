@@ -38,7 +38,7 @@ See the [Views guide](./views.md) for more information on ASGI setup.
 
 ## Basic DataLoader Usage
 
-### Creating a Simple DataLoader
+### Creating a Basic DataLoader
 
 ```python title="dataloaders.py"
 from typing import List

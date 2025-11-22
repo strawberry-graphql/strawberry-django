@@ -815,7 +815,7 @@ class Order(models.Model):
     quantity = models.IntegerField(validators=[MinValueValidator(1)])
 ```
 
-### 5. Structure Validation Errors Clearly
+### 5. Structure Validation Errors Properly
 
 ```python
 # Good - structured errors

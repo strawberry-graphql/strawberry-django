@@ -103,7 +103,7 @@ The optimizer automatically:
 
 - Uses `select_related()` for foreign keys and one-to-one relationships
 - Uses `prefetch_related()` for many-to-many and reverse foreign keys
-- Adds `only()` to fetch only requested fields (disabled for mutations)
+- Adds `only()` to fetch only requested fields (turned off for mutations)
 - Handles nested relationships
 
 ## Query Optimizer
@@ -948,7 +948,7 @@ def authors_with_books(self) -> List[AuthorType]:
 
 ### Too Many Database Queries
 
-**Problem**: Query count is very high for simple operations.
+**Problem**: Query count is very high for basic operations.
 
 **Solution**: Enable query logging and identify N+1 queries:
 

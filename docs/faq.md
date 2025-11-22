@@ -430,7 +430,7 @@ See [Relay guide](./guide/relay.md).
 
 **Offset pagination** (default):
 
-- Simple to implement
+- Straightforward to implement
 - Allows jumping to any page
 - Works well for small to medium datasets
 

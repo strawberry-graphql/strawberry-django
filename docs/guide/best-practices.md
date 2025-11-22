@@ -471,7 +471,7 @@ urlpatterns = [
 ]
 ```
 
-**Note**: If using token-based authentication (JWT, API tokens), CSRF protection is typically not needed as tokens in headers aren't vulnerable to CSRF attacks.
+**Note**: If using token-based authentication (JWT, API tokens), CSRF protection is typically not needed as tokens in headers aren't vulnerable to CSRF exploits.
 
 ## Error Handling
 

@@ -16,7 +16,7 @@ Strawberry Django provides specialized input types for handling relationships:
 - `ManyToManyInput`: For many-to-many relationships
 - `ListInput[T]`: Generic list input with `add`, `remove`, and `set` operations
 
-## Simple Foreign Key Relationships
+## Basic Foreign Key Relationships
 
 ### Creating Objects with Foreign Keys
 

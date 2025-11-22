@@ -17,7 +17,7 @@ Both decorators accept the same optimization parameters as `strawberry_django.fi
 
 ## Basic Usage
 
-### Simple Model Property
+### Basic Model Property
 
 ```python title="models.py"
 from decimal import Decimal
@@ -335,7 +335,7 @@ type Product {
 
 2. **Use cached_model_property for expensive operations**: If the calculation is expensive and doesn't depend on mutable data, use caching.
 
-3. **Keep properties simple**: Complex business logic should be in separate service classes, not in model properties.
+3. **Keep properties focused**: Complex business logic should be in separate service classes, not in model properties.
 
 4. **Type annotations are required**: Always provide return type annotations for model properties.
 

@@ -232,7 +232,7 @@ See [GitHub Issue #793](https://github.com/strawberry-graphql/strawberry-django/
 
 ### Validation Errors Not Showing Field Information
 
-**Problem**: Validation errors don't indicate which field failed.
+**Problem**: Validation errors don't indicate which field had an error.
 
 **Solution**: Use Django's dict-style ValidationError:
 
@@ -451,7 +451,7 @@ ASGI_APPLICATION = 'project.asgi.application'
 
 ## Testing
 
-### Async Test Failures
+### Async Test Errors
 
 **Problem**: `RuntimeError: no running event loop` in async tests.
 

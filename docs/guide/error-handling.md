@@ -38,7 +38,7 @@ When `handle_django_errors=True`, the following Django exceptions are automatica
 
 1. **`ValidationError`**: Field validation errors
 2. **`PermissionDenied`**: Permission-related errors
-3. **`ObjectDoesNotExist`**: Object lookup failures
+3. **`ObjectDoesNotExist`**: Object lookup errors
 
 ### Generated Schema
 
@@ -178,7 +178,7 @@ STRAWBERRY_DJANGO = {
 }
 ```
 
-With this setting, all mutations will handle Django errors by default unless explicitly disabled:
+With this setting, all mutations will handle Django errors by default unless explicitly turned off:
 
 ```python
 @strawberry_django.mutation(handle_django_errors=False)
