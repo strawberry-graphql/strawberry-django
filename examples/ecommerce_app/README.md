@@ -1,28 +1,20 @@
 # E-commerce Example
 
-A complete e-commerce GraphQL API built with Strawberry Django, demonstrating modern best practices including authentication, shopping cart, order management, and query optimization.
+An example GraphQL API demonstrating Strawberry Django features and best practices through an e-commerce use case with users, products, shopping cart, and orders.
 
-## Features
+## What This Example Demonstrates
 
-### User Management
-- Custom user model with email addresses and profile information
-- Login/logout mutations
-- Current user query (`me`)
-- User filtering and ordering
+This example showcases:
 
-### Product Catalog
-- Products with brands and multiple images
-- Enum types for product categories (physical/virtual)
-- Advanced filtering by name, kind, and brand
-- Ordering support
-- Multiple query patterns (single node, paginated list, relay connections)
-
-### Shopping Cart & Orders
-- Session-based shopping cart (no login required)
-- Add, update, and remove items
-- Cart checkout flow (requires authentication)
-- Order history per user
-- Staff-only access to all orders
+- **Modular Django app structure** - Organized code across user, product, and order apps
+- **Multiple query patterns** - Single nodes, paginated lists, and Relay connections
+- **Filtering and ordering** - Type-safe filtering and ordering on queries
+- **Authentication & permissions** - Login/logout with permission checks using extensions
+- **Custom mutations** - Shopping cart operations and checkout flow
+- **Query optimization** - Using `@model_property` to work with the DjangoOptimizerExtension
+- **Custom context** - Type-safe context with user helpers and dataloaders
+- **Relay interface** - Node interface implementation for global IDs
+- **Session handling** - Session-based cart before authentication
 
 ## Setup
 
@@ -69,7 +61,7 @@ mutation {
 }
 ```
 
-### Query Products with Filtering
+### Query Products with Filtering and Ordering
 
 ```graphql
 query {
@@ -220,65 +212,88 @@ app/
 └── settings.py        # Django settings
 ```
 
-## Key Concepts
+## Key Patterns & Best Practices
 
-### Modular App Structure
+### 1. Modular Schema Organization
 
-The example is organized into Django apps (user, product, order) with each having:
-- `models.py` - Django ORM models
-- `types.py` - Strawberry GraphQL types with filters/ordering
-- `schema.py` - Queries and mutations
+Each Django app has its own GraphQL schema that gets merged into the root schema:
 
-All schemas are merged in the root `schema.py`.
+```python
+# app/schema.py
+@strawberry.type
+class Query(
+    UserQuery,
+    ProductQuery,
+    OrderQuery,
+):
+    pass
 
-### Custom Context
+schema = strawberry.Schema(query=Query, mutation=Mutation)
+```
 
-The example includes a custom context class with helper methods:
+### 2. Custom Context with Type Safety
+
+Define a custom context class for type-safe access to request data:
+
+```python
+# app/base/types.py
+@dataclasses.dataclass
+class Context(StrawberryDjangoContext):
+    dataloaders: DataLoaders
+
+    def get_user(self, *, required: Literal[True] | None = None) -> User | None:
+        # Implementation with proper typing
+        ...
+
+Info = info.Info["Context", None]
+```
+
+Usage in resolvers:
 
 ```python
 @strawberry_django.field
 def my_field(self, info: Info) -> SomeType:
-    # Get user or None if not authenticated
-    user = info.context.get_user()
-
-    # Get user or raise PermissionDenied
-    user = info.context.get_user(required=True)
-
-    # Access dataloaders
+    user = info.context.get_user(required=True)  # Type-safe!
     brand = await info.context.dataloaders.brand_loader.load(brand_id)
 ```
 
-### Permission Extensions
+### 3. Permission Extensions
 
-Using Strawberry Django's permission extensions:
+Use permission extensions instead of manual checks in resolvers:
 
 ```python
-# Only authenticated users can access
+# Only authenticated users
 @strawberry_django.connection(extensions=[IsAuthenticated()])
 def my_orders(self, info: Info) -> Iterable[Order]:
     ...
 
-# Only staff users can access
+# Only staff users
 orders_conn: DjangoListConnection[OrderType] = strawberry_django.connection(
     extensions=[IsStaff()]
 )
 ```
 
-### Query Optimization
+### 4. Query Optimization with @model_property
 
-The example uses `@model_property` for computed fields that work with the query optimizer:
+Use `@model_property` for computed fields to enable query optimization:
 
 ```python
-@model_property(only=["quantity", "price"])
-def total(self) -> decimal.Decimal:
-    return self.quantity * self.price
+from strawberry_django.descriptors import model_property
+
+class OrderItem(models.Model):
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=24, decimal_places=2)
+
+    @model_property(only=["quantity", "price"])
+    def total(self) -> decimal.Decimal:
+        return self.quantity * self.price
 ```
 
-This tells the optimizer to only fetch the specified fields, preventing unnecessary database queries.
+This tells the optimizer exactly which fields to fetch, preventing unnecessary database queries.
 
-### Filtering and Ordering
+### 5. Modern Filter and Order Types
 
-Using the modern Strawberry Django filter/order APIs:
+Use the current Strawberry Django APIs for filters and ordering:
 
 ```python
 @strawberry_django.filter_type(User)
@@ -292,6 +307,71 @@ class UserOrder:
     email: auto
 ```
 
+Apply them to fields:
+
+```python
+users: list[UserType] = strawberry_django.field(
+    filters=UserFilter,
+    order=UserOrder,
+    pagination=True,
+)
+```
+
+### 6. Multiple Query Patterns
+
+Provide different ways to query data based on use case:
+
+```python
+# Single node by ID
+product: ProductType = strawberry_django.node()
+
+# Paginated list with offset pagination
+products: list[ProductType] = strawberry_django.field(pagination=True)
+
+# Relay connection with cursor pagination
+products_conn: DjangoListConnection[ProductType] = strawberry_django.connection()
+```
+
+### 7. Mutation Error Handling
+
+Use `handle_django_errors=True` to automatically handle Django validation errors:
+
+```python
+@strawberry_django.mutation(handle_django_errors=True)
+@transaction.atomic
+def cart_add_item(
+    self,
+    info: Info,
+    product: strawberry_django.NodeInput,
+    quantity: int = 1,
+) -> CartItemType:
+    if quantity <= 0:
+        raise ValidationError({"quantity": _("Quantity must be at least 1")})
+    # ...
+```
+
+### 8. Using Relay Node Interface
+
+Implement the Node interface for global object identification:
+
+```python
+@strawberry_django.type(Product, is_interface=False)
+class ProductType(relay.Node):
+    # Fields are automatically exposed
+    pass
+```
+
+This enables queries like:
+
+```graphql
+query {
+  product(id: "UHJvZHVjdFR5cGU6MQ==") {
+    name
+    price
+  }
+}
+```
+
 ## Admin Interface
 
 Access the Django admin at http://localhost:8000/admin/
@@ -302,12 +382,4 @@ Default credentials:
 
 ## Debug Toolbar
 
-When running in debug mode, the Django Debug Toolbar is available to inspect queries and performance. Look for the toolbar on the right side of the page when accessing the GraphQL endpoint through a browser.
-
-## Technologies Used
-
-- **Django 5.0+** - Web framework
-- **Strawberry GraphQL** - GraphQL library for Python
-- **Strawberry Django** - Django integration for Strawberry
-- **django-choices-field** - Better enum field support
-- **Pillow** - Image handling for product images
+When running in debug mode, the Django Debug Toolbar is available to inspect queries and performance. Look for the toolbar on the right side when accessing the GraphQL endpoint through a browser.
