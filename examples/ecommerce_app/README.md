@@ -166,7 +166,7 @@ mutation {
 
 ```graphql
 query {
-  myOrdersConn(first: 10) {
+  myOrders(first: 10) {
     edges {
       node {
         id
