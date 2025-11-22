@@ -208,18 +208,464 @@ Using the interactive query tool, you can query for the fruits you added earlier
 
 ![GraphiQL with fruit](./images/graphiql-with-fruit.png)
 
-## Next steps
+## Real-World Examples
 
-1. [Defining more Django Types](./guide/types.md)
-2. [Define Fields inside those Types](./guide/fields.md)
-3. [Serve your API using ASGI or WSGI](./guide/views.md)
-4. [Define filters for your fields](./guide/filters.md)
-5. [Define orderings for your fields](./guide/ordering.md)
-6. [Define pagination for your fields](./guide/pagination.md)
-7. [Define queries for your schema](./guide/queries.md)
-8. [Define mutations for your schema](./guide/mutations.md)
-9. [Define subscriptions for your schema](./guide/subscriptions.md)
-10. [Enable the Query Optimizer extension for performance improvement](./guide/optimizer.md)
-11. [Use the relay integration for advanced pagination and model refetching](./guide/relay.md)
-12. [Protect your fields using the Permission Extension](./guide/permissions.md)
-13. [Write unit tests for your schema](./guide/unit-testing.md)
+Now that you have a basic API running, let's explore some common real-world scenarios.
+
+### Adding Filters
+
+Allow clients to filter fruits by category or color:
+
+```python title="schema.py"
+import strawberry
+from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django import filters
+from typing import Optional
+
+from .types import Fruit, Color
+
+@strawberry.type
+class Query:
+    @strawberry_django.field
+    def fruits(
+        self,
+        category: Optional[str] = None,
+        color_name: Optional[str] = None
+    ) -> list[Fruit]:
+        """Get fruits with optional filtering"""
+        queryset = models.Fruit.objects.all()
+
+        if category:
+            queryset = queryset.filter(category=category)
+
+        if color_name:
+            queryset = queryset.filter(color__name__icontains=color_name)
+
+        return queryset
+
+schema = strawberry.Schema(
+    query=Query,
+    extensions=[
+        DjangoOptimizerExtension,
+    ],
+)
+```
+
+Query with filters:
+
+```graphql
+query {
+  fruits(category: "BERRY", colorName: "red") {
+    name
+    category
+    color {
+      name
+    }
+  }
+}
+```
+
+### Adding Mutations
+
+Allow clients to create and update fruits:
+
+```python title="schema.py"
+import strawberry
+from strawberry_django import mutations
+from .types import Fruit
+from . import models
+
+@strawberry.input
+class CreateFruitInput:
+    name: str
+    category: str
+    color_id: strawberry.ID
+
+@strawberry.type
+class Mutation:
+    # Automatic CRUD mutations with Django error handling
+    create_fruit: Fruit = mutations.create(
+        models.Fruit,
+        handle_django_errors=True
+    )
+
+    update_fruit: Fruit = mutations.update(
+        models.Fruit,
+        handle_django_errors=True
+    )
+
+    delete_fruit: Fruit = mutations.delete(
+        models.Fruit,
+        handle_django_errors=True
+    )
+
+schema = strawberry.Schema(
+    query=Query,
+    mutation=Mutation,
+    extensions=[
+        DjangoOptimizerExtension,
+    ],
+)
+```
+
+Create a fruit:
+
+```graphql
+mutation {
+  createFruit(data: { name: "Blueberry", category: "BERRY", colorId: "1" }) {
+    ... on Fruit {
+      id
+      name
+      category
+    }
+    ... on OperationInfo {
+      messages {
+        field
+        message
+      }
+    }
+  }
+}
+```
+
+### Adding Pagination
+
+Limit the number of results for better performance:
+
+```python title="schema.py"
+from strawberry_django.pagination import OffsetPaginationInput
+
+@strawberry.type
+class Query:
+    @strawberry_django.field
+    def fruits(
+        self,
+        pagination: Optional[OffsetPaginationInput] = None
+    ) -> list[Fruit]:
+        """Get fruits with pagination"""
+        queryset = models.Fruit.objects.all()
+
+        if pagination:
+            queryset = queryset[pagination.offset:pagination.offset + pagination.limit]
+        else:
+            queryset = queryset[:20]  # Default limit
+
+        return queryset
+```
+
+Query with pagination:
+
+```graphql
+query {
+  fruits(pagination: { offset: 0, limit: 10 }) {
+    name
+    category
+  }
+}
+```
+
+### Adding Authentication
+
+Protect your API with authentication:
+
+```python title="schema.py"
+from strawberry.permission import BasePermission
+from strawberry.types import Info
+
+class IsAuthenticated(BasePermission):
+    message = "User is not authenticated"
+
+    def has_permission(self, source, info: Info, **kwargs) -> bool:
+        return info.context.request.user.is_authenticated
+
+@strawberry.type
+class Mutation:
+    @strawberry.mutation(permission_classes=[IsAuthenticated])
+    def create_fruit(self, info: Info, name: str, category: str) -> Fruit:
+        """Create a fruit (requires authentication)"""
+        return models.Fruit.objects.create(
+            name=name,
+            category=category,
+            created_by=info.context.request.user
+        )
+```
+
+### Computed Fields
+
+Add fields that are computed rather than stored:
+
+```python title="types.py"
+import strawberry_django
+from strawberry import auto
+
+@strawberry_django.type(models.Fruit)
+class Fruit:
+    id: auto
+    name: auto
+    category: auto
+    color: "Color"
+
+    @strawberry_django.field
+    def display_name(self) -> str:
+        """Computed field: formatted display name"""
+        return f"{self.name} ({self.category})"
+
+    @strawberry_django.field
+    def is_citrus(self) -> bool:
+        """Computed field: check if fruit is citrus"""
+        return self.category == models.FruitCategory.CITRUS
+```
+
+Query computed fields:
+
+```graphql
+query {
+  fruits {
+    name
+    displayName
+    isCitrus
+  }
+}
+```
+
+### Optimizing Performance
+
+The `DjangoOptimizerExtension` automatically prevents N+1 query problems:
+
+```python
+# Without optimizer: 1 query for fruits + N queries for colors (N+1 problem)
+# With optimizer: 2 queries total (1 for fruits + 1 JOIN for colors)
+
+@strawberry.type
+class Query:
+    fruits: list[Fruit] = strawberry_django.field()
+
+# Query that fetches related data efficiently
+query = """
+  query {
+    fruits {
+      name
+      color {
+        name  # No N+1 problem thanks to optimizer!
+      }
+    }
+  }
+"""
+```
+
+See the [Performance Guide](./guide/performance.md) for more optimization strategies.
+
+### Error Handling
+
+Handle validation and database errors gracefully:
+
+```python title="schema.py"
+@strawberry.type
+class Mutation:
+    create_fruit: Fruit = mutations.create(
+        models.Fruit,
+        handle_django_errors=True  # Automatically returns structured errors
+    )
+```
+
+Error response format:
+
+```json
+{
+  "data": {
+    "createFruit": {
+      "__typename": "OperationInfo",
+      "messages": [
+        {
+          "field": "name",
+          "message": "This field is required",
+          "kind": "VALIDATION"
+        }
+      ]
+    }
+  }
+}
+```
+
+See the [Error Handling Guide](./guide/error-handling.md) for comprehensive error management.
+
+## Complete Example
+
+Here's a complete example bringing everything together:
+
+```python title="schema.py"
+import strawberry
+from strawberry_django import mutations
+from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.pagination import OffsetPaginationInput
+from strawberry.permission import BasePermission
+from strawberry.types import Info
+from typing import Optional
+
+from .types import Fruit, Color
+from . import models
+
+class IsAuthenticated(BasePermission):
+    message = "User is not authenticated"
+
+    def has_permission(self, source, info: Info, **kwargs) -> bool:
+        return info.context.request.user.is_authenticated
+
+@strawberry.type
+class Query:
+    @strawberry_django.field
+    def fruits(
+        self,
+        category: Optional[str] = None,
+        pagination: Optional[OffsetPaginationInput] = None
+    ) -> list[Fruit]:
+        """Get fruits with optional filtering and pagination"""
+        queryset = models.Fruit.objects.all()
+
+        if category:
+            queryset = queryset.filter(category=category)
+
+        if pagination:
+            queryset = queryset[pagination.offset:pagination.offset + pagination.limit]
+        else:
+            queryset = queryset[:20]
+
+        return queryset
+
+    @strawberry_django.field
+    def fruit(self, id: strawberry.ID) -> Optional[Fruit]:
+        """Get a single fruit by ID"""
+        return models.Fruit.objects.filter(id=id).first()
+
+    @strawberry_django.field
+    def colors(self) -> list[Color]:
+        """Get all colors"""
+        return models.Color.objects.all()
+
+@strawberry.type
+class Mutation:
+    # CRUD operations with automatic error handling
+    create_fruit: Fruit = mutations.create(
+        models.Fruit,
+        handle_django_errors=True
+    )
+
+    update_fruit: Fruit = mutations.update(
+        models.Fruit,
+        handle_django_errors=True
+    )
+
+    @strawberry.mutation(permission_classes=[IsAuthenticated])
+    def delete_fruit(self, info: Info, id: strawberry.ID) -> bool:
+        """Delete a fruit (requires authentication)"""
+        models.Fruit.objects.filter(id=id).delete()
+        return True
+
+schema = strawberry.Schema(
+    query=Query,
+    mutation=Mutation,
+    extensions=[
+        DjangoOptimizerExtension,  # Prevents N+1 queries
+    ],
+)
+```
+
+Example queries:
+
+```graphql
+# Get all fruits with their colors
+query GetAllFruits {
+  fruits {
+    id
+    name
+    category
+    displayName
+    color {
+      name
+    }
+  }
+}
+
+# Get filtered and paginated fruits
+query GetBerries {
+  fruits(category: "BERRY", pagination: { offset: 0, limit: 5 }) {
+    name
+    color {
+      name
+    }
+  }
+}
+
+# Create a new fruit
+mutation CreateFruit {
+  createFruit(data: { name: "Raspberry", category: "BERRY", colorId: "1" }) {
+    ... on Fruit {
+      id
+      name
+      category
+    }
+    ... on OperationInfo {
+      messages {
+        field
+        message
+        kind
+      }
+    }
+  }
+}
+
+# Update a fruit
+mutation UpdateFruit {
+  updateFruit(id: "1", data: { name: "Updated Strawberry" }) {
+    ... on Fruit {
+      id
+      name
+    }
+    ... on OperationInfo {
+      messages {
+        field
+        message
+      }
+    }
+  }
+}
+```
+
+## Next Steps
+
+Now that you have a working GraphQL API with common features, explore these guides to learn more:
+
+### Essential Guides
+
+1. [Types](./guide/types.md) - Define complex GraphQL types from Django models
+2. [Fields](./guide/fields.md) - Customize field behavior and add computed fields
+3. [Mutations](./guide/mutations.md) - Create, update, and delete operations
+4. [Filters](./guide/filters.md) - Advanced filtering capabilities
+5. [Pagination](./guide/pagination.md) - Efficient data pagination strategies
+
+### Performance & Optimization
+
+6. [Query Optimizer](./guide/optimizer.md) - Prevent N+1 queries automatically
+7. [Performance](./guide/performance.md) - Database optimization and caching
+8. [DataLoaders](./guide/dataloaders.md) - Custom data loading patterns
+
+### Security & Validation
+
+9. [Permissions](./guide/permissions.md) - Protect your API with authorization
+10. [Validation](./guide/validation.md) - Input validation and error handling
+11. [Error Handling](./guide/error-handling.md) - Comprehensive error management
+12. [Best Practices](./guide/best-practices.md) - Security and code quality
+
+### Advanced Topics
+
+13. [Relay](./guide/relay.md) - Relay-style pagination and connections
+14. [Subscriptions](./guide/subscriptions.md) - Real-time updates with WebSockets
+15. [Model Properties](./guide/model-properties.md) - Optimize computed properties
+16. [Nested Mutations](./guide/nested-mutations.md) - Handle complex relationships
+17. [Unit Testing](./guide/unit-testing.md) - Test your GraphQL API
+
+### Help & Resources
+
+- [FAQ](./faq.md) - Frequently asked questions
+- [Troubleshooting](./guide/troubleshooting.md) - Common issues and solutions
+- [Example App](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/django) - Complete working example
