@@ -8,12 +8,12 @@ if TYPE_CHECKING:
 import strawberry
 from app.base.types import Info
 from app.product.models import Product
-from strawberry import relay
-
-import strawberry_django
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
+from strawberry import relay
+
+import strawberry_django
 from strawberry_django.optimizer import optimize
 from strawberry_django.permissions import IsAuthenticated, IsStaff
 

@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import strawberry
-from django_choices_field.fields import TextChoicesField
-
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django_choices_field.fields import TextChoicesField
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager

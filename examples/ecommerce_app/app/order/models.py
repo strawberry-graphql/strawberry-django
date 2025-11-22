@@ -4,16 +4,15 @@ import decimal
 from typing import TYPE_CHECKING
 
 import strawberry
-from django_choices_field.fields import TextChoicesField
-
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
+from django_choices_field.fields import TextChoicesField
+
 from strawberry_django.descriptors import model_property
 
 if TYPE_CHECKING:
     from app.user.models import User
-
     from django.db.models.manager import RelatedManager
 
 

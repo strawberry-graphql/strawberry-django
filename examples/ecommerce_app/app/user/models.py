@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import ImageField
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
 from strawberry_django.descriptors import model_property
 
 

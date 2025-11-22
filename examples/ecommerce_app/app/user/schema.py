@@ -4,11 +4,11 @@ from typing import cast
 
 import strawberry
 from app.base.types import Info
-
-import strawberry_django
 from django.contrib import auth
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+
+import strawberry_django
 
 from .types import UserFilter, UserOrder, UserType
 
