@@ -181,7 +181,7 @@ max-nested-blocks = 7
 [tool.pyright]
 pythonVersion = "3.10"
 useLibraryCodeForTypes = true
-exclude = [".venv", "**/migrations", "dist", "docs"]
+exclude = [".venv", "**/migrations", "dist", "docs", "examples"]
 reportCallInDefaultInitializer = "warning"
 reportMatchNotExhaustive = "warning"
 reportMissingSuperCall = "warning"
