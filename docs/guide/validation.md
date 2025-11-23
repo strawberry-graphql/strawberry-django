@@ -135,22 +135,26 @@ See [Django Validators](https://docs.djangoproject.com/en/stable/ref/validators/
 For custom validation logic in mutations, raise `ValidationError` with field-specific errors:
 
 ```python
+import strawberry
+import strawberry_django
 from django.core.exceptions import ValidationError
 
-@strawberry_django.mutation(handle_django_errors=True)
-def create_user(self, email: str, age: int) -> User:
-    errors = {}
+@strawberry.type
+class Mutation:
+    @strawberry_django.mutation(handle_django_errors=True)
+    def create_user(self, email: str, age: int) -> User:
+        errors = {}
 
-    if not email or "@" not in email:
-        errors["email"] = "Invalid email address"
+        if not email or "@" not in email:
+            errors["email"] = "Invalid email address"
 
-    if age < 18:
-        errors["age"] = "Must be at least 18 years old"
+        if age < 18:
+            errors["age"] = "Must be at least 18 years old"
 
-    if errors:
-        raise ValidationError(errors)
+        if errors:
+            raise ValidationError(errors)
 
-    return models.User.objects.create(email=email, age=age)
+        return models.User.objects.create(email=email, age=age)
 ```
 
 ## Async Validation
@@ -158,17 +162,20 @@ def create_user(self, email: str, age: int) -> User:
 For async mutations, use Django's async ORM methods (Django 4.1+):
 
 ```python
-from asgiref.sync import sync_to_async
+import strawberry
+from django.core.exceptions import ValidationError
 
-@strawberry.mutation
-async def create_article(self, title: str) -> Article:
-    # Check for duplicate using async
-    exists = await models.Article.objects.filter(title=title).aexists()
+@strawberry.type
+class Mutation:
+    @strawberry.mutation
+    async def create_article(self, title: str) -> Article:
+        # Check for duplicate using async
+        exists = await models.Article.objects.filter(title=title).aexists()
 
-    if exists:
-        raise ValidationError({'title': "Article with this title already exists"})
+        if exists:
+            raise ValidationError({'title': "Article with this title already exists"})
 
-    return await models.Article.objects.acreate(title=title)
+        return await models.Article.objects.acreate(title=title)
 ```
 
 For older Django versions, wrap ORM calls in `sync_to_async`. See [Django Async documentation](https://docs.djangoproject.com/en/stable/topics/async/) for details.
@@ -178,7 +185,10 @@ For older Django versions, wrap ORM calls in `sync_to_async`. See [Django Async 
 Integrate Django forms for complex validation:
 
 ```python
+import strawberry
+import strawberry_django
 from django import forms
+from django.core.exceptions import ValidationError
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -191,16 +201,18 @@ class UserForm(forms.ModelForm):
             raise ValidationError("Username already taken")
         return username
 
-@strawberry_django.mutation
-def create_user(self, data: UserInput) -> User:
-    form = UserForm({'email': data.email, 'username': data.username, 'age': data.age})
+@strawberry.type
+class Mutation:
+    @strawberry_django.mutation
+    def create_user(self, data: UserInput) -> User:
+        form = UserForm({'email': data.email, 'username': data.username, 'age': data.age})
 
-    if not form.is_valid():
-        # Convert form errors to ValidationError
-        error_dict = {field: error_list[0] for field, error_list in form.errors.items()}
-        raise ValidationError(error_dict)
+        if not form.is_valid():
+            # Convert form errors to ValidationError
+            error_dict = {field: error_list[0] for field, error_list in form.errors.items()}
+            raise ValidationError(error_dict)
 
-    return form.save()
+        return form.save()
 ```
 
 See [Django Forms documentation](https://docs.djangoproject.com/en/stable/topics/forms/) for more on form validation.
