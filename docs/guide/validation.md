@@ -190,14 +190,14 @@ class UserForm(forms.ModelForm):
             raise ValidationError("Username already taken")
         return username
 
-@strawberry.mutation
+@strawberry_django.mutation
 def create_user(self, data: UserInput) -> User:
     form = UserForm({'email': data.email, 'username': data.username, 'age': data.age})
 
     if not form.is_valid():
         # Convert form errors to ValidationError
-        errors = {field: errors[0] for field, errors in form.errors.items()}
-        raise ValidationError(errors)
+        error_dict = {field: error_list[0] for field, error_list in form.errors.items()}
+        raise ValidationError(error_dict)
 
     return form.save()
 ```

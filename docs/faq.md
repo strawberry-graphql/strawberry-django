@@ -184,7 +184,7 @@ class AuthorInput:
 class Mutation:
     create_author: Author = strawberry_django.create(AuthorInput)
     update_author: Author = strawberry_django.update(AuthorInput)
-    delete_author: Author = strawberry_django.delete()
+    delete_author: list[Author] = strawberry_django.delete()
 ```
 
 These mutations automatically:

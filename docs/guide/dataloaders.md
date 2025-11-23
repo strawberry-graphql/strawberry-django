@@ -110,7 +110,9 @@ async def load_tags(article_ids: list[int]) -> list[list[models.Tag]]:
     """Load tags for multiple articles."""
     tags_by_article = {
         article.id: await sync_to_async(list)(article.tags.all())
-        async for article in models.Article.objects.filter(id__in=article_ids).prefetch_related('tags')
+        async for article in models.Article.objects.filter(
+            id__in=article_ids
+        ).prefetch_related('tags')
     }
 
     return [tags_by_article.get(article_id, []) for article_id in article_ids]
