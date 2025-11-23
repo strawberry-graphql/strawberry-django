@@ -235,7 +235,7 @@ class Mutation:
 For cases where you want more control, handle errors manually:
 
 ```python title="mutations.py"
-from typing import Union
+from typing import Annotated
 from django.core.exceptions import ValidationError
 
 @strawberry.type
@@ -247,7 +247,7 @@ class ProductError:
 class ProductSuccess:
     product: Product
 
-ProductResult = strawberry.union("ProductResult", (ProductSuccess, ProductError))
+ProductResult = Annotated[ProductSuccess | ProductError, strawberry.union("ProductResult")]
 
 @strawberry.type
 class Mutation:
@@ -261,13 +261,13 @@ class Mutation:
                 )
 
             product = models.Product.objects.create(name=name, price=price)
-            return ProductSuccess(product=product)
-
         except Exception as e:
             return ProductError(
                 message=str(e),
                 code="UNKNOWN_ERROR"
             )
+
+        return ProductSuccess(product=product)
 ```
 
 ## Permission Errors
@@ -347,16 +347,14 @@ Error handling works the same way with async resolvers:
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
     async def create_user_async(self, email: str, username: str) -> User:
-        from asgiref.sync import sync_to_async
-
         # Validation
-        if await sync_to_async(models.User.objects.filter(email=email).exists)():
+        if await models.User.objects.filter(email=email).aexists():
             raise ValidationError({
                 'email': 'A user with this email already exists'
             })
 
         # Creation
-        user = await sync_to_async(models.User.objects.create)(
+        user = await models.User.objects.acreate(
             email=email,
             username=username
         )
@@ -436,27 +434,7 @@ raise ValidationError(
 )
 ```
 
-### 4. Log Unexpected Errors
-
-Always log unexpected errors for debugging:
-
-```python
-import logging
-
-logger = logging.getLogger(__name__)
-
-@strawberry_django.mutation(handle_django_errors=True)
-def process_payment(self, order_id: strawberry.ID) -> Order:
-    try:
-        order = models.Order.objects.get(pk=order_id)
-        # Process payment...
-        return order
-    except Exception as e:
-        logger.error(f"Payment processing failed for order {order_id}: {e}")
-        raise
-```
-
-### 5. Validate Early
+### 4. Validate Early
 
 Validate inputs before performing expensive operations:
 

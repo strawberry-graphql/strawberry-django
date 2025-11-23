@@ -73,51 +73,7 @@ The computed value is cached on the instance after the first access, avoiding re
 
 ## Optimization Parameters
 
-Model properties support the same optimization hints as `strawberry_django.field()`:
-
-### `only`
-
-Specify fields that must be fetched from the database:
-
-```python title="models.py"
-class Person(models.Model):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-
-    @model_property(only=["first_name", "last_name"])
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
-```
-
-### `select_related`
-
-Specify foreign key relations that should be joined:
-
-```python title="models.py"
-class Order(models.Model):
-    customer = models.ForeignKey("Customer", on_delete=models.CASCADE)
-
-    @model_property(
-        select_related=["customer"],
-        only=["customer__email"]
-    )
-    def customer_email(self) -> str:
-        return self.customer.email
-```
-
-### `prefetch_related`
-
-Specify relations that should be prefetched:
-
-```python title="models.py"
-class Author(models.Model):
-    name = models.CharField(max_length=100)
-
-    @model_property(prefetch_related=["books"])
-    def book_count(self) -> int:
-        """Count the number of books by this author."""
-        return self.books.count()
-```
+Model properties support the same optimization hints as `strawberry_django.field()`: `only`, `select_related`, and `prefetch_related`. See the [Query Optimizer guide](./optimizer.md) for detailed information on these parameters.
 
 You can also use a lambda for more complex prefetch scenarios:
 
@@ -217,7 +173,7 @@ class Order:
     customer_name: auto     # Uses cached_model_property hints
 ```
 
-## Advanced Patterns
+## Common Patterns
 
 ### Conditional Logic with Info Context
 
@@ -264,69 +220,6 @@ class Product(models.Model):
         reviews = self._review_count  # type: ignore
         rating = self._avg_rating or 0.0  # type: ignore
         return f"{self.name} ({self.category.name}) - {rating:.1f}★ ({reviews} reviews)"
-```
-
-## Type Annotations
-
-Model properties require return type annotations. These annotations are used by Strawberry to determine the GraphQL type:
-
-```python title="models.py"
-from typing import Optional
-from strawberry_django.descriptors import model_property
-
-class Product(models.Model):
-    name = models.CharField(max_length=100)
-    discontinued_date = models.DateField(null=True, blank=True)
-
-    @model_property(only=["discontinued_date"])
-    def is_active(self) -> bool:
-        """Check if product is currently active."""
-        return self.discontinued_date is None
-
-    @model_property(only=["name"])
-    def display_name(self) -> str:
-        """Get formatted display name."""
-        return self.name.upper()
-
-    @model_property(only=["discontinued_date"])
-    def days_until_discontinued(self) -> Optional[int]:
-        """Calculate days until product is discontinued."""
-        if self.discontinued_date is None:
-            return None
-        from datetime import date
-        delta = self.discontinued_date - date.today()
-        return delta.days
-```
-
-## Documentation
-
-Model property docstrings are automatically used as field descriptions in the GraphQL schema:
-
-```python title="models.py"
-class Product(models.Model):
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-
-    @model_property(only=["price"])
-    def formatted_price(self) -> str:
-        """
-        The price formatted as a currency string.
-
-        Returns the price in USD format with proper currency symbol.
-        """
-        return f"${self.price:.2f}"
-```
-
-This will generate the following in your GraphQL schema:
-
-```graphql
-type Product {
-  formattedPrice: String!
-    """
-    The price formatted as a currency string.
-
-    Returns the price in USD format with proper currency symbol.
-    """
-}
 ```
 
 ## Best Practices

@@ -5,20 +5,18 @@ title: Ordering
 > [!WARNING]
 > The legacy ordering behavior described in this document is provided for backwards compatibility.
 > You should prefer the new [Ordering](ordering) system instead.
->
-> Note: The `@strawberry_django.order` decorator is deprecated. Use `@strawberry_django.order_type` instead.
 
 # Order (Legacy)
 
-The legacy ordering system created with `@strawberry_django.order_type` allows sorting by multiple fields only by specifying the object keys in the order input
+The legacy ordering system created with `@strawberry_django.order` allows sorting by multiple fields only by specifying the object keys in the order input
 in the desired order. This is not always feasible and contradicts the way objects are supposed to be used.
 
 ```python title="types.py"
-@strawberry_django.order_type(models.Color)
+@strawberry_django.order(models.Color)
 class ColorOrder:
     name: auto
 
-@strawberry_django.order_type(models.Fruit)
+@strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
     color: ColorOrder | None

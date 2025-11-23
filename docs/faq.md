@@ -38,29 +38,13 @@ def resolver(root, info: Info):
 
 ### Where can I find example projects?
 
-See the complete Django project in the GitHub repository: [examples/django](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/django).
-
-This example includes:
-
-- Model definitions
-- GraphQL types and inputs
-- Queries and mutations
-- Filters and ordering
-- Authentication
+Check out the [examples directory](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples) in the GitHub repository for complete Django project examples.
 
 ## IDE and Development
 
-### Autocompletion with editors
-
-Some editors like VS Code may not be able to resolve symbols and types without explicit `strawberry.django` import. Adding the following line to your code fixes that problem:
-
-```python
-import strawberry.django
-```
-
 ### Type checking errors with strawberry.auto
 
-If your type checker (PyLance, mypy) shows errors with `strawberry.auto`, use type casts in mutations:
+If your type checker (PyLance, mypy) shows errors with `strawberry.auto`, use type casts in mutations when returning a Django model instance but the annotation expects a GraphQL type:
 
 ```python
 from typing import cast
@@ -68,14 +52,14 @@ from typing import cast
 @strawberry_django.mutation
 def create_fruit(self, name: str) -> Fruit:
     fruit = models.Fruit.objects.create(name=name)
-    return cast(Fruit, fruit)
+    return cast(Fruit, fruit)  # Cast model to GraphQL type
 ```
 
 ## Queries and Optimization
 
 ### Should I use the Query Optimizer or DataLoaders?
 
-**Use the Query Optimizer** (recommended for most cases):
+**Use the [Query Optimizer](guide/optimizer.md)** (recommended for most cases):
 
 - Automatic optimization
 - Works with Django ORM
@@ -182,7 +166,9 @@ class AuthorFilter:
 
 ### How do I create nested objects in mutations?
 
-Use input types with related fields and handle them manually:
+You can handle nested mutations manually as shown below, or use the automatic mutation generators `strawberry_django.create`, `strawberry_django.update`, or `strawberry_django.delete` which handle nested relationships automatically.
+
+**Manual approach:**
 
 ```python
 @strawberry_django.input(models.Author)
@@ -206,7 +192,7 @@ def create_author_with_books(self, data: AuthorInputWithBooks) -> Author:
     return models.Author.objects.get(pk=author.pk)
 ```
 
-See [Nested Mutations guide](./guide/nested-mutations.md) for comprehensive examples.
+See [Nested Mutations guide](./guide/nested-mutations.md) for comprehensive examples and check the tests in the repository for automatic mutation examples.
 
 ### How do I update many-to-many relationships?
 
@@ -548,22 +534,6 @@ schema = strawberry.Schema(
 ```
 
 ## Common Errors
-
-### "Cannot use DataLoader with sync resolvers"
-
-Ensure your resolver is async:
-
-```python
-# ❌ Sync
-@strawberry.field
-def author(self, info: Info) -> Author:
-    return await loader.load(self.author_id)
-
-# ✅ Async
-@strawberry.field
-async def author(self, info: Info) -> Author:
-    return await loader.load(self.author_id)
-```
 
 ### "Object has no attribute 'refresh_from_db'"
 
