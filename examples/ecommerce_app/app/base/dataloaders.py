@@ -3,18 +3,17 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
+from app.product.models import Brand
+from app.user.models import User
 from asgiref.sync import sync_to_async
 from strawberry.dataloader import DataLoader
 
 if TYPE_CHECKING:
-    from app.product.models import Brand
-    from app.user.models import User
+    pass
 
 
 async def load_brands(keys: list[int]) -> list[Brand | None]:
     """Batch load brands by their IDs."""
-    from app.product.models import Brand
-
     brands = await sync_to_async(list)(Brand.objects.filter(id__in=keys))
 
     # Return results in the same order as keys
@@ -24,8 +23,6 @@ async def load_brands(keys: list[int]) -> list[Brand | None]:
 
 async def load_users(keys: list[int]) -> list[User | None]:
     """Batch load users by their IDs."""
-    from app.user.models import User
-
     users = await sync_to_async(list)(User.objects.filter(id__in=keys))
 
     # Return results in the same order as keys
