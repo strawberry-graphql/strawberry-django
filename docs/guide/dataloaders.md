@@ -23,7 +23,7 @@ from . import models
 
 async def load_authors(keys: list[int]) -> list[models.Author | None]:
     """Batch load authors by their IDs."""
-    # Create map using async comprehension
+    # Build map from async queryset iteration
     author_map = {
         author.id: author
         async for author in models.Author.objects.filter(id__in=keys)
