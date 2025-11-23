@@ -552,41 +552,6 @@ Limit query complexity to prevent expensive operations.
 
 ### Query Depth Limiting
 
-```python
-import strawberry
-from strawberry.extensions import QueryDepthLimiter
-
-schema = strawberry.Schema(
-    query=Query,
-    extensions=[
-        QueryDepthLimiter(max_depth=10),  # Prevent deeply nested queries
-    ]
-)
-```
-
-### Custom Complexity Analysis
-
-```python
-from strawberry.extensions import SchemaExtension
-
-class QueryComplexityExtension(SchemaExtension):
-    def on_operation(self):
-        # Calculate query complexity
-        complexity = self.calculate_complexity()
-
-        if complexity > 1000:
-            raise Exception("Query too complex")
-
-        yield
-
-    def calculate_complexity(self):
-        # Custom complexity calculation
-        # Consider field costs, depth, etc.
-        pass
-```
-
-### Query Depth and Complexity Limiting
-
 Use Strawberry's built-in query depth limiter to prevent overly complex queries:
 
 ```python
@@ -596,7 +561,7 @@ from strawberry.extensions import QueryDepthLimiter
 schema = strawberry.Schema(
     query=Query,
     extensions=[
-        QueryDepthLimiter(max_depth=10),  # Limit query nesting
+        QueryDepthLimiter(max_depth=10),  # Prevent deeply nested queries
     ]
 )
 ```
