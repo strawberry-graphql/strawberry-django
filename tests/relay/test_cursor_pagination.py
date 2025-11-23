@@ -1420,6 +1420,152 @@ def test_invalid_cursor(cursor, test_objects):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_connection_distinct_with_m2m_filters():
+    from tests import models
+
+    @strawberry_django.filter_type(models.FruitType, lookups=True)
+    class FruitTypeFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        name: strawberry.auto
+        types: FruitTypeFilter | None
+        DISTINCT: bool | None
+
+    @strawberry_django.type(models.FruitType)
+    class FruitTypeGQL(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitGQL(Node):
+        name: strawberry.auto
+        types: list[FruitTypeGQL]
+
+    @strawberry.type
+    class FruitQuery:
+        fruits: DjangoCursorConnection[FruitGQL] = strawberry_django.connection()
+
+    fruit_schema = strawberry.Schema(
+        query=FruitQuery, extensions=[DjangoOptimizerExtension()]
+    )
+
+    ft1 = models.FruitType.objects.create(name="tropical")
+    ft2 = models.FruitType.objects.create(name="citrus")
+
+    banana = models.Fruit.objects.create(name="banana")
+    banana.types.add(ft1, ft2)
+
+    apple = models.Fruit.objects.create(name="apple")
+    apple.types.add(ft1)
+
+    orange = models.Fruit.objects.create(name="orange")
+    orange.types.add(ft2)
+
+    query = """
+    query TestQuery {
+        fruits(filters: {
+            types: { name: { inList: ["tropical", "citrus"] } }
+            DISTINCT: true
+        }) {
+            edges {
+                node {
+                    id
+                    name
+                }
+            }
+            totalCount
+        }
+    }
+    """
+    result = fruit_schema.execute_sync(query)
+    assert not result.errors
+    assert result.data
+
+    edges = result.data["fruits"]["edges"]
+    total_count = result.data["fruits"]["totalCount"]
+
+    assert len(edges) == 3
+    assert total_count == 3
+
+    names = {edge["node"]["name"] for edge in edges}
+    assert names == {"banana", "apple", "orange"}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_connection_distinct_with_pagination():
+    from tests import models
+
+    @strawberry_django.filter_type(models.FruitType, lookups=True)
+    class FruitTypeFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        name: strawberry.auto
+        types: FruitTypeFilter | None
+        DISTINCT: bool | None
+
+    @strawberry_django.type(models.FruitType)
+    class FruitTypeGQL(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitGQL(Node):
+        name: strawberry.auto
+        types: list[FruitTypeGQL]
+
+    @strawberry.type
+    class FruitQuery:
+        fruits: DjangoCursorConnection[FruitGQL] = strawberry_django.connection()
+
+    fruit_schema = strawberry.Schema(
+        query=FruitQuery, extensions=[DjangoOptimizerExtension()]
+    )
+
+    ft1 = models.FruitType.objects.create(name="tropical")
+    ft2 = models.FruitType.objects.create(name="citrus")
+
+    for i in range(5):
+        fruit = models.Fruit.objects.create(name=f"fruit_{i}")
+        fruit.types.add(ft1, ft2)
+
+    query = """
+    query TestQuery {
+        fruits(
+            first: 2
+            filters: {
+                types: { name: { inList: ["tropical", "citrus"] } }
+                DISTINCT: true
+            }
+        ) {
+            edges {
+                node {
+                    id
+                    name
+                }
+            }
+            totalCount
+            pageInfo {
+                hasNextPage
+            }
+        }
+    }
+    """
+    result = fruit_schema.execute_sync(query)
+    assert not result.errors
+    assert result.data
+
+    edges = result.data["fruits"]["edges"]
+    total_count = result.data["fruits"]["totalCount"]
+    has_next = result.data["fruits"]["pageInfo"]["hasNextPage"]
+
+    assert len(edges) == 2
+    assert total_count == 5
+    assert has_next is True
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     ("first", "last", "error_message"),
     [
