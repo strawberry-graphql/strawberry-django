@@ -12,7 +12,7 @@ def user(db):
     return User.objects.create_user(
         username="testuser",
         email="test@example.com",
-        password="testpass123",
+        password="testpass123",  # gitleaks:allow
         first_name="Test",
         last_name="User",
     )
@@ -24,7 +24,7 @@ def admin_user(db):
     return User.objects.create_superuser(
         username="admin",
         email="admin@example.com",
-        password="admin123",
+        password="admin123",  # gitleaks:allow
         first_name="Admin",
         last_name="User",
     )

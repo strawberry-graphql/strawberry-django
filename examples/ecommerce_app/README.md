@@ -48,8 +48,8 @@ This example is designed to help you learn Strawberry Django by demonstrating re
    ```
 
    This creates:
-   - Admin user (username: `admin`, password: `admin`)
-   - Test user (username: `testuser`, password: `test123`)
+   - Admin user (username: `admin`, password: `admin`) <!-- test password only -->
+   - Test user (username: `testuser`, password: `test123`) <!-- test password only -->
    - Sample brands and products
 
 4. **Run the server:**
