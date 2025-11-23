@@ -150,4 +150,6 @@ class Mutation:
         if not cart.items.exists():
             raise ValidationError(_("Can't checkout an empty cart"))
 
-        return cast("OrderType", cart.checkout(user))
+        order = cart.checkout(user)
+        transaction.on_commit(lambda: info.context.request.session.pop("cart_pk", None))
+        return cast("OrderType", order)

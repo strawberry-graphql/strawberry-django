@@ -55,9 +55,10 @@ mutation {
   login(username: "testuser", password: "test123") {
     id
     name
-    firstName
-    lastName
-    emails
+    emails {
+      email
+      isPrimary
+    }
   }
 }
 ```
