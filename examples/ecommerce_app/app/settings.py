@@ -15,7 +15,7 @@ for cls in [
     models.JSONField,
     models.ManyToManyField,
 ]:
-    cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # type: ignore
+    cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent

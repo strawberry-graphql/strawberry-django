@@ -22,6 +22,12 @@ from strawberry.tools import merge_types
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
+# Root Query type combining all app-specific queries.
+#
+# Available queries:
+# - User queries: user, users, me
+# - Product queries: product, products, productsConn
+# - Order queries: ordersConn, myOrders, myCart
 Query = merge_types(
     "Query",
     (
@@ -30,14 +36,12 @@ Query = merge_types(
         UserQuery,
     ),
 )
-"""Root Query type combining all app-specific queries.
 
-Available queries:
-- User queries: user, users, me
-- Product queries: product, products, productsConn
-- Order queries: ordersConn, myOrders, myCart
-"""
-
+# Root Mutation type combining all app-specific mutations.
+#
+# Available mutations:
+# - User mutations: login, logout
+# - Cart mutations: cartAddItem, cartUpdateItem, cartRemoveItem, cartCheckout
 Mutation = merge_types(
     "Mutation",
     (
@@ -46,14 +50,15 @@ Mutation = merge_types(
         UserMutation,
     ),
 )
-"""Root Mutation type combining all app-specific mutations.
-
-Available mutations:
-- User mutations: login, logout
-- Cart mutations: cartAddItem, cartUpdateItem, cartRemoveItem, cartCheckout
-"""
 
 
+# Main GraphQL schema with DjangoOptimizerExtension.
+#
+# The DjangoOptimizerExtension automatically optimizes database queries by:
+# - Analyzing the GraphQL query and selecting only needed fields
+# - Using select_related() for foreign keys
+# - Using prefetch_related() for many-to-many and reverse foreign keys
+# - Respecting optimization hints from @model_property and field decorators
 schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
@@ -61,11 +66,3 @@ schema = strawberry.Schema(
         DjangoOptimizerExtension,
     ],
 )
-"""Main GraphQL schema with DjangoOptimizerExtension.
-
-The DjangoOptimizerExtension automatically optimizes database queries by:
-- Analyzing the GraphQL query and selecting only needed fields
-- Using select_related() for foreign keys
-- Using prefetch_related() for many-to-many and reverse foreign keys
-- Respecting optimization hints from @model_property and field decorators
-"""
