@@ -54,7 +54,7 @@ input FruitOrder {
 You can define custom order method by defining your own resolver.
 
 ```python title="types.py"
-@strawberry_django.order_type(models.Fruit)
+@strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
 
@@ -116,12 +116,12 @@ input FruitOrder {
   - In code bellow custom order `name` ends up ordering `Fruit` instead of `Color` without applying `prefix`
 
 ```python title="Why prefix?"
-@strawberry_django.order_type(models.Fruit)
+@strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
     color: ColorOrder | None
 
-@strawberry_django.order_type(models.Color)
+@strawberry_django.order(models.Color)
 class ColorOrder:
     @strawberry_django.order_field
     def name(self, value: bool, prefix: str):
@@ -176,7 +176,7 @@ Works similar to field order method, but:
 - should probaly use `sequence`
 
 ```python title="types.py"
-@strawberry_django.order_type(models.Fruit)
+@strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
 
