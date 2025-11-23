@@ -1,10 +1,9 @@
 """Tests for user queries demonstrating Strawberry Django testing patterns."""
 
 import pytest
+from app.schema import schema
 from django.contrib.auth import get_user_model
 from strawberry.test import BaseGraphQLTestClient
-
-from app.schema import schema
 
 User = get_user_model()
 
@@ -31,13 +30,13 @@ def test_me_query_unauthenticated(graphql_client, db):
 
 def test_me_query_authenticated(graphql_client, user, client):
     """Test that me query returns user data when authenticated.
-    
+
     Demonstrates:
     - Testing authenticated queries
     - Using Django's test client to manage sessions
     """
     client.force_login(user)
-    
+
     query = """
         query {
             me {
@@ -49,7 +48,7 @@ def test_me_query_authenticated(graphql_client, user, client):
             }
         }
     """
-    
+
     # Note: In a real app, you'd need to pass the request context
     # This is a simplified example showing the query structure
     result = graphql_client.query(query)
@@ -59,7 +58,7 @@ def test_me_query_authenticated(graphql_client, user, client):
 
 def test_login_mutation(graphql_client, user, db):
     """Test login mutation with valid credentials.
-    
+
     Demonstrates:
     - Testing mutations
     - Handling authentication
@@ -73,20 +72,20 @@ def test_login_mutation(graphql_client, user, db):
             }
         }
     """
-    
+
     # Test with correct credentials
     result = graphql_client.query(
         mutation,
         variables={"username": "testuser", "password": "testpass123"},
     )
-    
+
     # Note: Actual behavior depends on context setup
     # This demonstrates the structure of a login test
 
 
 def test_users_query_with_filters(graphql_client, user, db):
     """Test users query with filtering.
-    
+
     Demonstrates:
     - Testing filtered queries
     - Pagination
@@ -103,7 +102,7 @@ def test_users_query_with_filters(graphql_client, user, db):
         first_name="Jane",
         last_name="Smith",
     )
-    
+
     query = """
         query Users($filters: UserFilter, $pagination: OffsetPaginationInput) {
             users(filters: $filters, pagination: $pagination) {
@@ -112,7 +111,7 @@ def test_users_query_with_filters(graphql_client, user, db):
             }
         }
     """
-    
+
     result = graphql_client.query(
         query,
         variables={
@@ -120,6 +119,6 @@ def test_users_query_with_filters(graphql_client, user, db):
             "pagination": {"limit": 10, "offset": 0},
         },
     )
-    
+
     # In a real test, you'd verify the filtered results
     assert result.errors is None or len(result.errors) == 0

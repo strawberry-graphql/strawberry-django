@@ -48,7 +48,7 @@ def test_simple_query(graphql_client):
 def test_authenticated_query(graphql_client, user, client):
     # Set up authentication
     client.force_login(user)
-    
+
     query = """
         query {
             me {
@@ -57,7 +57,7 @@ def test_authenticated_query(graphql_client, user, client):
             }
         }
     """
-    
+
     # Pass request context to the query
     result = graphql_client.query(query, context_value={"request": client})
     assert result.data["me"]["id"] == user.id
@@ -75,7 +75,7 @@ def test_mutation(graphql_client, user):
             }
         }
     """
-    
+
     result = graphql_client.query(
         mutation,
         variables={

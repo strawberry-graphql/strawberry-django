@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 class Order(models.Model):
     """Completed order created from a checked-out cart.
-    
+
     Demonstrates:
     - One-to-one relationship with Cart
     - Computed total using @model_property with prefetch_related
@@ -55,7 +55,7 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     """Individual product within an order with quantity and price snapshot.
-    
+
     Demonstrates:
     - Composite unique constraint (order + product)
     - Price snapshot (stores price at time of purchase)
@@ -100,7 +100,7 @@ class OrderItem(models.Model):
     @model_property(only=["quantity", "price"])
     def total(self) -> decimal.Decimal:
         """Calculate line item total (quantity × price).
-        
+
         The only parameter tells the optimizer to fetch quantity and price
         when this property is accessed, preventing deferred attribute errors.
         """
@@ -109,7 +109,7 @@ class OrderItem(models.Model):
 
 class Cart(models.Model):
     """Shopping cart for collecting items before checkout.
-    
+
     Demonstrates:
     - Session-based cart (stored in session, not tied to user)
     - Status enum with TextChoices
@@ -140,18 +140,19 @@ class Cart(models.Model):
     @transaction.atomic
     def checkout(self, user: User) -> Order:
         """Convert cart to an order and snapshot product prices.
-        
+
         Creates an Order and OrderItems from the cart, snapshotting current
         prices at checkout time. Marks the cart as finished.
-        
+
         Args:
             user: The user placing the order
-            
+
         Returns:
             The created Order instance
-            
+
         Note: This method is wrapped in @transaction.atomic to ensure
         atomicity - either all operations succeed or none do.
+
         """
         order = Order.objects.create(user=user, cart=self)
         for item in self.items.all():
@@ -169,7 +170,7 @@ class Cart(models.Model):
 
 class CartItem(models.Model):
     """Individual product within a cart with quantity.
-    
+
     Demonstrates:
     - Composite unique constraint (cart + product)
     - Computed properties using related data (price from product)
@@ -209,7 +210,7 @@ class CartItem(models.Model):
     @model_property(only=["product__price"], select_related=["product"])
     def price(self) -> decimal.Decimal:
         """Get the current price from the related product.
-        
+
         The only parameter with __ notation (product__price) tells the optimizer
         to fetch the price field from the related product model.
         select_related ensures the product is loaded efficiently with a JOIN.
@@ -219,7 +220,7 @@ class CartItem(models.Model):
     @model_property(only=["quantity", "product__price"], select_related=["product"])
     def total(self) -> decimal.Decimal:
         """Calculate line item total (quantity × current price).
-        
+
         Demonstrates accessing related model fields through __notation
         and combining multiple optimization parameters.
         """

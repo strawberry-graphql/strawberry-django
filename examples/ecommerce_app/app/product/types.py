@@ -21,7 +21,7 @@ class BrandFilter:
 )
 class BrandType(relay.Node):
     """GraphQL type for Brand model.
-    
+
     Demonstrates reverse relationship (products) from ForeignKey.
     """
 
@@ -32,7 +32,7 @@ class BrandType(relay.Node):
 @strawberry_django.filter_type(Product, lookups=True)
 class ProductFilter:
     """Filter type for Product queries.
-    
+
     Demonstrates nested filtering with the brand field, allowing queries like:
     filters: { brand: { name: { iContains: "apple" } } }
     """
@@ -58,7 +58,7 @@ class ProductOrdering:
 )
 class ProductType(relay.Node):
     """GraphQL type for Product model.
-    
+
     Demonstrates:
     - Relay Node interface
     - Optional foreign key relationship (brand)
@@ -73,24 +73,24 @@ class ProductType(relay.Node):
     description: auto
     price: auto
     images: list[ProductImageType]
-    
+
     @strawberry_django.field(only=["price"])
     def formatted_price(self, root: Product) -> str:
         """Return price formatted as currency string.
-        
+
         Demonstrates a simple computed field for display formatting.
         """
         return f"${root.price:.2f}"
-    
+
     # Example of using a dataloader (commented out as it duplicates the brand field)
     # @strawberry.field
     # async def brand_via_loader(self, root: Product, info: Info) -> BrandType | None:
     #     """Example showing DataLoader usage for batching queries.
-    #     
+    #
     #     This demonstrates how to use dataloaders to efficiently load related
     #     objects, preventing N+1 queries. The brand_loader batches all brand_id
     #     lookups in a single request into one database query.
-    #     
+    #
     #     Note: In practice, you'd use the auto-generated 'brand' field which
     #     is already optimized by the DjangoOptimizerExtension. This example
     #     shows the pattern for custom scenarios.

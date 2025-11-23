@@ -103,7 +103,7 @@ query {
 ```graphql
 query {
   products(
-    filters: { 
+    filters: {
       brand: { name: { iContains: "apple" } }
       kind: { exact: PHYSICAL }
     }

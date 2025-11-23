@@ -29,7 +29,7 @@ async def load_users(keys: list[int]) -> list[User | None]:
 @dataclasses.dataclass
 class DataLoaders:
     """Container for all dataloaders in the application.
-    
+
     DataLoaders help solve the N+1 query problem by batching and caching database queries.
     Each loader is instantiated once per request and shared across all resolvers.
     """

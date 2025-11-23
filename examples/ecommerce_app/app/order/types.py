@@ -12,7 +12,7 @@ from .models import Cart, CartItem, Order, OrderItem
 @strawberry_django.type(Order, name="Order")
 class OrderType(relay.Node):
     """GraphQL type for completed orders.
-    
+
     Demonstrates computed total field from model_property.
     """
 
@@ -24,7 +24,7 @@ class OrderType(relay.Node):
 @strawberry_django.type(OrderItem, name="OrderItem")
 class OrderItemType(relay.Node):
     """GraphQL type for order line items.
-    
+
     Shows price snapshot at time of purchase and computed total.
     """
 
@@ -37,7 +37,7 @@ class OrderItemType(relay.Node):
 @strawberry_django.type(Cart, name="Cart")
 class CartType(relay.Node):
     """GraphQL type for shopping carts.
-    
+
     Demonstrates session-based state management and computed totals.
     """
 
@@ -48,7 +48,7 @@ class CartType(relay.Node):
 @strawberry_django.type(CartItem, name="CartItem")
 class CartItemType(relay.Node):
     """GraphQL type for cart line items.
-    
+
     Shows computed price and total fields using model_property with
     related field access (product__price).
     """

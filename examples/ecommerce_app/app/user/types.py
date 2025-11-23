@@ -19,7 +19,7 @@ class EmailType(relay.Node):
 @strawberry_django.filter_type(User, lookups=True)
 class UserFilter:
     """Filter type for User queries.
-    
+
     The lookups=True parameter enables field lookups like iContains, exact, etc.
     Example: filters: { firstName: { iContains: "john" } }
     """
@@ -32,7 +32,7 @@ class UserFilter:
 @strawberry_django.order_type(User)
 class UserOrder:
     """Ordering type for User queries.
-    
+
     Allows sorting by specified fields in ASC or DESC order.
     Example: order: { firstName: ASC }
     """
@@ -45,7 +45,7 @@ class UserOrder:
 @strawberry_django.type(User, name="User")
 class UserType(relay.Node):
     """GraphQL type for User model.
-    
+
     Demonstrates:
     - Relay Node interface implementation
     - Field deprecation (first_name, last_name -> name)
@@ -62,7 +62,7 @@ class UserType(relay.Node):
     @strawberry_django.field(only=["first_name", "last_name"])
     def name(self, root: User) -> str:
         """Return the user's full name.
-        
+
         The only parameter ensures first_name and last_name are fetched
         when this field is requested, preventing deferred attribute errors.
         """

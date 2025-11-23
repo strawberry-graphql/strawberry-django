@@ -27,7 +27,7 @@ class Query:
     @strawberry_django.field
     async def me(self, info: Info) -> UserType | None:
         """Get the current logged-in user, or null if not authenticated.
-        
+
         This query demonstrates async resolvers and context usage for
         retrieving the current user from the request.
         """
@@ -46,19 +46,20 @@ class Mutation:
         password: str,
     ) -> UserType:
         """Authenticate a user and create a session.
-        
+
         Args:
             username: The user's username
             password: The user's password
-            
+
         Returns:
             The authenticated user
-            
+
         Raises:
             ValidationError: If credentials are invalid
-            
+
         The handle_django_errors=True parameter automatically converts
         Django ValidationErrors into GraphQL errors with proper formatting.
+
         """
         request = info.context.request
 
@@ -75,9 +76,10 @@ class Mutation:
         info: Info,
     ) -> bool:
         """Log out the current user and destroy their session.
-        
+
         Returns:
             True if a user was logged out, False if no user was logged in
+
         """
         user = info.context.get_user()
         ret = user.is_authenticated if user else False

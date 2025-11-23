@@ -23,17 +23,18 @@ from .types import CartItemType, CartType, OrderType
 
 def get_current_cart(info: Info) -> Cart | None:
     """Get the current cart from session, handling stale/invalid cart_pk.
-    
+
     This helper demonstrates:
     - Session-based cart storage (allows anonymous users to shop)
     - Graceful handling of stale/deleted carts with first() instead of get()
     - Query optimization with the optimizer's optimize() function
-    
+
     Args:
         info: The GraphQL resolve info containing request context
-        
+
     Returns:
         The current pending cart or None if no valid cart exists
+
     """
     cart_pk = info.context.request.session.get("cart_pk")
     if cart_pk is None:
@@ -65,7 +66,7 @@ class Query:
     )
     def my_orders(self, info: Info) -> Iterable[Order]:
         """Get the current user's orders.
-        
+
         Demonstrates:
         - Authentication requirement with IsAuthenticated() extension
         - Filtering queryset based on current user
@@ -77,7 +78,7 @@ class Query:
     @strawberry_django.field
     def my_cart(self, info: Info) -> CartType | None:
         """Get the current session's shopping cart.
-        
+
         Works for both authenticated and anonymous users via session storage.
         Returns null if no cart exists.
         """
@@ -98,23 +99,24 @@ class Mutation:
         quantity: int = 1,
     ) -> CartItemType:
         """Add a product to the cart or increment its quantity.
-        
+
         Demonstrates:
         - NodeInput for accepting global IDs
         - Automatic error handling with handle_django_errors
         - Transaction safety with @transaction.atomic
         - Session updates using transaction.on_commit
         - Get-or-create pattern for cart items
-        
+
         Args:
             product: Global ID of the product to add
             quantity: Number of items to add (default: 1)
-            
+
         Returns:
             The created or updated cart item
-            
+
         Raises:
             ValidationError: If quantity is less than 1
+
         """
         if quantity <= 0:
             raise ValidationError({
@@ -191,19 +193,20 @@ class Mutation:
     @transaction.atomic
     def cart_checkout(self, info: Info) -> OrderType:
         """Convert the current cart into an order.
-        
+
         Demonstrates:
         - Authentication requirement (get_user with required=True)
         - Business logic encapsulation (cart.checkout method)
         - Session cleanup with transaction.on_commit
         - Validation before processing
-        
+
         Returns:
             The created order
-            
+
         Raises:
             PermissionDenied: If user is not authenticated
             ValidationError: If cart is empty or doesn't exist
+
         """
         user = info.context.get_user(required=True)
         cart = get_current_cart(info)
