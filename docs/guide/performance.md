@@ -1,3 +1,7 @@
+---
+title: Performance Optimization
+---
+
 # Performance Optimization
 
 Performance is critical for GraphQL APIs, especially when dealing with complex queries and large datasets. This guide covers strategies to optimize your Strawberry Django application for maximum performance.

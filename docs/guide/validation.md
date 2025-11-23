@@ -1,3 +1,7 @@
+---
+title: Validation
+---
+
 # Validation
 
 Strawberry Django integrates with Django's validation system to automatically validate GraphQL inputs using Django's model validation, field validators, and forms.
