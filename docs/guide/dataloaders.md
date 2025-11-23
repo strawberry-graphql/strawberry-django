@@ -23,7 +23,7 @@ from . import models
 
 async def load_authors(keys: list[int]) -> list[models.Author | None]:
     """Batch load authors by their IDs."""
-    # Return results in the same order as keys
+    # Create map using async comprehension
     author_map = {
         author.id: author
         async for author in models.Author.objects.filter(id__in=keys)
@@ -43,7 +43,7 @@ from . import models
 class GraphQLContext:
     def __init__(self, request):
         self.request = request
-        self._author_loader = None
+        self._author_loader: DataLoader[int, models.Author | None] | None = None
 
     @property
     def author_loader(self) -> DataLoader[int, models.Author | None]:
@@ -110,8 +110,7 @@ async def load_tags(article_ids: list[int]) -> list[list[models.Tag]]:
     """Load tags for multiple articles."""
     tags_by_article = {
         article.id: await sync_to_async(list)(article.tags.all())
-        async for article in models.Article.objects.filter(id__in=article_ids)
-        .prefetch_related('tags')
+        async for article in models.Article.objects.filter(id__in=article_ids).prefetch_related('tags')
     }
 
     return [tags_by_article.get(article_id, []) for article_id in article_ids]
