@@ -82,24 +82,6 @@ class ProductType(relay.Node):
         """
         return f"${root.price:.2f}"
 
-    # Example of using a dataloader (commented out as it duplicates the brand field)
-    # @strawberry.field
-    # async def brand_via_loader(self, root: Product, info: Info) -> BrandType | None:
-    #     """Example showing DataLoader usage for batching queries.
-    #
-    #     This demonstrates how to use dataloaders to efficiently load related
-    #     objects, preventing N+1 queries. The brand_loader batches all brand_id
-    #     lookups in a single request into one database query.
-    #
-    #     Note: In practice, you'd use the auto-generated 'brand' field which
-    #     is already optimized by the DjangoOptimizerExtension. This example
-    #     shows the pattern for custom scenarios.
-    #     """
-    #     if root.brand_id is None:
-    #         return None
-    #     brand = await info.context.dataloaders.brand_loader.load(root.brand_id)
-    #     return cast("BrandType | None", brand)
-
 
 @strawberry_django.type(ProductImage, name="ProductImage")
 class ProductImageType(relay.Node):

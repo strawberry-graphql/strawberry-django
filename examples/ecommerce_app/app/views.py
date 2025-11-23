@@ -21,7 +21,7 @@ class GraphQLView(AsyncGraphQLView[Context]):
     For sync-only applications, use the standard GraphQLView instead.
     """
 
-    async def get_context(self, request, response) -> Context | ExecutionContext:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def get_context(self, request, response) -> Context | ExecutionContext:
         """Create a new Context instance for each GraphQL request.
 
         IMPORTANT: DataLoaders must be instantiated per-request to ensure

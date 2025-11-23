@@ -1,7 +1,12 @@
+"""Custom GraphQL context and type definitions.
+
+Provides type-safe context access and utilities for resolvers.
+"""
+
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import PermissionDenied
@@ -15,14 +20,9 @@ if TYPE_CHECKING:
     from .dataloaders import DataLoaders
 
 
-Info = info.Info["Context", None]
-"""Type alias for GraphQL info with our custom Context.
-
-This provides type safety and IDE autocompletion for:
-- info.context.request
-- info.context.get_user()
-- info.context.dataloaders
-"""
+# Type alias for GraphQL info with our custom Context.
+# Provides type safety and IDE autocompletion for context access.
+Info: TypeAlias = info.Info["Context", None]
 
 
 @dataclasses.dataclass

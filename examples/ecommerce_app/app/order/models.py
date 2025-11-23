@@ -99,7 +99,7 @@ class OrderItem(models.Model):
 
     @model_property(only=["quantity", "price"])
     def total(self) -> decimal.Decimal:
-        """Calculate line item total (quantity × price).
+        """Calculate line item total (quantity x price).
 
         The only parameter tells the optimizer to fetch quantity and price
         when this property is accessed, preventing deferred attribute errors.
@@ -219,7 +219,7 @@ class CartItem(models.Model):
 
     @model_property(only=["quantity", "product__price"], select_related=["product"])
     def total(self) -> decimal.Decimal:
-        """Calculate line item total (quantity × current price).
+        """Calculate line item total (quantity x current price).
 
         Demonstrates accessing related model fields through __notation
         and combining multiple optimization parameters.

@@ -74,7 +74,7 @@ def test_login_mutation(graphql_client, user, db):
     """
 
     # Test with correct credentials
-    result = graphql_client.query(
+    graphql_client.query(
         mutation,
         variables={"username": "testuser", "password": "testpass123"},
     )
