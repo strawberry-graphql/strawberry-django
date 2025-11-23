@@ -224,6 +224,7 @@ See [Django Forms documentation](https://docs.djangoproject.com/en/stable/topics
 2. **Put business logic in `Model.clean()`** instead of scattering it across resolvers
 
 3. **Use dict-style ValidationError** for field-specific errors:
+
    ```python
    raise ValidationError({'field': 'Error message'})
    ```

@@ -189,6 +189,7 @@ class Mutation:
 ```
 
 These mutations automatically:
+
 - Generate appropriate input types for nested relationships
 - Handle create, update, and delete operations on related objects
 - Validate data using Django's validation system

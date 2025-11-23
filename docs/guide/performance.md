@@ -382,8 +382,6 @@ class Query:
 # Stable across data changes
 ```
 
-
-
 ## Monitoring and Profiling
 
 Use Django Debug Toolbar in development to identify N+1 queries:
