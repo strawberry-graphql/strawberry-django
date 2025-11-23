@@ -92,6 +92,28 @@ query {
       name
     }
     price
+    formattedPrice
+    kind
+  }
+}
+```
+
+### Advanced Filtering - Nested Filters
+
+```graphql
+query {
+  products(
+    filters: { 
+      brand: { name: { iContains: "apple" } }
+      kind: { exact: PHYSICAL }
+    }
+    pagination: { limit: 5 }
+  ) {
+    id
+    name
+    brand {
+      name
+    }
     kind
   }
 }
@@ -385,6 +407,33 @@ query {
 }
 ```
 
+### 9. Understanding the Query Optimizer
+
+The DjangoOptimizerExtension automatically optimizes queries based on your GraphQL selection:
+
+```graphql
+# This query
+query {
+  products(pagination: { limit: 10 }) {
+    name
+    brand {
+      name
+    }
+    formattedPrice
+  }
+}
+
+# Automatically generates optimal SQL with:
+# - SELECT only needed fields (name, price for formattedPrice, brand_id)
+# - JOIN brand table (select_related)
+# - No N+1 queries
+```
+
+The optimizer works because:
+- `@model_property` decorators specify field dependencies
+- `@strawberry_django.field` with `only`, `select_related`, `prefetch_related`
+- Automatic analysis of field requirements
+
 ## Testing
 
 Example tests are provided in the `tests/` directory showing how to test Strawberry Django applications:
@@ -470,6 +519,73 @@ def computed_value(self) -> int:
 )
 def custom_resolver(self, root: Product) -> str:
     return f"{root.brand.name}: {root.name}"
+```
+
+## Common Pitfalls and Solutions
+
+### ❌ Forgetting to specify optimization hints
+
+```python
+# BAD - Will cause N+1 queries
+@model_property
+def full_name(self) -> str:
+    return f"{self.first_name} {self.last_name}"  # Deferred attribute error!
+```
+
+```python
+# GOOD - Specifies required fields
+@model_property(only=["first_name", "last_name"])
+def full_name(self) -> str:
+    return f"{self.first_name} {self.last_name}"
+```
+
+### ❌ Not using transactions for multi-step operations
+
+```python
+# BAD - No atomicity
+def checkout(self, user):
+    order = Order.objects.create(user=user, cart=self)
+    for item in self.items.all():
+        order.items.create(...)  # If this fails, order still exists!
+```
+
+```python
+# GOOD - Atomic operation
+@transaction.atomic
+def checkout(self, user):
+    order = Order.objects.create(user=user, cart=self)
+    for item in self.items.all():
+        order.items.create(...)  # All-or-nothing
+```
+
+### ❌ Capturing variables by reference in lambdas
+
+```python
+# BAD - cart.pk might change before callback runs
+transaction.on_commit(
+    lambda: info.context.request.session.update({"cart_pk": cart.pk})
+)
+```
+
+```python
+# GOOD - Capture by value with default argument
+transaction.on_commit(
+    lambda pk=cart.pk: info.context.request.session.update({"cart_pk": pk})
+)
+```
+
+### ❌ Not handling async contexts properly
+
+```python
+# BAD - Sync code in async resolver
+async def my_resolver(self, info: Info):
+    user = info.context.request.user  # Might cause SynchronousOnlyOperation
+```
+
+```python
+# GOOD - Use async helpers
+async def my_resolver(self, info: Info):
+    user = await info.context.aget_user()  # Properly wrapped
 ```
 
 ## Additional Resources

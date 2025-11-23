@@ -18,6 +18,12 @@ class EmailType(relay.Node):
 
 @strawberry_django.filter_type(User, lookups=True)
 class UserFilter:
+    """Filter type for User queries.
+    
+    The lookups=True parameter enables field lookups like iContains, exact, etc.
+    Example: filters: { firstName: { iContains: "john" } }
+    """
+
     id: strawberry.auto
     first_name: strawberry.auto
     birth_date: strawberry.auto
@@ -25,6 +31,12 @@ class UserFilter:
 
 @strawberry_django.order_type(User)
 class UserOrder:
+    """Ordering type for User queries.
+    
+    Allows sorting by specified fields in ASC or DESC order.
+    Example: order: { firstName: ASC }
+    """
+
     id: strawberry.auto
     first_name: strawberry.auto
     birth_date: strawberry.auto

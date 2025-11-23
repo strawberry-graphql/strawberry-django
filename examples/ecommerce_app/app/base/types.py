@@ -16,10 +16,31 @@ if TYPE_CHECKING:
 
 
 Info = info.Info["Context", None]
+"""Type alias for GraphQL info with our custom Context.
+
+This provides type safety and IDE autocompletion for:
+- info.context.request
+- info.context.get_user()
+- info.context.dataloaders
+"""
 
 
 @dataclasses.dataclass
 class Context(StrawberryDjangoContext):
+    """Custom GraphQL context with type-safe user access and dataloaders.
+    
+    Extends StrawberryDjangoContext to add:
+    - dataloaders: Container for all DataLoader instances
+    - get_user(): Type-safe user retrieval with authentication checks
+    - aget_user(): Async version of get_user()
+    
+    Example usage:
+        @strawberry_django.field
+        def my_resolver(self, info: Info) -> SomeType:
+            user = info.context.get_user(required=True)
+            brand = await info.context.dataloaders.brand_loader.load(brand_id)
+    """
+
     dataloaders: DataLoaders
 
     @overload
@@ -29,6 +50,22 @@ class Context(StrawberryDjangoContext):
     def get_user(self, *, required: None = ...) -> User | None: ...
 
     def get_user(self, *, required: Literal[True] | None = None) -> User | None:
+        """Get the authenticated user from the request.
+        
+        Args:
+            required: If True, raises PermissionDenied when user is not authenticated.
+                     If None/False, returns None for unauthenticated requests.
+                     
+        Returns:
+            User instance if authenticated, None otherwise (unless required=True)
+            
+        Raises:
+            PermissionDenied: If required=True and user is not authenticated/active
+            
+        The overload signatures ensure type safety:
+        - get_user(required=True) -> User (never None)
+        - get_user() -> User | None
+        """
         user = self.request.user
 
         if not user or not user.is_authenticated or not user.is_active:
@@ -46,6 +83,16 @@ class Context(StrawberryDjangoContext):
     async def aget_user(self, *, required: None = ...) -> User | None: ...
 
     async def aget_user(self, *, required: Literal[True] | None = None) -> User | None:
+        """Async version of get_user().
+        
+        Use this in async resolvers to avoid SynchronousOnlyOperation errors.
+        
+        Example:
+            @strawberry_django.field
+            async def my_async_resolver(self, info: Info) -> UserType:
+                user = await info.context.aget_user(required=True)
+                return cast("UserType", user)
+        """
         # Wrap the sync method properly to handle the overload signature
         if required:
             return await sync_to_async(lambda: self.get_user(required=True))()
