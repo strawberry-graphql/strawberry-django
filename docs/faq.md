@@ -168,20 +168,32 @@ class AuthorFilter:
 
 ### How do I create nested objects in mutations?
 
-**Recommended**: Use the automatic mutation generators which handle nested relationships for you:
+**Recommended**: Use the automatic mutation generators which handle nested relationships automatically:
 
 ```python
 import strawberry
 import strawberry_django
+from strawberry_django import mutations
+from . import models
+
+@strawberry_django.input(models.Author)
+class AuthorInput:
+    name: auto
+    books: auto  # Automatically handles nested book creation
 
 @strawberry.type
 class Mutation:
-    create_author: Author = strawberry_django.create()
-    update_author: Author = strawberry_django.update()
-    delete_author: Author = strawberry_django.delete()
+    create_author: Author = mutations.create(AuthorInput)
+    update_author: Author = mutations.update(AuthorInput)
+    delete_author: Author = mutations.delete()
 ```
 
-These automatically generate input types and handle nested creates/updates. See the [tests in the repository](https://github.com/strawberry-graphql/strawberry-django/tree/main/tests) for examples.
+These mutations automatically:
+- Generate appropriate input types for nested relationships
+- Handle create, update, and delete operations on related objects
+- Validate data using Django's validation system
+
+See the [tests in the repository](https://github.com/strawberry-graphql/strawberry-django/tree/main/tests) for complete examples of automatic mutations with nested relationships.
 
 **Manual approach** (when you need custom logic):
 
@@ -527,22 +539,6 @@ class Mutation:
         # Handle the file...
         return True
 ```
-
-### Can I use subscriptions with Django?
-
-Yes, using Django Channels:
-
-```python
-# asgi.py
-from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
-
-application = AuthGraphQLProtocolTypeRouter(
-    schema,
-    django_application=django_asgi_app,
-)
-```
-
-See [Subscriptions guide](./guide/subscriptions.md).
 
 ## Common Errors
 

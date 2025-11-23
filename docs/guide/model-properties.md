@@ -73,7 +73,7 @@ The computed value is cached on the instance after the first access, avoiding re
 
 ## Optimization Parameters
 
-Model properties accept the same optimization hints as `strawberry_django.field()`: `only`, `select_related`, `prefetch_related`, and `annotate`. See the [Query Optimizer guide](./optimizer.md) for complete details on these parameters.
+Model properties accept the same optimization hints as `strawberry_django.field()`. See the [Query Optimizer guide](./optimizer.md) for complete details.
 
 ## Combining with GraphQL Types
 
