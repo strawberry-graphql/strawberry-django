@@ -8,17 +8,6 @@ This guide covers common issues encountered when using Strawberry Django and the
 
 ## Installation and Setup Issues
 
-### Import Errors
-
-**Problem**: `Cannot find reference 'django' in 'strawberry_django'`
-
-**Solution**: This is typically an IDE issue (PyCharm, VS Code). Add this import to help your IDE:
-
-```python
-import strawberry.django  # Helps IDE resolve strawberry_django imports
-import strawberry_django
-```
-
 ### Module Not Found
 
 **Problem**: `ModuleNotFoundError: No module named 'strawberry_django'`
@@ -27,8 +16,6 @@ import strawberry_django
 
 ```bash
 pip install strawberry-graphql-django
-# or
-poetry add strawberry-graphql-django
 ```
 
 ## Type and Field Resolution
@@ -567,17 +554,6 @@ from typing import cast
 def create_fruit(self, name: str) -> Fruit:
     fruit = models.Fruit.objects.create(name=name)
     return cast(Fruit, fruit)  # ✅ Help type checker
-```
-
-### VS Code Auto-Import Not Working
-
-**Problem**: Auto-import doesn't suggest `strawberry_django` imports.
-
-**Solution**: Add explicit import at top of module:
-
-```python
-import strawberry.django  # Helps VS Code
-import strawberry_django
 ```
 
 ## Getting Help

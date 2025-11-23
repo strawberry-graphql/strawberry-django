@@ -162,6 +162,9 @@ class Query:
         return qs[:100]  # Default limit
 ```
 
+> [!NOTE]
+> Returning `list[Fruit]` means the queryset is evaluated immediately. For paginated queries with metadata (total count, page info), use `OffsetPaginated[Fruit]` with `pagination=True` instead. See the [Pagination guide](./pagination.md) for details.
+
 ```graphql
 query {
   fruits(pagination: { offset: 0, limit: 10 }) {
