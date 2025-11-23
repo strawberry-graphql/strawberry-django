@@ -23,12 +23,11 @@ from . import models
 
 async def load_authors(keys: list[int]) -> list[models.Author | None]:
     """Batch load authors by their IDs."""
-    authors = await sync_to_async(list)(
-        models.Author.objects.filter(id__in=keys)
-    )
-
     # Return results in the same order as keys
-    author_map = {author.id: author for author in authors}
+    author_map = {
+        author.id: author
+        async for author in models.Author.objects.filter(id__in=keys)
+    }
     return [author_map.get(key) for key in keys]
 ```
 
@@ -39,6 +38,7 @@ async def load_authors(keys: list[int]) -> list[models.Author | None]:
 ```python title="context.py"
 from strawberry.dataloader import DataLoader
 from .dataloaders import load_authors
+from . import models
 
 class GraphQLContext:
     def __init__(self, request):
@@ -46,7 +46,7 @@ class GraphQLContext:
         self._author_loader = None
 
     @property
-    def author_loader(self) -> DataLoader:
+    def author_loader(self) -> DataLoader[int, models.Author | None]:
         if self._author_loader is None:
             self._author_loader = DataLoader(load_fn=load_authors)
         return self._author_loader
@@ -96,12 +96,8 @@ from collections import defaultdict
 
 async def load_books_by_author(author_ids: list[int]) -> list[list[models.Book]]:
     """Load all books for multiple authors."""
-    books = await sync_to_async(list)(
-        models.Book.objects.filter(author_id__in=author_ids)
-    )
-
     books_by_author = defaultdict(list)
-    for book in books:
+    async for book in models.Book.objects.filter(author_id__in=author_ids):
         books_by_author[book.author_id].append(book)
 
     return [books_by_author[author_id] for author_id in author_ids]
@@ -112,33 +108,13 @@ async def load_books_by_author(author_ids: list[int]) -> list[list[models.Book]]
 ```python title="dataloaders.py"
 async def load_tags(article_ids: list[int]) -> list[list[models.Tag]]:
     """Load tags for multiple articles."""
-    articles = await sync_to_async(list)(
-        models.Article.objects.filter(id__in=article_ids)
-        .prefetch_related('tags')
-    )
-
     tags_by_article = {
-        article.id: list(article.tags.all())
-        for article in articles
+        article.id: await sync_to_async(list)(article.tags.all())
+        async for article in models.Article.objects.filter(id__in=article_ids)
+        .prefetch_related('tags')
     }
 
     return [tags_by_article.get(article_id, []) for article_id in article_ids]
-```
-
-### Optimizing Queries
-
-Use Django's `select_related()` and `prefetch_related()` in your DataLoaders:
-
-```python title="dataloaders.py"
-async def load_authors(keys: list[int]) -> list[models.Author | None]:
-    """Load authors with their publisher."""
-    authors = await sync_to_async(list)(
-        models.Author.objects.filter(id__in=keys)
-        .select_related('publisher')
-    )
-
-    author_map = {author.id: author for author in authors}
-    return [author_map.get(key) for key in keys]
 ```
 
 ## See Also

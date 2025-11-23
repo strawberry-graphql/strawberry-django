@@ -73,64 +73,7 @@ The computed value is cached on the instance after the first access, avoiding re
 
 ## Optimization Parameters
 
-Model properties support the same optimization hints as `strawberry_django.field()`: `only`, `select_related`, and `prefetch_related`. See the [Query Optimizer guide](./optimizer.md) for detailed information on these parameters.
-
-You can also use a lambda for more complex prefetch scenarios:
-
-```python title="models.py"
-from django.db.models import Prefetch
-
-class Author(models.Model):
-    name = models.CharField(max_length=100)
-
-    @model_property(
-        prefetch_related=[
-            lambda info: Prefetch(
-                "books",
-                queryset=Book.objects.filter(published=True)
-            )
-        ]
-    )
-    def published_book_count(self) -> int:
-        return len(self.books.all())
-```
-
-### `annotate`
-
-Add database annotations for complex calculations:
-
-```python title="models.py"
-from django.db.models import Count
-
-class Category(models.Model):
-    name = models.CharField(max_length=100)
-
-    @model_property(
-        annotate={
-            "_product_count": Count("products")
-        }
-    )
-    def product_count(self) -> int:
-        """Get the count of products in this category."""
-        return self._product_count  # type: ignore
-```
-
-You can also use lambdas for dynamic annotations:
-
-```python title="models.py"
-from django.db.models import Avg
-
-class Product(models.Model):
-    name = models.CharField(max_length=100)
-
-    @model_property(
-        annotate={
-            "_avg_rating": lambda info: Avg("reviews__rating")
-        }
-    )
-    def average_rating(self) -> float:
-        return self._avg_rating or 0.0  # type: ignore
-```
+Model properties accept the same optimization hints as `strawberry_django.field()`: `only`, `select_related`, `prefetch_related`, and `annotate`. See the [Query Optimizer guide](./optimizer.md) for complete details on these parameters.
 
 ## Combining with GraphQL Types
 
@@ -171,55 +114,6 @@ class Order:
     status: auto
     total_amount: auto      # Uses model_property optimization hints
     customer_name: auto     # Uses cached_model_property hints
-```
-
-## Common Patterns
-
-### Conditional Logic with Info Context
-
-For properties that need request context, you can combine model properties with field resolvers:
-
-```python title="types.py"
-import strawberry_django
-from strawberry import auto
-from strawberry.types import Info
-
-@strawberry_django.type(models.Product)
-class Product:
-    name: auto
-    price: auto
-
-    @strawberry_django.field(only=["price"])
-    def discounted_price(self, info: Info) -> Decimal:
-        """Apply user-specific discount."""
-        user = info.context.request.user
-        discount = user.discount_rate if user.is_authenticated else 0
-        return self.price * (1 - discount)
-```
-
-### Combining Multiple Optimization Hints
-
-```python title="models.py"
-from django.db.models import Count, Avg, Q
-
-class Product(models.Model):
-    name = models.CharField(max_length=200)
-    category = models.ForeignKey("Category", on_delete=models.CASCADE)
-
-    @model_property(
-        select_related=["category"],
-        prefetch_related=["reviews"],
-        annotate={
-            "_review_count": Count("reviews"),
-            "_avg_rating": Avg("reviews__rating"),
-        },
-        only=["name", "category__name"]
-    )
-    def summary(self) -> str:
-        """Generate a product summary with category and ratings."""
-        reviews = self._review_count  # type: ignore
-        rating = self._avg_rating or 0.0  # type: ignore
-        return f"{self.name} ({self.category.name}) - {rating:.1f}★ ({reviews} reviews)"
 ```
 
 ## Best Practices

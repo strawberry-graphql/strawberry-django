@@ -44,16 +44,18 @@ Check out the [examples directory](https://github.com/strawberry-graphql/strawbe
 
 ### Type checking errors with strawberry.auto
 
-If your type checker (PyLance, mypy) shows errors with `strawberry.auto`, use type casts in mutations when returning a Django model instance but the annotation expects a GraphQL type:
+If your type checker (PyLance, mypy) shows errors with `strawberry.auto`, it's because you're returning a Django model instance while the annotation expects a GraphQL type. Use type casts to inform the type checker that the return value is compatible:
 
 ```python
 from typing import cast
 
 @strawberry_django.mutation
-def create_fruit(self, name: str) -> Fruit:
-    fruit = models.Fruit.objects.create(name=name)
-    return cast(Fruit, fruit)  # Cast model to GraphQL type
+def create_fruit(self, name: str) -> Fruit:  # Fruit is the GraphQL type
+    fruit = models.Fruit.objects.create(name=name)  # Returns Django model
+    return cast(Fruit, fruit)  # Tell type checker: model is compatible with GraphQL type
 ```
+
+This is only needed when the annotation is a GraphQL type but you're returning a Django model instance. The cast is purely for type checking and has no runtime effect.
 
 ## Queries and Optimization
 
@@ -166,9 +168,22 @@ class AuthorFilter:
 
 ### How do I create nested objects in mutations?
 
-You can handle nested mutations manually as shown below, or use the automatic mutation generators `strawberry_django.create`, `strawberry_django.update`, or `strawberry_django.delete` which handle nested relationships automatically.
+**Recommended**: Use the automatic mutation generators which handle nested relationships for you:
 
-**Manual approach:**
+```python
+import strawberry
+import strawberry_django
+
+@strawberry.type
+class Mutation:
+    create_author: Author = strawberry_django.create()
+    update_author: Author = strawberry_django.update()
+    delete_author: Author = strawberry_django.delete()
+```
+
+These automatically generate input types and handle nested creates/updates. See the [tests in the repository](https://github.com/strawberry-graphql/strawberry-django/tree/main/tests) for examples.
+
+**Manual approach** (when you need custom logic):
 
 ```python
 from django.db import transaction
@@ -192,13 +207,12 @@ def create_author_with_books(self, data: AuthorInputWithBooks) -> Author:
             models.Book.objects.create(
                 author=author,
                 title=book_data.title,
-                # Add other book fields explicitly
             )
 
     return models.Author.objects.get(pk=author.pk)
 ```
 
-See [Nested Mutations guide](./guide/nested-mutations.md) for comprehensive examples and check the tests in the repository for automatic mutation examples.
+See [Nested Mutations guide](./guide/nested-mutations.md) for more details.
 
 ### How do I update many-to-many relationships?
 
@@ -529,19 +543,6 @@ application = AuthGraphQLProtocolTypeRouter(
 ```
 
 See [Subscriptions guide](./guide/subscriptions.md).
-
-### How do I integrate with Django's cache framework?
-
-The library includes a validation cache extension:
-
-```python
-from strawberry_django.extensions import DjangoValidationCache
-
-schema = strawberry.Schema(
-    query=Query,
-    extensions=[DjangoValidationCache],
-)
-```
 
 ## Common Errors
 
