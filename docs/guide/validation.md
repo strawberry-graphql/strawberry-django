@@ -93,6 +93,7 @@ class User(models.Model):
 
     def clean(self):
         """Custom model validation"""
+        super().clean()  # Always call parent first
         errors = {}
 
         if self.age < 18:
