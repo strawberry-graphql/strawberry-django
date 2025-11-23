@@ -1,20 +1,34 @@
 # E-commerce Example
 
-An example GraphQL API demonstrating Strawberry Django features and best practices through an e-commerce use case with users, products, shopping cart, and orders.
+A comprehensive GraphQL API example demonstrating **Strawberry Django** features and best practices through a realistic e-commerce application with users, products, shopping carts, and orders.
 
-## What This Example Demonstrates
+## 🎯 Learning Objectives
 
-This example showcases:
+This example is designed to help you learn Strawberry Django by demonstrating real-world patterns you'll use in production applications. After exploring this example, you'll understand:
 
-- **Modular Django app structure** - Organized code across user, product, and order apps
-- **Multiple query patterns** - Single nodes, paginated lists, and Relay connections
-- **Filtering and ordering** - Type-safe filtering and ordering on queries
-- **Authentication & permissions** - Login/logout with permission checks using extensions
-- **Custom mutations** - Shopping cart operations and checkout flow
-- **Query optimization** - Using `@model_property` to work with the DjangoOptimizerExtension
-- **Custom context** - Type-safe context with user helpers and dataloaders
-- **Relay interface** - Node interface implementation for global IDs
-- **Session handling** - Session-based cart before authentication
+### Core Concepts
+- **Modular Django app structure** - How to organize GraphQL schemas across multiple Django apps
+- **Type-safe GraphQL** - Using Python type hints for automatic schema generation
+- **Relay Node interface** - Implementing global object identification
+- **Multiple query patterns** - Single nodes, offset pagination, and cursor-based Relay connections
+
+### Optimization & Performance
+- **Query optimization** - Using `@model_property` with optimization hints to prevent N+1 queries
+- **DataLoaders** - Batching and caching database queries (see `app/base/dataloaders.py`)
+- **Prefetching strategies** - Efficient loading of related data
+
+### Security & Authentication
+- **Authentication** - Session-based login/logout
+- **Permissions** - Using permission extensions (`IsAuthenticated`, `IsStaff`)
+- **Field-level security** - Controlling access to specific fields
+
+### Advanced Features
+- **Custom context** - Type-safe context with helper methods and dataloaders
+- **Error handling** - Automatic Django error conversion with `handle_django_errors`
+- **Transaction handling** - Using `@transaction.atomic` for data consistency
+- **Session management** - Anonymous cart with session storage
+- **Computed fields** - Business logic in model properties and resolvers
+- **Type enums** - Exposing Django TextChoices to GraphQL
 
 ## Setup
 
@@ -78,6 +92,28 @@ query {
       name
     }
     price
+    formattedPrice
+    kind
+  }
+}
+```
+
+### Advanced Filtering - Nested Filters
+
+```graphql
+query {
+  products(
+    filters: { 
+      brand: { name: { iContains: "apple" } }
+      kind: { exact: PHYSICAL }
+    }
+    pagination: { limit: 5 }
+  ) {
+    id
+    name
+    brand {
+      name
+    }
     kind
   }
 }
@@ -250,9 +286,9 @@ Usage in resolvers:
 
 ```python
 @strawberry_django.field
-def my_field(self, info: Info) -> SomeType:
+async def my_field(self, info: Info, brand_id: int) -> SomeType:
     user = info.context.get_user(required=True)  # Type-safe!
-    # Note: This is an illustrative example - dataloaders are not yet implemented in this demo
+    # Use dataloaders to efficiently batch queries
     brand = await info.context.dataloaders.brand_loader.load(brand_id)
 ```
 
@@ -371,6 +407,51 @@ query {
 }
 ```
 
+### 9. Understanding the Query Optimizer
+
+The DjangoOptimizerExtension automatically optimizes queries based on your GraphQL selection:
+
+```graphql
+# This query
+query {
+  products(pagination: { limit: 10 }) {
+    name
+    brand {
+      name
+    }
+    formattedPrice
+  }
+}
+
+# Automatically generates optimal SQL with:
+# - SELECT only needed fields (name, price for formattedPrice, brand_id)
+# - JOIN brand table (select_related)
+# - No N+1 queries
+```
+
+The optimizer works because:
+- `@model_property` decorators specify field dependencies
+- `@strawberry_django.field` with `only`, `select_related`, `prefetch_related`
+- Automatic analysis of field requirements
+
+## Testing
+
+Example tests are provided in the `tests/` directory showing how to test Strawberry Django applications:
+
+```bash
+# Run tests with pytest
+poetry run pytest tests/
+
+# Run with coverage
+poetry run pytest --cov=app tests/
+```
+
+The tests demonstrate:
+- Testing queries and mutations
+- Handling authentication in tests
+- Using fixtures for test data
+- Testing with GraphQL test client
+
 ## Admin Interface
 
 Access the Django admin at http://localhost:8000/admin/
@@ -382,3 +463,140 @@ Default credentials:
 ## Debug Toolbar
 
 When running in debug mode, the Django Debug Toolbar is available to inspect queries and performance. Look for the toolbar on the right side when accessing the GraphQL endpoint through a browser.
+
+## Learning Path
+
+If you're new to Strawberry Django, we recommend exploring the example in this order:
+
+1. **Start with models** (`app/user/models.py`, `app/product/models.py`) - See how Django models are defined with type hints and `@model_property`
+2. **Explore types** (`app/user/types.py`, `app/product/types.py`) - Learn how models are exposed as GraphQL types
+3. **Study schemas** (`app/user/schema.py`, `app/order/schema.py`) - Understand queries, mutations, and permissions
+4. **Check context** (`app/base/types.py`, `app/base/dataloaders.py`) - See how context and dataloaders work
+5. **Review root schema** (`app/schema.py`) - Learn how to merge schemas from multiple apps
+6. **Try queries** - Use GraphiQL to experiment with the example queries in this README
+7. **Read tests** (`tests/`) - See how to test your GraphQL API
+
+## Common Patterns Reference
+
+### Adding a New Model
+
+1. Create the Django model with type hints
+2. Add `@model_property` for computed fields
+3. Create a GraphQL type with `@strawberry_django.type`
+4. Add queries/mutations in schema.py
+5. Merge into root schema
+
+### Adding Permissions
+
+```python
+# Query-level permission
+@strawberry_django.field(extensions=[IsAuthenticated()])
+def my_data(self, info: Info) -> list[MyType]:
+    ...
+
+# Field-level permission
+@strawberry_django.field(extensions=[IsStaff()])
+def sensitive_field(self, root: MyModel) -> str:
+    return root.secret_data
+```
+
+### Optimizing Queries
+
+```python
+# For model properties
+@model_property(
+    only=["field1", "field2"],  # SELECT these fields
+    select_related=["fk_relation"],  # JOIN these FKs
+    prefetch_related=["m2m_relation"],  # Prefetch these M2M/reverse FKs
+)
+def computed_value(self) -> int:
+    ...
+
+# For custom resolvers
+@strawberry_django.field(
+    only=["name"],
+    select_related=["brand"],
+)
+def custom_resolver(self, root: Product) -> str:
+    return f"{root.brand.name}: {root.name}"
+```
+
+## Common Pitfalls and Solutions
+
+### ❌ Forgetting to specify optimization hints
+
+```python
+# BAD - Will cause N+1 queries
+@model_property
+def full_name(self) -> str:
+    return f"{self.first_name} {self.last_name}"  # Deferred attribute error!
+```
+
+```python
+# GOOD - Specifies required fields
+@model_property(only=["first_name", "last_name"])
+def full_name(self) -> str:
+    return f"{self.first_name} {self.last_name}"
+```
+
+### ❌ Not using transactions for multi-step operations
+
+```python
+# BAD - No atomicity
+def checkout(self, user):
+    order = Order.objects.create(user=user, cart=self)
+    for item in self.items.all():
+        order.items.create(...)  # If this fails, order still exists!
+```
+
+```python
+# GOOD - Atomic operation
+@transaction.atomic
+def checkout(self, user):
+    order = Order.objects.create(user=user, cart=self)
+    for item in self.items.all():
+        order.items.create(...)  # All-or-nothing
+```
+
+### ❌ Capturing variables by reference in lambdas
+
+```python
+# BAD - cart.pk might change before callback runs
+transaction.on_commit(
+    lambda: info.context.request.session.update({"cart_pk": cart.pk})
+)
+```
+
+```python
+# GOOD - Capture by value with default argument
+transaction.on_commit(
+    lambda pk=cart.pk: info.context.request.session.update({"cart_pk": pk})
+)
+```
+
+### ❌ Not handling async contexts properly
+
+```python
+# BAD - Sync code in async resolver
+async def my_resolver(self, info: Info):
+    user = info.context.request.user  # Might cause SynchronousOnlyOperation
+```
+
+```python
+# GOOD - Use async helpers
+async def my_resolver(self, info: Info):
+    user = await info.context.aget_user()  # Properly wrapped
+```
+
+## Additional Resources
+
+- [Strawberry Django Documentation](https://strawberry.rocks/docs/django)
+- [Strawberry GraphQL Documentation](https://strawberry.rocks/)
+- [Django Documentation](https://docs.djangoproject.com/)
+- [GraphQL Specification](https://spec.graphql.org/)
+
+## Need Help?
+
+- Check the [Strawberry Django FAQ](https://strawberry.rocks/docs/django/faq)
+- Visit the [GitHub Discussions](https://github.com/strawberry-graphql/strawberry-django/discussions)
+- Join the [Discord Community](https://discord.gg/ZkRTEJQ)
