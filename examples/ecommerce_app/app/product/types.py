@@ -55,3 +55,21 @@ class ProductImageType(relay.Node):
     @strawberry_django.field(only=["image"])
     def image(self, root: ProductImage) -> str | None:
         return root.image.url if root.image else None
+
+
+@strawberry_django.input(Product)
+class ProductInput:
+    """Input type for creating products."""
+
+    name: auto
+    brand: relay.GlobalID | None = None
+    kind: auto
+    description: auto
+    price: auto
+
+
+@strawberry_django.input(Brand)
+class BrandInput:
+    """Input type for creating brands."""
+
+    name: auto

@@ -12,7 +12,11 @@ if TYPE_CHECKING:
 
 
 class Brand(models.Model):
-    """Product brand model."""
+    """Product brand/manufacturer model.
+    
+    Represents companies or manufacturers of products (e.g., Apple, Samsung).
+    Demonstrates a simple model with a string representation.
+    """
 
     class Meta:
         verbose_name = _("Brand")
@@ -28,7 +32,14 @@ class Brand(models.Model):
 
 
 class Product(models.Model):
-    """Product model."""
+    """Product model representing items available for purchase.
+    
+    Demonstrates:
+    - TextChoices enum exposed to GraphQL via @strawberry.enum
+    - ForeignKey relationship with optional brand
+    - Type hints for foreign key IDs (brand_id: int | None)
+    - Using django-choices-field for better enum handling
+    """
 
     class Meta:
         verbose_name = _("Product")
@@ -76,7 +87,11 @@ class Product(models.Model):
 
 
 class ProductImage(models.Model):
-    """Product image model."""
+    """Product images for display in the catalog.
+    
+    Demonstrates handling of image fields and related_name usage
+    for reverse relationships (product.images).
+    """
 
     class Meta:
         verbose_name = _("Image")

@@ -12,7 +12,13 @@ from strawberry_django.descriptors import model_property
 
 
 class User(AbstractUser):
-    """Default user in the app."""
+    """User model extending Django's AbstractUser.
+    
+    This model demonstrates:
+    - Custom fields (avatar, birth_date)
+    - Computed properties with @model_property
+    - Type hints for better IDE support
+    """
 
     class Meta:
         verbose_name = _("User")
@@ -33,6 +39,11 @@ class User(AbstractUser):
 
     @model_property(only=["birth_date"])
     def age(self) -> int | None:
+        """Calculate user's age from birth_date.
+        
+        The @model_property decorator with only=["birth_date"] tells the optimizer
+        to fetch birth_date when this property is requested, preventing N+1 queries.
+        """
         if self.birth_date is None:
             return None
 
@@ -41,7 +52,11 @@ class User(AbstractUser):
 
 
 class Email(models.Model):
-    """Email model for users."""
+    """Email addresses associated with users.
+    
+    Demonstrates a one-to-many relationship where users can have multiple email addresses,
+    with one marked as primary for communication.
+    """
 
     class Meta:
         verbose_name = _("Email")

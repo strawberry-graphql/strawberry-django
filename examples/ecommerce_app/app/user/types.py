@@ -10,6 +10,8 @@ from .models import Email, User
 
 @strawberry_django.type(Email, name="Email")
 class EmailType(relay.Node):
+    """GraphQL type for Email model implementing Relay Node interface."""
+
     email: strawberry.auto
     is_primary: strawberry.auto
 
@@ -30,6 +32,15 @@ class UserOrder:
 
 @strawberry_django.type(User, name="User")
 class UserType(relay.Node):
+    """GraphQL type for User model.
+    
+    Demonstrates:
+    - Relay Node interface implementation
+    - Field deprecation (first_name, last_name -> name)
+    - Custom field resolvers with optimization hints
+    - Computed fields from model properties (age)
+    """
+
     emails: list[EmailType]
     birth_date: strawberry.auto
     age: strawberry.auto
@@ -38,8 +49,14 @@ class UserType(relay.Node):
 
     @strawberry_django.field(only=["first_name", "last_name"])
     def name(self, root: User) -> str:
+        """Return the user's full name.
+        
+        The only parameter ensures first_name and last_name are fetched
+        when this field is requested, preventing deferred attribute errors.
+        """
         return f"{root.first_name} {root.last_name}".strip()
 
     @strawberry_django.field(only=["avatar"])
     def avatar(self, root: User) -> str | None:
+        """Return the user's avatar URL if available."""
         return root.avatar.url if root.avatar else None

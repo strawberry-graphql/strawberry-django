@@ -12,12 +12,20 @@ if TYPE_CHECKING:
 
 @strawberry.type
 class Query:
+    """Product-related queries demonstrating different query patterns."""
+
     product: ProductType = strawberry_django.node()
+    """Fetch a single product by its global ID (Relay Node pattern)."""
+
     products: list[ProductType] = strawberry_django.field(pagination=True)
+    """List products with offset-based pagination, filtering, and ordering."""
+
     products_conn: strawberry_django.relay.DjangoListConnection[ProductType] = (
         strawberry_django.connection()
     )
+    """List products with cursor-based Relay connection pagination."""
 
 
 @strawberry.type
-class Mutation: ...
+class Mutation:
+    """Product-related mutations (placeholder for future extensions)."""
