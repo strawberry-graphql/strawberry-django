@@ -276,283 +276,61 @@ async def author(self, info) -> Author:
 
 ## Database Optimization
 
-Beyond query optimization, optimize your database schema and queries.
-
-### Indexes
-
-Add indexes for frequently queried fields:
+Beyond GraphQL-specific optimizations, add database indexes for fields used in GraphQL filters and ordering:
 
 ```python
-from django.db import models
-
 class Book(models.Model):
     title = models.CharField(max_length=200, db_index=True)
-    isbn = models.CharField(max_length=13, unique=True)  # Unique adds index
     publication_date = models.DateField(db_index=True)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE)  # FK auto-indexed
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
     class Meta:
         indexes = [
-            # Composite indexes for common queries
             models.Index(fields=['author', 'publication_date']),
-            models.Index(fields=['title', 'author']),
-
-            # Partial index (PostgreSQL)
-            models.Index(
-                fields=['publication_date'],
-                name='recent_books_idx',
-                condition=models.Q(publication_date__gte='2020-01-01')
-            ),
         ]
 ```
 
-### Database Functions and Aggregations
-
-Use database functions for calculations:
+Use database aggregations in GraphQL resolvers:
 
 ```python
-from django.db.models import F, Q, Count, Sum, Avg
-from django.db.models.functions import Lower, Concat
+from django.db.models import Count, Avg
 
-@strawberry.type
-class Query:
-    @strawberry.field
-    def books(
-        self,
-        min_rating: Optional[float] = None
-    ) -> List[BookType]:
-        qs = Book.objects.all()
-
-        # Filter using database
-        if min_rating:
-            qs = qs.filter(rating__gte=min_rating)
-
-        # Annotate aggregations
-        qs = qs.annotate(
-            review_count=Count('reviews'),
-            avg_rating=Avg('reviews__rating'),
-            full_title=Concat('title', models.Value(' - '), 'subtitle')
-        )
-
-        return qs
+@strawberry_django.type(models.Author)
+class Author:
+    name: auto
+    book_count: int = strawberry_django.field(annotate={'book_count': Count('books')})
+    avg_rating: float = strawberry_django.field(annotate={'avg_rating': Avg('books__rating')})
 ```
 
-### Efficient Counting
-
-```python
-# Bad: Loads all objects into memory
-books = Book.objects.all()
-count = len(books)  # Fetches all records!
-
-# Good: Count in database
-count = Book.objects.count()
-
-# Even better: exists() for boolean checks
-has_books = Book.objects.exists()
-```
-
-### Efficient Existence Checks
-
-```python
-# Bad: Fetches objects
-if Book.objects.filter(author=author):
-    # ...
-
-# Good: Just check existence
-if Book.objects.filter(author=author).exists():
-    # ...
-
-# For counting small numbers, filter + limit
-recent_books = Book.objects.filter(
-    publication_date__gte=date.today() - timedelta(days=30)
-)[:5]  # Limit early
-
-if len(recent_books) >= 5:
-    # Handle case with many recent books
-```
-
-### Bulk Operations
-
-```python
-# Bad: Multiple queries
-for book in books:
-    book.is_featured = True
-    book.save()  # One query per book!
-
-# Good: Bulk update
-Book.objects.filter(id__in=book_ids).update(is_featured=True)
-
-# Bulk create
-books_to_create = [
-    Book(title=f"Book {i}", author=author)
-    for i in range(100)
-]
-Book.objects.bulk_create(books_to_create)  # Single query
-
-# Bulk update with different values (Django 4.2+)
-Book.objects.bulk_update(books, ['title', 'rating'])
-```
-
-### Select Only Needed Fields
-
-```python
-# Bad: Fetches all fields
-books = Book.objects.all()
-
-# Good: Fetch only what you need
-books = Book.objects.only('id', 'title', 'author_id')
-
-# Or exclude large fields
-books = Book.objects.defer('description', 'content')
-```
-
-### Raw Queries for Complex Operations
-
-```python
-from django.db import connection
-
-@strawberry.field
-def complex_statistics(self) -> StatisticsType:
-    """Use raw SQL for complex queries optimizer can't handle"""
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT
-                author_id,
-                COUNT(*) as book_count,
-                AVG(rating) as avg_rating,
-                SUM(sales) as total_sales
-            FROM books
-            WHERE publication_date >= %s
-            GROUP BY author_id
-            HAVING COUNT(*) > %s
-        """, [start_date, min_books])
-
-        results = cursor.fetchall()
-
-    return process_results(results)
-```
+For general Django database optimization (bulk operations, efficient queries, etc.), see the [Django database optimization documentation](https://docs.djangoproject.com/en/stable/topics/db/optimization/).
 
 ## Caching Strategies
 
-Implement caching at multiple levels for maximum performance.
-
-### Django Cache Framework
+Cache expensive resolver computations using Django's cache framework:
 
 ```python
 from django.core.cache import cache
-from django.views.decorators.cache import cache_page
 
-# Cache query results
 @strawberry.field
 def featured_books(self) -> List[BookType]:
     cache_key = 'featured_books'
-
-    # Try cache first
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
-    # Fetch from database
     books = Book.objects.filter(is_featured=True)[:10]
-
-    # Cache for 1 hour
-    cache.set(cache_key, books, 3600)
-
+    cache.set(cache_key, books, 3600)  # Cache for 1 hour
     return books
-```
-
-### Field-Level Caching
-
-```python
-from django.core.cache import cache
-import strawberry_django
-
-@strawberry_django.type(Author)
-class AuthorType:
-    name: strawberry.auto
-
-    @strawberry.field
-    def book_count(self) -> int:
-        """Cache computed values"""
-        cache_key = f'author_book_count_{self.id}'
-        count = cache.get(cache_key)
-        if count is None:
-            count = self.books.count()
-            cache.set(cache_key, count, 300)  # Cache for 5 minutes
-        return count
 ```
 
 > [!WARNING]
 > Don't use `@lru_cache` on instance methods as it can lead to memory leaks. Use Django's cache framework or `cached_property` instead.
 
-### Cache Invalidation
-
-```python
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-
-@receiver([post_save, post_delete], sender=Book)
-def invalidate_book_cache(sender, instance, **kwargs):
-    """Invalidate cache when books change"""
-    cache.delete('featured_books')
-    cache.delete(f'author_books_{instance.author_id}')
-```
-
-### Redis Caching
-
-```python
-# settings.py
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'strawberry',
-        'TIMEOUT': 300,
-    }
-}
-
-# Use in resolvers
-from django.core.cache import cache
-
-@strawberry.field
-def expensive_computation(self, id: int) -> ResultType:
-    cache_key = f'computation_{id}'
-
-    result = cache.get(cache_key)
-    if result is None:
-        result = perform_expensive_computation(id)
-        cache.set(cache_key, result, timeout=3600)
-
-    return result
-```
-
-### HTTP Caching with ETags
-
-```python
-from django.views.decorators.http import condition
-from django.utils.http import http_date
-
-def latest_book_date(request, *args, **kwargs):
-    """Get last modification time for ETag"""
-    latest = Book.objects.latest('updated_at')
-    return latest.updated_at
-
-@condition(last_modified_func=latest_book_date)
-def graphql_view(request):
-    # GraphQL view with HTTP caching
-    pass
-```
+For cache configuration and invalidation strategies, see [Django's cache documentation](https://docs.djangoproject.com/en/stable/topics/cache/).
 
 ## Query Complexity
 
-Limit query complexity to prevent expensive operations.
-
-### Query Depth Limiting
-
-Use Strawberry's built-in query depth limiter to prevent overly complex queries:
+Limit query complexity to prevent expensive operations using Strawberry's built-in extensions:
 
 ```python
 import strawberry
@@ -566,37 +344,7 @@ schema = strawberry.Schema(
 )
 ```
 
-For custom complexity analysis, you can implement a custom extension. See [Strawberry Extensions](https://strawberry.rocks/docs/guides/extensions) for more details.
-
-### Rate Limiting
-
-```python
-from django.core.cache import cache
-from django.core.exceptions import PermissionDenied
-
-def rate_limit(key: str, limit: int, period: int):
-    """Rate limit decorator"""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            cache_key = f'rate_limit_{key}'
-            count = cache.get(cache_key, 0)
-
-            if count >= limit:
-                raise PermissionDenied("Rate limit exceeded")
-
-            cache.set(cache_key, count + 1, period)
-            return func(*args, **kwargs)
-
-        return wrapper
-    return decorator
-
-@strawberry.type
-class Query:
-    @strawberry.field
-    @rate_limit('search', limit=100, period=3600)  # 100 per hour
-    def search_books(self, query: str) -> List[BookType]:
-        return Book.objects.filter(title__icontains=query)
-```
+For custom complexity analysis and rate limiting, see [Strawberry Extensions](https://strawberry.rocks/docs/guides/extensions).
 
 ## Pagination
 
@@ -634,119 +382,43 @@ class Query:
 # Stable across data changes
 ```
 
-### Performance Tips for Pagination
 
-```python
-# Bad: Count(*) on large tables
-total_count = Book.objects.count()  # Slow on millions of rows
-
-# Good: Estimate or cache
-cached_count = cache.get('book_count')
-if not cached_count:
-    cached_count = Book.objects.count()
-    cache.set('book_count', cached_count, 3600)
-
-# Even better: Use approximate counts (PostgreSQL)
-from django.db import connection
-
-with connection.cursor() as cursor:
-    cursor.execute("""
-        SELECT reltuples::bigint AS estimate
-        FROM pg_class
-        WHERE relname = 'books'
-    """)
-    estimate = cursor.fetchone()[0]
-```
 
 ## Monitoring and Profiling
 
-Monitor performance to identify bottlenecks.
-
-### Django Debug Toolbar
+Use Django Debug Toolbar in development to identify N+1 queries:
 
 ```python
 # settings.py
 INSTALLED_APPS = [
-    # ...
     'debug_toolbar',
-    'strawberry_django',
+    # ...
 ]
 
 MIDDLEWARE = [
-    # ...
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    # ...
 ]
-
-# Enables query debugging in development
 ```
 
-### Query Logging
+Enable query logging to monitor database queries:
 
 ```python
-import logging
-from django.db import connection
-
-# Enable query logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('django.db.backends')
-logger.setLevel(logging.DEBUG)
-
-@strawberry.field
-def books(self) -> List[BookType]:
-    # Run query
-    result = Book.objects.all()
-
-    # Log queries
-    for query in connection.queries:
-        print(f"Query: {query['sql']}")
-        print(f"Time: {query['time']}")
-
-    return result
-```
-
-### Custom Performance Monitoring
-
-```python
-import time
-from functools import wraps
-
-def log_performance(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        queries_before = len(connection.queries)
-
-        result = func(*args, **kwargs)
-
-        elapsed = time.time() - start
-        queries_count = len(connection.queries) - queries_before
-
-        print(f"{func.__name__}: {elapsed:.3f}s, {queries_count} queries")
-
-        return result
-
-    return wrapper
-
-@strawberry.type
-class Query:
-    @strawberry.field
-    @log_performance
-    def books(self) -> List[BookType]:
-        return Book.objects.all()
-```
-
-### APM Integration (New Relic, Datadog, etc.)
-
-```python
-# Example with New Relic
-import newrelic.agent
-
-@strawberry.type
-class Query:
-    @strawberry.field
-    @newrelic.agent.function_trace()
-    def books(self) -> List[BookType]:
-        return Book.objects.all()
+# settings.py
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
 ```
 
 ## Best Practices
@@ -794,19 +466,7 @@ class Book(models.Model):
         ]
 ```
 
-### 4. Use Bulk Operations
-
-```python
-# Bad: Loop with saves
-for book in books:
-    book.is_published = True
-    book.save()
-
-# Good: Bulk update
-Book.objects.filter(id__in=[b.id for b in books]).update(is_published=True)
-```
-
-### 5. Cache Expensive Computations
+### 4. Cache Expensive Computations
 
 ```python
 from django.core.cache import cache
@@ -822,62 +482,25 @@ def statistics(self) -> StatisticsType:
     return stats
 ```
 
-### 6. Monitor Query Performance
+### 5. Monitor Query Performance
 
-```python
-# Use Django Debug Toolbar in development
-# Monitor slow queries in production
-# Set up alerts for N+1 queries
-```
+Use Django Debug Toolbar in development and enable query logging to identify performance bottlenecks.
 
 ## Common Patterns
 
-### Pattern 1: Efficient Filtering
-
-```python
-@strawberry.type
-class Query:
-    @strawberry.field
-    def books(
-        self,
-        author_id: Optional[int] = None,
-        published_after: Optional[date] = None,
-    ) -> List[BookType]:
-        qs = Book.objects.all()
-
-        # Build query incrementally
-        if author_id:
-            qs = qs.filter(author_id=author_id)
-
-        if published_after:
-            qs = qs.filter(publication_date__gte=published_after)
-
-        # Apply optimizer hints
-        qs = qs.select_related('author', 'publisher')
-
-        return qs[:100]  # Always limit
-```
-
-### Pattern 2: Computed Fields with Annotations
+### Computed Fields with Annotations
 
 ```python
 from django.db.models import Count, Avg
 
-@strawberry_django.type(Author)
-class AuthorType:
-    name: str
-
-    # Use annotations for aggregations
-    book_count: int = strawberry_django.field(
-        annotate={'book_count': Count('books')}
-    )
-
-    avg_book_rating: float = strawberry_django.field(
-        annotate={'avg_book_rating': Avg('books__rating')}
-    )
+@strawberry_django.type(models.Author)
+class Author:
+    name: auto
+    book_count: int = strawberry_django.field(annotate={'book_count': Count('books')})
+    avg_rating: float = strawberry_django.field(annotate={'avg_rating': Avg('books__rating')})
 ```
 
-### Pattern 3: Use Model Properties with Optimization Hints
+### Model Properties with Optimization Hints
 
 ```python
 from strawberry_django.descriptors import model_property
@@ -888,108 +511,33 @@ class Author(models.Model):
 
     @model_property(annotate={'_book_count': Count('books')})
     def book_count(self) -> int:
-        """Cache-friendly computed property"""
         return self._book_count  # type: ignore
-```
-
-### Pattern 4: Prefetch Related Lists
-
-```python
-from django.db.models import Prefetch
-
-@strawberry.field
-def authors_with_books(self) -> List[AuthorType]:
-    # Prefetch related books efficiently
-    return Author.objects.prefetch_related(
-        Prefetch(
-            'books',
-            queryset=Book.objects.filter(is_published=True).order_by('-publication_date')
-        )
-    )
 ```
 
 ## Troubleshooting
 
 ### Too Many Database Queries
 
-**Problem**: Query count is very high for basic operations.
-
-**Solution**: Enable query logging and identify N+1 queries:
-
-```python
-from django.db import connection, reset_queries
-from django.test.utils import override_settings
-
-@override_settings(DEBUG=True)
-def test_queries():
-    reset_queries()
-
-    # Run your query
-    result = execute_graphql_query()
-
-    print(f"Total queries: {len(connection.queries)}")
-    for i, query in enumerate(connection.queries):
-        print(f"{i}: {query['sql'][:100]}")
-```
-
-### Query Optimizer Not Working
-
-**Problem**: Optimizer extension added but still seeing N+1.
-
-**Check**:
-
-1. Extension is properly registered
-2. Using strawberry_django types (not plain strawberry types)
-3. Fields are properly typed with relationships
-
-```python
-# Won't work - missing optimizer extension
-schema = strawberry.Schema(query=Query)
-
-# Works - optimizer registered
-schema = strawberry.Schema(
-    query=Query,
-    extensions=[DjangoOptimizerExtension()]
-)
-```
+Enable query logging to identify N+1 queries. Ensure the [Query Optimizer](./optimizer.md) extension is registered and you're using `strawberry_django` types.
 
 ### Slow Aggregations
 
-**Problem**: Counting or aggregating large datasets is slow.
-
-**Solution**: Use database-level aggregations and caching:
+Use database-level aggregations with `annotate` instead of Python-level counting:
 
 ```python
 from django.db.models import Count
 
-# Slow: Python-level counting
-authors = Author.objects.all()
-for author in authors:
-    book_count = author.books.count()  # N queries!
+# ❌ Slow: N queries
+for author in Author.objects.all():
+    book_count = author.books.count()
 
-# Fast: Database aggregation
-authors = Author.objects.annotate(
-    book_count=Count('books')
-)
+# ✅ Fast: Single query with annotation
+authors = Author.objects.annotate(book_count=Count('books'))
 ```
 
-### Memory Issues with Large Querysets
+### Memory Issues
 
-**Problem**: Loading too many objects into memory.
-
-**Solution**: Use pagination and iterator():
-
-```python
-# Bad: Loads everything into memory
-all_books = Book.objects.all()  # Could be millions!
-
-# Good: Paginate
-books = Book.objects.all()[:100]
-
-# Good: Iterator for batch processing
-for book in Book.objects.iterator(chunk_size=1000):
-    process_book(book)
-```
+Always paginate large result sets. See the [Pagination guide](./pagination.md) for details.
 
 ## See Also
 
