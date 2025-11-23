@@ -168,11 +168,12 @@ class AuthorFilter:
 
 ### How do I create nested objects in mutations?
 
-**Recommended**: Use the automatic mutation generators provided by `strawberry_django.create()`, `strawberry_django.update()`, and `strawberry_django.delete()` which handle nested relationships automatically:
+**Recommended**: Use the automatic mutation generators which handle nested relationships automatically:
 
 ```python
 import strawberry
 import strawberry_django
+from strawberry_django import mutations
 from . import models
 
 @strawberry_django.input(models.Author)
@@ -182,9 +183,9 @@ class AuthorInput:
 
 @strawberry.type
 class Mutation:
-    create_author: Author = strawberry_django.create(AuthorInput)
-    update_author: Author = strawberry_django.update(AuthorInput)
-    delete_author: Author = strawberry_django.delete()
+    create_author: Author = mutations.create(AuthorInput)
+    update_author: Author = mutations.update(AuthorInput)
+    delete_author: Author = mutations.delete()
 ```
 
 These mutations automatically:
