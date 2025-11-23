@@ -50,15 +50,15 @@ class Book(models.Model):
 
 # schema.py
 import strawberry
-from strawberry_django import type as django_type
+import strawberry_django
 
-@django_type(Author)
+@strawberry_django.type(Author)
 class AuthorType:
-    name: str
+    name: strawberry.auto
 
-@django_type(Book)
+@strawberry_django.type(Book)
 class BookType:
-    title: str
+    title: strawberry.auto
     author: AuthorType  # N+1 problem here!
 
 @strawberry.type
@@ -464,18 +464,26 @@ def featured_books(self) -> List[BookType]:
 ### Field-Level Caching
 
 ```python
-from functools import lru_cache
+from django.core.cache import cache
+import strawberry_django
 
 @strawberry_django.type(Author)
 class AuthorType:
-    name: str
+    name: strawberry.auto
 
     @strawberry.field
-    @lru_cache(maxsize=128)
     def book_count(self) -> int:
         """Cache computed values"""
-        return self.books.count()
+        cache_key = f'author_book_count_{self.id}'
+        count = cache.get(cache_key)
+        if count is None:
+            count = self.books.count()
+            cache.set(cache_key, count, 300)  # Cache for 5 minutes
+        return count
 ```
+
+> [!WARNING]
+> Don't use `@lru_cache` on instance methods as it can lead to memory leaks. Use Django's cache framework or `cached_property` instead.
 
 ### Cache Invalidation
 
@@ -577,30 +585,23 @@ class QueryComplexityExtension(SchemaExtension):
         pass
 ```
 
-### Field Complexity Costs
+### Query Depth and Complexity Limiting
+
+Use Strawberry's built-in query depth limiter to prevent overly complex queries:
 
 ```python
 import strawberry
+from strawberry.extensions import QueryDepthLimiter
 
-@strawberry.type
-class Query:
-    @strawberry.field(
-        extensions=[
-            CostExtension(complexity=10)  # Expensive field
-        ]
-    )
-    def expensive_computation(self) -> ResultType:
-        # Complex operation
-        pass
-
-    @strawberry.field(
-        extensions=[
-            CostExtension(complexity=1)  # Cheap field
-        ]
-    )
-    def simple_field(self) -> str:
-        return "Simple value"
+schema = strawberry.Schema(
+    query=Query,
+    extensions=[
+        QueryDepthLimiter(max_depth=10),  # Limit query nesting
+    ]
+)
 ```
+
+For custom complexity analysis, you can implement a custom extension. See [Strawberry Extensions](https://strawberry.rocks/docs/guides/extensions) for more details.
 
 ### Rate Limiting
 
@@ -641,31 +642,27 @@ Always paginate large result sets.
 ```python
 from strawberry_django.pagination import OffsetPaginationInput
 
+import strawberry_django
+from strawberry_django.pagination import OffsetPaginated
+
 @strawberry.type
 class Query:
-    @strawberry.field
-    def books(
-        self,
-        pagination: Optional[OffsetPaginationInput] = None
-    ) -> List[BookType]:
-        qs = Book.objects.all()
-
-        if pagination:
-            qs = qs[pagination.offset:pagination.offset + pagination.limit]
-        else:
-            qs = qs[:100]  # Default limit
-
-        return qs
+    # Use built-in pagination support
+    books: OffsetPaginated[BookType] = strawberry_django.field(pagination=True)
 ```
+
+> [!TIP]
+> For production, use the built-in pagination support instead of manual slicing. See the [Pagination guide](./pagination.md) for details.
 
 ### Cursor Pagination (Relay)
 
 ```python
-from strawberry_django import relay
+from strawberry import relay
+import strawberry_django
 
 @strawberry.type
 class Query:
-    books: relay.ListConnection[BookType] = relay.connection()
+    books: relay.Connection[BookType] = strawberry_django.connection()
 
 # Efficiently handles large datasets
 # Better for infinite scroll
@@ -915,17 +912,19 @@ class AuthorType:
     )
 ```
 
-### Pattern 3: Cached Resolver Results
+### Pattern 3: Use Model Properties with Optimization Hints
 
 ```python
-from functools import lru_cache
+from strawberry_django.descriptors import model_property
+from django.db.models import Count
 
-class BookType:
-    @strawberry.field
-    @lru_cache(maxsize=1000)
-    def author_books_count(self, info) -> int:
-        """Cache per-author book counts"""
-        return Book.objects.filter(author=self.author).count()
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+
+    @model_property(annotate={'_book_count': Count('books')})
+    def book_count(self) -> int:
+        """Cache-friendly computed property"""
+        return self._book_count  # type: ignore
 ```
 
 ### Pattern 4: Prefetch Related Lists

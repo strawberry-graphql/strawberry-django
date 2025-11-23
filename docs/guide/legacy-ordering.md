@@ -4,7 +4,7 @@ title: Ordering
 
 > [!WARNING]
 > The legacy ordering behavior described in this document is provided for backwards compatibility.
-> You should prefer the new [Ordering](ordering) system instead.
+> You should prefer the new [Ordering](ordering.md) system instead.
 
 # Order (Legacy)
 
@@ -173,7 +173,7 @@ Works similar to field order method, but:
 - _must_ be named `order`
 - argument `queryset` is **Required**
 - argument `value` is **Forbidden**
-- should probaly use `sequence`
+- should probably use `sequence`
 
 ```python title="types.py"
 @strawberry_django.order(models.Fruit)

@@ -82,6 +82,7 @@ class User(models.Model):
 ```python
 # schema.py
 import strawberry
+import strawberry_django
 from strawberry_django import mutations
 from . import models
 
@@ -155,6 +156,7 @@ Django field constraints are automatically validated:
 
 ```python
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
@@ -541,8 +543,8 @@ from django.core.exceptions import ValidationError
 @strawberry.input
 class ProfileInput:
     email: str
-    website: Optional[str] = None
-    bio: Optional[str] = None
+    website: str | None = None
+    bio: str | None = None
 
     def __post_init__(self):
         errors = {}
@@ -593,7 +595,7 @@ class AddressInput:
 @strawberry.input
 class CreateCompanyInput:
     name: str
-    addresses: List[AddressInput]
+    addresses: list[AddressInput]
 
     def __post_init__(self):
         # Validate company has at least one address

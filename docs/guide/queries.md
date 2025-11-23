@@ -206,7 +206,6 @@ See the [Pagination Guide](./pagination.md) for more pagination strategies.
 Override default resolvers for custom query logic.
 
 ```python title="schema.py"
-from typing import Optional
 from strawberry.types import Info
 
 @strawberry.type
@@ -328,16 +327,15 @@ Add custom arguments to your queries for flexibility.
 
 ```python title="schema.py"
 from datetime import date
-from typing import Optional
 
 @strawberry.type
 class Query:
     @strawberry_django.field
     def books(
         self,
-        author_id: Optional[int] = None,
-        published_after: Optional[date] = None,
-        min_rating: Optional[float] = None,
+        author_id: int | None = None,
+        published_after: date | None = None,
+        min_rating: float | None = None,
     ) -> list[Book]:
         qs = models.Book.objects.all()
 
@@ -411,7 +409,6 @@ import strawberry
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginationInput
-from typing import Optional
 
 from . import models
 from .types import Fruit, FruitFilter, FruitOrder
@@ -425,9 +422,9 @@ class Query:
     @strawberry_django.field
     def fruits(
         self,
-        filters: Optional[FruitFilter] = strawberry.UNSET,
-        order: Optional[FruitOrder] = strawberry.UNSET,
-        pagination: Optional[OffsetPaginationInput] = None,
+        filters: FruitFilter | None = strawberry.UNSET,
+        order: FruitOrder | None = strawberry.UNSET,
+        pagination: OffsetPaginationInput | None = None,
     ) -> list[Fruit]:
         qs = models.Fruit.objects.all()
 

@@ -143,7 +143,7 @@ query {
 Yes, use custom filter/order methods:
 
 ```python
-from django.db.models import Count
+from django.db.models import Count, Q, QuerySet
 
 @strawberry_django.filter_type(models.Author)
 class AuthorFilter:
@@ -171,6 +171,8 @@ You can handle nested mutations manually as shown below, or use the automatic mu
 **Manual approach:**
 
 ```python
+from django.db import transaction
+
 @strawberry_django.input(models.Author)
 class AuthorInputWithBooks:
     name: auto
@@ -186,8 +188,12 @@ def create_author_with_books(self, data: AuthorInputWithBooks) -> Author:
     )
 
     if data.books:
-        for book in data.books:
-            models.Book.objects.create(author=author, **book)
+        for book_data in data.books:
+            models.Book.objects.create(
+                author=author,
+                title=book_data.title,
+                # Add other book fields explicitly
+            )
 
     return models.Author.objects.get(pk=author.pk)
 ```
@@ -336,6 +342,7 @@ Three options:
 1. **Model property** (recommended):
 
 ```python
+from decimal import Decimal
 from strawberry_django.descriptors import model_property
 
 class Order(models.Model):
@@ -350,14 +357,16 @@ class Order(models.Model):
 2. **Custom resolver**:
 
 ```python
+from decimal import Decimal
+
 @strawberry_django.type(models.Order)
 class Order:
     price: auto
     quantity: auto
 
     @strawberry_django.field(only=["price", "quantity"])
-    def total(self, root) -> Decimal:
-        return root.price * root.quantity
+    def total(self) -> Decimal:
+        return self.price * self.quantity
 ```
 
 3. **Annotated field**:
@@ -398,16 +407,17 @@ This automatically generates GraphQL enums.
 ### How do I use Relay-style pagination?
 
 ```python
-from strawberry.relay import Node
-from strawberry_django.relay import DjangoListConnection
+import strawberry
+from strawberry import relay
+import strawberry_django
 
 @strawberry_django.type(models.Fruit)
-class Fruit(Node):
+class Fruit(relay.Node):
     name: auto
 
 @strawberry.type
 class Query:
-    fruits: DjangoListConnection[Fruit] = strawberry_django.connection()
+    fruits: relay.Connection[Fruit] = strawberry_django.connection()
 ```
 
 See [Relay guide](./guide/relay.md).

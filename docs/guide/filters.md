@@ -10,6 +10,7 @@ be converted into `.filter(...)` queries for the ORM:
 ```python title="types.py"
 import strawberry_django
 from strawberry import auto
+from typing_extensions import Self
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:

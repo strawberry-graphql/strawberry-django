@@ -129,6 +129,9 @@ def author_name(self) -> str:
 **Solution**: Use model-level annotations or custom DataLoaders:
 
 ```python
+from django.db.models import Count
+from strawberry_django.descriptors import model_property
+
 @model_property(
     annotate={"_book_count": Count("books")}
 )
@@ -143,9 +146,11 @@ def book_count(self) -> int:
 **Solution**: Add `only` hints to custom fields and model properties:
 
 ```python
+from decimal import Decimal
+
 @strawberry_django.field(only=["price", "quantity"])
-def total(self, root) -> Decimal:
-    return root.price * root.quantity
+def total(self) -> Decimal:
+    return self.price * self.quantity
 ```
 
 ## Mutations and Relationships
@@ -159,13 +164,19 @@ def total(self, root) -> Decimal:
 **Solution**: Refresh the object or fetch it again:
 
 ```python
+from django.db import transaction
+
 @strawberry_django.mutation
 @transaction.atomic
 def create_author_with_books(self, data: AuthorInput) -> Author:
     author = models.Author.objects.create(name=data.name)
 
-    for book in data.books:
-        models.Book.objects.create(author=author, **book)
+    for book_data in data.books:
+        models.Book.objects.create(
+            author=author,
+            title=book_data.title,
+            # Add other fields explicitly
+        )
 
     # ✅ Option 1: Refresh from database
     author.refresh_from_db()
@@ -308,6 +319,8 @@ Ensure authentication middleware is properly configured and the view is set up c
 **Workaround**: Use a subquery or custom totalCount resolver:
 
 ```python
+import strawberry
+
 @strawberry.field
 def total_count(self, root) -> int:
     # Custom count logic that handles DISTINCT properly
@@ -400,6 +413,7 @@ class Fruit(Node):  # ✅ Inherit from Node
 **Solution**: Ensure you're overriding the correct method:
 
 ```python
+import strawberry
 from strawberry.relay import Node
 
 @strawberry_django.type(models.Fruit)

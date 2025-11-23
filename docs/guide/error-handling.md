@@ -16,7 +16,8 @@ Strawberry Django can automatically handle common Django errors and convert them
 import strawberry
 import strawberry_django
 from django.core.exceptions import ValidationError
-from typing import cast
+
+from . import models
 
 @strawberry.type
 class Mutation:
@@ -29,7 +30,7 @@ class Mutation:
             name=name,
             price=price
         )
-        return cast(Product, product)
+        return product
 ```
 
 ### Handled Exception Types
@@ -497,4 +498,4 @@ Only Django's built-in exceptions are automatically handled. For custom exceptio
 
 - [Mutations](./mutations.md) - Creating and updating data
 - [Permissions](./permissions.md) - Authorization and access control
-- [Validation](#) - Input validation patterns (coming soon)
+- [Validation](./validation.md) - Input validation patterns

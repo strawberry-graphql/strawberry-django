@@ -16,13 +16,12 @@ DataLoaders help solve the N+1 query problem by batching and caching database qu
 Here's a basic DataLoader for fetching Django models:
 
 ```python title="dataloaders.py"
-from typing import List
 from strawberry.dataloader import DataLoader
 from asgiref.sync import sync_to_async
 
 from . import models
 
-async def load_authors(keys: List[int]) -> List[models.Author | None]:
+async def load_authors(keys: list[int]) -> list[models.Author | None]:
     """Batch load authors by their IDs."""
     authors = await sync_to_async(list)(
         models.Author.objects.filter(id__in=keys)
@@ -95,7 +94,7 @@ class Book:
 ```python title="dataloaders.py"
 from collections import defaultdict
 
-async def load_books_by_author(author_ids: List[int]) -> List[List[models.Book]]:
+async def load_books_by_author(author_ids: list[int]) -> list[list[models.Book]]:
     """Load all books for multiple authors."""
     books = await sync_to_async(list)(
         models.Book.objects.filter(author_id__in=author_ids)
@@ -111,7 +110,7 @@ async def load_books_by_author(author_ids: List[int]) -> List[List[models.Book]]
 ### Many-to-Many Relationships
 
 ```python title="dataloaders.py"
-async def load_tags(article_ids: List[int]) -> List[List[models.Tag]]:
+async def load_tags(article_ids: list[int]) -> list[list[models.Tag]]:
     """Load tags for multiple articles."""
     articles = await sync_to_async(list)(
         models.Article.objects.filter(id__in=article_ids)
@@ -131,7 +130,7 @@ async def load_tags(article_ids: List[int]) -> List[List[models.Tag]]:
 Use Django's `select_related()` and `prefetch_related()` in your DataLoaders:
 
 ```python title="dataloaders.py"
-async def load_authors(keys: List[int]) -> List[models.Author | None]:
+async def load_authors(keys: list[int]) -> list[models.Author | None]:
     """Load authors with their publisher."""
     authors = await sync_to_async(list)(
         models.Author.objects.filter(id__in=keys)

@@ -218,10 +218,12 @@ Allow clients to filter fruits by category or color:
 
 ```python title="schema.py"
 import strawberry
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django import filters
 from typing import Optional
 
+from . import models
 from .types import Fruit, Color
 
 @strawberry.type
@@ -301,6 +303,7 @@ class Mutation:
     )
 
     delete_fruit: Fruit = mutations.delete(
+        FruitInputPartial,  # Need input type with id field
         handle_django_errors=True
     )
 
@@ -659,7 +662,6 @@ Now that you have a working GraphQL API with common features, explore these guid
 9. [Permissions](./guide/permissions.md) - Protect your API with authorization
 10. [Validation](./guide/validation.md) - Input validation and error handling
 11. [Error Handling](./guide/error-handling.md) - Comprehensive error management
-12. [Best Practices](./guide/best-practices.md) - Security and code quality
 
 ### Advanced Topics
 
