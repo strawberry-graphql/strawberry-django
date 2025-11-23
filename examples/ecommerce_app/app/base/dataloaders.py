@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING
 
 from app.product.models import Brand
 from app.user.models import User
 from asgiref.sync import sync_to_async
 from strawberry.dataloader import DataLoader
-
-if TYPE_CHECKING:
-    pass
 
 
 async def load_brands(keys: list[int]) -> list[Brand | None]:
