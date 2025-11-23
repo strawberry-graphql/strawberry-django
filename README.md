@@ -25,13 +25,8 @@ pip install strawberry-graphql-django
 - 🔐 **Authentication & Permissions** - Django auth integration with flexible permission system
 - ✨ **CRUD Mutations** - Auto-generated create, update, and delete mutations with validation
 - ⚡ **Query Optimizer** - Automatic `select_related` and `prefetch_related` to prevent N+1 queries
-- 🔄 **Relay Support** - Full Relay specification support with Node interface and connections
-- 🎯 **DataLoaders** - Built-in DataLoader support for efficient data fetching
-- 🔧 **Django Integration** - Works with Django views (sync and async), forms, and validation
+- 🐍 **Django Integration** - Works with Django views (sync and async), forms, and validation
 - 🐛 **Debug Toolbar** - GraphiQL integration with Django Debug Toolbar for query inspection
-- 🧪 **Testing Utilities** - Test client and utilities for easier GraphQL API testing
-- 🌐 **Subscriptions** - WebSocket subscriptions support via Django Channels
-- 🎨 **Flexible** - Customize types, fields, and resolvers while keeping automatic generation
 
 ## Quick Start
 
