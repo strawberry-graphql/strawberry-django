@@ -177,11 +177,12 @@ query {
 ### Relay-Style Cursor Pagination
 
 ```python title="schema.py"
-from strawberry_django import relay
+from strawberry_django.relay import ListConnection
+import strawberry_django
 
 @strawberry.type
 class Query:
-    fruits: relay.ListConnection[Fruit] = relay.connection()
+    fruits: ListConnection[Fruit] = strawberry_django.connection()
 ```
 
 ```graphql

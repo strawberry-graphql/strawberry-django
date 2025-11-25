@@ -53,7 +53,7 @@ Partial input types can be generated from existing input types through class inh
 Non-`auto` type annotations will be respected—and therefore required—unless explicitly marked `Optional[]`.
 
 ```python title="types.py"
-@strawberry_django.input(models.Color, partial=True)
+@strawberry_django.input(models.Fruit, partial=True)
 class FruitPartialInput(FruitInput):
     color: list["ColorPartialInput"]
 
@@ -134,5 +134,5 @@ class Berry:
 > Another way of limiting this is by using the [PermissionExtension](permissions.md)
 > provided by this lib.
 
-The `kwargs` dictionary can include other parameters that were added in a `@strawberry.django.type` definition
+The `kwargs` dictionary can include other parameters that were added in a `@strawberry_django.type` definition
 like [filters](filters.md) or [pagination](pagination.md).

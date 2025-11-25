@@ -4,7 +4,7 @@ title: Ordering
 
 # Ordering
 
-`@strawberry_django.ordering_type` is an upgrade from the previous `@strawberry_django.order` implementation
+`@strawberry_django.order_type` is the decorator used for defining ordering types
 and allows sorting by multiple fields.
 
 ```python title="types.py"
@@ -133,7 +133,7 @@ class ColorOrder:
 
 ```graphql
 {
-  fruits( ordering: [{color: name: ASC}] ) { ... }
+  fruits( ordering: [{color: {name: ASC}}] ) { ... }
 }
 ```
 
