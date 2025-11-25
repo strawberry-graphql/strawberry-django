@@ -39,6 +39,50 @@ class Mutation:
     )
 ```
 
+## Controlling Validation with full_clean
+
+By default, mutations call `full_clean()` before saving. You can control this behavior:
+
+### Disable Validation
+
+```python
+@strawberry.type
+class Mutation:
+    # Skip validation entirely
+    create_user: User = mutations.create(UserInput, full_clean=False)
+```
+
+### Customize Validation with FullCleanOptions
+
+Use `FullCleanOptions` to control what `full_clean()` validates:
+
+```python
+from strawberry_django.mutations.types import FullCleanOptions
+
+@strawberry.type
+class Mutation:
+    create_user: User = mutations.create(
+        UserInput,
+        full_clean=FullCleanOptions(
+            exclude=["field_to_skip"],      # Fields to exclude from validation
+            validate_unique=True,           # Check unique constraints (default: True)
+            validate_constraints=True,      # Check model constraints (default: True)
+        ),
+    )
+```
+
+| Option                 | Type        | Default | Description                             |
+| ---------------------- | ----------- | ------- | --------------------------------------- |
+| `exclude`              | `list[str]` | `[]`    | Fields to exclude from validation       |
+| `validate_unique`      | `bool`      | `True`  | Whether to run unique constraint checks |
+| `validate_constraints` | `bool`      | `True`  | Whether to run model constraint checks  |
+
+This is useful when:
+
+- Some fields are set programmatically after initial validation
+- You want to skip unique checks for performance (and handle IntegrityError separately)
+- Certain validation rules don't apply in the GraphQL context
+
 When validation fails, errors are returned in the GraphQL response:
 
 ```graphql
