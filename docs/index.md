@@ -10,7 +10,7 @@ In this Quick-Start, we will:
 - Add them to a graphql schema and serve the graph API.
 - Query the graph API for model contents.
 
-For a more advanced example of a similar setup including a set of mutations and more queries, please check the [example app](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/django).
+For a more advanced example of a similar setup including a set of mutations and more queries, please check the [example app](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/ecommerce_app).
 
 ## Installation
 
@@ -143,7 +143,7 @@ Now we're showing off. This isn't enabled by default, since existing django appl
 have model docstrings and help text that aren't user-oriented. But if you're starting clean (or overhauling
 existing dosctrings and helptext), setting up the following is super useful for your API users.
 
-If you don't set these true, you can always provide user-oriented descriptions. See the
+If you don't set these true, you can always provide user-oriented descriptions. See the [types guide](./guide/types.md) and [fields guide](./guide/fields.md) for more details.
 
 ```python title="settings.py"
 STRAWBERRY_DJANGO = {
@@ -665,14 +665,14 @@ Now that you have a working GraphQL API with common features, explore these guid
 
 ### Advanced Topics
 
-13. [Relay](./guide/relay.md) - Relay-style pagination and connections
-14. [Subscriptions](./guide/subscriptions.md) - Real-time updates with WebSockets
-15. [Model Properties](./guide/model-properties.md) - Optimize computed properties
-16. [Nested Mutations](./guide/nested-mutations.md) - Handle complex relationships
-17. [Unit Testing](./guide/unit-testing.md) - Test your GraphQL API
+12. [Relay](./guide/relay.md) - Relay-style pagination and connections
+13. [Subscriptions](./guide/subscriptions.md) - Real-time updates with WebSockets
+14. [Model Properties](./guide/model-properties.md) - Optimize computed properties
+15. [Nested Mutations](./guide/nested-mutations.md) - Handle complex relationships
+16. [Unit Testing](./guide/unit-testing.md) - Test your GraphQL API
 
 ### Help & Resources
 
 - [FAQ](./faq.md) - Frequently asked questions
 - [Troubleshooting](./guide/troubleshooting.md) - Common issues and solutions
-- [Example App](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/django) - Complete working example
+- [Example App](https://github.com/strawberry-graphql/strawberry-django/tree/main/examples/ecommerce_app) - Complete working example
