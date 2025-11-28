@@ -36,7 +36,7 @@ class Fruit2:
 ## Relationships
 
 All one-to-one, one-to-many, many-to-one and many-to-many relationship types are supported, and the many-to-many relation is described using the `typing.List` annotation.
-The default resolver of `strawberry_django.fields()` resolves the relationship based on given type information.
+The default resolver of `strawberry_django.field()` resolves the relationship based on given type information.
 
 ```python title="types.py"
 @strawberry_django.type(models.Fruit)
@@ -108,7 +108,7 @@ Slug = strawberry.scalar(
     parse_value=lambda v: v,
 )
 
-@strawberry_django.type
+@strawberry.type
 class MyCustomFileType:
     ...
 

@@ -313,7 +313,7 @@ class ColorFilter:
 
 ```graphql
 {
-  fruits( filters: {color: name: "blue"} ) { ... }
+  fruits( filters: {color: {name: "blue"}} ) { ... }
 }
 ```
 
@@ -377,14 +377,14 @@ class FruitFilter:
             info=info,
             queryset=queryset,
             prefix=prefix,
-            skip_object_order_method=True
+            skip_object_filter_method=True
         )
 ```
 
 > [!TIP]
 > As seen above `strawberry_django.process_filters` function is exposed and can be
 > reused in custom methods.
-> For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
+> For filter method `filter` `skip_object_filter_method` was used to avoid endless recursion.
 
 ## Adding filters to types
 

@@ -28,7 +28,7 @@ class Company(models.Model):
 import strawberry
 import strawberry_django
 
-import .models
+from . import models
 
 @strawberry_django.type(models.Company)
 class Company:

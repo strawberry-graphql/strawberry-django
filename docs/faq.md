@@ -565,11 +565,69 @@ This happens when using interfaces with `handle_django_errors=True`. Either:
 update_project: WebProject | ExternalProject = mutations.update_project(...)
 ```
 
-2. Or disable error handling:
+2. Or set error handling to false:
 
 ```python
 update_project: Project = mutations.update_project(handle_django_errors=False)
 ```
+
+### "AppRegistryNotReady: Apps aren't loaded yet"
+
+This occurs when importing Django models before Django is fully initialized. In your `asgi.py`:
+
+```python
+import os
+from django.core.asgi import get_asgi_application
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
+
+# Initialize Django FIRST
+django_asgi_app = get_asgi_application()
+
+# THEN import your schema (which imports models)
+from myproject.schema import schema
+```
+
+### "Cannot query field on type"
+
+Common causes:
+
+1. **Field not exposed**: Add the field to your type definition
+2. **Wrong field name**: GraphQL uses camelCase by default (`firstName` not `first_name`)
+3. **Type mismatch**: Ensure the field is defined on the correct type
+
+### "Maximum recursion depth exceeded"
+
+Usually caused by circular type references. Use string annotations:
+
+```python
+@strawberry_django.type(models.Author)
+class AuthorType:
+    books: list["BookType"]  # String annotation for forward reference
+
+@strawberry_django.type(models.Book)
+class BookType:
+    author: "AuthorType"  # String annotation for back reference
+```
+
+### Subscriptions not working
+
+1. Ensure you're using ASGI, not WSGI
+2. Check that Daphne is installed and configured
+3. Verify `ASGI_APPLICATION` is set in settings
+4. Import schema after `get_asgi_application()`
+
+See [Subscriptions guide](./guide/subscriptions.md) for setup details.
+
+### DataLoaders not working with sync views
+
+DataLoaders require async execution. They don't work with:
+
+- WSGI servers (use ASGI instead)
+- `runserver` without Daphne
+- Sync resolvers
+
+Use the Query Optimizer for sync contexts, or switch to ASGI.
 
 ## Getting More Help
 
