@@ -67,9 +67,9 @@ class DocumentType:
     content: auto
 
     # Check object permission on the resolved document
-    @strawberry_django.field(extensions=[HasRetvalPerm("documents.view_document")])
-    def secret_content(self) -> str:
-        return self.secret_content
+    secret_content: str = strawberry_django.field(
+        extensions=[HasRetvalPerm("documents.view_document")]
+    )
 ```
 
 ```python title="schema.py"

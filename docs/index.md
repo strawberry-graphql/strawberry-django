@@ -141,7 +141,7 @@ schema = strawberry.Schema(
 
 Now we're showing off. This isn't enabled by default, since existing django applications will likely
 have model docstrings and help text that aren't user-oriented. But if you're starting clean (or overhauling
-existing dosctrings and helptext), setting up the following is super useful for your API users.
+existing docstrings and help text), setting up the following is super useful for your API users.
 
 If you don't set these true, you can always provide user-oriented descriptions. See the [types guide](./guide/types.md) and [fields guide](./guide/fields.md) for more details.
 
