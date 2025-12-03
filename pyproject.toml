@@ -30,6 +30,7 @@ classifiers = [
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
 ]
 
 [tool.poetry.dependencies]
@@ -61,7 +62,7 @@ django-polymorphic = "^4.1.0"
 setuptools = "^80.1.0"
 psycopg = "^3.2.10"
 psycopg-binary = "^3.2.10"
-django-tree-queries = "^0.22.0"
+django-tree-queries = "^0.23.0"
 django-model-utils = "^5.0.0"
 
 [tool.poetry.extras]
