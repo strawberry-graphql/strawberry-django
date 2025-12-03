@@ -50,10 +50,12 @@ title: Strawberry Django docs
 
 ## Integrations
 
-- [Debug Toolbar](./integrations/debug-toolbar.md)
+- [Federation](./integrations/federation.md)
 - [Channels](./integrations/channels.md)
 - [Choices Field](./integrations/choices-field.md)
+- [Debug Toolbar](./integrations/debug-toolbar.md)
 - [Django Guardian](./integrations/guardian.md)
+- [GeoDjango](./integrations/geodjango.md)
 
 ## Resources
 

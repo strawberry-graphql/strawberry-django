@@ -104,7 +104,7 @@ class Subscription:
 ```
 
 That's pretty much it for this basic start.
-See for yourself by running your test server `./manange.py runserver` and opening `http://127.0.0.1:8000/graphql/` in your browser. Now run:
+See for yourself by running your test server `./manage.py runserver` and opening `http://127.0.0.1:8000/graphql/` in your browser. Now run:
 
 ```graphql
 subscription {
