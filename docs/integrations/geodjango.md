@@ -1,3 +1,7 @@
+---
+title: GeoDjango
+---
+
 # GeoDjango
 
 Strawberry Django provides built-in support for

@@ -50,7 +50,7 @@ title: Strawberry Django docs
 
 ## Integrations
 
-- [Apollo Federation](./integrations/federation.md)
+- [Federation](./integrations/federation.md)
 - [Channels](./integrations/channels.md)
 - [Choices Field](./integrations/choices-field.md)
 - [Debug Toolbar](./integrations/debug-toolbar.md)

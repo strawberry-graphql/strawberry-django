@@ -1,7 +1,11 @@
-# Apollo Federation
+---
+title: Federation
+---
+
+# Federation
 
 Strawberry Django works seamlessly with
-[Strawberry's Apollo Federation support](https://strawberry.rocks/docs/guides/federation).
+[Strawberry's Federation support](https://strawberry.rocks/docs/guides/federation).
 Since federation is handled at the Strawberry level, you can use all federation
 features directly with your Django types.
 
@@ -94,4 +98,4 @@ configuring authentication in your Django service.
 For complete federation documentation, see:
 
 - [Strawberry Federation Guide](https://strawberry.rocks/docs/guides/federation)
-- [Apollo Federation Specification](https://www.apollographql.com/docs/federation/)
+- [Federation Specification](https://www.apollographql.com/docs/federation/)
