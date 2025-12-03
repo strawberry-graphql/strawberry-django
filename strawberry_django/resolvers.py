@@ -12,6 +12,9 @@ from django.db.models.manager import BaseManager
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import ParamSpec
 
+# Post-fetch utilities used by default_qs_hook
+from strawberry_django.postfetch import apply_postfetch
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -40,6 +43,11 @@ def default_qs_hook(qs: models.QuerySet[_M]) -> models.QuerySet[_M]:
     # After this, iterating over the queryset should be async safe
     if qs._result_cache is None:  # type: ignore
         qs._fetch_all()  # type: ignore
+
+    # Post-fetch optimization: delegate to postfetch.apply_postfetch
+    # which will evaluate and clear hints as needed.
+    apply_postfetch(qs)
+
     return qs
 
 
