@@ -1,4 +1,5 @@
 import datetime
+import operator
 from typing import Any, cast
 
 import pytest
@@ -2201,3 +2202,237 @@ def test_mixed_annotation_prefetch(gql_client):
             ],
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["sync", "async"], indirect=True)
+def test_nested_annotation_via_select_related(db, gql_client: GraphQLTestClient):
+    """Test that annotations work on nested types accessed via select_related.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/549
+    and https://github.com/strawberry-graphql/strawberry-django/issues/743
+
+    When querying a nested type (e.g., issue.milestone.project) via select_related,
+    annotations on the nested type should work correctly. Previously, the optimizer
+    would try to annotate the outer queryset with a prefixed path (e.g.,
+    `milestone__project__annotation`), but this doesn't populate the annotation on
+    the nested object - it populates it on the root object.
+    """
+    from django.db.models.functions import Upper
+
+    @strawberry_django.type(Project)
+    class ProjectTypeWithAnnotation:
+        name: strawberry.auto
+        name_upper: str = strawberry_django.field(
+            annotate=Upper("name"),
+        )
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeWithAnnotation:
+        name: strawberry.auto
+        project: ProjectTypeWithAnnotation
+
+    @strawberry_django.type(Issue)
+    class IssueTypeWithAnnotation:
+        name: strawberry.auto
+        milestone: MilestoneTypeWithAnnotation
+
+    @strawberry.type
+    class Query:
+        issues: list[IssueTypeWithAnnotation] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="TestProject")
+    milestone = MilestoneFactory.create(project=project, name="Milestone1")
+    IssueFactory.create(milestone=milestone, name="Issue1")
+
+    query = """\
+      query TestQuery {
+        issues {
+          name
+          milestone {
+            name
+            project {
+              name
+              nameUpper
+            }
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "issues": [
+            {
+                "name": "Issue1",
+                "milestone": {
+                    "name": "Milestone1",
+                    "project": {
+                        "name": "TestProject",
+                        "nameUpper": "TESTPROJECT",
+                    },
+                },
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
+def test_prefetch_related_without_explicit_ordering(db, gql_client: GraphQLTestClient):
+    """Test that prefetch_related works correctly without explicit ordering.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/772
+
+    When using prefetch_related with a custom queryset that has no explicit ordering,
+    the deterministic ordering added by get_queryset should not break the prefetch cache.
+
+    This uses to_attr which is the recommended approach.
+    """
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+
+        @strawberry_django.field(
+            prefetch_related=[
+                Prefetch(
+                    "milestones",
+                    queryset=Milestone.objects.filter(name__startswith="Test"),
+                    to_attr="_filtered_milestones",
+                )
+            ]
+        )
+        def filtered_milestones(self) -> list[MilestoneTypeTest]:
+            return self._filtered_milestones  # type: ignore
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    # Create test data
+    project1 = ProjectFactory.create(name="Project1")
+    project2 = ProjectFactory.create(name="Project2")
+    MilestoneFactory.create(project=project1, name="TestMilestone1")
+    MilestoneFactory.create(project=project1, name="TestMilestone2")
+    MilestoneFactory.create(
+        project=project1, name="OtherMilestone"
+    )  # Should be filtered out
+    MilestoneFactory.create(project=project2, name="TestMilestone3")
+
+    query = """\
+      query TestQuery {
+        projects {
+          name
+          filteredMilestones {
+            name
+          }
+        }
+      }
+    """
+
+    # This should not cause N+1 queries
+    # Expected: 1 query for projects + 1 query for prefetched milestones = 2 queries
+    if DjangoOptimizerExtension.enabled.get():
+        with assert_num_queries(2):
+            result = schema.execute_sync(query)
+    else:
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data is not None
+    # Verify the data is correct
+    projects_data = sorted(result.data["projects"], key=operator.itemgetter("name"))
+    assert len(projects_data) == 2
+    assert projects_data[0]["name"] == "Project1"
+    assert len(projects_data[0]["filteredMilestones"]) == 2
+    assert projects_data[1]["name"] == "Project2"
+    assert len(projects_data[1]["filteredMilestones"]) == 1
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
+def test_prefetch_related_without_to_attr(db, gql_client: GraphQLTestClient):
+    """Test that prefetch_related works correctly without to_attr.
+
+    Additional regression test for https://github.com/strawberry-graphql/strawberry-django/issues/772
+
+    When using prefetch_related without to_attr, accessing the related manager
+    should still use the prefetch cache.
+    """
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+
+        # Using prefetch_related without to_attr
+        @strawberry_django.field(
+            prefetch_related=[
+                Prefetch(
+                    "milestones",
+                    queryset=Milestone.objects.filter(name__startswith="Test"),
+                )
+            ]
+        )
+        def filtered_milestones(self) -> list[MilestoneTypeTest]:
+            # This should use the prefetch cache, not trigger a new query
+            return list(self.milestones.all())  # type: ignore
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    # Create test data
+    project1 = ProjectFactory.create(name="Project1")
+    project2 = ProjectFactory.create(name="Project2")
+    MilestoneFactory.create(project=project1, name="TestMilestone1")
+    MilestoneFactory.create(project=project1, name="TestMilestone2")
+    MilestoneFactory.create(
+        project=project1, name="OtherMilestone"
+    )  # Won't be prefetched due to filter
+    MilestoneFactory.create(project=project2, name="TestMilestone3")
+
+    query = """\
+      query TestQuery {
+        projects {
+          name
+          filteredMilestones {
+            name
+          }
+        }
+      }
+    """
+
+    # Without to_attr, calling .all() might not use the prefetch cache
+    # This test may fail, showing the N+1 issue
+    if DjangoOptimizerExtension.enabled.get():
+        with assert_num_queries(2):
+            result = schema.execute_sync(query)
+    else:
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
