@@ -10,6 +10,7 @@ be converted into `.filter(...)` queries for the ORM:
 ```python title="types.py"
 import strawberry_django
 from strawberry import auto
+from typing_extensions import Self
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
@@ -152,7 +153,7 @@ Single-field lookup can be annotated with the `FilterLookup` generic type.
 ```python title="types.py"
 from strawberry_django import FilterLookup
 
-@strawberry_django.filter(models.Fruit)
+@strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     name: FilterLookup[str]
 ```
@@ -160,12 +161,12 @@ class FruitFilter:
 ## Filtering over relationships
 
 ```python title="types.py"
-@strawberry_django.filter(models.Color)
+@strawberry_django.filter_type(models.Color)
 class ColorFilter:
     id: auto
     name: auto
 
-@strawberry_django.filter(models.Fruit)
+@strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
@@ -198,7 +199,7 @@ input FruitFilter {
 You can define custom filter method by defining your own resolver.
 
 ```python title="types.py"
-@strawberry_django.filter(models.Fruit)
+@strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     name: auto
     last_name: auto
@@ -295,12 +296,12 @@ input FruitFilter {
   - In code bellow custom filter `name` ends up filtering `Fruit` instead of `Color` without applying `prefix`
 
 ```python title="Why prefix?"
-@strawberry_django.filter(models.Fruit)
+@strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     name: auto
     color: ColorFilter | None
 
-@strawberry_django.filter(models.Color)
+@strawberry_django.filter_type(models.Color)
 class ColorFilter:
     @strawberry_django.filter_field
     def name(self, value: str, prefix: str):
@@ -312,7 +313,7 @@ class ColorFilter:
 
 ```graphql
 {
-  fruits( filters: {color: name: "blue"} ) { ... }
+  fruits( filters: {color: {name: "blue"}} ) { ... }
 }
 ```
 
@@ -347,7 +348,7 @@ Works similar to field filter method, but:
 - argument `value` is **Forbidden**
 
 ```python title="types.py"
-@strawberry_django.filter(models.Fruit)
+@strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     def ordered(
         self,
@@ -360,7 +361,7 @@ class FruitFilter:
         )
         return queryset, Q(**{f"{prefix}_ordered_num": value})
 
-    @strawberry_django.order_field
+    @strawberry_django.filter_field
     def filter(
         self,
         info: Info,
@@ -376,14 +377,14 @@ class FruitFilter:
             info=info,
             queryset=queryset,
             prefix=prefix,
-            skip_object_order_method=True
+            skip_object_filter_method=True
         )
 ```
 
 > [!TIP]
 > As seen above `strawberry_django.process_filters` function is exposed and can be
 > reused in custom methods.
-> For filter method `filter` `skip_object_order_method` was used to avoid endless recursion.
+> For filter method `filter` `skip_object_filter_method` was used to avoid endless recursion.
 
 ## Adding filters to types
 

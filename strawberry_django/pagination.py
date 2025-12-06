@@ -249,8 +249,8 @@ def apply_window_pagination(
 def remove_window_pagination(queryset: _QS) -> _QS:
     """Remove pagination window functions from a queryset.
 
-    Utility function to remove the pagination `WHERE` clause added by
-    the `apply_window_pagination` function.
+    Utility function to remove the pagination `WHERE` clause and annotations
+    added by the `apply_window_pagination` function.
 
     Args:
     ----
@@ -263,6 +263,11 @@ def remove_window_pagination(queryset: _QS) -> _QS:
         for child in queryset.query.where.children
         if (not hasattr(child, "lhs") or not isinstance(child.lhs, _PaginationWindow))
     ]
+    queryset.query.annotations = {  # type: ignore
+        key: value
+        for key, value in queryset.query.annotations.items()
+        if not isinstance(value, _PaginationWindow)
+    }
     return queryset
 
 
@@ -278,6 +283,13 @@ def get_total_count(queryset: QuerySet) -> int:
         results = queryset._result_cache  # type: ignore
 
         if results:
+            # If the queryset has DISTINCT enabled, the _strawberry_total_count
+            # annotation won't be accurate because window functions are evaluated
+            # before DISTINCT in SQL. Fall back to queryset.count() instead.
+            if queryset.query.distinct:
+                queryset = remove_window_pagination(queryset)
+                return queryset.count()
+
             try:
                 return results[0]._strawberry_total_count
             except AttributeError:

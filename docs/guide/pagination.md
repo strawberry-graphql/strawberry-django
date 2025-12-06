@@ -74,7 +74,7 @@ subclass and modify its default value, like:
 
 ```python
 @strawberry.input
-def MyOffsetPaginationInput(OffsetPaginationInput):
+class MyOffsetPaginationInput(OffsetPaginationInput):
     limit: int = 250
 
 
@@ -175,7 +175,7 @@ class Fruit:
     price: auto
 
 
-@strawberry_django.order(models.Fruit)
+@strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
     price: auto
@@ -237,7 +237,9 @@ add extra functionality in it. For example, suppose we want to add the average
 price of the fruits in the pagination:
 
 ```python title="types.py"
+from decimal import Decimal
 from strawberry_django.pagination import OffsetPaginated
+from django.db.models import Avg
 
 
 @strawberry_django.type(models.Fruit)

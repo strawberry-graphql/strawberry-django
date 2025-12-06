@@ -40,6 +40,34 @@ schema = strawberry.Schema(
 )
 ```
 
+### Extension Parameters
+
+The extension accepts several parameters to customize its behavior:
+
+```python
+DjangoOptimizerExtension(
+    enable_only_optimization=True,           # Enable QuerySet.only() optimization
+    enable_select_related_optimization=True, # Enable QuerySet.select_related() optimization
+    enable_prefetch_related_optimization=True, # Enable QuerySet.prefetch_related() optimization
+    enable_annotate_optimization=True,       # Enable QuerySet.annotate() optimization
+    enable_nested_relations_prefetch=True,   # Enable prefetch of nested relations
+    prefetch_custom_queryset=False,          # Use default manager instead of base manager
+)
+```
+
+| Parameter                              | Default | Description                                                    |
+| -------------------------------------- | ------- | -------------------------------------------------------------- |
+| `enable_only_optimization`             | `True`  | Enable `QuerySet.only()` to fetch only requested fields        |
+| `enable_select_related_optimization`   | `True`  | Enable `QuerySet.select_related()` for FK relations            |
+| `enable_prefetch_related_optimization` | `True`  | Enable `QuerySet.prefetch_related()` for M2M/reverse relations |
+| `enable_annotate_optimization`         | `True`  | Enable `QuerySet.annotate()` for annotated fields              |
+| `enable_nested_relations_prefetch`     | `True`  | Enable prefetch of nested relations with filters/pagination    |
+| `prefetch_custom_queryset`             | `False` | Use default manager instead of base manager for prefetches     |
+
+> [!NOTE]
+> Setting `prefetch_custom_queryset=True` is useful when using `InheritanceManager` from django-model-utils,
+> as it ensures the correct manager is used for polymorphic queries.
+
 ## Usage
 
 The optimizer will try to optimize all types automatically by introspecting it.
@@ -483,3 +511,67 @@ class Query:
 > [!WARNING]
 > Make sure to add `get_queryset` to your interface type, to force the optimizer to use
 > `prefetch_related`, otherwise this technique will not work for relation fields.
+
+## Temporarily Turning Off the Optimizer
+
+You can temporarily turn off the optimizer using the `disabled()` context manager:
+
+```python
+from strawberry_django.optimizer import DjangoOptimizerExtension
+
+def my_resolver(info):
+    # Optimizer is turned off within this block
+    with DjangoOptimizerExtension.disabled():
+        # Manual optimization or custom logic here
+        return MyModel.objects.select_related("relation").all()
+```
+
+This is useful when you need complete control over the queryset optimization.
+
+## Troubleshooting
+
+### Extra queries still occurring
+
+1. **Check that the extension is enabled**: Ensure `DjangoOptimizerExtension` is in your schema's extensions list
+2. **Verify field names match**: The optimizer uses field names to determine what to optimize. Ensure your GraphQL field names match the model field names or use optimization hints
+3. **Check for custom resolvers**: Custom resolvers bypass automatic optimization. Use optimization hints (`only`, `select_related`, `prefetch_related`) on the field
+
+### "Deferred field" errors
+
+If you see errors about accessing deferred fields, it usually means a property or method needs fields that weren't selected:
+
+```python
+# Problem: total needs price and quantity, but they might not be selected
+@property
+def total(self):
+    return self.price * self.quantity
+
+# Solution: Use optimization hints
+@strawberry_django.field(only=["price", "quantity"])
+def total(self) -> Decimal:
+    return self.price * self.quantity
+```
+
+### Prefetch not working for nested relations
+
+For nested relations with filters, ordering, or pagination, ensure `enable_nested_relations_prefetch=True` (the default).
+
+If using custom connections, note that this optimization only works automatically with `ListConnection` and `DjangoListConnection`.
+
+### Polymorphic queries not working
+
+1. **With InheritanceManager**: Set `prefetch_custom_queryset=True` in the extension
+2. **With Django Polymorphic**: Should work out of the box
+3. **Custom solution**: Implement `resolve_type` and `get_queryset` on your interface type
+
+### Performance still slow
+
+1. Use Django Debug Toolbar to inspect actual queries being made
+2. Check if the optimizer is being bypassed by custom resolvers
+3. Consider using `@strawberry_django.field(annotate=...)` for computed fields to move computation to the database
+
+## See Also
+
+- [Fields](./fields.md) - Field-level optimization hints
+- [Pagination](./pagination.md) - Pagination with optimization
+- [Relay](./relay.md) - Relay connections with optimization

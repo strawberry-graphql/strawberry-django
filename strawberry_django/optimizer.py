@@ -804,7 +804,35 @@ def _get_hints_from_django_foreign_key(
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
     level: int = 0,
 ) -> OptimizerStore:
-    if _must_use_prefetch_related(config, field, model_field):
+    # First, collect hints from nested fields to check if they have annotations,
+    # which are incompatible with select_related.
+    # Annotations must be applied directly to the related model's queryset, not
+    # prefixed onto the outer queryset (which is what with_prefix does).
+    nested_stores: list[
+        tuple[StrawberryObjectDefinition, type[models.Model], OptimizerStore]
+    ] = []
+    for f_type_def in get_possible_type_definitions(field.type):
+        f_model = model_field.related_model
+        f_store = _get_model_hints(
+            f_model,
+            schema,
+            f_type_def,
+            parent_type=field_definition,
+            info=field_info,
+            config=config,
+            cache=cache,
+            level=level + 1,
+        )
+        if f_store is not None:
+            nested_stores.append((f_type_def, f_model, f_store))
+
+    # Check if any nested store has annotations.
+    # Annotations are incompatible with select_related because they need to be
+    # applied directly to the related model's queryset (via Prefetch), not
+    # prefixed onto the outer queryset.
+    has_annotations = any(f_store.annotate for _, _, f_store in nested_stores)
+
+    if _must_use_prefetch_related(config, field, model_field) or has_annotations:
         store = _get_hints_from_django_relation(
             field,
             field_selection=field_selection,
@@ -834,21 +862,9 @@ def _get_hints_from_django_foreign_key(
             f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}",
         )
 
-    for f_type_def in get_possible_type_definitions(field.type):
-        f_model = model_field.related_model
-        f_store = _get_model_hints(
-            f_model,
-            schema,
-            f_type_def,
-            parent_type=field_definition,
-            info=field_info,
-            config=config,
-            cache=cache,
-            level=level + 1,
-        )
-        if f_store is not None:
-            cache.setdefault(f_model, []).append((level, f_store))
-            store |= f_store.with_prefix(path, info=field_info)
+    for _f_type_def, f_model, f_store in nested_stores:
+        cache.setdefault(f_model, []).append((level, f_store))
+        store |= f_store.with_prefix(path, info=field_info)
 
     return store
 
@@ -1324,11 +1340,24 @@ def _get_model_hints_from_connection(
             e_definition = get_object_definition(e_definition, strict=True)
         assert isinstance(e_definition, StrawberryObjectDefinition)
 
+        # Get the GraphQL definition first, then look it up in the schema
+        # to ensure we get the properly specialized/registered type
         e_gql_definition = _get_gql_definition(
             schema,
             e_definition,
         )
         assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
+
+        # For generic Edge types, we need to get the actual specialized type from the GraphQL schema
+        # Otherwise fragments defined on the concrete Edge type (e.g. UserTypeEdge) won't match
+        edge_type_name = f"{n_definition.name}Edge"
+        if edge_type_name in schema.schema_converter.type_map:
+            specialized_edge = schema.schema_converter.type_map[edge_type_name]
+            if hasattr(specialized_edge, "implementation"):
+                specialized_edge = specialized_edge.implementation
+            if isinstance(specialized_edge, (GraphQLObjectType, GraphQLInterfaceType)):
+                e_gql_definition = specialized_edge
+
         e_info = _generate_selection_resolve_info(
             info,
             edges,

@@ -4,38 +4,60 @@ title: Strawberry Django docs
 
 # Strawberry Django docs
 
-## Docs
+## Getting Started
 
-- [Getting Started](./index.md)
+- [Quick Start](./index.md)
 
-## General
+## Core Concepts
 
 - [Types](./guide/types.md)
 - [Fields](./guide/fields.md)
-- [Views](./guide/views.md)
-- [Filters](./guide/filters.md)
-- [Ordering](./guide/ordering.md)
-- [Pagination](./guide/pagination.md)
 - [Queries](./guide/queries.md)
 - [Mutations](./guide/mutations.md)
 - [Subscriptions](./guide/subscriptions.md)
-- [Settings](./guide/settings.md)
-- [FAQ](./faq.md)
+- [Views](./guide/views.md)
 
-## Guide
+## Data Management
+
+- [Filters](./guide/filters.md)
+- [Ordering](./guide/ordering.md)
+- [Legacy Ordering](./guide/legacy-ordering.md)
+- [Pagination](./guide/pagination.md)
+- [Relay](./guide/relay.md)
+
+## Advanced Features
 
 - [Query Optimizer](./guide/optimizer.md)
-- [Permissions](./guide/permissions.md)
-- [Relay](./guide/relay.md)
-- [Authentication](./guide/authentication.md)
-- [Export Schema](./guide/export-schema.md)
+- [Performance](./guide/performance.md)
+- [DataLoaders](./guide/dataloaders.md)
+- [Model Properties](./guide/model-properties.md)
+- [Nested Mutations](./guide/nested-mutations.md)
 - [Resolvers](./guide/resolvers.md)
+
+## Security & Validation
+
+- [Permissions](./guide/permissions.md)
+- [Authentication](./guide/authentication.md)
+- [Validation](./guide/validation.md)
+- [Error Handling](./guide/error-handling.md)
+
+## Development & Testing
+
 - [Unit Testing](./guide/unit-testing.md)
+- [Export Schema](./guide/export-schema.md)
+- [Settings](./guide/settings.md)
+- [Troubleshooting](./guide/troubleshooting.md)
 
 ## Integrations
 
-- [Debug Toolbar](./integrations/debug-toolbar.md)
+- [Federation](./integrations/federation.md)
 - [Channels](./integrations/channels.md)
 - [Choices Field](./integrations/choices-field.md)
+- [Debug Toolbar](./integrations/debug-toolbar.md)
 - [Django Guardian](./integrations/guardian.md)
+- [GeoDjango](./integrations/geodjango.md)
+
+## Resources
+
+- [FAQ](./faq.md)
 - [Community Projects](./community-projects.md)

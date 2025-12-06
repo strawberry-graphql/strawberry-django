@@ -3,12 +3,12 @@ title: Ordering
 ---
 
 > [!WARNING]
-> The legacy `@strawberry_django.order` implementation is only provided for backwards compatibility.
-> You should prefer [Ordering](ordering) instead.
+> The legacy ordering behavior described in this document is provided for backwards compatibility.
+> You should prefer the new [Ordering](ordering.md) system instead.
 
 # Order (Legacy)
 
-`@strawberry_django.order` allows sorting by multiple fields only by specifying the object keys in the order input
+The legacy ordering system created with `@strawberry_django.order` allows sorting by multiple fields only by specifying the object keys in the order input
 in the desired order. This is not always feasible and contradicts the way objects are supposed to be used.
 
 ```python title="types.py"
@@ -173,7 +173,7 @@ Works similar to field order method, but:
 - _must_ be named `order`
 - argument `queryset` is **Required**
 - argument `value` is **Forbidden**
-- should probaly use `sequence`
+- should probably use `sequence`
 
 ```python title="types.py"
 @strawberry_django.order(models.Fruit)

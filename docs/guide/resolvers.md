@@ -25,7 +25,7 @@ class Color:
 
     @strawberry_django.field
     def fruits(self) -> list[Fruit]:
-        return self.fruits.objects.filter(...)
+        return self.fruit_set.filter(...)
 ```
 
 ## Async resolvers
@@ -45,7 +45,7 @@ class Color:
 
     @strawberry_django.field
     async def fruits(self) -> list[Fruit]:
-        return sync_to_async(list)(self.fruits.objects.filter(...))
+        return await sync_to_async(list)(self.fruit_set.filter(...))
 ```
 
 ## Optimizing resolvers
@@ -70,19 +70,18 @@ import strawberry_django
 from . import models
 
 
-@strawberry_django.filter(models.Fruit, lookups=True)
+@strawberry_django.filter_type(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
 
 
-@strawberry_django.type(models.Fruit, order=FruitOrder)
-class Fruit:
-    id: auto
+@strawberry_django.order_type(models.Fruit)
+class FruitOrder:
     name: auto
 
 
-@strawberry_django.type(models.Fruit, is_interface=True)
+@strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
@@ -93,11 +92,11 @@ class Query:
     @strawberry_django.field
     def fruits(
         self,
-        info: Info
+        info: Info,
         filters: FruitFilter | None = strawberry.UNSET,
         order: FruitOrder | None = strawberry.UNSET
     ) -> list[Fruit]:
-        qs = models.fruit.objects.all()
+        qs = models.Fruit.objects.all()
 
         # apply filters if defined
         if filters is not strawberry.UNSET:
@@ -105,7 +104,7 @@ class Query:
 
         # apply ordering if defined
         if order is not strawberry.UNSET:
-            qs = strawberry_django.ordering.apply(filters, qs)
+            qs = strawberry_django.ordering.apply(order, qs)
 
         return qs
 ```

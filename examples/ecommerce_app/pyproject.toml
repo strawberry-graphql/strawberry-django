@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "strawberry-django-example"
+version = "0.1.0"
+description = "Strawberry GraphQL Django Example Application"
+authors = ["Strawberry GraphQL <hello@strawberry.rocks>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+django = "^5.0"
+django-choices-field = "^2.2.2"
+pillow = "^10.0.0"
+strawberry-graphql-django = {path = "../..", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+django-debug-toolbar = "^4.1.0"
+django-extensions = "^3.2.0"
+pytest = "^7.4.0"
+pytest-django = "^4.5.0"
+pytest-cov = "^4.1.0"
+
+[tool.pyright]
+pythonVersion = "3.10"
+useLibraryCodeForTypes = true
+exclude = [".venv", "**/migrations", "dist"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

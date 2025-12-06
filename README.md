@@ -1,4 +1,4 @@
-# Strawberry GraphQL Django integration
+# Strawberry GraphQL Django Integration
 
 [![CI](https://github.com/strawberry-graphql/strawberry-django/actions/workflows/tests.yml/badge.svg)](https://github.com/strawberry-graphql/strawberry-django/actions/workflows/tests.yml)
 [![Coverage](https://codecov.io/gh/strawberry-graphql/strawberry-django/branch/main/graph/badge.svg?token=JNH6PUYh3e)](https://codecov.io/gh/strawberry-graphql/strawberry-django)
@@ -6,70 +6,53 @@
 [![Downloads](https://pepy.tech/badge/strawberry-graphql-django)](https://pepy.tech/project/strawberry-graphql-django)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/strawberry-graphql-django)
 
-[**Docs**](https://strawberry.rocks/docs/django) | [**Discord**](https://strawberry.rocks/discord)
+[**Documentation**](https://strawberry.rocks/docs/django) | [**Discord**](https://strawberry.rocks/discord)
 
-This package provides powerful tools to generate GraphQL types, queries,
-mutations and resolvers from Django models.
+Strawberry GraphQL Django integration provides powerful tools to build GraphQL APIs with Django. Automatically generate GraphQL types, queries, mutations, and resolvers from your Django models with full type safety.
 
-Installing `strawberry-graphql-django` package from the python package repository.
+## Installation
 
 ```shell
 pip install strawberry-graphql-django
 ```
 
-## Supported Features
+## Features
 
-- [x] GraphQL type generation from models
-- [x] Filtering, pagination and ordering
-- [x] Basic create, retrieve, update and delete (CRUD) types and mutations
-- [x] Basic Django auth support, current user query, login and logout mutations
-- [x] Django sync and async views
-- [x] Permission extension using django's permissioning system
-- [x] Relay support with automatic resolvers generation
-- [x] Query optimization to improve performance and avoid common pitfalls (e.g n+1)
-- [x] Debug Toolbar integration with graphiql to display metrics like SQL queries
-- [x] Unit test integration
+- 🍓 **Automatic Type Generation** - Generate GraphQL types from Django models with full type safety
+- 🔍 **Advanced Filtering** - Powerful filtering system with lookups (contains, exact, in, etc.)
+- 📄 **Pagination** - Built-in offset and cursor-based (Relay) pagination
+- 📊 **Ordering** - Sort results by any field with automatic ordering support
+- 🔐 **Authentication & Permissions** - Django auth integration with flexible permission system
+- ✨ **CRUD Mutations** - Auto-generated create, update, and delete mutations with validation
+- ⚡ **Query Optimizer** - Automatic `select_related` and `prefetch_related` to prevent N+1 queries
+- 🐍 **Django Integration** - Works with Django views (sync and async), forms, and validation
+- 🐛 **Debug Toolbar** - GraphiQL integration with Django Debug Toolbar for query inspection
 
-## Basic Usage
+## Quick Start
 
 ```python
 # models.py
-
 from django.db import models
 
 class Fruit(models.Model):
-    """A tasty treat"""
-    name = models.CharField(
-        max_length=20,
-    )
-    color = models.ForeignKey(
-        "Color",
-        on_delete=models.CASCADE,
-        related_name="fruits",
-        blank=True,
-        null=True,
-    )
+    name = models.CharField(max_length=20)
+    color = models.ForeignKey("Color", on_delete=models.CASCADE, related_name="fruits")
 
 class Color(models.Model):
-    name = models.CharField(
-        max_length=20,
-        help_text="field description",
-    )
+    name = models.CharField(max_length=20)
 ```
 
 ```python
 # types.py
-
 import strawberry_django
 from strawberry import auto
-
 from . import models
 
 @strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
-    color: 'Color'
+    color: "Color"
 
 @strawberry_django.type(models.Color)
 class Color:
@@ -80,11 +63,9 @@ class Color:
 
 ```python
 # schema.py
-
 import strawberry
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-
 from .types import Fruit
 
 @strawberry.type
@@ -93,83 +74,69 @@ class Query:
 
 schema = strawberry.Schema(
     query=Query,
-    extensions=[
-        DjangoOptimizerExtension,  # not required, but highly recommended
-    ],
+    extensions=[DjangoOptimizerExtension],
 )
 ```
 
 ```python
 # urls.py
-
-from django.urls import include, path
+from django.urls import path
 from strawberry.django.views import AsyncGraphQLView
-
 from .schema import schema
 
 urlpatterns = [
-    path('graphql', AsyncGraphQLView.as_view(schema=schema)),
+    path("graphql/", AsyncGraphQLView.as_view(schema=schema)),
 ]
 ```
 
-Code above generates following schema.
+That's it! You now have a fully functional GraphQL API with:
+- Automatic type inference from Django models
+- Optimized database queries (no N+1 problems)
+- Interactive GraphiQL interface at `/graphql/`
+
+Visit http://localhost:8000/graphql/ and try this query:
 
 ```graphql
-"""
-A tasty treat
-"""
-type Fruit {
-  id: ID!
-  name: String!
-  color: Color
-}
-
-type Color {
-  id: ID!
-  """
-  field description
-  """
-  name: String!
-  fruits: [Fruit!]
-}
-
-type Query {
-  fruits: [Fruit!]!
+query {
+  fruits {
+    id
+    name
+    color {
+      name
+    }
+  }
 }
 ```
+
+## Next Steps
+
+Check out our comprehensive documentation:
+
+- 📚 [**Getting Started Guide**](https://strawberry.rocks/docs/django) - Complete tutorial with examples
+- 🎓 [**Example App**](./examples/ecommerce_app/) - Full-featured e-commerce application
+- 📖 [**Documentation**](https://strawberry.rocks/docs/django) - In-depth guides and API reference
+- 💬 [**Discord Community**](https://strawberry.rocks/discord) - Get help and share your projects
 
 ## Contributing
 
-We use [poetry](https://github.com/sdispater/poetry) to manage dependencies, to
-get started follow these steps:
+We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated 😊
+
+**Quick Start:**
 
 ```shell
-$ git clone https://github.com/strawberry-graphql/strawberry-django
-$ cd strawberry-django
-$ python -m pip install poetry
-$ make install
-```
-
-### Running tests
-
-Using [make](Makefile) to run the tests:
-
-```shell
-$ make test
-```
-
-To run tests in parallel:
-
-```shell
-$ make test-dist
-```
-
-### Pre commit
-
-We have a configuration for
-[pre-commit](https://github.com/pre-commit/pre-commit), to add the hook run the
-following command:
-
-```shell
+git clone https://github.com/strawberry-graphql/strawberry-django
+cd strawberry-django
 pre-commit install
 ```
+
+Then run tests with `make test` or `make test-dist` for parallel execution.
+
+## Community
+
+- 💬 [**Discord**](https://strawberry.rocks/discord) - Join our community for help and discussions
+- 🐛 [**GitHub Issues**](https://github.com/strawberry-graphql/strawberry-django/issues) - Report bugs or request features
+- 💡 [**GitHub Discussions**](https://github.com/strawberry-graphql/strawberry-django/discussions) - Ask questions and share ideas
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
