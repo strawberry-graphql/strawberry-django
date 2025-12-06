@@ -165,6 +165,52 @@ class Mutation:
     )
 ```
 
+## Partial updates with Maybe
+
+When using `partial` inputs for updates, all `auto` fields become optional. However, this makes it
+impossible to distinguish between "field not provided" and "field explicitly set to null".
+
+The [`Maybe`](https://strawberry.rocks/docs/types/maybe) type solves this:
+
+- `Maybe[str]`: field is either absent (`None`) or has a value (`Some("hello")`)
+- `Maybe[str | None]`: field is absent (`None`), has a value (`Some("hello")`), or explicitly null (`Some(None)`)
+
+```python title="types.py"
+from strawberry import Maybe
+
+@strawberry_django.input(models.Fruit)
+class FruitUpdateInput:
+    id: strawberry.relay.GlobalID
+    # name is required, null not allowed
+    name: Maybe[str]
+    # color is optional, can be explicitly set to null
+    color: Maybe[str | None]
+
+@strawberry.type
+class Mutation:
+    @strawberry_django.mutation
+    def update_fruit(self, info, input: FruitUpdateInput) -> Fruit:
+        fruit = input.id.resolve_node_sync(info)
+
+        if input.name is not None:
+            fruit.name = input.name.value
+
+        if input.color is not None:
+            # input.color.value is either a string or None
+            fruit.color = input.color.value
+
+        fruit.save()
+        return cast(Fruit, fruit)
+```
+
+This pattern allows clients to:
+
+- Omit a field entirely (no change)
+- Set a field to a value: `{ "name": "Apple" }`
+- Set a nullable field to null: `{ "color": null }` (only with `Maybe[T | None]`)
+
+For more details, see the [Strawberry Maybe documentation](https://strawberry.rocks/docs/types/maybe).
+
 ## Filtering
 
 > [!CAUTION]

@@ -18,7 +18,7 @@ from typing import (
 
 import strawberry
 from django.db.models import Q, QuerySet
-from strawberry import UNSET, relay
+from strawberry import UNSET, Some, relay
 from strawberry.tools import create_type
 from strawberry.types import has_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
@@ -121,6 +121,11 @@ lookup_name_conversion_map = {
 def resolve_value(value: Any) -> Any:
     if isinstance(value, list):
         return [resolve_value(v) for v in value]
+
+    # Handle strawberry.Some (the wrapped value inside Maybe)
+    if isinstance(value, Some):
+        # Extract .value from Some and recursively resolve it
+        return resolve_value(value.value)
 
     if isinstance(value, relay.GlobalID):
         return value.node_id

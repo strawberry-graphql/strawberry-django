@@ -5,7 +5,7 @@ from typing import Annotated, Any, cast
 import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
-from strawberry import auto
+from strawberry import Some, auto
 from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
 from strawberry.types import ExecutionResult, get_object_definition
@@ -128,6 +128,7 @@ def query():
 @pytest.mark.parametrize(
     ("value", "resolved"),
     [
+        (None, None),
         (2, 2),
         ("something", "something"),
         (GlobalID("", "24"), "24"),
@@ -136,6 +137,18 @@ def query():
             [1, "str", GlobalID("", "24"), Version.THREE],
             [1, "str", "24", Version.THREE.value],
         ),
+        # Some (inner type of Maybe) tests
+        (Some("test_string"), "test_string"),
+        (Some(None), None),
+        (Some(Version.TWO), Version.TWO.value),
+        (Some(GlobalID("FruitNode", "42")), "42"),
+        (Some(Some("nested")), "nested"),
+        (Some(Some(None)), None),
+        (
+            [Some(1), Some("test"), Some(None), Some(Version.ONE)],
+            [1, "test", None, Version.ONE.value],
+        ),
+        ([Some(Some("foo")), Some(None)], ["foo", None]),
     ],
 )
 def test_resolve_value(value, resolved):
@@ -578,3 +591,120 @@ async def test_async_resolver_filter(fruits):
     assert result.data["fruits"] == [
         {"name": "strawberry"},
     ]
+
+
+def test_resolve_value_some_with_range_lookup():
+    range_lookup = strawberry_django.RangeLookup(
+        start=Some(GlobalID("FruitNode", "10")),
+        end=Some(GlobalID("FruitNode", "20")),
+    )
+    assert resolve_value(range_lookup.start) == "10"
+    assert resolve_value(range_lookup.end) == "20"
+
+
+def test_resolve_value_some_with_comparison_filter_lookup():
+    gid = GlobalID("FruitNode", "125")
+    filter_lookup = strawberry_django.ComparisonFilterLookup(
+        exact=Some(gid),
+        range=strawberry_django.RangeLookup(start=Some(gid), end=Some(gid)),
+    )
+
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class Filter:
+        id: strawberry_django.ComparisonFilterLookup[GlobalID] | None
+
+    filter_: Any = Filter(id=filter_lookup)  # type: ignore[arg-type]
+    object_: Any = object()
+    q = process_filters(filter_, object_, object_)[1]
+    assert q == Q(id__exact="125", id__range=["125", "125"])
+
+
+def test_filter_method_some_value_resolution():
+    received_values: dict[str, Any] = {}
+
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field(resolve_value=True)
+        def field_filter_resolved(self, value: GlobalID, prefix):
+            received_values["resolved"] = value
+            return Q()
+
+        @strawberry_django.filter_field
+        def field_filter_unset(self, value: GlobalID, prefix):
+            received_values["unset"] = value
+            return Q()
+
+    gid = GlobalID("FruitNode", "125")
+    filter_: Any = Filter(
+        field_filter_resolved=Some(gid),  # type: ignore[arg-type]
+        field_filter_unset=Some(gid),  # type: ignore[arg-type]
+    )
+    object_: Any = object()
+    process_filters(filter_, object_, object_)
+
+    assert isinstance(received_values["resolved"], str)
+    assert received_values["resolved"] == "125"
+    # When resolve_value is UNSET for filter methods, Some wrapper is kept
+    assert isinstance(received_values["unset"], Some)
+    assert received_values["unset"].value == gid
+
+
+def test_filter_with_some_enum_value():
+    filter_lookup = strawberry_django.ComparisonFilterLookup(
+        exact=Some(Version.TWO),
+    )
+    assert resolve_value(filter_lookup.exact) == "second"
+
+
+def test_filter_with_some_in_list():
+    filter_lookup = strawberry_django.BaseFilterLookup(
+        in_list=[Some(GlobalID("FruitNode", "1")), Some(GlobalID("FruitNode", "2"))],
+    )
+    resolved = resolve_value(filter_lookup.in_list)
+    assert resolved == ["1", "2"]
+
+
+def test_filter_with_nested_some():
+    nested = Some(Some(Some(GlobalID("FruitNode", "42"))))
+    assert resolve_value(nested) == "42"
+
+
+def test_filter_with_some_none():
+    assert resolve_value(Some(None)) is None
+    assert resolve_value(Some(Some(None))) is None
+
+
+def test_process_filters_with_some_wrapped_values():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class Filter:
+        name: strawberry_django.FilterLookup[str] | None
+
+    name_lookup = strawberry_django.FilterLookup(
+        exact=Some("strawberry"),
+        contains=Some("berry"),
+    )
+    filter_: Any = Filter(name=name_lookup)  # type: ignore[arg-type]
+    object_: Any = object()
+    _, q = process_filters(filter_, object_, object_)
+    assert set(q.children) == {
+        ("name__exact", "strawberry"),
+        ("name__contains", "berry"),
+    }
+
+
+def test_process_filters_with_some_global_id_in_lookup():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class Filter:
+        id: strawberry_django.BaseFilterLookup[GlobalID] | None
+
+    id_lookup = strawberry_django.BaseFilterLookup(
+        exact=Some(GlobalID("FruitNode", "42")),
+        in_list=[
+            Some(GlobalID("FruitNode", "1")),
+            Some(GlobalID("FruitNode", "2")),
+        ],
+    )
+    filter_: Any = Filter(id=id_lookup)  # type: ignore[arg-type]
+    object_: Any = object()
+    _, q = process_filters(filter_, object_, object_)
+    assert dict(q.children) == {"id__exact": "42", "id__in": ["1", "2"]}

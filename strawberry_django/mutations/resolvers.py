@@ -23,7 +23,7 @@ from django.db.models.fields.reverse_related import (
     OneToOneRel,
 )
 from django.utils.functional import LazyObject
-from strawberry import UNSET, relay
+from strawberry import UNSET, Some, relay
 
 from strawberry_django.fields.types import (
     ListInput,
@@ -167,6 +167,9 @@ def parse_input(
     *,
     key_attr: str | None = None,
 ):
+    if isinstance(data, Some):
+        return parse_input(info, data.value, key_attr=key_attr)
+
     if isinstance(data, dict):
         return {k: parse_input(info, v, key_attr=key_attr) for k, v in data.items()}
 
