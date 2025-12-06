@@ -521,3 +521,24 @@ def test_update_geo(mutation):
     assert deep_tuple_to_list(geofield_obj.multi_point.tuple) == multi_point
     assert deep_tuple_to_list(geofield_obj.multi_line_string.tuple) == multi_line_string
     assert deep_tuple_to_list(geofield_obj.multi_polygon.tuple) == multi_polygon
+
+
+def test_parse_input_unwraps_some():
+    from enum import Enum
+    from typing import Any
+
+    from strawberry import Some
+
+    from strawberry_django.mutations.resolvers import parse_input
+
+    class Color(Enum):
+        RED = "red"
+        GREEN = "green"
+
+    info: Any = None
+    assert parse_input(info, Some("hello")) == "hello"
+    assert parse_input(info, Some(None)) is None
+    assert parse_input(info, Some(Some("nested"))) == "nested"
+    assert parse_input(info, Some(Color.RED)) == "red"
+    assert parse_input(info, [Some("a"), Some("b")]) == ["a", "b"]
+    assert parse_input(info, {"key": Some("value")}) == {"key": "value"}

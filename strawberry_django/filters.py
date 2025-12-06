@@ -18,20 +18,13 @@ from typing import (
 
 import strawberry
 from django.db.models import Q, QuerySet
-from strawberry import UNSET, relay
+from strawberry import UNSET, Some, relay
 from strawberry.tools import create_type
 from strawberry.types import has_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.field import StrawberryField, field
 from strawberry.types.unset import UnsetType
 from typing_extensions import Self, assert_never, dataclass_transform, deprecated
-
-# Try to import Maybe at module level for performance
-try:
-    from strawberry import Maybe
-except ImportError:
-    # Maybe type not available in this version of strawberry
-    Maybe = None  # type: ignore[assignment, misc]
 
 from strawberry_django.fields.filter_order import (
     RESOLVE_VALUE_META,
@@ -129,11 +122,10 @@ def resolve_value(value: Any) -> Any:
     if isinstance(value, list):
         return [resolve_value(v) for v in value]
 
-    # Handle strawberry.Maybe type if available
-    if Maybe is not None and isinstance(value, Maybe):
-        # Extract .value from Maybe and recursively resolve it
-        # resolve_value(None) already returns None, so no need for explicit check
-        return resolve_value(getattr(value, "value", None))
+    # Handle strawberry.Some (the wrapped value inside Maybe)
+    if isinstance(value, Some):
+        # Extract .value from Some and recursively resolve it
+        return resolve_value(value.value)
 
     if isinstance(value, relay.GlobalID):
         return value.node_id

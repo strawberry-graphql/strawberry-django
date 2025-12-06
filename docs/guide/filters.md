@@ -268,6 +268,7 @@ class FruitFilter:
 >
 > - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute
 > - `value` parameter of type `Enum` is resolved to is's value
+> - `value` parameter wrapped in `strawberry.Some` (from [`Maybe`](https://strawberry.rocks/docs/types/maybe#maybe) type) is unwrapped and resolved
 > - above types are converted in `lists` as well
 >
 > resolution can modified via `strawberry_django.filter_field(resolve_value=...)`
