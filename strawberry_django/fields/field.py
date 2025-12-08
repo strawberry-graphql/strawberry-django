@@ -277,6 +277,21 @@ class StrawberryDjangoField(
             if "info" not in kwargs:
                 kwargs["info"] = info
 
+            # If we have a prefetched cache for this reverse accessor on the source instance,
+            # pass a hint so the queryset hook can short-circuit to the cached list without
+            # re-optimizing/requerying.
+            attname = self.django_name or self.python_name
+            if source is not None:
+                cache = getattr(source, "_prefetched_objects_cache", None)
+                if isinstance(cache, dict) and attname in cache:
+                    kwargs = dict(kwargs)
+                    kwargs["__use_prefetched_cache__"] = attname
+
+            # Provide source instance in kwargs so the queryset hook can use prefetched cache
+            if source is not None:
+                kwargs = dict(kwargs)
+                kwargs["__source__"] = source
+
             result = django_resolver(
                 self.get_queryset_hook(**kwargs),
                 qs_hook=lambda qs: qs,
@@ -286,13 +301,54 @@ class StrawberryDjangoField(
 
     def get_queryset_hook(self, info: Info, **kwargs):
         if self.is_connection or self.is_paginated:
-            # We don't want to fetch results yet, those will be done by the connection/pagination
+            # For connections/paginated fields, avoid DB hits when we already have
+            # a prefetched cache for this reverse accessor on the source instance.
+            # Otherwise, just return the queryset and let the connection handle it.
             def qs_hook(qs: models.QuerySet):  # type: ignore
-                return self.get_queryset(qs, info, **kwargs)
+                # If the resolver passed a hint to use the source's prefetched cache,
+                # return the cached list so the connection can operate on a Python list
+                # (preventing per-node LIMIT queries on reverse relations).
+                use_cache_key = kwargs.pop("__use_prefetched_cache__", None)
+                source_obj = kwargs.pop("__source__", None)
+                if use_cache_key and source_obj is not None:
+                    cache = getattr(source_obj, "_prefetched_objects_cache", None)
+                    if isinstance(cache, dict) and use_cache_key in cache:
+                        return cache[use_cache_key]
+                qs2 = self.get_queryset(qs, info, **kwargs)
+                # If the connection queryset carries parent-level postfetch branches,
+                # we need to trigger evaluation now so the optimizer's postfetch hook
+                # can batch nested reverse relations across the page. This will not
+                # bypass pagination because the queryset already carries LIMIT/OFFSET.
+                from strawberry_django.queryset import (
+                    get_queryset_config as _get_qs_cfg,
+                )
+
+                cfg = _get_qs_cfg(qs2)
+                if getattr(cfg, "parent_postfetch_branches", None):
+                    from strawberry_django.resolvers import default_qs_hook as _dqsh
+
+                    qs2 = _dqsh(qs2)
+                return qs2
 
         elif self.is_list:
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
+                # If the source instance has a prefetched cache for this accessor, short-circuit
+                use_cache_key = kwargs.pop("__use_prefetched_cache__", None)
+                source_obj = kwargs.pop("__source__", None)
+                if use_cache_key and source_obj is not None:
+                    cache = getattr(source_obj, "_prefetched_objects_cache", None)
+                    if isinstance(cache, dict) and use_cache_key in cache:
+                        # Only short-circuit to the cache if the queryset does NOT carry
+                        # postfetch hints. If it does, we must run the default_qs_hook so
+                        # nested postfetch can execute on this queryset.
+                        from strawberry_django.queryset import (
+                            get_queryset_config as _get_qs_cfg,
+                        )
+
+                        cfg = _get_qs_cfg(qs)
+                        if not getattr(cfg, "postfetch_prefetch", None):
+                            return cache[use_cache_key]
                 qs = self.get_queryset(qs, info, **kwargs)
                 if not self.disable_fetch_list_results:
                     qs = default_qs_hook(qs)
@@ -464,13 +520,75 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
         assert self.connection_type is not None
         nodes = cast("Iterable[relay.Node]", next_(source, info, **kwargs))
 
+        # Helper to apply early SQL pagination for simple forward root connections
+        def _apply_early_pagination(qs: models.QuerySet):
+            import contextlib
+
+            # Only for root connections (source is None), forward pagination with `first`,
+            # and no cursors
+            if source is not None:
+                return qs
+            if (
+                first in {None, 0}
+                or before is not None
+                or after is not None
+                or last is not None
+            ):
+                return qs
+
+            # Cap by max_results when provided
+            page_limit = first
+            if isinstance(self.max_results, int) and page_limit is not None:
+                page_limit = min(page_limit, self.max_results)
+
+            # Ensure deterministic ordering
+            if not qs.ordered:
+                qs = qs.order_by("pk")
+
+            # Build ORDER BY expressions as Django does for window pagination
+            from django.db import DEFAULT_DB_ALIAS
+
+            # Use the public `db` property instead of the private `_db` attribute
+            with contextlib.suppress(Exception):
+                compiler = qs.query.get_compiler(using=(qs.db or DEFAULT_DB_ALIAS))
+                order_by_exprs = [expr for expr, _ in compiler.get_order_by()]
+
+                # Annotate row number and total count (global partition)
+                from django.db.models import Count, Window
+                from django.db.models.functions import RowNumber
+
+                qs = qs.annotate(
+                    _strawberry_row_number=Window(
+                        RowNumber(),
+                        partition_by=None,
+                        order_by=order_by_exprs,
+                    ),
+                    _strawberry_total_count=Window(
+                        Count(1),
+                        partition_by=None,
+                    ),
+                )
+
+                # Fetch one extra row so super().resolve_connection can compute hasNextPage
+                return (
+                    qs.filter(_strawberry_row_number__lte=(page_limit + 1))
+                    if page_limit is not None
+                    else qs
+                )
+
+            # Best-effort: on any failure above, return original queryset
+            return qs
+
         # We have a single resolver for both sync and async, so we need to check if
         # nodes is awaitable or not and resolve it accordingly
         if inspect.isawaitable(nodes):
 
             async def async_resolver():
+                awaited = await nodes
+                if isinstance(awaited, models.QuerySet):
+                    awaited = _apply_early_pagination(awaited)
                 resolved = self.connection_type.resolve_connection(
-                    await nodes,
+                    awaited,
                     info=info,
                     before=before,
                     after=after,
@@ -485,6 +603,9 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                 return resolved
 
             return async_resolver()
+
+        if isinstance(nodes, models.QuerySet):
+            nodes = _apply_early_pagination(nodes)
 
         return self.connection_type.resolve_connection(
             nodes,
