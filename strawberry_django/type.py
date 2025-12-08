@@ -27,6 +27,7 @@ from strawberry.types import get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.cast import get_strawberry_type_cast
 from strawberry.types.field import StrawberryField
+from strawberry.types.maybe import _annotation_is_maybe  # noqa: PLC2701
 from strawberry.types.private import is_private
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Self, dataclass_transform, get_annotations
@@ -165,18 +166,22 @@ def _process_type(
         # FIXME: For input types it is important to set the default value to UNSET
         # Is there a better way of doing this?
         if is_input:
+            # For Maybe types, the default should be None (matching strawberry's behavior)
+            # For other types, the default should be UNSET
+            is_maybe = _annotation_is_maybe(annotation)
+            default_value = None if is_maybe else UNSET
+
             # First check if the field is defined in the class. If it is,
-            # then we just need to set its default value to UNSET in case
-            # it is MISSING
+            # then we just need to set its default value in case it is MISSING
             if field_name in cls.__dict__:
                 field = cls.__dict__[field_name]
                 if (
                     isinstance(field, dataclasses.Field)
                     and field.default is dataclasses.MISSING
                 ):
-                    field.default = UNSET
+                    field.default = default_value
                     if isinstance(field, StrawberryField):
-                        field.default_value = UNSET
+                        field.default_value = default_value
 
                 continue
 
@@ -185,12 +190,12 @@ def _process_type(
                 if base_field is not None and isinstance(base_field, StrawberryField):
                     new_field = copy.copy(base_field)
                 else:
-                    new_field = _field(default=UNSET)
+                    new_field = _field(default=default_value)
 
                 cls_annotations[field_name] = field_annotation.raw_annotation
-                new_field.default = UNSET
+                new_field.default = default_value
                 if isinstance(base_field, StrawberryField):
-                    new_field.default_value = UNSET
+                    new_field.default_value = default_value
 
                 setattr(cls, field_name, new_field)
 

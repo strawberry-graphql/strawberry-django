@@ -1,9 +1,11 @@
+import dataclasses
 from typing import cast
 
 import strawberry
 from strawberry import auto
 from strawberry.types import get_object_definition
 from strawberry.types.base import StrawberryOptional
+from strawberry.types.maybe import Maybe
 
 import strawberry_django
 
@@ -113,3 +115,27 @@ def test_relationship_inherit(testtype):
         ),
         ("another_name", StrawberryOptional(strawberry_django.OneToManyInput)),
     ]
+
+
+def test_maybe_field_default_value():
+    @strawberry_django.input(TypeModel)
+    class InputWithMaybe:
+        my_maybe_field: Maybe[bool]
+        regular_optional_field: str | None
+
+    @strawberry.input
+    class StrawberryInputWithMaybe:
+        my_maybe_field: Maybe[bool]
+
+    django_fields = {f.name: f for f in dataclasses.fields(InputWithMaybe)}
+    strawberry_fields = {
+        f.name: f for f in dataclasses.fields(StrawberryInputWithMaybe)
+    }
+
+    assert django_fields["my_maybe_field"].default is None
+    assert (
+        django_fields["my_maybe_field"].default
+        == strawberry_fields["my_maybe_field"].default
+    )
+
+    assert django_fields["regular_optional_field"].default is strawberry.UNSET
