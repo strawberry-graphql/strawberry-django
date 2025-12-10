@@ -723,25 +723,40 @@ def test_process_filters_with_some_global_id_in_lookup():
 
 
 @pytest.mark.django_db
-def test_uuid_lookup_contains_string(query):
-    # Testing that regex/contains/etc on UUID field accepts string
-    # See test_issue_repro.py origin
+@pytest.mark.parametrize(
+    ("lookup_name", "value_getter"),
+    [
+        ("exact", lambda u: f'"{u}"'),
+        ("iExact", lambda u: f'"{u}"'),
+        ("inList", lambda u: f'["{u}"]'),
+        ("contains", lambda u: f'"{u[5:10]}"'),
+        ("iContains", lambda u: f'"{u[5:10].upper()}"'),
+        ("startsWith", lambda u: f'"{u[:5]}"'),
+        ("iStartsWith", lambda u: f'"{u[:5].upper()}"'),
+        ("endsWith", lambda u: f'"{u[-5:]}"'),
+        ("iEndsWith", lambda u: f'"{u[-5:].upper()}"'),
+        ("regex", lambda u: f'"{u[:5]}.*"'),
+        ("iRegex", lambda u: f'"{u[:5].upper()}.*"'),
+    ],
+)
+def test_uuid_lookup_string_filters(query, lookup_name, value_getter):
+    """Test that UUID fields support string-based partial lookups and exact matches.
 
-    # We need to verify that we can filter using a partial string on a UUID field.
-    # The models.UUIDModel should be available.
-
+    Verifies that lookups like contains, startsWith, regex, etc., accept string inputs
+    and correctly filter UUIDs, in addition to standard exact/inList matches.
+    """
     instance = models.UUIDModel.objects.create(text="test")
     uuid_str = str(instance.id)
-    partial_uuid = uuid_str[:5]
+    filter_value = value_getter(uuid_str)
 
-    result = query(f'''
+    result = query(f"""
         query {{
-            items(filters: {{ id: {{ contains: "{partial_uuid}" }} }}) {{
+            items(filters: {{ id: {{ {lookup_name}: {filter_value} }} }}) {{
                 id
                 text
             }}
         }}
-    ''')
+    """)
 
     assert not result.errors
     assert len(result.data["items"]) == 1
