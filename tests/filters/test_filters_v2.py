@@ -113,11 +113,23 @@ class FruitFilter:
         )
 
 
+@strawberry_django.filter_type(models.UUIDModel, lookups=True)
+class UUIDModelFilter:
+    id: auto
+
+
+@strawberry_django.type(models.UUIDModel, filters=UUIDModelFilter)
+class UUIDModelType:
+    id: auto
+    text: auto
+
+
 @strawberry.type
 class Query:
     types: list[FruitType] = strawberry_django.field(filters=FruitTypeFilter)
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
     vegetables: list[Vegetable] = strawberry_django.field(filters=VegetableFilter)
+    items: list[UUIDModelType] = strawberry_django.field()
 
 
 @pytest.fixture
@@ -708,3 +720,29 @@ def test_process_filters_with_some_global_id_in_lookup():
     object_: Any = object()
     _, q = process_filters(filter_, object_, object_)
     assert dict(q.children) == {"id__exact": "42", "id__in": ["1", "2"]}
+
+
+@pytest.mark.django_db
+def test_uuid_lookup_contains_string(query):
+    # Testing that regex/contains/etc on UUID field accepts string
+    # See test_issue_repro.py origin
+
+    # We need to verify that we can filter using a partial string on a UUID field.
+    # The models.UUIDModel should be available.
+
+    instance = models.UUIDModel.objects.create(text="test")
+    uuid_str = str(instance.id)
+    partial_uuid = uuid_str[:5]
+
+    result = query(f'''
+        query {{
+            items(filters: {{ id: {{ contains: "{partial_uuid}" }} }}) {{
+                id
+                text
+            }}
+        }}
+    ''')
+
+    assert not result.errors
+    assert len(result.data["items"]) == 1
+    assert result.data["items"][0]["id"] == uuid_str
