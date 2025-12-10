@@ -56,28 +56,28 @@ class FilterLookup(BaseFilterLookup[T]):
     i_exact: T | None = filter_field(
         description=f"Case-insensitive exact match. {_SKIP_MSG}"
     )
-    contains: T | None = filter_field(
+    contains: str | None = filter_field(
         description=f"Case-sensitive containment test. {_SKIP_MSG}"
     )
-    i_contains: T | None = filter_field(
+    i_contains: str | None = filter_field(
         description=f"Case-insensitive containment test. {_SKIP_MSG}"
     )
-    starts_with: T | None = filter_field(
+    starts_with: str | None = filter_field(
         description=f"Case-sensitive starts-with. {_SKIP_MSG}"
     )
-    i_starts_with: T | None = filter_field(
+    i_starts_with: str | None = filter_field(
         description=f"Case-insensitive starts-with. {_SKIP_MSG}"
     )
-    ends_with: T | None = filter_field(
+    ends_with: str | None = filter_field(
         description=f"Case-sensitive ends-with. {_SKIP_MSG}"
     )
-    i_ends_with: T | None = filter_field(
+    i_ends_with: str | None = filter_field(
         description=f"Case-insensitive ends-with. {_SKIP_MSG}"
     )
-    regex: T | None = filter_field(
+    regex: str | None = filter_field(
         description=f"Case-sensitive regular expression match. {_SKIP_MSG}"
     )
-    i_regex: T | None = filter_field(
+    i_regex: str | None = filter_field(
         description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
     )
 

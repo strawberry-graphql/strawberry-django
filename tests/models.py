@@ -1,3 +1,4 @@
+import uuid
 from typing import TYPE_CHECKING, Optional
 
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -137,3 +138,8 @@ try:
 
 except ImproperlyConfigured:
     GEOS_IMPORTED = False
+
+
+class UUIDModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    text = models.CharField(max_length=50)
