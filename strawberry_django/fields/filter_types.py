@@ -74,16 +74,16 @@ class FilterLookup(BaseFilterLookup[T]):
     i_ends_with: T | None = filter_field(
         description=f"Case-insensitive ends-with. {_SKIP_MSG}"
     )
-    regex: str | None = filter_field(
+    regex: T | None = filter_field(
         description=f"Case-sensitive regular expression match. {_SKIP_MSG}"
     )
-    i_regex: str | None = filter_field(
+    i_regex: T | None = filter_field(
         description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
     )
 
 
 @strawberry.input
-class UUIDFilterLookup(BaseFilterLookup[T]):
+class StrFilterLookup(BaseFilterLookup[T]):
     i_exact: T | None = filter_field(
         description=f"Case-insensitive exact match. {_SKIP_MSG}"
     )
@@ -148,6 +148,6 @@ type_filter_map = {
     decimal.Decimal: ComparisonFilterLookup,
     float: ComparisonFilterLookup,
     int: ComparisonFilterLookup,
-    str: FilterLookup,
-    uuid.UUID: UUIDFilterLookup,
+    str: StrFilterLookup,
+    uuid.UUID: StrFilterLookup,
 }
