@@ -82,7 +82,7 @@ class FilterLookup(BaseFilterLookup[T]):
     )
 
 
-@strawberry.input
+@strawberry.input(name="FilterLookup")
 class StrFilterLookup(BaseFilterLookup[T]):
     i_exact: T | None = filter_field(
         description=f"Case-insensitive exact match. {_SKIP_MSG}"
