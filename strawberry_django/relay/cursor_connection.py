@@ -233,7 +233,8 @@ def apply_cursor_pagination(
         #   This query is likely not very efficient, but using last _and_ first together is discouraged by the
         #   spec anyway
         qs = (
-            qs.reverse()
+            qs
+            .reverse()
             .annotate(
                 _strawberry_row_number_fwd=Window(
                     RowNumber(),

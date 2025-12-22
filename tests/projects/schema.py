@@ -318,7 +318,8 @@ class TagType(relay.Node, Named):
     def issues_with_selected_related_milestone_and_project(self) -> list[IssueType]:
         # here, the `select_related` is on the queryset directly, and not on the field
         return (
-            self.issues.all()  # type: ignore
+            self.issues
+            .all()  # type: ignore
             .select_related("milestone", "milestone__project")
             .order_by("id")
         )

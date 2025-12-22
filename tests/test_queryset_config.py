@@ -37,7 +37,8 @@ def test_queryset_config_survives_in_prefetch_queryset():
     config.optimized = True
 
     project = (
-        Project.objects.all()
+        Project.objects
+        .all()
         .prefetch_related(Prefetch("milestones", queryset=qs))
         .get()
     )
