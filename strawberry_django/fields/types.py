@@ -444,7 +444,7 @@ def resolve_model_field_type(
         )
     ):
         field_type = model_field.choices_enum
-        enum_def = getattr(field_type, "_enum_definition", None)
+        enum_def = getattr(field_type, "__strawberry_definition__", None)
         if enum_def is None:
             doc = (
                 inspect.cleandoc(field_type.__doc__)
@@ -452,7 +452,9 @@ def resolve_model_field_type(
                 and field_type.__doc__
                 else None
             )
-            enum_def = strawberry.enum(field_type, description=doc)._enum_definition
+            enum_def = strawberry.enum(
+                field_type, description=doc
+            ).__strawberry_definition__
         field_type = enum_def.wrapped_cls
     # Auto enum
     elif (

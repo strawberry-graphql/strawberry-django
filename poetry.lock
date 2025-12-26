@@ -1101,4 +1101,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "de092d850879ce2416e605d144facd6a53d0a64efe12ea699618c81866bca1c8"
+content-hash = "5d30bf45d25c9e4dbd996a62c7807f159a0374177dccd3ef3390d782f8d9d074"

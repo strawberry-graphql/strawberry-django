@@ -261,7 +261,7 @@ def test_order_type():
         def custom_order(self, value: auto, prefix: str):
             pass
 
-    annotated_type = StrawberryOptional(Ordering._enum_definition)  # type: ignore
+    annotated_type = StrawberryOptional(Ordering.__strawberry_definition__)  # type: ignore
 
     assert [
         (
