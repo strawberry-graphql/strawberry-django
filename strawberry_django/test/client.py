@@ -91,7 +91,7 @@ class AsyncTestClient(TestClient):
             assert_no_errors if asserts_errors is None else asserts_errors
         )
         if assert_no_errors:
-            assert response.errors is None
+            assert response.errors is None, response.errors
 
         return response
 
