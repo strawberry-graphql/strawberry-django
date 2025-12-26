@@ -2,7 +2,7 @@ import strawberry
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.relay import DjangoListConnection
 
 from .models import (
     AndroidProject,
@@ -23,9 +23,9 @@ from .models import (
 
 
 @strawberry_django.interface(Project)
-class ProjectType:
+class ProjectType(strawberry.relay.Node):
     topic: strawberry.auto
-    notes: list["ProjectNoteType"] = strawberry_django.field()
+    notes: DjangoListConnection["ProjectNoteType"] = strawberry_django.connection()
 
     @strawberry_django.field(only=("topic",))
     def topic_upper(self) -> str:
@@ -33,7 +33,7 @@ class ProjectType:
 
 
 @strawberry_django.type(ProjectNote)
-class ProjectNoteType:
+class ProjectNoteType(strawberry.relay.Node):
     project: ProjectType
     title: strawberry.auto
 
@@ -43,7 +43,9 @@ class ArtProjectType(ProjectType):
     artist: strawberry.auto
     art_style_upper: strawberry.auto
 
-    art_notes: list["ArtProjectNoteType"] = strawberry_django.field()
+    art_notes: DjangoListConnection["ArtProjectNoteType"] = (
+        strawberry_django.connection()
+    )
 
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
@@ -51,15 +53,17 @@ class ArtProjectType(ProjectType):
 
 
 @strawberry_django.type(ArtProjectNote)
-class ArtProjectNoteType:
+class ArtProjectNoteType(strawberry.relay.Node):
     art_project: "ArtProjectType"
     title: strawberry.auto
 
-    details: list["ArtProjectNoteDetailsType"] = strawberry_django.field()
+    details: DjangoListConnection["ArtProjectNoteDetailsType"] = (
+        strawberry_django.connection()
+    )
 
 
 @strawberry_django.type(ArtProjectNoteDetails)
-class ArtProjectNoteDetailsType:
+class ArtProjectNoteDetailsType(strawberry.relay.Node):
     art_project_note: ArtProjectNoteType
     text: strawberry.auto
 
@@ -100,29 +104,26 @@ class IOSProjectType(AppProjectType):
 
 
 @strawberry_django.type(CompanyProjectLink)
-class CompanyProjectLinkType:
+class CompanyProjectLinkType(strawberry.relay.Node):
     company: "CompanyType"
     project: ProjectType
     label: strawberry.auto
 
 
 @strawberry_django.type(Company)
-class CompanyType:
+class CompanyType(strawberry.relay.Node):
     name: strawberry.auto
-    projects: list[ProjectType]
+    projects: DjangoListConnection[ProjectType] = strawberry_django.connection()
     main_project: ProjectType | None
-    project_links: list["CompanyProjectLinkType"] = strawberry_django.field()
+    project_links: DjangoListConnection["CompanyProjectLinkType"] = (
+        strawberry_django.connection()
+    )
 
 
 @strawberry.type
 class Query:
-    companies: list[CompanyType] = strawberry_django.field()
-    companies_paginated: list[CompanyType] = strawberry_django.field(pagination=True)
-    projects: list[ProjectType] = strawberry_django.field()
-    projects_paginated: list[ProjectType] = strawberry_django.field(pagination=True)
-    projects_offset_paginated: OffsetPaginated[ProjectType] = (
-        strawberry_django.offset_paginated()
-    )
+    companies: DjangoListConnection[CompanyType] = strawberry_django.connection()
+    projects: DjangoListConnection[ProjectType] = strawberry_django.connection()
 
 
 schema = strawberry.Schema(

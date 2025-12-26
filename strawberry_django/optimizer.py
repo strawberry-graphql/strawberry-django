@@ -103,6 +103,235 @@ _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
 
 
+# --- Helper utilities to keep function nesting shallow (ruff PLR1702 friendly) ---
+
+
+def _flatten_prefetch_paths_for_subclass(
+    pf_obj: Prefetch, base_field_names: set[str]
+) -> list[str]:
+    """Flatten nested Prefetch objects into dot paths for subclass postfetching.
+
+    Only returns paths whose root is NOT a field on the base model (so they must
+    be fetched from subclass instances grouped post-fetch). This mirrors the logic
+    previously implemented inline inside `_get_model_hints`.
+    """
+    paths: list[str] = []
+    to = getattr(pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None))
+    if not isinstance(to, str):
+        return paths
+
+    root = to.split(LOOKUP_SEP, 1)[0]
+    if root not in base_field_names:
+        # Always include the root path itself
+        paths.append(to)
+        # Inspect nested prefetches on the queryset, if any
+        qs = getattr(pf_obj, "queryset", None)
+        if qs is not None:
+            inner = getattr(qs, "_prefetch_related_lookups", None)
+            if isinstance(inner, (list, tuple)):
+                for inner_pf in inner:
+                    if isinstance(inner_pf, str):
+                        # Simple nested string path
+                        paths.append(f"{to}{LOOKUP_SEP}{inner_pf}")
+                    elif isinstance(inner_pf, Prefetch):
+                        # Append the first hop if present
+                        inner_to = getattr(
+                            inner_pf, "prefetch_to", getattr(inner_pf, "lookup", None)
+                        )
+                        if isinstance(inner_to, str) and inner_to:
+                            paths.append(f"{to}{LOOKUP_SEP}{inner_to}")
+                        # Recurse to capture any deeper nested paths under the inner prefetch
+                        paths.extend(
+                            f"{to}{LOOKUP_SEP}{nested}"
+                            for nested in _flatten_prefetch_paths_for_subclass(
+                                inner_pf, base_field_names
+                            )
+                        )
+    return paths
+
+
+def _extract_rel_paths_from_prefetches(
+    prefetches: list[PrefetchType], base_field_names: set[str]
+) -> set[str]:
+    """Collect relation paths from a list of prefetch hints for subclass postfetching."""
+    rel_paths: set[str] = set()
+    for pf in prefetches:
+        if isinstance(pf, str):
+            root = pf.split(LOOKUP_SEP, 1)[0]
+            if root not in base_field_names:
+                rel_paths.add(pf)
+        elif isinstance(pf, Prefetch):
+            rel_paths.update(_flatten_prefetch_paths_for_subclass(pf, base_field_names))
+    return rel_paths
+
+
+def _rewrite_prefetches_for_selected_subclasses(
+    prefetches: list[PrefetchType], prefixes: list[str]
+) -> list[PrefetchType]:
+    """Rewrite prefetch paths relative to subclass instances after select_subclasses().
+
+    This ensures that paths like "parentaccessor__child_rel" become "child_rel"
+    when instances are already materialized as subclass objects.
+    """
+    if not prefixes:
+        return prefetches
+
+    new_prefetches: list[PrefetchType] = []
+    for pf in prefetches:
+        if isinstance(pf, str):
+            new_to = pf
+            for pref in prefixes:
+                if new_to.startswith(pref):
+                    new_to = new_to[len(pref) :]
+                    break
+            new_prefetches.append(new_to)
+        elif isinstance(pf, Prefetch):
+            to = getattr(pf, "prefetch_to", None)
+            new_to = to
+            if isinstance(to, str):
+                for pref in prefixes:
+                    if to.startswith(pref):
+                        new_to = to[len(pref) :]
+                        break
+            if isinstance(new_to, str) and new_to != to:
+                kwargs_prefetch: dict[str, Any] = {"queryset": pf.queryset}
+                to_attr = getattr(pf, "to_attr", None)
+                if to_attr is not None:
+                    kwargs_prefetch["to_attr"] = to_attr
+                new_pf = Prefetch(new_to, **kwargs_prefetch)
+                if getattr(pf, "_optimizer_sentinel", None) is _sentinel:
+                    new_pf._optimizer_sentinel = _sentinel  # type: ignore[attr-defined]
+                new_prefetches.append(new_pf)
+            else:
+                new_prefetches.append(pf)
+        else:
+            # Leave callables/unknown types as-is
+            new_prefetches.append(pf)
+    return new_prefetches
+
+
+def _add_prefix_to_items(items: list[str], subclass_prefix: str) -> list[str]:
+    """Add prefix to lookup paths if not already present."""
+    if not subclass_prefix:
+        return items
+    out: list[str] = []
+    for it in items:
+        if it.startswith(subclass_prefix) or not it.split(LOOKUP_SEP, 1)[0]:
+            out.append(it)
+        else:
+            out.append(f"{subclass_prefix}{it}")
+    return out
+
+
+def _extract_rel_paths_for_inheritance_manager(
+    prefetches: list[PrefetchType], subclass_prefix: str, base_field_names: set[str]
+) -> set[str]:
+    """Extract relation paths for postfetching when using InheritanceManager.
+
+    Accept both absolute paths (starting with the parent->subclass accessor prefix)
+    and paths relative to the subclass model. Filters out relations that point back
+    to base model fields.
+    """
+
+    def keep_after_prefix(path: str) -> str | None:
+        # Accept prefetch paths that are either absolute (already prefixed
+        # with the parent accessor) or relative to the subclass model.
+        if subclass_prefix and path.startswith(subclass_prefix):
+            remainder = path[len(subclass_prefix) :]
+            remainder = remainder.removeprefix(LOOKUP_SEP)
+        else:
+            # Treat as relative to subclass
+            remainder = path
+        first = remainder.split(LOOKUP_SEP, 1)[0]
+        return remainder if first and first not in base_field_names else None
+
+    def _flatten_after_prefix(pf_obj: Prefetch) -> list[str]:
+        out: list[str] = []
+        to = getattr(pf_obj, "prefetch_to", getattr(pf_obj, "lookup", None))
+        if not isinstance(to, str):
+            return out
+        rem = keep_after_prefix(to)
+        if not rem:
+            return out
+        out.append(rem)
+
+        def _append_nested(base_rem: str, child_pf: Prefetch):
+            # child_pf.to is relative to the child queryset model; join under base_rem
+            child_to = getattr(
+                child_pf, "prefetch_to", getattr(child_pf, "lookup", None)
+            )
+            if isinstance(child_to, str) and child_to:
+                out.append(f"{base_rem}{LOOKUP_SEP}{child_to}")
+                # Recurse deeper
+                child_qs = getattr(child_pf, "queryset", None)
+                if child_qs is not None:
+                    grand = getattr(child_qs, "_prefetch_related_lookups", None)
+                    if isinstance(grand, (list, tuple)):
+                        for g in grand:
+                            if isinstance(g, str):
+                                out.append(
+                                    f"{base_rem}{LOOKUP_SEP}{child_to}{LOOKUP_SEP}{g}"
+                                )
+                            elif isinstance(g, Prefetch):
+                                _append_nested(f"{base_rem}{LOOKUP_SEP}{child_to}", g)
+
+        qs = getattr(pf_obj, "queryset", None)
+        if qs is not None:
+            inner = getattr(qs, "_prefetch_related_lookups", None)
+            if isinstance(inner, (list, tuple)):
+                for inner_pf in inner:
+                    if isinstance(inner_pf, str):
+                        out.append(f"{rem}{LOOKUP_SEP}{inner_pf}")
+                    elif isinstance(inner_pf, Prefetch):
+                        _append_nested(rem, inner_pf)
+        return out
+
+    rel_paths: set[str] = set()
+    for pf in prefetches:
+        if isinstance(pf, str):
+            rem = keep_after_prefix(pf)
+            if rem:
+                rel_paths.add(rem)
+        elif isinstance(pf, Prefetch):
+            rel_paths.update(_flatten_after_prefix(pf))
+    return rel_paths
+
+
+def _lift_child_postfetch_to_parent(
+    parent_store: OptimizerStore,
+    child_store: OptimizerStore,
+    accessor_path: str,
+) -> OptimizerStore:
+    """Lift child-level postfetch hints/branches to the parent accessor.
+
+    Returns a shallow copy of child_store with postfetch-related hints cleared,
+    so that execution happens once at the parent level instead of per-parent.
+    """
+    # Operate on a copy to avoid mutating the original reference
+    new_child = child_store.copy()
+
+    # Lift child postfetch_prefetch (model -> set(paths)) into parent branches
+    if getattr(child_store, "postfetch_prefetch", None):
+        dest = parent_store.parent_postfetch_branches.setdefault(accessor_path, {})
+        for mdl, rels in child_store.postfetch_prefetch.items():
+            dest.setdefault(mdl, set()).update(rels)
+        new_child.postfetch_prefetch.clear()
+
+    # Merge any existing child parent_postfetch_branches into this accessor
+    if getattr(child_store, "parent_postfetch_branches", None):
+        merged: dict[type[models.Model], set[str]] = {}
+        for mapping in child_store.parent_postfetch_branches.values():
+            for mdl, rels in mapping.items():
+                merged.setdefault(mdl, set()).update(rels)
+        if merged:
+            dest = parent_store.parent_postfetch_branches.setdefault(accessor_path, {})
+            for mdl, rels in merged.items():
+                dest.setdefault(mdl, set()).update(rels)
+        new_child.parent_postfetch_branches.clear()
+
+    return new_child
+
+
 @dataclasses.dataclass
 class OptimizerConfig:
     """Django optimization configuration.
@@ -146,6 +375,9 @@ class OptimizerStore:
             Set of values to optimize using `QuerySet.prefetch_related`
         annotate:
             Dict of values to use in `QuerySet.annotate`
+        postfetch_prefetch:
+            Map of concrete model classes to a set of relation roots to be prefetched
+            after queryset evaluation (used for django-polymorphic subtype reverse relations).
 
     """
 
@@ -153,10 +385,24 @@ class OptimizerStore:
     select_related: list[str] = dataclasses.field(default_factory=list)
     prefetch_related: list[PrefetchType] = dataclasses.field(default_factory=list)
     annotate: dict[str, AnnotateType] = dataclasses.field(default_factory=dict)
+    postfetch_prefetch: dict[type[models.Model], set[str]] = dataclasses.field(
+        default_factory=dict
+    )
+    # Parent-level postfetch branches: accessor -> { subclass model -> set(paths) }
+    parent_postfetch_branches: dict[str, dict[type[models.Model], set[str]]] = (
+        dataclasses.field(default_factory=dict)
+    )
 
     def __bool__(self):
         return any(
-            [self.only, self.select_related, self.prefetch_related, self.annotate],
+            [
+                self.only,
+                self.select_related,
+                self.prefetch_related,
+                self.annotate,
+                bool(self.postfetch_prefetch),
+                bool(self.parent_postfetch_branches),
+            ],
         )
 
     def __ior__(self, other: OptimizerStore):
@@ -164,6 +410,17 @@ class OptimizerStore:
         self.select_related.extend(other.select_related)
         self.prefetch_related.extend(other.prefetch_related)
         self.annotate.update(other.annotate)
+        # merge postfetch hints
+        for mdl, rels in other.postfetch_prefetch.items():
+            if mdl in self.postfetch_prefetch:
+                self.postfetch_prefetch[mdl].update(rels)
+            else:
+                self.postfetch_prefetch[mdl] = set(rels)
+        # merge parent-level postfetch branches
+        for acc, mapping in other.parent_postfetch_branches.items():
+            dest = self.parent_postfetch_branches.setdefault(acc, {})
+            for mdl, rels in mapping.items():
+                dest.setdefault(mdl, set()).update(rels)
         return self
 
     def __or__(self, other: OptimizerStore):
@@ -178,6 +435,11 @@ class OptimizerStore:
             select_related=self.select_related[:],
             prefetch_related=self.prefetch_related[:],
             annotate=self.annotate.copy(),
+            postfetch_prefetch={k: set(v) for k, v in self.postfetch_prefetch.items()},
+            parent_postfetch_branches={
+                acc: {k: set(v) for k, v in mp.items()}
+                for acc, mp in self.parent_postfetch_branches.items()
+            },
         )
 
     @classmethod
@@ -304,7 +566,24 @@ class OptimizerStore:
             config=config,
         )
 
-        return qs  # noqa: RET504
+        # Merge postfetch prefetch hints into queryset config for post-fetch optimization
+        from strawberry_django.queryset import get_queryset_config as _get_qs_cfg
+
+        cfg = None
+        if self.postfetch_prefetch or self.parent_postfetch_branches:
+            cfg = _get_qs_cfg(qs)
+        if self.postfetch_prefetch and cfg is not None:
+            for mdl, rels in self.postfetch_prefetch.items():
+                if mdl in cfg.postfetch_prefetch:
+                    cfg.postfetch_prefetch[mdl].update(rels)
+                else:
+                    cfg.postfetch_prefetch[mdl] = set(rels)
+        if self.parent_postfetch_branches and cfg is not None:
+            for acc, mapping in self.parent_postfetch_branches.items():
+                dest = cfg.parent_postfetch_branches.setdefault(acc, {})
+                for mdl, rels in mapping.items():
+                    dest.setdefault(mdl, set()).update(rels)
+        return qs
 
     def _apply_prefetch_related(
         self,
@@ -429,7 +708,20 @@ class OptimizerStore:
         only_set = set(self.only) | extra_only_set
 
         if config.enable_only and only_set:
-            qs = qs.only(*only_set)
+            # Always include foreign key columns to avoid Django issuing
+            # per-row queries when accessing related pointers (especially
+            # for reverse-prefetched relations).
+            try:
+                fk_attnames = [
+                    f.attname
+                    for f in qs.model._meta.fields
+                    if isinstance(f, models.ForeignKey)
+                ]
+            except AttributeError:
+                fk_attnames = []
+
+            expanded_only = set(only_set) | set(fk_attnames)
+            qs = qs.only(*expanded_only)
 
         return qs
 
@@ -645,11 +937,32 @@ def _get_selections(
     info: GraphQLResolveInfo,
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ) -> dict[str, list[FieldNode]]:
+    # collect_sub_fields requires the concrete GraphQLObjectType that is being resolved.
+    # When the parent_type is an interface, we need to merge the selections from all
+    # possible implementing object types so that fields selected inside inline
+    # fragments (e.g., `... on SomeType { rel { ... } }`) are visible to the optimizer.
+    if isinstance(parent_type, GraphQLInterfaceType):
+        merged: dict[str, list[FieldNode]] = {}
+        for concrete in info.schema.get_possible_types(parent_type):
+            sub = collect_sub_fields(
+                info.schema,
+                info.fragments,
+                info.variable_values,
+                concrete,
+                info.field_nodes,
+            )
+            for name, nodes in sub.items():
+                if name in merged:
+                    merged[name].extend(nodes)
+                else:
+                    merged[name] = list(nodes)
+        return merged
+
     return collect_sub_fields(
         info.schema,
         info.fragments,
         info.variable_values,
-        cast("GraphQLObjectType", parent_type),
+        parent_type,
         info.field_nodes,
     )
 
@@ -921,13 +1234,6 @@ def _get_hints_from_django_relation(
         remote_model, schema, f_type
     ):
         django_definition = get_django_definition(concrete_field_type.origin)
-        if (
-            django_definition
-            and django_definition.model != remote_model
-            and not django_definition.model._meta.abstract
-            and issubclass(django_definition.model, remote_model)
-        ):
-            subclasses.append(django_definition.model)
         concrete_store = _get_model_hints(
             remote_model,
             schema,
@@ -939,6 +1245,15 @@ def _get_hints_from_django_relation(
             level=level + 1,
         )
         if concrete_store is not None:
+            # Only include subclasses that actually have selected fields/prefetches.
+            if (
+                django_definition
+                and django_definition.model != remote_model
+                and not django_definition.model._meta.abstract
+                and issubclass(django_definition.model, remote_model)
+                and bool(concrete_store)
+            ):
+                subclasses.append(django_definition.model)
             field_store = (
                 concrete_store if field_store is None else field_store | concrete_store
             )
@@ -991,7 +1306,12 @@ def _get_hints_from_django_relation(
     )
     if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
-    field_qs = field_store.apply(base_qs, info=field_info, config=config)
+    # Lift any child-level postfetch hints/branches to the parent accessor so batching
+    # happens once for all parents, and clear them from the child copy to avoid
+    # per-parent execution later.
+    child_store = _lift_child_postfetch_to_parent(store, field_store, path)
+
+    field_qs = child_store.apply(base_qs, info=field_info, config=config)
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)
@@ -1149,29 +1469,10 @@ def _get_model_hints(
             if subclass_collection is not None:
                 subclass_collection.add(dj_definition.model)
             if is_polymorphic_model(model):
-                # These must be prefixed with app_label__ModelName___ (note three underscores)
-                # This is a special syntax for django-polymorphic:
-                # https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
-                # "prefix" however is written in terms of not including the final LOOKUP_SEP (i.e. "__")
-                # So we don't include the final __ here.
-                return _get_model_hints(
-                    dj_definition.model,
-                    schema,
-                    object_definition,
-                    parent_type=parent_type,
-                    info=info,
-                    config=config,
-                    prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}_",
-                )
-            if is_inheritance_manager(model._default_manager) and (
-                path_from_parent := dj_definition.model._meta.get_path_from_parent(
-                    model
-                )
-            ):
-                prefix = LOOKUP_SEP.join(
-                    p.join_field.get_accessor_name() for p in path_from_parent
-                )
-                return _get_model_hints(
+                # For django-polymorphic, use the special subclass prefix only for
+                # field selection (only/select_related) and never for prefetch_related.
+                # See: https://django-polymorphic.readthedocs.io/en/stable/advanced.html#polymorphic-filtering-for-fields-in-inherited-classes
+                subclass_store = _get_model_hints(
                     dj_definition.model,
                     schema,
                     object_definition,
@@ -1180,6 +1481,112 @@ def _get_model_hints(
                     config=config,
                     prefix=prefix,
                 )
+                if subclass_store:
+                    # Build the polymorphic triple-underscore prefix:
+                    base_lookup_prefix = prefix + LOOKUP_SEP if prefix else ""
+                    poly_prefix = (
+                        f"{base_lookup_prefix}{dj_definition.model._meta.app_label}__"
+                        f"{dj_definition.model._meta.model_name}___"
+                    )
+                    # Apply the polymorphic prefix to only/select_related paths
+                    store.only.extend(f"{poly_prefix}{i}" for i in subclass_store.only)
+                    store.select_related.extend(
+                        f"{poly_prefix}{i}" for i in subclass_store.select_related
+                    )
+                    # Do NOT propagate subclass prefetches using the polymorphic prefix.
+                    # Instead, record the roots of subclass prefetches to be applied post-fetch
+                    # via prefetch_related_objects on grouped subclass instances.
+                    if subclass_store.prefetch_related:
+                        base_field_names = set(
+                            get_model_fields(cast("Any", model)).keys()
+                        )
+                        rel_paths = _extract_rel_paths_from_prefetches(
+                            subclass_store.prefetch_related, base_field_names
+                        )
+                        if rel_paths:
+                            store.postfetch_prefetch.setdefault(
+                                dj_definition.model, set()
+                            ).update(rel_paths)
+                return store
+            if is_inheritance_manager(model._default_manager) and (
+                path_from_parent := dj_definition.model._meta.get_path_from_parent(
+                    model
+                )
+            ):
+                # For django-model-utils InheritanceManager we need to account for fields
+                # that live on the subclass tables by prefixing through the parent links.
+                # However, we should not propagate prefetch_related hints from the
+                # subclass back to the base, otherwise reverse relations defined on the
+                # base (e.g. `notes`) end up being prefetched twice: once at base path
+                # and once via the subclass prefix, causing duplicate queries.
+                prefix = LOOKUP_SEP.join(
+                    p.join_field.get_accessor_name() for p in path_from_parent
+                )
+                subclass_store = _get_model_hints(
+                    dj_definition.model,
+                    schema,
+                    object_definition,
+                    parent_type=parent_type,
+                    info=info,
+                    config=config,
+                    prefix=prefix,
+                )
+                if subclass_store:
+                    # Merge only/select_related from subclass
+                    subclass_prefix = prefix + LOOKUP_SEP if prefix else ""
+
+                    # Ensure entries referencing subclass-only fields (like parent links
+                    # such as `project_ptr_id`) are correctly namespaced when merged
+                    # back into the base model hints.
+                    store.only.extend(
+                        _add_prefix_to_items(subclass_store.only, subclass_prefix)
+                    )
+                    store.select_related.extend(
+                        _add_prefix_to_items(
+                            subclass_store.select_related, subclass_prefix
+                        )
+                    )
+
+                    # Keep subclass-specific reverse relation roots to be prefetched
+                    # after evaluation. Prefetching through the subclass prefix can
+                    # lead to cache misses when using InheritanceManager because the
+                    # downcasted instances differ from the ones used during the
+                    # prefetch phase. Using postfetch batching avoids N+1 reliably.
+                    subclass_prefix = prefix + LOOKUP_SEP if prefix else ""
+                    base_field_names = set(get_model_fields(model).keys())
+
+                    rel_paths: set[str] = _extract_rel_paths_for_inheritance_manager(
+                        subclass_store.prefetch_related,
+                        subclass_prefix,
+                        base_field_names,
+                    )
+
+                    # Also consider subclass-level postfetch hints that are relative to the subclass
+                    if getattr(subclass_store, "postfetch_prefetch", None):
+                        rels = subclass_store.postfetch_prefetch.get(
+                            dj_definition.model
+                        )
+                        if rels:
+                            for r in rels:
+                                # Reuse the same logic for relative/absolute paths
+                                extra = _extract_rel_paths_for_inheritance_manager(
+                                    [r], subclass_prefix, base_field_names
+                                )
+                                rel_paths.update(extra)
+
+                    if rel_paths:
+                        # Always record subclass reverse relation roots as child-level
+                        # postfetch hints here. The proper parent accessor (e.g. 'projects')
+                        # is only known by the relation handler, which will lift these
+                        # hints to the correct parent level. Using the inheritance
+                        # accessor (e.g. 'artproject') as a parent key would cause
+                        # incorrect prefetching.
+                        store.postfetch_prefetch.setdefault(
+                            dj_definition.model, set()
+                        ).update(rel_paths)
+                # Do not return here; continue processing base model normally
+                # so that base-level relations are optimized once.
+                return store
 
         return None
 
@@ -1542,6 +1949,25 @@ def optimize(
     if store:
         if inheritance_qs and subclasses:
             qs = qs.select_subclasses(*subclasses)
+            # When using InheritanceManager we generate prefetch paths that go through
+            # the parent->subclass accessor (e.g. "artproject__art_notes"). After
+            # select_subclasses(), instances are of the subclass type and Django will
+            # expect prefetch paths relative to the subclass ("art_notes"). Rewrite
+            # those prefetch lookups accordingly to prevent redundant per-object
+            # queries on subclass relations.
+            prefixes: list[str] = []
+            for sub in subclasses:
+                path_from_parent = sub._meta.get_path_from_parent(qs.model)
+                if path_from_parent:
+                    prefix = LOOKUP_SEP.join(
+                        p.join_field.get_accessor_name() for p in path_from_parent
+                    )
+                    if prefix:
+                        prefixes.append(prefix + LOOKUP_SEP)
+            if prefixes and store.prefetch_related:
+                store.prefetch_related = _rewrite_prefetches_for_selected_subclasses(
+                    store.prefetch_related, prefixes
+                )
         qs = store.apply(qs, info=info, config=config)
         qs_config = get_queryset_config(qs)
         qs_config.optimized = True
@@ -1596,7 +2022,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         Add the following to your schema configuration.
 
         >>> import strawberry
-        >>> from strawberry_django_plus.optimizer import DjangoOptimizerExtension
+        >>> from strawberry_django.optimizer import DjangoOptimizerExtension
         ...
         >>> schema = strawberry.Schema(
         ...     Query,
