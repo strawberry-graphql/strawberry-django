@@ -223,7 +223,8 @@ def apply_window_pagination(
     if reverse:
         order_by_reverse = [
             expr
-            for expr, _ in queryset.reverse()
+            for expr, _ in queryset
+            .reverse()
             .query.get_compiler(
                 using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
             )
