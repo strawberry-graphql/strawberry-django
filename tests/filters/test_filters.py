@@ -7,7 +7,10 @@ import strawberry
 from django.test import override_settings
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.tools import create_type
 from strawberry.types import ExecutionResult
+from strawberry.types.base import get_object_definition
+from strawberry.types.field import StrawberryField
 
 import strawberry_django
 from tests import models, utils
@@ -605,3 +608,36 @@ def test_pk_inserted_for_root_field_only():
             "groupProp": {"name": "Some Group"},
         },
     }
+
+
+@pytest.mark.parametrize("field_name", ["pk", "id"])
+def test_django_model_filter_input_with_custom_pk_field_name(field_name: str, mocker):
+    """Test that DjangoModelFilterInput works with both 'pk' and 'id' field names.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/770
+    """
+    mocker.patch(
+        "strawberry_django.filters.strawberry_django_settings",
+        return_value={"DEFAULT_PK_FIELD_NAME": field_name},
+    )
+
+    id_field = StrawberryField(
+        python_name=field_name,
+        graphql_name=field_name,
+        type_annotation=StrawberryAnnotation(strawberry.ID),
+    )
+    filter_input_type = create_type(
+        "DjangoModelFilterInput",
+        [id_field],
+        is_input=True,
+    )
+
+    defn = get_object_definition(filter_input_type, strict=True)
+    assert len(defn.fields) == 1
+    field = defn.fields[0]
+    assert field.python_name == field_name
+    assert field.graphql_name == field_name
+
+    kwargs = {field_name: "123"}
+    obj = filter_input_type(**kwargs)
+    assert getattr(obj, field_name) == "123"

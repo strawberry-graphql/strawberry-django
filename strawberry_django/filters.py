@@ -19,6 +19,7 @@ from typing import (
 import strawberry
 from django.db.models import Q, QuerySet
 from strawberry import UNSET, Some, relay
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.tools import create_type
 from strawberry.types import has_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
@@ -67,17 +68,16 @@ def get_django_model_filter_input_type():
     if _DjangoModelFilterInput is None:
         settings = strawberry_django_settings()
 
-        def _get_id(root) -> str:
-            return root.pk
-
         id_field_name = settings["DEFAULT_PK_FIELD_NAME"]
-        id_field = field(
-            name=id_field_name, graphql_type=strawberry.ID, resolver=_get_id
+        id_field = StrawberryField(
+            python_name=id_field_name,
+            graphql_name=id_field_name,
+            type_annotation=StrawberryAnnotation(strawberry.ID),
         )
 
         _DjangoModelFilterInput = create_type(
             "DjangoModelFilterInput",
-            [id_field],  # type: ignore
+            [id_field],
             is_input=True,
         )
 
