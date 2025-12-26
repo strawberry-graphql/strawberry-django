@@ -113,11 +113,23 @@ class FruitFilter:
         )
 
 
+@strawberry_django.filter_type(models.UUIDModel, lookups=True)
+class UUIDModelFilter:
+    id: auto
+
+
+@strawberry_django.type(models.UUIDModel, filters=UUIDModelFilter)
+class UUIDModelType:
+    id: auto
+    text: auto
+
+
 @strawberry.type
 class Query:
     types: list[FruitType] = strawberry_django.field(filters=FruitTypeFilter)
     fruits: list[Fruit] = strawberry_django.field(filters=FruitFilter)
     vegetables: list[Vegetable] = strawberry_django.field(filters=VegetableFilter)
+    items: list[UUIDModelType] = strawberry_django.field()
 
 
 @pytest.fixture
@@ -708,3 +720,44 @@ def test_process_filters_with_some_global_id_in_lookup():
     object_: Any = object()
     _, q = process_filters(filter_, object_, object_)
     assert dict(q.children) == {"id__exact": "42", "id__in": ["1", "2"]}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("lookup_name", "value_getter"),
+    [
+        ("exact", lambda u: f'"{u}"'),
+        ("iExact", lambda u: f'"{u}"'),
+        ("inList", lambda u: f'["{u}"]'),
+        ("contains", lambda u: f'"{u[5:10]}"'),
+        ("iContains", lambda u: f'"{u[5:10].upper()}"'),
+        ("startsWith", lambda u: f'"{u[:5]}"'),
+        ("iStartsWith", lambda u: f'"{u[:5].upper()}"'),
+        ("endsWith", lambda u: f'"{u[-5:]}"'),
+        ("iEndsWith", lambda u: f'"{u[-5:].upper()}"'),
+        ("regex", lambda u: f'"{u[:5]}.*"'),
+        ("iRegex", lambda u: f'"{u[:5].upper()}.*"'),
+    ],
+)
+def test_uuid_lookup_string_filters(query, lookup_name, value_getter):
+    """Test that UUID fields support string-based partial lookups and exact matches.
+
+    Verifies that lookups like contains, startsWith, regex, etc., accept string inputs
+    and correctly filter UUIDs, in addition to standard exact/inList matches.
+    """
+    instance = models.UUIDModel.objects.create(text="test")
+    uuid_str = str(instance.id)
+    filter_value = value_getter(uuid_str)
+
+    result = query(f"""
+        query {{
+            items(filters: {{ id: {{ {lookup_name}: {filter_value} }} }}) {{
+                id
+                text
+            }}
+        }}
+    """)
+
+    assert not result.errors
+    assert len(result.data["items"]) == 1
+    assert result.data["items"][0]["id"] == uuid_str

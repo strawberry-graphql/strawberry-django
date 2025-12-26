@@ -82,6 +82,37 @@ class FilterLookup(BaseFilterLookup[T]):
     )
 
 
+@strawberry.input(name="FilterLookup")
+class StrFilterLookup(BaseFilterLookup[T]):
+    i_exact: T | None = filter_field(
+        description=f"Case-insensitive exact match. {_SKIP_MSG}"
+    )
+    contains: str | None = filter_field(
+        description=f"Case-sensitive containment test. {_SKIP_MSG}"
+    )
+    i_contains: str | None = filter_field(
+        description=f"Case-insensitive containment test. {_SKIP_MSG}"
+    )
+    starts_with: str | None = filter_field(
+        description=f"Case-sensitive starts-with. {_SKIP_MSG}"
+    )
+    i_starts_with: str | None = filter_field(
+        description=f"Case-insensitive starts-with. {_SKIP_MSG}"
+    )
+    ends_with: str | None = filter_field(
+        description=f"Case-sensitive ends-with. {_SKIP_MSG}"
+    )
+    i_ends_with: str | None = filter_field(
+        description=f"Case-insensitive ends-with. {_SKIP_MSG}"
+    )
+    regex: str | None = filter_field(
+        description=f"Case-sensitive regular expression match. {_SKIP_MSG}"
+    )
+    i_regex: str | None = filter_field(
+        description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
+    )
+
+
 @strawberry.input
 class DateFilterLookup(ComparisonFilterLookup[T]):
     year: ComparisonFilterLookup[int] | None = UNSET
@@ -117,6 +148,6 @@ type_filter_map = {
     decimal.Decimal: ComparisonFilterLookup,
     float: ComparisonFilterLookup,
     int: ComparisonFilterLookup,
-    str: FilterLookup,
-    uuid.UUID: FilterLookup,
+    str: StrFilterLookup,
+    uuid.UUID: StrFilterLookup,
 }
