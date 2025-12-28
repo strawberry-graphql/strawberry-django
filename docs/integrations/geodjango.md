@@ -38,6 +38,7 @@ class Location(models.Model):
 # types.py
 import strawberry_django
 from strawberry import auto
+from django.contrib.gis.geos import Point, Polygon
 
 from . import models
 
@@ -53,6 +54,14 @@ class LocationInput:
     name: auto
     point: auto
     area: auto
+
+# You can also use geos types directly in annotations
+@strawberry_django.type(models.Location)
+class LocationExplicit:
+    id: auto
+    name: auto
+    point: Point
+    area: Polygon | None
 ```
 
 ## GraphQL Data Format
