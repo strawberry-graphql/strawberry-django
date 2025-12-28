@@ -421,21 +421,6 @@ files = [
 ]
 
 [[package]]
-name = "lia-web"
-version = "0.3.1"
-description = "This package has been renamed to cross-web. Install cross-web instead."
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "lia_web-0.3.1-py3-none-any.whl", hash = "sha256:e4e6e7a9381e228aca60a6f3d67dbae9a5f4638eced242d931f95797ddba3f8b"},
-    {file = "lia_web-0.3.1.tar.gz", hash = "sha256:7f551269eddd729f1437e9341ad21622a849eb0c0975d9232ccbbaadbdc74c06"},
-]
-
-[package.dependencies]
-cross-web = ">=0.3.0"
-
-[[package]]
 name = "packaging"
 version = "25.0"
 description = "Core utilities for Python packages"
@@ -926,19 +911,19 @@ doc = ["sphinx"]
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.287.3"
+version = "0.288.0"
 description = "A library for creating GraphQL APIs"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "strawberry_graphql-0.287.3-py3-none-any.whl", hash = "sha256:2bb1f9b122ef1213f82f01cf27a095eb0776fda78e12af9e60c54de6e543797c"},
-    {file = "strawberry_graphql-0.287.3.tar.gz", hash = "sha256:c81126cc75102aa32417048f074429d6c5c8d096424aa939fdb8827b8c5f84a9"},
+    {file = "strawberry_graphql-0.288.0-py3-none-any.whl", hash = "sha256:19b07b3201f23a68880f63883d3e47d699b5ac4de93ccdad35c76fd93ba2392d"},
+    {file = "strawberry_graphql-0.288.0.tar.gz", hash = "sha256:10fd113fe595a477ded8f8a39bcd49e8ec84f1cda70dac1369590692c028b09e"},
 ]
 
 [package.dependencies]
+cross-web = ">=0.4.0"
 graphql-core = ">=3.2.0,<3.4.0"
-lia-web = ">=0.2.1"
 packaging = ">=23"
 python-dateutil = ">=2.7"
 typing-extensions = ">=4.5.0"
@@ -1101,4 +1086,4 @@ enum = ["django-choices-field"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "5d30bf45d25c9e4dbd996a62c7807f159a0374177dccd3ef3390d782f8d9d074"
+content-hash = "ec18499ac1e234cfdb37635b0b0cf70259f4d381bcdaf27daa9170f66c6c821b"
