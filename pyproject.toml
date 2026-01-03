@@ -1,77 +1,92 @@
-[tool.poetry]
+[project]
 name = "strawberry-graphql-django"
-packages = [{ include = "strawberry_django" }]
 version = "0.72.0"
 description = "Strawberry GraphQL Django extension"
 authors = [
-    "Lauri Hintsala <lauri.hintsala@verkkopaja.fi>",
-    "Thiago Bellini Ribeiro <thiago@bellini.dev>",
+  { name = "Lauri Hintsala", email = "lauri.hintsala@verkkopaja.fi" },
+  { name = "Thiago Bellini Ribeiro", email = "thiago@bellini.dev" },
 ]
-maintainers = ["Thiago Bellini Ribeiro <thiago@bellini.dev>"]
-repository = "https://github.com/strawberry-graphql/strawberry-django"
-documentation = "https://strawberry.rocks/docs/django"
-license = "MIT"
+maintainers = [
+  { name = "Thiago Bellini Ribeiro", email = "thiago@bellini.dev" },
+]
+license = { text = "MIT" }
 readme = "README.md"
 keywords = ["graphql", "api", "django", "strawberry-graphql"]
 classifiers = [
-    "Environment :: Web Environment",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Framework :: Django",
-    "Framework :: Django :: 4.2",
-    "Framework :: Django :: 5.0",
-    "Framework :: Django :: 5.1",
-    "Framework :: Django :: 5.2",
-    "Framework :: Django :: 6.0",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Framework :: Django",
+  "Framework :: Django :: 4.2",
+  "Framework :: Django :: 5.0",
+  "Framework :: Django :: 5.1",
+  "Framework :: Django :: 5.2",
+  "Framework :: Django :: 6.0",
+]
+requires-python = ">=3.10,<4.0"
+dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.288.0"]
+
+[project.urls]
+homepage = "https://strawberry.rocks/docs/django"
+repository = "https://github.com/strawberry-graphql/strawberry-django"
+documentation = "https://strawberry.rocks/docs/django"
+
+[project.optional-dependencies]
+debug-toolbar = ["django-debug-toolbar>=6.0.0"]
+enum = ["django-choices-field>=2.2.2"]
+
+[dependency-groups]
+dev = [
+  "channels>=3.0.5",
+  "django-choices-field>=3.1.0",
+  "django-debug-toolbar>=6.0.0",
+  "django-guardian>=3.2.0",
+  "django-types>=0.22.0",
+  "factory-boy>=3.2.1",
+  "pillow>=12.0.0",
+  "pytest>=9.0.1",
+  "pytest-asyncio>=1.0.0",
+  "pytest-cov>=7.0.0",
+  "pytest-django>=4.1.0",
+  "pytest-mock>=3.5.1",
+  "pytest-snapshot>=0.9.0",
+  "pytest-watch>=4.2.0",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.14.0",
+  "django-polymorphic>=4.1.0",
+  "setuptools>=80.1.0",
+  "psycopg>=3.2.10",
+  "psycopg-binary>=3.2.10",
+  "django-tree-queries>=0.23.0",
+  "django-model-utils>=5.0.0",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
-django = ">=4.2"
-asgiref = ">=3.8"
-django-choices-field = { version = ">=2.2.2", optional = true }
-django-debug-toolbar = { version = ">=6.0.0", optional = true }
-strawberry-graphql = ">=0.288.0"
+[tool.uv]
+default-groups = ["dev"]
 
-[tool.poetry.group.dev.dependencies]
-channels = { version = ">=3.0.5" }
-django-choices-field = "^3.1.0"
-django-debug-toolbar = "^6.0.0"
-django-guardian = "^3.2.0"
-django-types = "^0.22.0"
-factory-boy = "^3.2.1"
-pillow = "^12.0.0"
-pytest = "^9.0.1"
-pytest-asyncio = "^1.0.0"
-pytest-cov = "^7.0.0"
-pytest-django = "^4.1.0"
-pytest-mock = "^3.5.1"
-pytest-snapshot = "^0.9.0"
-pytest-watch = "^4.2.0"
-pytest-xdist = "^3.8.0"
-ruff = "^0.14.0"
-django-polymorphic = "^4.1.0"
-setuptools = "^80.1.0"
-psycopg = "^3.2.10"
-psycopg-binary = "^3.2.10"
-django-tree-queries = "^0.23.0"
-django-model-utils = "^5.0.0"
+[tool.hatch.build.targets.wheel]
+packages = ["strawberry_django"]
 
-[tool.poetry.extras]
-debug-toolbar = ["django-debug-toolbar"]
-enum = ["django-choices-field"]
+[tool.hatch.build.targets.sdist]
+include = ["/strawberry_django", "/pyproject.toml", "/README.md", "/LICENSE"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "setuptools"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.autopub]
+git-username = "Botberry"
+git-email = "bot@strawberry.rocks"
+project-name = "strawberry-graphql-django"
+append-github-contributor = true
 
 [tool.ruff]
 target-version = "py310"
@@ -79,92 +94,92 @@ preview = true
 
 [tool.ruff.lint]
 extend-select = [
-    "A",
-    "ASYNC",
-    "B",
-    "BLE",
-    "C4",
-    "COM",
-    "D",
-    "D2",
-    "D3",
-    "D4",
-    "DTZ",
-    "E",
-    "ERA",
-    "EXE",
-    "F",
-    "FURB",
-    "G",
-    "I",
-    "ICN001",
-    "INP",
-    "ISC",
-    "N",
-    "PERF",
-    "PGH",
-    "PIE",
-    "PL",
-    "PT",
-    "PTH",
-    "PYI",
-    "Q",
-    "RET",
-    "RSE",
-    "RUF",
-    "SIM",
-    "SLF",
-    "SLOT",
-    "T10",
-    "T20",
-    "TCH",
-    "TID",
-    "TRY",
-    "UP",
-    "W",
-    "YTT",
+  "A",
+  "ASYNC",
+  "B",
+  "BLE",
+  "C4",
+  "COM",
+  "D",
+  "D2",
+  "D3",
+  "D4",
+  "DTZ",
+  "E",
+  "ERA",
+  "EXE",
+  "F",
+  "FURB",
+  "G",
+  "I",
+  "ICN001",
+  "INP",
+  "ISC",
+  "N",
+  "PERF",
+  "PGH",
+  "PIE",
+  "PL",
+  "PT",
+  "PTH",
+  "PYI",
+  "Q",
+  "RET",
+  "RSE",
+  "RUF",
+  "SIM",
+  "SLF",
+  "SLOT",
+  "T10",
+  "T20",
+  "TCH",
+  "TID",
+  "TRY",
+  "UP",
+  "W",
+  "YTT",
 ]
 extend-ignore = [
-    "A005",
-    "D1",
-    "D203",
-    "D213",
-    "D417",
-    "E203",
-    "PGH003",
-    "PLR09",
-    "SLF001",
-    "TRY003",
-    "PLR6301",
-    "PLC0415",
-    "TC002",
-    # ruff formatter recommends to disable those
-    "COM812",
-    "COM819",
-    "D206",
-    "E111",
-    "E114",
-    "E117",
-    "E501",
-    "ISC001",
-    "Q000",
-    "Q001",
-    "Q002",
-    "Q003",
-    "W191",
+  "A005",
+  "D1",
+  "D203",
+  "D213",
+  "D417",
+  "E203",
+  "PGH003",
+  "PLR09",
+  "SLF001",
+  "TRY003",
+  "PLR6301",
+  "PLC0415",
+  "TC002",
+  # ruff formatter recommends to disable those
+  "COM812",
+  "COM819",
+  "D206",
+  "E111",
+  "E114",
+  "E117",
+  "E501",
+  "ISC001",
+  "Q000",
+  "Q001",
+  "Q002",
+  "Q003",
+  "W191",
 ]
 exclude = [
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".tox",
-    ".venv",
-    "__pycached__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
+  ".eggs",
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".tox",
+  ".venv",
+  "__pycached__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
 ]
 
 [tool.ruff.lint.per-file-ignores]
