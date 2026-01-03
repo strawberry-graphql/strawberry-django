@@ -1,0 +1,197 @@
+---
+name: Release file check
+
+on:
+  pull_request_target:
+    types: [synchronize, reopened, opened, ready_for_review]
+    branches:
+      - main
+    paths:
+      - "strawberry_django/**"
+      - "pyproject.toml"
+
+permissions:
+  pull-requests: write
+
+env:
+  AUTOPUB_CMD: uvx --from 'autopub>=1.0.0a51' --with pygithub autopub
+
+jobs:
+  get-contributor-info:
+    name: Get PR info
+    runs-on: ubuntu-latest
+
+    outputs:
+      contributor-username: ${{ steps.get-info.outputs.contributor-username }}
+
+    steps:
+      - name: Get PR info
+        id: get-info
+        uses: strawberry-graphql/get-pr-info-action@v6
+
+  skip-if-bot:
+    name: Set skip if PR is from a bot
+    runs-on: ubuntu-latest
+    needs: get-contributor-info
+
+    outputs:
+      skip: ${{ steps.skip.outputs.skip }}
+
+    steps:
+      - name: Set skip to true if contributor is a bot
+        id: skip
+        shell: python
+        env:
+          CONTRIBUTOR_USERNAME: ${{ needs.get-contributor-info.outputs.contributor-username }}
+        run: |
+          import os
+          bots = [
+             "dependabot-preview[bot]",
+             "dependabot-preview",
+             "dependabot",
+             "dependabot[bot]",
+           ]
+
+          username = os.environ.get("CONTRIBUTOR_USERNAME", "")
+
+          if username in bots:
+            print(f"Skipping {username} because it is a bot")
+            with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("skip=true\n")
+          else:
+            with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("skip=false\n")
+
+  release-file-check:
+    name: Release check
+    runs-on: ubuntu-latest
+    needs: skip-if-bot
+    if: needs.skip-if-bot.outputs.skip == 'false'
+
+    outputs:
+      changelog: ${{ steps.release-check.outputs.changelog }}
+      status: ${{ steps.check.outputs.release_status }}
+      change_type: ${{ steps.release-check.outputs.change_type }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+          sparse-checkout: |
+            RELEASE.md
+            pyproject.toml
+          sparse-checkout-cone-mode: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Check with autopub
+        id: check
+        run: |
+          if $AUTOPUB_CMD check; then
+            echo "has_release=true" >> "$GITHUB_OUTPUT"
+            echo "release_status=OK" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_release=false" >> "$GITHUB_OUTPUT"
+            echo "release_status=MISSING" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract release info
+        id: release-check
+        if: steps.check.outputs.has_release == 'true' && github.event.pull_request.draft == false
+        run: |
+          if [ -f "RELEASE.md" ]; then
+            change_type=$(head -1 RELEASE.md | grep -oE "(major|minor|patch)" | head -1)
+            echo "change_type=${change_type}" >> "$GITHUB_OUTPUT"
+            changelog=$(tail -n +2 RELEASE.md | base64 -w 0)
+            echo "changelog=${changelog}" >> "$GITHUB_OUTPUT"
+          fi
+
+  send-comment:
+    runs-on: ubuntu-latest
+    needs: release-file-check
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+          issue-number: ${{ github.event.number }}
+          comment-author: "botberry"
+          body-includes: "## Release file"
+
+      - name: Create comment body
+        id: comment-body
+        shell: python
+        env:
+          STATUS: ${{ needs.release-file-check.outputs.status }}
+          CHANGE_TYPE: ${{ needs.release-file-check.outputs.change_type }}
+          CHANGELOG_BASE64: ${{ needs.release-file-check.outputs.changelog }}
+        run: |
+          import base64
+          import os
+          from textwrap import dedent
+
+          status = os.environ.get("STATUS", "")
+          change_type = os.environ.get("CHANGE_TYPE", "")
+          changelog_base64 = os.environ.get("CHANGELOG_BASE64", "")
+
+          if status == "OK" and changelog_base64:
+              changelog = base64.b64decode(changelog_base64).decode("utf-8").strip()
+              body = dedent(f"""
+                  ## Release file
+
+                  ✅ This PR has a valid `RELEASE.md` file.
+
+                  **Change type:** `{change_type}`
+
+                  **Changelog:**
+
+                  {changelog}
+              """).strip()
+          else:
+              body = dedent("""
+                  ## Release file
+
+                  ⚠️ This PR is missing a `RELEASE.md` file.
+
+                  Please add a `RELEASE.md` file to the root of the repository with the following format:
+
+                  ```markdown
+                  Release type: patch
+
+                  Description of the changes in this PR.
+                  ```
+
+                  Valid release types are: `major`, `minor`, `patch`.
+              """).strip()
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("body<<EOF\n")
+              f.write(body)
+              f.write("\nEOF\n")
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.number }}
+          body: ${{ steps.comment-body.outputs.body }}
+          edit-mode: replace
+
+  fail-if-missing:
+    runs-on: ubuntu-latest
+    needs: [release-file-check, send-comment]
+
+    steps:
+      - name: Fail if release file is missing
+        if: ${{ needs.release-file-check.outputs.status != 'OK' }}
+        run: exit 1
