@@ -1,16 +1,14 @@
 .PHONY : install test test-dist lint
 
+POETRY := $(shell command -v poetry 2> /dev/null)
+
 all: install test
 
 install:
-	uv sync
+	${POETRY} install
 
 test:
-	uv run pytest
+	${POETRY} run pytest
 
 test-dist:
-	uv run pytest -n auto
-
-lint:
-	uv run ruff check .
-	uv run ruff format --check .
+	${POETRY} run pytest -n auto
