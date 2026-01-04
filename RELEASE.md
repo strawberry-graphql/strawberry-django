@@ -1,3 +1,3 @@
-Release type: minor
+Release type: patch
 
 Nothing changed, testing the new release process using `autopub`.
