@@ -125,7 +125,7 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
           issue-number: ${{ github.event.number }}
           comment-author: "botberry"
-          body-includes: "## Release file"
+          body-includes: "RELEASE.md"
 
       - name: Create comment body
         id: comment-body
@@ -146,31 +146,37 @@ jobs:
           if status == "OK" and changelog_base64:
               changelog = base64.b64decode(changelog_base64).decode("utf-8").strip()
               body = dedent(f"""
-                  ## Release file
+                  Thanks for adding the `RELEASE.md` file!
 
-                  ✅ This PR has a valid `RELEASE.md` file.
+                  ![](https://media.giphy.com/media/xq1FxHkABwW7m/giphy.gif)
 
-                  **Change type:** `{change_type}`
+                  Here's a preview of the changelog:
 
-                  **Changelog:**
+                  ---
 
                   {changelog}
+
+                  ---
+
+                  **Release type:** `{change_type}`
               """).strip()
           else:
               body = dedent("""
-                  ## Release file
+                  Hi, thanks for contributing to Strawberry Django 🍓!
 
-                  ⚠️ This PR is missing a `RELEASE.md` file.
+                  We noticed that this PR is missing a `RELEASE.md` file. We use that to automatically do releases here on GitHub and, most importantly, to PyPI!
 
-                  Please add a `RELEASE.md` file to the root of the repository with the following format:
+                  So as soon as this PR is merged, a release will be made 🚀.
+
+                  Here's an example of `RELEASE.md`:
 
                   ```markdown
                   Release type: patch
 
-                  Description of the changes in this PR.
+                  Description of the changes, ideally with some examples, if adding a new feature.
                   ```
 
-                  Valid release types are: `major`, `minor`, `patch`.
+                  Release type can be one of `patch`, `minor` or `major`. We use [semver](https://semver.org/), so make sure to pick the appropriate type. If in doubt feel free to ask :)
               """).strip()
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
