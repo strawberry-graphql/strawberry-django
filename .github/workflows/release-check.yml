@@ -125,7 +125,7 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
           issue-number: ${{ github.event.number }}
           comment-author: "botberry"
-          body-includes: "RELEASE.md"
+          body-includes: "<!-- action-check: release-file -->"
 
       - name: Create comment body
         id: comment-body
@@ -150,15 +150,15 @@ jobs:
 
                   ![](https://media.giphy.com/media/xq1FxHkABwW7m/giphy.gif)
 
+                  **Release type:** `{change_type}`
+
                   Here's a preview of the changelog:
 
                   ---
 
                   {changelog}
 
-                  ---
-
-                  **Release type:** `{change_type}`
+                  <!-- action-check: release-file -->
               """).strip()
           else:
               body = dedent("""
@@ -177,6 +177,7 @@ jobs:
                   ```
 
                   Release type can be one of `patch`, `minor` or `major`. We use [semver](https://semver.org/), so make sure to pick the appropriate type. If in doubt feel free to ask :)
+                  <!-- action-check: release-file -->
               """).strip()
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
