@@ -15,7 +15,7 @@ permissions:
   pull-requests: write
 
 env:
-  AUTOPUB_CMD: uvx --from 'autopub>=1.0.0a51' --with pygithub autopub
+  AUTOPUB_CMD: uvx --from autopub>=1.0.0a51 --with pygithub autopub
 
 jobs:
   check-release:
