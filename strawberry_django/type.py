@@ -56,7 +56,7 @@ from .fields.field import field as _field
 from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
 
-# To be removed comment
+# To be removed comment.
 
 __all__ = [
     "StrawberryDjangoDefinition",
