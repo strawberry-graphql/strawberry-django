@@ -40,3 +40,7 @@ repos:
       - id: django-upgrade
         args:
           - --target-version=4.2
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format

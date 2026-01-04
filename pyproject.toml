@@ -1,6 +1,6 @@
 [project]
 name = "strawberry-graphql-django"
-version = "0.72.0"
+version = "0.72.1"
 description = "Strawberry GraphQL Django extension"
 authors = [
   { name = "Lauri Hintsala", email = "lauri.hintsala@verkkopaja.fi" },
@@ -83,6 +83,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.autopub]
+plugins = ["autopub.plugins.github", "autopub.plugins.uv"]
 git-username = "Botberry"
 git-email = "bot@strawberry.rocks"
 project-name = "strawberry-graphql-django"
