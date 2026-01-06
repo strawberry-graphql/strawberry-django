@@ -382,6 +382,6 @@ class PrefetchInspector:
             inspector = self.__class__(existing).merge(PrefetchInspector(p))
             prefetch_related[path] = inspector.prefetch
 
-        self.prefetch_related = prefetch_related
+        self.prefetch_related = prefetch_related.values()
 
         return self

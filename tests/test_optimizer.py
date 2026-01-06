@@ -8,12 +8,15 @@ from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.models import Prefetch
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
+from graphql import GraphQLResolveInfo
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
 from strawberry.types import ExecutionResult, get_object_definition
 
 import strawberry_django
-from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.optimizer import (
+    DjangoOptimizerExtension,
+)
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
 from . import utils
@@ -2436,3 +2439,133 @@ def test_prefetch_related_without_to_attr(db, gql_client: GraphQLTestClient):
         result = schema.execute_sync(query)
 
     assert result.errors is None, result.errors
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
+def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
+    """Test that duplicated prefetch_related hints are correctly merged."""
+
+    @strawberry_django.type(Issue)
+    class IssueTypeTest:
+        name: strawberry.auto
+        kind: strawberry.auto
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+        @strawberry_django.field()
+        @staticmethod
+        def bugs(parent: strawberry.Parent[Milestone]) -> list[IssueTypeTest]:
+            # This is not the most efficient way to do this, it only exists for this test.
+            return getattr(parent, "bugs", [])
+
+        @strawberry_django.field()
+        @staticmethod
+        def has_bugs(parent: strawberry.Parent[Milestone]) -> bool:
+            # This is not the most efficient way to do this, it only exists for this test.
+            return bool(getattr(parent, "bugs", None))
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+
+        @staticmethod
+        def _prefetch_custom_milestones(_: GraphQLResolveInfo) -> Prefetch:
+            return Prefetch(
+                "milestones",
+                to_attr="custom_milestones",
+                queryset=Milestone.objects.all().prefetch_related(
+                    Prefetch(
+                        "issues",
+                        Issue.objects.all().filter(kind=Issue.Kind.BUG),
+                        to_attr="bugs",
+                    )
+                ),
+            )
+
+        @strawberry_django.field(prefetch_related=_prefetch_custom_milestones)
+        @staticmethod
+        def milestones(parent: strawberry.Parent[Project]) -> list[MilestoneTypeTest]:
+            return getattr(parent, "custom_milestones", [])
+
+        @strawberry_django.field(prefetch_related=_prefetch_custom_milestones)
+        @staticmethod
+        def milestones2(parent: strawberry.Parent[Project]) -> list[MilestoneTypeTest]:
+            return getattr(parent, "custom_milestones", [])
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    # Create test data
+    project1 = ProjectFactory.create(name="Project1")
+    project2 = ProjectFactory.create(name="Project2")
+    milestone1 = MilestoneFactory.create(project=project1, name="Milestone1")
+    milestone2 = MilestoneFactory.create(project=project1, name="Milestone2")
+    milestone3 = MilestoneFactory.create(project=project2, name="Milestone3")
+    IssueFactory.create(milestone=milestone1, name="TestFeat1M1", kind="f")
+    IssueFactory.create(milestone=milestone1, name="TestBug1M1", kind="b")
+    IssueFactory.create(milestone=milestone1, name="TestFeat2M1", kind="f")
+    IssueFactory.create(milestone=milestone2, name="TestFeat1M2", kind="f")
+    IssueFactory.create(milestone=milestone3, name="TestFeat1M3", kind="f")
+    IssueFactory.create(milestone=milestone3, name="TestBug1M3", kind="b")
+
+    query = """\
+      query TestQuery {
+        projects {
+          name
+          milestones {
+            name
+            hasBugs
+            bugs { name }
+          }
+          milestones2 { name }
+        }
+      }
+    """
+    if DjangoOptimizerExtension.enabled.get():
+        with assert_num_queries(3):
+            result = schema.execute_sync(query)
+    else:
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "name": "Project1",
+                "milestones": [
+                    {
+                        "name": "Milestone1",
+                        "hasBugs": True,
+                        "bugs": [{"name": "TestBug1M1"}],
+                    },
+                    {"name": "Milestone2", "hasBugs": False, "bugs": []},
+                ],
+                "milestones2": [
+                    {"name": "Milestone1"},
+                    {"name": "Milestone2"},
+                ],
+            },
+            {
+                "name": "Project2",
+                "milestones": [
+                    {
+                        "name": "Milestone3",
+                        "hasBugs": True,
+                        "bugs": [{"name": "TestBug1M3"}],
+                    },
+                ],
+                "milestones2": [
+                    {"name": "Milestone3"},
+                ],
+            },
+        ],
+    }
