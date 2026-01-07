@@ -41,7 +41,7 @@ jobs:
             echo "has_release=false" >> "$GITHUB_OUTPUT"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN || github.token }}
 
       - name: Upload .autopub artifact
         if: steps.check.outputs.has_release == 'true'
