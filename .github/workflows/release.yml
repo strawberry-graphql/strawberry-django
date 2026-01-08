@@ -4,7 +4,7 @@ name: Release
 concurrency: release
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
   push:
     branches: [main]
@@ -26,6 +26,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # For pull_request_target, checkout the PR merge commit
+          ref: ${{ github.event.pull_request && format('refs/pull/{0}/merge', github.event.number) || github.ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -41,7 +44,7 @@ jobs:
             echo "has_release=false" >> "$GITHUB_OUTPUT"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
 
       - name: Upload .autopub artifact
         if: steps.check.outputs.has_release == 'true'
