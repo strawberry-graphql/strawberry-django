@@ -21,6 +21,10 @@ env:
 jobs:
   check-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     outputs:
       has_release: ${{ steps.check.outputs.has_release }}
 
@@ -44,7 +48,7 @@ jobs:
             echo "has_release=false" >> "$GITHUB_OUTPUT"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload .autopub artifact
         if: steps.check.outputs.has_release == 'true'
@@ -58,6 +62,11 @@ jobs:
     needs: check-release
     if: github.ref == 'refs/heads/main' && needs.check-release.outputs.has_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
     outputs:
       version: ${{ steps.get-version.outputs.version }}
 
@@ -77,7 +86,7 @@ jobs:
 
       - name: Build and publish
         run: |
-          git remote set-url origin https://${{ secrets.BOT_TOKEN }}@github.com/${{ github.repository }}
+          git remote set-url origin https://${{ github.token }}@github.com/${{ github.repository }}
           echo "✨ Preparing..."
           $AUTOPUB_CMD prepare
           echo "✨ Building..."
@@ -85,7 +94,7 @@ jobs:
           echo "✨ Publishing..."
           $AUTOPUB_CMD publish
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Get project version
         id: get-version
