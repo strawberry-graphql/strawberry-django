@@ -28,9 +28,9 @@ jobs:
         id: check
         run: |
            if uvx --from autopub==1.0.0a51 --with pygithub autopub check; then
-             echo "has_release=true" >> $GITHUB_OUTPUT
+             echo "has_release=true" >> "$GITHUB_OUTPUT"
            else
-             echo "has_release=false" >> $GITHUB_OUTPUT
+             echo "has_release=false" >> "$GITHUB_OUTPUT"
              if [ "${{ github.event_name }}" = "pull_request" ]; then
                exit 1
              fi
