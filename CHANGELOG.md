@@ -5,7 +5,7 @@
 This release fixes a bug, which caused nested prefetch_related hints to get incorrectly merged
 in certain cases.
 
-This release was contributed by @diesieben07 in #839
+This release was contributed by @diesieben07 in https://github.com/strawberry-graphql/strawberry-django/pull/839
 
 0.73.0 - 2026-01-04
 -------------------
@@ -17,9 +17,7 @@ Nothing changed, testing the new release process using `autopub`.
 
 Nothing changed, testing the new release process using `autopub`.
 
-This release was contributed by @bellini666 in #837
-
-Reviewers: @sourcery-ai[bot]
+This release was contributed by @bellini666 in https://github.com/strawberry-graphql/strawberry-django/pull/837
 
 0.72.0 - 2025-12-28
 -------------------
