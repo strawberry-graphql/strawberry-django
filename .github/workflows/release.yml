@@ -27,7 +27,7 @@ jobs:
       - name: Check for release
         id: check
         run: |
-           if uvx --from autopub==1.0.0a52 --with pygithub autopub check; then
+           if uvx --from autopub==1.0.0a53 --with pygithub autopub check; then
              echo "has_release=true" >> "$GITHUB_OUTPUT"
            else
              echo "has_release=false" >> "$GITHUB_OUTPUT"
@@ -87,10 +87,10 @@ jobs:
       - name: Build and publish
         run: |
           echo "✨ Preparing release..."
-          uvx --from autopub==1.0.0a52 --with pygithub autopub prepare
+          uvx --from autopub==1.0.0a53 --with pygithub autopub prepare
           echo "✨ Building package..."
-          uvx --from autopub==1.0.0a52 --with pygithub autopub build
+          uvx --from autopub==1.0.0a53 --with pygithub autopub build
           echo "✨ Publishing to PyPI..."
-          uvx --from autopub==1.0.0a52 --with pygithub autopub publish
+          uvx --from autopub==1.0.0a53 --with pygithub autopub publish
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
