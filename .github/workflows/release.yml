@@ -1,5 +1,5 @@
-
 name: 🚀 AutoPub Release
+concurrency: release
 
 on:
   push:
