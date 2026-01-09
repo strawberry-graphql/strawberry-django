@@ -5,6 +5,8 @@
 This release fixes a bug, which caused nested prefetch_related hints to get incorrectly merged
 in certain cases.
 
+This release was contributed by @diesieben07 in #839
+
 0.73.0 - 2026-01-04
 -------------------
 
