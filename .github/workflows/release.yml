@@ -1,11 +1,7 @@
----
-name: Release
 
-concurrency: release
+name: 🚀 AutoPub Release
 
 on:
-  pull_request_target:
-    branches: [main]
   push:
     branches: [main]
 
@@ -15,40 +11,42 @@ permissions:
   issues: write
   pull-requests: write
 
-env:
-  AUTOPUB_CMD: uvx --from autopub>=1.0.0a51 --with pygithub autopub
-
 jobs:
   check-release:
+    name: 📦 Check for release
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
     outputs:
       has_release: ${{ steps.check.outputs.has_release }}
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # For pull_request_target, checkout the PR merge commit
-          ref: ${{ github.event.pull_request && format('refs/pull/{0}/merge', github.event.number) || github.ref }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
+        uses: astral-sh/setup-uv@v6
 
-      - name: Check
+      - name: Check for release
         id: check
         run: |
-          if $AUTOPUB_CMD check; then
-            echo "has_release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_release=false" >> "$GITHUB_OUTPUT"
-          fi
+           if uvx --from autopub==1.0.0a51 --with pygithub autopub check; then
+             echo "has_release=true" >> $GITHUB_OUTPUT
+           else
+             echo "has_release=false" >> $GITHUB_OUTPUT
+             if [ "${{ github.event_name }}" = "pull_request" ]; then
+               exit 1
+             fi
+           fi
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+      - name: Verify .autopub directory
+        if: steps.check.outputs.has_release == 'true'
+        run: |
+          if [ -d ".autopub" ]; then
+            echo "✓ Found .autopub directory"
+          else
+            echo "✗ No .autopub directory found"
+            exit 1
+          fi
 
       - name: Upload .autopub artifact
         if: steps.check.outputs.has_release == 'true'
@@ -58,27 +56,29 @@ jobs:
           path: .autopub
           include-hidden-files: true
 
+      - name: Debug info
+        run: |
+          echo "GitHub ref: ${{ github.ref }}"
+          echo "has_release: ${{ steps.check.outputs.has_release }}"
+
   publish:
+    name: 📦 Publish to PyPI
     needs: check-release
-    if: github.ref == 'refs/heads/main' && needs.check-release.outputs.has_release == 'true'
+    if: ${{ github.ref == 'refs/heads/main' && needs.check-release.outputs.has_release == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-      issues: write
-      pull-requests: write
-    outputs:
-      version: ${{ steps.get-version.outputs.version }}
 
     steps:
+      - name: Debug info
+        run: |
+          echo "GitHub ref: ${{ github.ref }}"
+          echo "has_release: ${{ needs.check-release.outputs.has_release }}"
+
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
+        uses: astral-sh/setup-uv@v6
 
-      - name: Download .autopub
+      - name: Download .autopub artifact
         uses: actions/download-artifact@v4
         with:
           name: autopub-data
@@ -86,26 +86,11 @@ jobs:
 
       - name: Build and publish
         run: |
-          git remote set-url origin https://${{ github.token }}@github.com/${{ github.repository }}
-          echo "✨ Preparing..."
-          $AUTOPUB_CMD prepare
-          echo "✨ Building..."
-          $AUTOPUB_CMD build
-          echo "✨ Publishing..."
-          $AUTOPUB_CMD publish
+          echo "✨ Preparing release..."
+          uvx --from autopub==1.0.0a51 --with pygithub autopub prepare
+          echo "✨ Building package..."
+          uvx --from autopub==1.0.0a51 --with pygithub autopub build
+          echo "✨ Publishing to PyPI..."
+          uvx --from autopub==1.0.0a51 --with pygithub autopub publish
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Get project version
-        id: get-version
-        shell: python
-        run: |
-          import os
-          import tomllib
-          from pathlib import Path
-
-          data = tomllib.loads(Path("pyproject.toml").read_text())
-          version = data.get("project", {}).get("version", "unknown")
-
-          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as f:
-              f.write(f"version={version}\n")
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
