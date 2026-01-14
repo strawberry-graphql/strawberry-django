@@ -589,9 +589,10 @@ def _optimize_prefetch_queryset(
                 field_ = field_def_.resolve_type(type_definition=connection_type_def)
                 field_ = unwrap_type(field_)
                 edge_class = cast("Edge", field_)
+                field_info = Info(_raw_info=info, _field=field)
 
                 slice_metadata = SliceMetadata.from_arguments(
-                    Info(_raw_info=info, _field=field),
+                    field_info,
                     first=field_kwargs.get("first"),
                     last=field_kwargs.get("last"),
                     before=field_kwargs.get("before"),
@@ -600,15 +601,20 @@ def _optimize_prefetch_queryset(
                     prefix=edge_class.CURSOR_PREFIX,
                 )
                 mark_reversed = slice_metadata.expected is None
+                # If the expected number of results is the same as the max results,
+                # we want to use -1 to indicate no limit.
+                # Otherwise, we want to use the number of results expected.
+                limit = (
+                    -1
+                    if slice_metadata.expected
+                    == field_info.schema.config.relay_max_results
+                    else slice_metadata.end - slice_metadata.start
+                )
                 qs = apply_window_pagination(
                     qs,
                     related_field_id=related_field_id,
                     offset=slice_metadata.start,
-                    limit=(
-                        field_kwargs.get("last", UNSET)
-                        if mark_reversed
-                        else slice_metadata.end - slice_metadata.start
-                    ),
+                    limit=(limit),
                     max_results=connection_extension.max_results,
                     reverse=mark_reversed,
                 )
