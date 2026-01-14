@@ -1193,6 +1193,24 @@ def _get_model_hints(
     if pk is not None:
         store.only.append(lookup_prefix + pk.attname)
 
+    # This ensures that whenever the optimizer generates a query with `.only()`
+    # (which limits which fields are fetched from the database), the `db_unique_key`
+    # field is always included. This is similar to how the primary key (`pk`) is always included.
+
+    # This prevents potential N+1 query problems or database refetching issues that could occur if
+    # `db_unique_key` is needed later but wasn't initially selected.
+
+    db_unique_key = next(
+        (
+            field.attname
+            for field in model._meta.fields
+            if field.name == "db_unique_key"
+        ),
+        None,
+    )
+    if db_unique_key is not None:
+        store.only.append(db_unique_key)
+
     # If this is a polymorphic Model, make sure to select its content type
     if is_polymorphic_model(model):
         store.only.extend(
