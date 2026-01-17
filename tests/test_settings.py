@@ -31,6 +31,7 @@ def test_non_defaults():
             DEFAULT_PK_FIELD_NAME="id",
             USE_DEPRECATED_FILTERS=True,
             PAGINATION_DEFAULT_LIMIT=250,
+            PAGINATION_MAX_LIMIT=1_000,
             ALLOW_MUTATIONS_WITHOUT_FILTERS=True,
         ),
     ):
@@ -46,6 +47,7 @@ def test_non_defaults():
                 DEFAULT_PK_FIELD_NAME="id",
                 USE_DEPRECATED_FILTERS=True,
                 PAGINATION_DEFAULT_LIMIT=250,
+                PAGINATION_MAX_LIMIT=1_000,
                 ALLOW_MUTATIONS_WITHOUT_FILTERS=True,
             )
         )

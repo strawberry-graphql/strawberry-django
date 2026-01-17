@@ -3,6 +3,7 @@ from typing import cast
 
 import pytest
 import strawberry
+from django.test import override_settings
 from strawberry import auto
 from strawberry.types import ExecutionResult
 
@@ -219,3 +220,133 @@ def test_nested_pagination_m2m(gql_client: utils.GraphQLTestClient):
             ],
         }
     }
+
+
+@pytest.mark.parametrize(
+    ("requested_limit", "max_limit", "default_limit", "expected_count"),
+    [
+        (None, 5, None, 5),  # None/unlimited should be capped to max_limit
+        (10, 5, None, 5),  # Requested limit > max_limit should be capped
+        (3, 5, None, 3),  # Requested limit < max_limit should be honored
+        (5, 5, None, 5),  # Requested limit = max_limit should be honored
+        (-1, 5, None, 5),  # Negative limit should be capped to max_limit
+        (10, None, None, 10),  # max_limit=None should allow any limit
+        (None, None, None, 10),  # Both None should return all results
+        (
+            "UNSET",
+            5,
+            200,
+            5,
+        ),  # UNSET limit with default_limit > max_limit should be capped
+    ],
+)
+@pytest.mark.django_db(transaction=True)
+def test_pagination_max_limit(
+    requested_limit, max_limit, default_limit, expected_count
+):
+    """Test that PAGINATION_MAX_LIMIT is respected."""
+    # Create 10 fruits
+    for i in range(10):
+        models.Fruit.objects.create(name=f"fruit{i}")
+
+    if requested_limit == "UNSET":
+        # For UNSET case, test via the apply() function directly
+        settings_dict = {"PAGINATION_MAX_LIMIT": max_limit}
+        if default_limit is not None:
+            settings_dict["PAGINATION_DEFAULT_LIMIT"] = default_limit
+
+        with override_settings(STRAWBERRY_DJANGO=settings_dict):
+            pagination = OffsetPaginationInput()
+            queryset = apply(pagination, models.Fruit.objects.all())
+            assert queryset.count() == expected_count
+        return
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def fruits(self, pagination: OffsetPaginationInput) -> list[Fruit]:
+            queryset = models.Fruit.objects.all()
+            return cast("list[Fruit]", apply(pagination, queryset))
+
+    query = utils.generate_query(Query)
+
+    # Build query based on requested_limit
+    if requested_limit is None:
+        gql_query = "{ fruits(pagination: { limit: null }) { name } }"
+    else:
+        gql_query = (
+            f"{{ fruits(pagination: {{ limit: {requested_limit} }}) {{ name }} }}"
+        )
+
+    settings_dict = {"PAGINATION_MAX_LIMIT": max_limit}
+    if default_limit is not None:
+        settings_dict["PAGINATION_DEFAULT_LIMIT"] = default_limit
+
+    with override_settings(STRAWBERRY_DJANGO=settings_dict):
+        result = query(gql_query)
+
+    assert isinstance(result, ExecutionResult)
+    assert not result.errors
+    assert result.data is not None
+    assert len(result.data["fruits"]) == expected_count
+
+
+@pytest.mark.parametrize(
+    ("requested_limit", "max_limit", "expected_count"),
+    [
+        (None, 5, 5),  # None/unlimited should be capped to max_limit
+        (10, 5, 5),  # Requested limit > max_limit should be capped
+        (3, 5, 3),  # Requested limit < max_limit should be honored
+        (5, 5, 5),  # Requested limit = max_limit should be honored
+        (-1, 5, 5),  # Negative limit should be capped to max_limit
+        (10, None, 10),  # max_limit=None should allow any limit
+        (None, None, 10),  # Both None should return all results
+    ],
+)
+@pytest.mark.django_db(transaction=True)
+def test_window_pagination_max_limit(requested_limit, max_limit, expected_count):
+    """Test that PAGINATION_MAX_LIMIT is respected in window pagination."""
+    color = models.Color.objects.create(name="Red")
+    for i in range(10):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    with override_settings(STRAWBERRY_DJANGO={"PAGINATION_MAX_LIMIT": max_limit}):
+        queryset = apply_window_pagination(
+            models.Fruit.objects.all(),
+            related_field_id="color_id",
+            offset=0,
+            limit=requested_limit,
+        )
+
+    assert queryset.count() == expected_count
+
+
+@pytest.mark.django_db(transaction=True)
+def test_pagination_max_limit_negative_validation():
+    """Test that negative PAGINATION_MAX_LIMIT raises ValueError."""
+    for i in range(10):
+        models.Fruit.objects.create(name=f"fruit{i}")
+
+    pagination = OffsetPaginationInput(limit=10)
+    with (
+        override_settings(STRAWBERRY_DJANGO={"PAGINATION_MAX_LIMIT": -5}),
+        pytest.raises(ValueError, match="PAGINATION_MAX_LIMIT must be non-negative"),
+    ):
+        apply(pagination, models.Fruit.objects.all())
+
+
+@pytest.mark.django_db(transaction=True)
+def test_window_pagination_max_limit_negative_validation():
+    """Test that negative PAGINATION_MAX_LIMIT raises ValueError in window pagination."""
+    color = models.Color.objects.create(name="Red")
+    for i in range(10):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    queryset = models.Fruit.objects.all()
+    with (
+        override_settings(STRAWBERRY_DJANGO={"PAGINATION_MAX_LIMIT": -5}),
+        pytest.raises(ValueError, match="PAGINATION_MAX_LIMIT must be non-negative"),
+    ):
+        apply_window_pagination(
+            queryset, related_field_id="color_id", offset=0, limit=10
+        )
