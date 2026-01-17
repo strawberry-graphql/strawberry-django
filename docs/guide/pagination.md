@@ -69,6 +69,27 @@ The default limit for pagination is set to `100`. This can be changed in the
 [strawberry django settings](./settings.md) to increase or decrease that number,
 or even set to `None` to set it to unlimited.
 
+### Maximum limit for pagination
+
+To prevent clients from requesting too many records at once (which could cause performance
+issues), you can configure a maximum limit using the `PAGINATION_MAX_LIMIT` setting.
+When set, this will cap any limit value requested by clients, including `None` (unlimited) requests.
+
+For example, if you set `PAGINATION_MAX_LIMIT` to `1000`, a client requesting `limit: 5000`
+or `limit: null` will only receive a maximum of 1000 records.
+
+```python title="settings.py"
+STRAWBERRY_DJANGO = {
+    "PAGINATION_DEFAULT_LIMIT": 100,
+    "PAGINATION_MAX_LIMIT": 1000,  # Cap all pagination requests at 1000 records
+}
+```
+
+By default, `PAGINATION_MAX_LIMIT` is set to `None`, which means unlimited requests are allowed.
+This maintains backward compatibility but is not recommended for production environments.
+
+### Custom pagination limits per field
+
 To configure it on a per field basis, you can define your own `OffsetPaginationInput`
 subclass and modify its default value, like:
 

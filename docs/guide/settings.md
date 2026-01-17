@@ -66,6 +66,12 @@ A dictionary with the following optional keys:
 
       Default limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
 
+- **`PAGINATION_MAX_LIMIT`** (default: `None`)
+
+      Maximum limit for [pagination](pagination.md) that can be requested by clients. When set, this will cap any limit value requested
+      by clients, including `None` (unlimited) requests. This is useful to prevent clients from requesting too many records at once,
+      which could cause performance issues. Can be set to `None` to allow unlimited requests (not recommended for production).
+
 - **`ALLOW_MUTATIONS_WITHOUT_FILTERS`** (default: `False`)
 
       If True, [CUD mutations](mutations.md#cud-mutations) will not require a filter to be specified.
@@ -83,6 +89,7 @@ STRAWBERRY_DJANGO = {
     "MAP_AUTO_ID_AS_GLOBAL_ID": True,
     "DEFAULT_PK_FIELD_NAME": "id",
     "PAGINATION_DEFAULT_LIMIT": 250,
+    "PAGINATION_MAX_LIMIT": 1000,
     "ALLOW_MUTATIONS_WITHOUT_FILTERS": True,
 }
 ```

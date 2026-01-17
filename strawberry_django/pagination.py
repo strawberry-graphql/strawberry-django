@@ -143,9 +143,20 @@ def apply(
     else:
         start = pagination.offset
         limit = pagination.limit
+        settings = strawberry_django_settings()
+
         if limit is UNSET:
-            settings = strawberry_django_settings()
             limit = settings["PAGINATION_DEFAULT_LIMIT"]
+
+        # Apply max limit if configured
+        max_limit = settings["PAGINATION_MAX_LIMIT"]
+        if max_limit is not None:
+            if max_limit < 0:
+                raise ValueError(
+                    f"PAGINATION_MAX_LIMIT must be non-negative, got {max_limit}"
+                )
+            if limit is None or limit < 0 or limit > max_limit:
+                limit = max_limit
 
         if limit is not None and limit >= 0:
             stop = start + limit
@@ -197,6 +208,17 @@ def apply_window_pagination(
             if max_results is not None
             else settings["PAGINATION_DEFAULT_LIMIT"]
         )
+
+    # Apply max limit if configured
+    settings = strawberry_django_settings()
+    max_limit = settings["PAGINATION_MAX_LIMIT"]
+    if max_limit is not None:
+        if max_limit < 0:
+            raise ValueError(
+                f"PAGINATION_MAX_LIMIT must be non-negative, got {max_limit}"
+            )
+        if limit is None or limit < 0 or limit > max_limit:
+            limit = max_limit
 
     order_by = [
         expr
