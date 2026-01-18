@@ -225,7 +225,8 @@ def test_nested_pagination_m2m(gql_client: utils.GraphQLTestClient):
 @pytest.mark.parametrize(
     ("requested_limit", "max_limit", "default_limit", "expected_count"),
     [
-        (None, 5, None, 5),  # None/unlimited should be capped to max_limit
+        (None, 5, 3, 3),  # None should use default_limit
+        (None, 5, None, 5),  # None with no default should be capped to max_limit
         (10, 5, None, 5),  # Requested limit > max_limit should be capped
         (3, 5, None, 3),  # Requested limit < max_limit should be honored
         (5, 5, None, 5),  # Requested limit = max_limit should be honored
@@ -238,6 +239,7 @@ def test_nested_pagination_m2m(gql_client: utils.GraphQLTestClient):
             200,
             5,
         ),  # UNSET limit with default_limit > max_limit should be capped
+        (None, 50, 20, 10),  # None should use default_limit (only 10 fruits exist)
     ],
 )
 @pytest.mark.django_db(transaction=True)
@@ -292,30 +294,49 @@ def test_pagination_max_limit(
 
 
 @pytest.mark.parametrize(
-    ("requested_limit", "max_limit", "expected_count"),
+    ("requested_limit", "max_limit", "default_limit", "expected_count"),
     [
-        (None, 5, 5),  # None/unlimited should be capped to max_limit
-        (10, 5, 5),  # Requested limit > max_limit should be capped
-        (3, 5, 3),  # Requested limit < max_limit should be honored
-        (5, 5, 5),  # Requested limit = max_limit should be honored
-        (-1, 5, 5),  # Negative limit should be capped to max_limit
-        (10, None, 10),  # max_limit=None should allow any limit
-        (None, None, 10),  # Both None should return all results
+        (None, 5, 3, 3),  # None should use default_limit
+        (None, 5, None, 5),  # None with no default should be capped to max_limit
+        (10, 5, None, 5),  # Requested limit > max_limit should be capped
+        (3, 5, None, 3),  # Requested limit < max_limit should be honored
+        (5, 5, None, 5),  # Requested limit = max_limit should be honored
+        (-1, 5, None, 5),  # Negative limit should be capped to max_limit
+        (10, None, None, 10),  # max_limit=None should allow any limit
+        (None, None, None, 10),  # Both None should return all results
+        (None, 50, 20, 10),  # None should use default_limit (only 10 fruits exist)
+        ("UNSET", 50, 20, 10),  # UNSET should use default_limit (only 10 fruits exist)
+        (
+            "UNSET",
+            5,
+            200,
+            5,
+        ),  # UNSET limit with default_limit > max_limit should be capped
+        (None, 5, 200, 5),  # None with default_limit > max_limit should be capped
     ],
 )
 @pytest.mark.django_db(transaction=True)
-def test_window_pagination_max_limit(requested_limit, max_limit, expected_count):
+def test_window_pagination_max_limit(
+    requested_limit, max_limit, default_limit, expected_count
+):
     """Test that PAGINATION_MAX_LIMIT is respected in window pagination."""
     color = models.Color.objects.create(name="Red")
     for i in range(10):
         models.Fruit.objects.create(name=f"fruit{i}", color=color)
 
-    with override_settings(STRAWBERRY_DJANGO={"PAGINATION_MAX_LIMIT": max_limit}):
+    settings_dict = {"PAGINATION_MAX_LIMIT": max_limit}
+    if default_limit is not None:
+        settings_dict["PAGINATION_DEFAULT_LIMIT"] = default_limit
+
+    # Handle UNSET by not passing the limit parameter
+    limit_arg = {} if requested_limit == "UNSET" else {"limit": requested_limit}
+
+    with override_settings(STRAWBERRY_DJANGO=settings_dict):
         queryset = apply_window_pagination(
             models.Fruit.objects.all(),
             related_field_id="color_id",
             offset=0,
-            limit=requested_limit,
+            **limit_arg,
         )
 
     assert queryset.count() == expected_count

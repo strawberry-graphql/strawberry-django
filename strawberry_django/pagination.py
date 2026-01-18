@@ -24,6 +24,50 @@ _QS = TypeVar("_QS", bound=QuerySet)
 PAGINATION_ARG = "pagination"
 
 
+def _resolve_limit(
+    limit: int | UnsetType | None,
+    *,
+    max_results: int | None = None,
+) -> int | None:
+    """Calculate the effective limit to apply.
+
+    Args:
+    ----
+        limit: The requested limit (can be UNSET, None, or an explicit value).
+        max_results: Override for default limit (used by relay pagination).
+
+    Returns:
+    -------
+        The effective limit to apply, or None for unlimited.
+
+    """
+    settings = strawberry_django_settings()
+    default_limit = (
+        max_results if max_results is not None else settings["PAGINATION_DEFAULT_LIMIT"]
+    )
+    max_limit = settings["PAGINATION_MAX_LIMIT"]
+
+    effective_limit: int | None
+    if limit is UNSET or limit is None:
+        effective_limit = default_limit
+    else:
+        effective_limit = cast("int", limit)
+
+    if max_limit is not None:
+        if max_limit < 0:
+            raise ValueError(
+                f"PAGINATION_MAX_LIMIT must be non-negative, got {max_limit}"
+            )
+        if (
+            effective_limit is None
+            or effective_limit < 0
+            or effective_limit > max_limit
+        ):
+            effective_limit = max_limit
+
+    return effective_limit
+
+
 @strawberry.type
 class OffsetPaginationInfo:
     offset: int = 0
@@ -42,7 +86,7 @@ class OffsetPaginated(Generic[NodeType]):
     @strawberry.field
     def page_info(self) -> OffsetPaginationInfo:
         return OffsetPaginationInfo(
-            limit=self.pagination.limit,
+            limit=_resolve_limit(self.pagination.limit),
             offset=self.pagination.offset,
         )
 
@@ -142,21 +186,7 @@ def apply(
         )
     else:
         start = pagination.offset
-        limit = pagination.limit
-        settings = strawberry_django_settings()
-
-        if limit is UNSET:
-            limit = settings["PAGINATION_DEFAULT_LIMIT"]
-
-        # Apply max limit if configured
-        max_limit = settings["PAGINATION_MAX_LIMIT"]
-        if max_limit is not None:
-            if max_limit < 0:
-                raise ValueError(
-                    f"PAGINATION_MAX_LIMIT must be non-negative, got {max_limit}"
-                )
-            if limit is None or limit < 0 or limit > max_limit:
-                limit = max_limit
+        limit = _resolve_limit(pagination.limit)
 
         if limit is not None and limit >= 0:
             stop = start + limit
@@ -201,24 +231,7 @@ def apply_window_pagination(
         reverse: The need to reverse queryset ordering for backwards relay pagination
 
     """
-    if limit is UNSET:
-        settings = strawberry_django_settings()
-        limit = (
-            max_results
-            if max_results is not None
-            else settings["PAGINATION_DEFAULT_LIMIT"]
-        )
-
-    # Apply max limit if configured
-    settings = strawberry_django_settings()
-    max_limit = settings["PAGINATION_MAX_LIMIT"]
-    if max_limit is not None:
-        if max_limit < 0:
-            raise ValueError(
-                f"PAGINATION_MAX_LIMIT must be non-negative, got {max_limit}"
-            )
-        if limit is None or limit < 0 or limit > max_limit:
-            limit = max_limit
+    limit = _resolve_limit(limit, max_results=max_results)
 
     order_by = [
         expr

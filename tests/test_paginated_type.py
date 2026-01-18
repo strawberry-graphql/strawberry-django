@@ -956,7 +956,7 @@ def test_pagination_default_limit():
         }
     }
 
-    # Setting limit to None should return all results
+    # Setting limit to None should use default limit (same as not providing limit)
     res = schema.execute_sync(query, variable_values={"pagination": {"limit": None}})
     assert res.errors is None
     assert res.data == {
@@ -965,8 +965,116 @@ def test_pagination_default_limit():
             "results": [
                 {"name": "Apple"},
                 {"name": "Banana"},
-                {"name": "Strawberry"},
-                {"name": "Watermelon"},
             ],
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("requested_limit", "max_limit", "default_limit", "expected_limit"),
+    [
+        (5, None, 100, 5),  # Explicit limit should be honored
+        (None, 50, 20, 20),  # None should use default_limit
+        (None, 50, None, 50),  # None with no default should use max_limit
+        (None, None, 20, 20),  # None with no max should use default_limit
+        (100, 50, 20, 50),  # Limit > max should be capped to max_limit
+        ("UNSET", 50, 20, 20),  # UNSET should use default_limit
+        ("UNSET", None, 20, 20),  # UNSET with no max should use default_limit
+        (10, 50, 5, 10),  # Explicit limit < max should be honored
+        # Edge cases
+        (
+            None,
+            None,
+            None,
+            100,
+        ),  # None with no settings should use global default (100)
+        ("UNSET", 50, None, 50),  # UNSET with no default should fall back to max_limit
+        (
+            "UNSET",
+            None,
+            None,
+            100,
+        ),  # UNSET with no settings should use global default (100)
+        (-5, 50, 20, 50),  # Negative limit should clamp to max_limit when set
+        (
+            -5,
+            None,
+            20,
+            -5,
+        ),  # Negative limit without max passes through (unlimited in practice)
+        (
+            -5,
+            None,
+            None,
+            -5,
+        ),  # Negative limit without settings passes through (unlimited in practice)
+    ],
+)
+def test_page_info_reflects_effective_limit(
+    requested_limit, max_limit, default_limit, expected_limit
+):
+    """Test that pageInfo.limit reflects the actual limit applied, not the requested one."""
+
+    @strawberry_django.type(models.Fruit)
+    class Fruit:
+        id: int
+        name: str
+
+    @strawberry.type
+    class Query:
+        fruits: OffsetPaginated[Fruit] = strawberry_django.offset_paginated()
+
+    for i in range(10):
+        models.Fruit.objects.create(name=f"Fruit{i}")
+
+    schema = strawberry.Schema(query=Query)
+
+    query = """\
+    query GetFruits ($pagination: OffsetPaginationInput) {
+      fruits (pagination: $pagination) {
+        pageInfo {
+          limit
+          offset
+        }
+        totalCount
+        results {
+          name
+        }
+      }
+    }
+    """
+
+    settings_dict = {}
+    if max_limit is not None:
+        settings_dict["PAGINATION_MAX_LIMIT"] = max_limit
+    if default_limit is not None:
+        settings_dict["PAGINATION_DEFAULT_LIMIT"] = default_limit
+
+    with override_settings(STRAWBERRY_DJANGO=settings_dict):
+        if requested_limit == "UNSET":
+            # Don't provide pagination at all
+            res = schema.execute_sync(query)
+        elif requested_limit is None:
+            # Explicitly pass null
+            res = schema.execute_sync(
+                query, variable_values={"pagination": {"limit": None}}
+            )
+        else:
+            # Pass explicit limit
+            res = schema.execute_sync(
+                query, variable_values={"pagination": {"limit": requested_limit}}
+            )
+
+    assert res.errors is None
+    assert res.data is not None
+    assert res.data["fruits"]["pageInfo"]["limit"] == expected_limit
+    assert res.data["fruits"]["pageInfo"]["offset"] == 0
+
+    results = res.data["fruits"]["results"]
+    total_fruits = 10
+    if expected_limit is not None and expected_limit > 0:
+        expected_count = min(expected_limit, total_fruits)
+    else:
+        expected_count = total_fruits
+    assert len(results) == expected_count
