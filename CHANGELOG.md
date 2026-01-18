@@ -1,6 +1,47 @@
 CHANGELOG
 =========
 
+0.74.1 - 2026-01-18
+-------------------
+
+Pagination `pageInfo.limit` now returns the actual limit applied (after defaults and max caps), not the raw request value.
+
+For example, with `PAGINATION_DEFAULT_LIMIT=20`, `PAGINATION_MAX_LIMIT=50`:
+
+```graphql
+{ fruits(pagination: { limit: null }) { pageInfo { limit } } }
+```
+
+Before:
+```json
+{
+  "data": {
+    "fruits": {
+      "pageInfo": {
+        "limit": null
+      }
+    }
+  }
+}
+```
+
+After:
+```json
+{
+  "data": {
+    "fruits": {
+      "pageInfo": {
+        "limit": 20
+      }
+    }
+  }
+}
+```
+
+Also fixes `limit: null` to use `PAGINATION_DEFAULT_LIMIT` instead of `PAGINATION_MAX_LIMIT`.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#848](https://github.com/strawberry-graphql/strawberry-django/pull/848)
+
 0.74.0 - 2026-01-17
 -------------------
 
