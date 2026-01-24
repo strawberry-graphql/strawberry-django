@@ -10,9 +10,25 @@ from django.test.client import AsyncClient, Client
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.utils import IS_GQL_32, IS_GQL_33
 from tests.utils import GraphQLTestClient
 
 from . import models, types, utils
+
+
+def skip_if_gql_32(
+    reason: str = "Test requires graphql-core 3.3+",
+) -> pytest.MarkDecorator:
+    """Skip test if running with graphql-core 3.2.x."""
+    return pytest.mark.skipif(IS_GQL_32, reason=reason)
+
+
+def skip_if_gql_33(
+    reason: str = "Test requires graphql-core 3.2.x",
+) -> pytest.MarkDecorator:
+    """Skip test if running with graphql-core 3.3+."""
+    return pytest.mark.skipif(IS_GQL_33, reason=reason)
+
 
 _TESTS_DIR = pathlib.Path(__file__).parent
 _ROOT_DIR = _TESTS_DIR.parent
