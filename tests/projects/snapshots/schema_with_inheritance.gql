@@ -435,6 +435,13 @@ type Query {
   ): MilestoneTypeSubclass
 }
 
+type RoleType implements Node & Named {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  name: String!
+  description: String!
+}
+
 type StaffType implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -524,5 +531,8 @@ type UserType implements Node {
   isActive: Boolean!
   isSuperuser: Boolean!
   isStaff: Boolean!
+  role: RoleType
+  roleName: String
+  roleDescription: String
   fullName: String!
 }

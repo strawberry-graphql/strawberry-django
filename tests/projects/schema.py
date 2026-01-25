@@ -55,7 +55,9 @@ from .models import (
     NamedModel,
     Project,
     Quiz,
+    Role,
     Tag,
+    UserAssignedRole,
 )
 
 UserModel = get_user_model()
@@ -77,6 +79,21 @@ class UserType(relay.Node):
     @strawberry_django.field(only=["first_name", "last_name"])
     def full_name(self, root: AbstractUser) -> str:
         return f"{root.first_name or ''} {root.last_name or ''}".strip()
+
+    # Test field_name with double-underscore traversal
+    role: Optional["RoleType"] = strawberry_django.field(
+        field_name="assigned_role__role",
+    )
+
+    # Test field_name traversal to scalar field
+    role_name: str | None = strawberry_django.field(
+        field_name="assigned_role__role__name",
+    )
+
+    # Test field_name traversal to another scalar
+    role_description: str | None = strawberry_django.field(
+        field_name="assigned_role__role__description",
+    )
 
 
 @strawberry_django.type(UserModel)
@@ -340,6 +357,21 @@ class QuizType(relay.Node):
         return queryset.order_by("title")
 
 
+@strawberry_django.type(Role)
+class RoleType(relay.Node, Named):
+    """Role type for testing field_name traversal."""
+
+    description: strawberry.auto
+
+
+@strawberry_django.type(UserAssignedRole)
+class UserAssignedRoleType(relay.Node):
+    """UserAssignedRole type for testing field_name traversal."""
+
+    role: RoleType
+    user: UserType
+
+
 @strawberry_django.partial(Tag)
 class TagInputPartial(NodeInputPartial):
     name: strawberry.auto
@@ -448,6 +480,8 @@ class Query:
     tag: TagType | None = strawberry_django.node()
     staff: StaffType | None = strawberry_django.node()
     staff_list: list[StaffType | None] = strawberry_django.node()
+
+    user_list: list[UserType] = strawberry_django.field()
 
     issue_list: list[IssueType] = strawberry_django.field()
     issues_paginated: OffsetPaginated[IssueType] = strawberry_django.offset_paginated()

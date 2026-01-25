@@ -6,7 +6,9 @@ import inspect
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from asgiref.sync import sync_to_async
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.files import FileDescriptor
 from django.db.models.manager import BaseManager
 from strawberry.utils.inspect import in_async_context
@@ -181,10 +183,57 @@ def _django_getattr(
     *,
     empty_file_descriptor_as_null: bool = False,
 ):
-    args = (default,) if default is not _SENTINEL else ()
-    result = getattr(obj, name, *args)
+    # Support Django's LOOKUP_SEP notation for relationship traversal
+    # e.g., "assigned_role__role" will traverse obj.assigned_role.role
+    if LOOKUP_SEP in name:
+        result = _traverse_lookup_path(obj, name, default)
+    else:
+        args = (default,) if default is not _SENTINEL else ()
+        result = getattr(obj, name, *args)
+
     if empty_file_descriptor_as_null and isinstance(result, FileDescriptor):
         result = None
+    return result
+
+
+def _traverse_lookup_path(obj: Any, name: str, default: Any) -> Any:
+    """Traverse a LOOKUP_SEP path, applying default to missing attributes.
+
+    The `default` value applies to missing attributes at any traversal segment.
+    For relationships that exist but are unset, traversal returns None.
+    """
+    parts = name.split(LOOKUP_SEP)
+    if not all(parts):
+        if default is _SENTINEL:
+            raise AttributeError(name)
+
+        return default
+
+    result = obj
+
+    for part in parts:
+        current = result
+        result = getattr(current, part, _SENTINEL)
+        if result is _SENTINEL:
+            if isinstance(current, models.Model):
+                try:
+                    current._meta.get_field(part)
+                except FieldDoesNotExist:
+                    pass
+                else:
+                    result = None
+                    break
+
+            if default is _SENTINEL:
+                raise AttributeError(part)
+
+            result = default
+            break
+
+        # If any intermediate relationship is None, return None
+        if result is None:
+            break
+
     return result
 
 
