@@ -148,35 +148,41 @@ class StrawberryDjangoField(
         new_field.store = self.store.copy()
         return new_field
 
-    @cached_property
-    def _need_remove_filters_argument(self):
-        if not self.base_resolver or not self.is_connection:
+    def _need_remove_argument(
+        self,
+        arg_name: str,
+        *,
+        requires_pagination: bool = False,
+    ) -> bool:
+        if not self.base_resolver:
+            return False
+
+        if requires_pagination:
+            if not self.is_paginated:
+                return False
+        elif not (self.is_connection or self.is_paginated):
             return False
 
         return not any(
-            p.name == FILTERS_ARG or p.kind == p.VAR_KEYWORD
+            p.name == arg_name or p.kind == p.VAR_KEYWORD
             for p in self.base_resolver.signature.parameters.values()
         )
 
     @cached_property
-    def _need_remove_order_argument(self):
-        if not self.base_resolver or not self.is_connection:
-            return False
-
-        return not any(
-            p.name == ORDER_ARG or p.kind == p.VAR_KEYWORD
-            for p in self.base_resolver.signature.parameters.values()
-        )
+    def _need_remove_filters_argument(self) -> bool:
+        return self._need_remove_argument(FILTERS_ARG)
 
     @cached_property
-    def _need_remove_ordering_argument(self):
-        if not self.base_resolver or not self.is_connection:
-            return False
+    def _need_remove_order_argument(self) -> bool:
+        return self._need_remove_argument(ORDER_ARG)
 
-        return not any(
-            p.name == ORDERING_ARG or p.kind == p.VAR_KEYWORD
-            for p in self.base_resolver.signature.parameters.values()
-        )
+    @cached_property
+    def _need_remove_ordering_argument(self) -> bool:
+        return self._need_remove_argument(ORDERING_ARG)
+
+    @cached_property
+    def _need_remove_pagination_argument(self) -> bool:
+        return self._need_remove_argument(PAGINATION_ARG, requires_pagination=True)
 
     def get_result(
         self,
@@ -189,12 +195,15 @@ class StrawberryDjangoField(
 
         if self.base_resolver is not None:
             resolver_kwargs = kwargs.copy()
-            if self._need_remove_order_argument:
-                resolver_kwargs.pop(ORDER_ARG, None)
-            if self._need_remove_ordering_argument:
-                resolver_kwargs.pop(ORDERING_ARG, None)
-            if self._need_remove_filters_argument:
-                resolver_kwargs.pop(FILTERS_ARG, None)
+
+            for check, attr in [
+                (self._need_remove_order_argument, ORDER_ARG),
+                (self._need_remove_ordering_argument, ORDERING_ARG),
+                (self._need_remove_filters_argument, FILTERS_ARG),
+                (self._need_remove_pagination_argument, PAGINATION_ARG),
+            ]:
+                if check:
+                    resolver_kwargs.pop(attr, None)
 
             assert info
             result = self.resolver(source, info, args, resolver_kwargs)
@@ -312,16 +321,18 @@ class StrawberryDjangoField(
                 # Calling get in that case would disregard the prefetched results, because get implicitly
                 # adds a limit to the query
                 if (result_cache := qs._result_cache) is not None:  # type: ignore
+                    model = qs.model
+                    assert model is not None
                     # mimic behavior of get()
                     # the queryset is already prefetched, no issue with just using len()
                     qs_len = len(result_cache)
                     if qs_len == 0:
-                        raise qs.model.DoesNotExist(
-                            f"{qs.model._meta.object_name} matching query does not exist."
+                        raise model.DoesNotExist(
+                            f"{model._meta.object_name} matching query does not exist."
                         )
                     if qs_len != 1:
-                        raise qs.model.MultipleObjectsReturned(
-                            f"get() returned more than one {qs.model._meta.object_name} -- it returned "
+                        raise model.MultipleObjectsReturned(
+                            f"get() returned more than one {model._meta.object_name} -- it returned "
                             f"{qs_len if qs_len < MAX_GET_RESULTS else f'more than {qs_len - 1}'}!"
                         )
                     return result_cache[0]
@@ -522,7 +533,21 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
         **kwargs: Any,
     ) -> Any:
         assert self.paginated_type is not None
-        queryset = cast("models.QuerySet", next_(source, info, **kwargs))
+        forwarded_kwargs = dict(kwargs)
+        if "pagination" not in forwarded_kwargs:
+            forwarded_kwargs["pagination"] = pagination
+        if "order" not in forwarded_kwargs:
+            forwarded_kwargs["order"] = order
+        if "filters" not in forwarded_kwargs:
+            forwarded_kwargs["filters"] = filters
+        queryset = cast(
+            "models.QuerySet",
+            next_(
+                source,
+                info,
+                **forwarded_kwargs,
+            ),
+        )
 
         def get_queryset(queryset):
             return cast("StrawberryDjangoField", info._field).get_queryset(

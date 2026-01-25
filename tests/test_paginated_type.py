@@ -5,6 +5,7 @@ import pytest
 import strawberry
 from django.db.models import QuerySet
 from django.test.utils import override_settings
+from strawberry.extensions.field_extension import FieldExtension
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -1078,3 +1079,101 @@ def test_page_info_reflects_effective_limit(
     else:
         expected_count = total_fruits
     assert len(results) == expected_count
+
+
+@pytest.mark.django_db(transaction=True)
+def test_offset_paginated_extensions_receive_filters():
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class Fruit:
+        id: int
+        name: str
+
+    class CaptureKwargsExtension(FieldExtension):
+        def __init__(self):
+            super().__init__()
+            self.seen_kwargs: dict[str, object] | None = None
+
+        def resolve(self, next_, source, info, **kwargs):
+            self.seen_kwargs = dict(kwargs)
+            return next_(source, info, **kwargs)
+
+    extension = CaptureKwargsExtension()
+
+    @strawberry.type
+    class Query:
+        @strawberry_django.offset_paginated(
+            OffsetPaginated[Fruit],
+            filters=FruitFilter,
+            extensions=[extension],
+        )
+        def fruits(self) -> QuerySet[models.Fruit]:
+            return models.Fruit.objects.all()
+
+    schema = strawberry.Schema(query=Query)
+    models.Fruit.objects.create(name="Apple")
+
+    query = """
+      query ($filters: FruitFilter) {
+        fruits(filters: $filters) {
+          results {
+            name
+          }
+        }
+      }
+    """
+
+    res = schema.execute_sync(
+        query,
+        variable_values={"filters": {"name": {"exact": "Apple"}}},
+    )
+
+    assert res.errors is None
+    assert extension.seen_kwargs is not None
+    assert "filters" in extension.seen_kwargs
+
+
+@pytest.mark.django_db(transaction=True)
+def test_offset_paginated_allows_filters_without_resolver_param():
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class Fruit:
+        id: int
+        name: str
+
+    @strawberry.type
+    class Query:
+        @strawberry_django.offset_paginated(
+            OffsetPaginated[Fruit],
+            filters=FruitFilter,
+        )
+        def fruits(self) -> QuerySet[models.Fruit]:
+            return models.Fruit.objects.all()
+
+    schema = strawberry.Schema(query=Query)
+    models.Fruit.objects.create(name="Apple")
+    models.Fruit.objects.create(name="Banana")
+
+    query = """
+      query ($filters: FruitFilter) {
+        fruits(filters: $filters) {
+          results {
+            name
+          }
+        }
+      }
+    """
+
+    res = schema.execute_sync(
+        query,
+        variable_values={"filters": {"name": {"exact": "Apple"}}},
+    )
+
+    assert res.errors is None
+    assert res.data == {"fruits": {"results": [{"name": "Apple"}]}}
