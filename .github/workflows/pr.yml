@@ -10,6 +10,7 @@ permissions:
 jobs:
   check-release:
     name: 📦 Check for release
+    if: github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
     outputs:
       has_release: ${{ steps.check.outputs.has_release }}
