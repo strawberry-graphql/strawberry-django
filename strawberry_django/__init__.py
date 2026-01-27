@@ -11,6 +11,7 @@ from .fields.filter_types import (
     DatetimeFilterLookup,
     FilterLookup,
     RangeLookup,
+    StrFilterLookup,
     TimeFilterLookup,
 )
 from .fields.types import (
@@ -52,6 +53,7 @@ __all__ = [
     "OneToOneInput",
     "Ordering",
     "RangeLookup",
+    "StrFilterLookup",
     "TimeFilterLookup",
     "auth",
     "connection",

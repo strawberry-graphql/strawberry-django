@@ -1,7 +1,9 @@
 import datetime
 import decimal
 import uuid
+import warnings
 from typing import (
+    Any,
     Generic,
     TypeVar,
 )
@@ -80,6 +82,16 @@ class FilterLookup(BaseFilterLookup[T]):
     i_regex: T | None = filter_field(
         description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
     )
+
+    def __class_getitem__(cls, item: Any) -> Any:
+        if item is str or item is uuid.UUID:
+            warnings.warn(
+                f"FilterLookup[{item.__name__}] may cause DuplicatedTypeName errors. "
+                "Use StrFilterLookup instead.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return super().__class_getitem__(item)  # type: ignore[misc]
 
 
 @strawberry.input(name="FilterLookup")

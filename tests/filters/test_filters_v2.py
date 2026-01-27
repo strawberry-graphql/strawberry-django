@@ -1,4 +1,5 @@
 # ruff: noqa: B904, BLE001, F811, PT012, A001
+import uuid
 from enum import Enum
 from typing import Annotated, Any, cast
 
@@ -689,13 +690,13 @@ def test_filter_with_some_none():
 def test_process_filters_with_some_wrapped_values():
     @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
-        name: strawberry_django.FilterLookup[str] | None
+        name: strawberry_django.StrFilterLookup | None
 
-    name_lookup = strawberry_django.FilterLookup(
+    name_lookup = strawberry_django.StrFilterLookup(
         exact=Some("strawberry"),
-        contains=Some("berry"),
+        contains=Some("berry"),  # type: ignore[arg-type]
     )
-    filter_: Any = Filter(name=name_lookup)  # type: ignore[arg-type]
+    filter_: Any = Filter(name=name_lookup)
     object_: Any = object()
     _, q = process_filters(filter_, object_, object_)
     assert set(q.children) == {
@@ -761,3 +762,13 @@ def test_uuid_lookup_string_filters(query, lookup_name, value_getter):
     assert not result.errors
     assert len(result.data["items"]) == 1
     assert result.data["items"][0]["id"] == uuid_str
+
+
+def test_filterlookup_str_emits_warning():
+    with pytest.warns(UserWarning, match="FilterLookup\\[str\\].*Use StrFilterLookup"):
+        filter_types.FilterLookup[str]
+
+
+def test_filterlookup_uuid_emits_warning():
+    with pytest.warns(UserWarning, match="FilterLookup\\[UUID\\].*Use StrFilterLookup"):
+        filter_types.FilterLookup[uuid.UUID]

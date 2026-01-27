@@ -148,15 +148,21 @@ input FruitFilter {
 }
 ```
 
-Single-field lookup can be annotated with the `FilterLookup` generic type.
+Single-field lookup can be annotated with the appropriate lookup type for the field.
+Use specific lookup types like `StrFilterLookup` for strings, `ComparisonFilterLookup` for numbers, etc.
 
 ```python title="types.py"
-from strawberry_django import FilterLookup
+from strawberry_django import StrFilterLookup
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
-    name: FilterLookup[str]
+    name: StrFilterLookup | None
 ```
+
+> [!WARNING]
+> Avoid using `FilterLookup[str]` directly. Use the specific lookup type (`StrFilterLookup`)
+> instead to prevent `DuplicatedTypeName` errors. See the [Generic Lookup reference](#generic-lookup-reference)
+> for the full list of available lookup types.
 
 ## Filtering over relationships
 
@@ -227,7 +233,7 @@ class FruitFilter:
         self,
         info: Info,
         queryset: QuerySet,
-        value: strawberry_django.FilterLookup[str],
+        value: strawberry_django.StrFilterLookup,
         prefix: str
     ) -> tuple[QuerySet, Q]:
         queryset = queryset.alias(
