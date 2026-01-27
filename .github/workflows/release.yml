@@ -73,6 +73,8 @@ jobs:
           echo "has_release: ${{ needs.check-release.outputs.has_release }}"
 
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
