@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-0.74.3 - 2026-01-27
+0.75.0 - 2026-01-27
 -------------------
 
 Adds support for Django-style relationship traversal in `strawberry_django.field(field_name=...)` using `LOOKUP_SEP` (`__`). You can now flatten related objects or scalar fields without custom resolvers.
