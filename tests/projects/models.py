@@ -256,3 +256,33 @@ class Quiz(models.Model):
             if max_ is not None:
                 self.sequence = max_ + 1
         super().save(*args, **kwargs)
+
+
+class Role(NamedModel):
+    """Role model for testing field_name traversal."""
+
+    id = models.BigAutoField(
+        verbose_name="ID",
+        primary_key=True,
+    )
+    description = models.TextField(blank=True, default="")
+
+
+class UserAssignedRole(models.Model):
+    """Intermediate model for testing field_name traversal with OneToOne."""
+
+    id = models.BigAutoField(
+        verbose_name="ID",
+        primary_key=True,
+    )
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name="user_assignments",
+    )
+    user = models.OneToOneField(
+        User,
+        related_name="assigned_role",
+        on_delete=models.CASCADE,
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)

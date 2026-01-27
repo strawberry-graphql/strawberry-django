@@ -77,6 +77,69 @@ class Color:
     )
 ```
 
+### Relationship Traversal with `field_name`
+
+The `field_name` parameter supports Django's double-underscore (`__`) lookup syntax for traversing relationships. This allows you to create flat GraphQL schemas without intermediate types or custom resolvers.
+
+```python title="types.py"
+# Django Models
+class Role(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+
+class UserAssignedRole(models.Model):
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        User,
+        related_name="assigned_role",
+        on_delete=models.CASCADE
+    )
+
+# GraphQL Types - Using field_name traversal
+@strawberry_django.type(Role)
+class RoleType:
+    name: auto
+    description: auto
+
+@strawberry_django.type(User)
+class UserType:
+    username: auto
+    email: auto
+
+    # Direct access to role, bypassing UserAssignedRole
+    role: Optional[RoleType] = strawberry_django.field(
+        field_name="assigned_role__role",
+    )
+
+    # You can also traverse to scalar fields directly
+    role_name: Optional[str] = strawberry_django.field(
+        field_name="assigned_role__role__name",
+    )
+```
+
+This creates a clean GraphQL query structure:
+
+```graphql
+query {
+  user {
+    username
+    role {
+      # Direct access, no intermediate 'assignedRole'
+      name
+      description
+    }
+    roleName
+  }
+}
+```
+
+**Key points:**
+
+- The optimizer will infer `select_related`/`only` for traversal paths when enabled
+- If any intermediate relationship is `None`, the entire field returns `None`
+- Works with any depth of relationship traversal (e.g., `"a__b__c__d"`)
+- Compatible with all optimization features (`only`, `prefetch_related`, `annotate`, etc.)
+
 ## Defining types for auto fields
 
 When using `strawberry.auto` to resolve a field's type, Strawberry Django uses a dict that maps

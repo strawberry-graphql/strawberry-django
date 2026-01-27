@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import Prefetch
 from django.db.models.constants import LOOKUP_SEP
@@ -1042,7 +1043,41 @@ def _get_hints_from_django_field(
         return None
 
     model_fieldname: str = getattr(field, "django_name", None) or field.python_name
-    if (model_field := get_model_field(model, model_fieldname)) is None:
+    if LOOKUP_SEP in model_fieldname:
+        model_field = None
+        relation_prefix = ""
+
+        parts = model_fieldname.split(LOOKUP_SEP)
+        if not all(parts):
+            return None
+
+        current_model = model
+        relation_parts: list[str] = []
+        for index, part in enumerate(parts):
+            try:
+                current_field = get_model_field(current_model, part)
+            except FieldDoesNotExist:
+                return None
+
+            if index < len(parts) - 1:
+                if not isinstance(current_field, (models.ForeignKey, OneToOneRel)):
+                    return None
+
+                related_model = getattr(current_field, "related_model", None)
+                if related_model is None:
+                    return None
+
+                current_model = related_model
+                relation_parts.append(part)
+                continue
+
+            model_field = current_field
+            relation_prefix = LOOKUP_SEP.join(relation_parts)
+    else:
+        model_field = get_model_field(model, model_fieldname)
+        relation_prefix = ""
+
+    if model_field is None:
         return None
 
     lookup_prefix = prefix + LOOKUP_SEP if prefix else ""
@@ -1084,6 +1119,10 @@ def _get_hints_from_django_field(
         )
     else:
         store = OptimizerStore.with_hints(only=[path])
+        if relation_prefix:
+            relation_path = f"{lookup_prefix}{relation_prefix}"
+            if not any(sr.startswith(relation_path) for sr in store.select_related):
+                store.select_related.append(relation_path)
 
     return store
 

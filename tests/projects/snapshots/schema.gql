@@ -680,6 +680,7 @@ type Query {
     """The IDs of the objects."""
     ids: [ID!]!
   ): [StaffType]!
+  userList: [UserType!]!
   issueList: [IssueType!]!
   issuesPaginated(pagination: OffsetPaginationInput): IssueTypeOffsetPaginated!
   milestoneList(filters: MilestoneFilter, order: MilestoneOrder, pagination: OffsetPaginationInput): [MilestoneType!]!
@@ -868,6 +869,13 @@ type QuizType implements Node {
   sequence: Int!
 }
 
+type RoleType implements Node & Named {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  name: String!
+  description: String!
+}
+
 type StaffType implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -1012,6 +1020,9 @@ type UserType implements Node {
   isActive: Boolean!
   isSuperuser: Boolean!
   isStaff: Boolean!
+  role: RoleType
+  roleName: String
+  roleDescription: String
   fullName: String!
 }
 
