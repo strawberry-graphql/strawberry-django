@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+0.74.2 - 2026-01-27
+-------------------
+
+Fix offset pagination extensions so they receive pagination, order, and filter
+arguments consistently with connection fields. This allows extensions to inspect
+filters for permission/validation while keeping resolvers tolerant of missing
+params.
+
 0.74.1 - 2026-01-18
 -------------------
 
