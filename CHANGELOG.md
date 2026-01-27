@@ -1,6 +1,29 @@
 CHANGELOG
 =========
 
+0.74.3 - 2026-01-27
+-------------------
+
+Adds support for Django-style relationship traversal in `strawberry_django.field(field_name=...)` using `LOOKUP_SEP` (`__`). You can now flatten related objects or scalar fields without custom resolvers.
+
+Examples:
+
+```python
+@strawberry_django.type(User)
+class UserType:
+    role: RoleType | None = strawberry_django.field(
+        field_name="assigned_role__role",
+    )
+
+    role_name: str | None = strawberry_django.field(
+        field_name="assigned_role__role__name",
+    )
+```
+
+The traversal returns `None` if an intermediate relationship is `None`. Documentation and tests cover the new behavior, including optimizer query counts.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#852](https://github.com/strawberry-graphql/strawberry-django/pull/852)
+
 0.74.2 - 2026-01-27
 -------------------
 
