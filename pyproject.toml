@@ -32,7 +32,7 @@ classifiers = [
   "Framework :: Django :: 6.0",
 ]
 requires-python = ">=3.10,<4.0"
-dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.288.0"]
+dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.303.0"]
 
 [project.urls]
 homepage = "https://strawberry.rocks/docs/django"
