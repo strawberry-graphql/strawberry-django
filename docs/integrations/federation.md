@@ -94,6 +94,9 @@ class ProductVariant:
 If you need custom logic, you can still define your own `resolve_reference`:
 
 ```python
+from strawberry.types.info import Info
+
+
 @strawberry_django.federation.type(models.Product, keys=["upc"])
 class Product:
     upc: strawberry.auto

@@ -15,9 +15,13 @@ from typing import (
 )
 
 from django.db.models import Model
+from strawberry.federation.params import (
+    FederationInterfaceParams,
+    FederationTypeParams,
+    process_federation_type_directives,
+)
 from strawberry.types.field import StrawberryField
-from strawberry.types.unset import UNSET
-from typing_extensions import dataclass_transform
+from typing_extensions import Unpack, dataclass_transform
 
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.fields.field import field as _field
@@ -26,9 +30,7 @@ from strawberry_django.type import _process_type
 from .resolve import generate_resolve_reference
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
-
-    from strawberry.federation.schema_directives import Key
+    from collections.abc import Callable, Sequence
 
     from strawberry_django.utils.typing import (
         AnnotateType,
@@ -47,7 +49,11 @@ __all__ = [
 
 
 def _get_keys_from_directives(directives: Sequence[object]) -> list[str]:
-    """Extract unique key field names from Key directives."""
+    """Extract unique key field names from Key directives.
+
+    Used to build the filter kwargs for resolve_reference — federation may
+    pass extra fields (e.g. from @requires) that are not valid ORM lookups.
+    """
     from strawberry.federation.schema_directives import Key
 
     key_fields: list[str] = []
@@ -58,63 +64,6 @@ def _get_keys_from_directives(directives: Sequence[object]) -> list[str]:
 
     # Remove duplicates while preserving order
     return list(dict.fromkeys(key_fields))
-
-
-def _process_federation_params(
-    directives: Sequence[object] | None,
-    *,
-    keys: Iterable[Key | str],
-    extend: bool,
-    shareable: bool,
-    inaccessible: object,  # UNSET or bool
-    authenticated: bool,
-    policy: list[list[str]] | None,
-    requires_scopes: list[list[str]] | None,
-    tags: Iterable[str],
-) -> tuple[list[object], bool]:
-    """Convert federation parameters to directives.
-
-    Follows the same pattern as strawberry.federation.object_type._impl_type.
-    """
-    from strawberry.federation.schema_directives import (
-        Authenticated,
-        Inaccessible,
-        Key,
-        Policy,
-        RequiresScopes,
-        Shareable,
-        Tag,
-    )
-    from strawberry.federation.types import FieldSet
-
-    result_directives = list(directives or [])
-
-    # Convert string keys to Key directives
-    for key in keys:
-        if isinstance(key, str):
-            result_directives.append(Key(fields=FieldSet(key), resolvable=UNSET))
-        else:
-            result_directives.append(key)
-
-    if authenticated:
-        result_directives.append(Authenticated())
-
-    if inaccessible is True:
-        result_directives.append(Inaccessible())
-
-    if policy:
-        result_directives.append(Policy(policies=policy))
-
-    if requires_scopes:
-        result_directives.append(RequiresScopes(scopes=requires_scopes))
-
-    if shareable:
-        result_directives.append(Shareable())
-
-    if tags:
-        result_directives.extend(Tag(name=tag) for tag in tags)
-
-    return result_directives, extend
 
 
 def _maybe_add_resolve_reference(
@@ -165,15 +114,7 @@ def type(  # noqa: A001
     disable_optimization: bool = False,
     fields: list[str] | Literal["__all__"] | None = None,
     exclude: list[str] | None = None,
-    # Federation-specific parameters
-    keys: Iterable[Key | str] = (),
-    extend: bool = False,
-    shareable: bool = False,
-    inaccessible: bool | object = UNSET,
-    authenticated: bool = False,
-    policy: list[list[str]] | None = None,
-    requires_scopes: list[list[str]] | None = None,
-    tags: Iterable[str] = (),
+    **federation_kwargs: Unpack[FederationTypeParams],
 ) -> Callable[[_T], _T]:
     """Annotate a class as a federated Django GraphQL type.
 
@@ -193,17 +134,8 @@ def type(  # noqa: A001
         tags: Metadata tags for this type.
 
     """
-    # Process federation parameters into directives
-    processed_directives, extend = _process_federation_params(
-        directives,
-        keys=keys,
-        extend=extend,
-        shareable=shareable,
-        inaccessible=inaccessible,
-        authenticated=authenticated,
-        policy=policy,
-        requires_scopes=requires_scopes,
-        tags=tags,
+    processed_directives, extend = process_federation_type_directives(
+        directives, **federation_kwargs
     )
 
     def wrapper(cls: _T) -> _T:
@@ -254,31 +186,15 @@ def interface(
     description: str | None = None,
     directives: Sequence[object] | None = (),
     disable_optimization: bool = False,
-    # Federation-specific parameters
-    keys: Iterable[Key | str] = (),
-    authenticated: bool = False,
-    inaccessible: bool | object = UNSET,
-    policy: list[list[str]] | None = None,
-    requires_scopes: list[list[str]] | None = None,
-    tags: Iterable[str] = (),
+    **federation_kwargs: Unpack[FederationInterfaceParams],
 ) -> Callable[[_T], _T]:
     """Annotate a class as a federated Django GraphQL interface.
 
     Wraps `strawberry_django.interface` with federation support.
     See `type()` for federation-specific parameters.
     """
-    # Process federation parameters into directives
-    # Note: interfaces don't support extend or shareable
-    processed_directives, _ = _process_federation_params(
-        directives,
-        keys=keys,
-        extend=False,
-        shareable=False,
-        inaccessible=inaccessible,
-        authenticated=authenticated,
-        policy=policy,
-        requires_scopes=requires_scopes,
-        tags=tags,
+    processed_directives, _ = process_federation_type_directives(
+        directives, **federation_kwargs
     )
 
     def wrapper(cls: _T) -> _T:

@@ -60,7 +60,11 @@ def resolve_model_reference(
 
 
 def generate_resolve_reference(key_fields: list[str]) -> classmethod:
-    """Generate a resolve_reference classmethod for a federation entity type."""
+    """Generate a resolve_reference classmethod for a federation entity type.
+
+    Only *key_fields* are forwarded to the ORM query — federation may pass
+    extra fields (e.g. from @requires) that are not valid ORM lookups.
+    """
 
     def resolve_reference(
         cls: type[WithStrawberryDjangoObjectDefinition],
