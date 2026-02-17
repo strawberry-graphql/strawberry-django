@@ -6,6 +6,7 @@ on:
     branches: [main]
 
 permissions:
+  contents: write
   id-token: write
 
 jobs:
@@ -13,52 +14,24 @@ jobs:
     name: 📦 Check for release
     runs-on: ubuntu-latest
     outputs:
-      has_release: ${{ steps.check.outputs.has_release }}
+      has_release: ${{ steps.check.outputs.has-release }}
 
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_TOKEN }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
       - name: Check for release
         id: check
-        run: |
-           if uvx --from autopub==1.0.0a55 --with pygithub autopub check; then
-             echo "has_release=true" >> "$GITHUB_OUTPUT"
-           else
-             echo "has_release=false" >> "$GITHUB_OUTPUT"
-             if [ "${{ github.event_name }}" = "pull_request" ]; then
-               exit 1
-             fi
-           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
-
-      - name: Verify .autopub directory
-        if: steps.check.outputs.has_release == 'true'
-        run: |
-          if [ -d ".autopub" ]; then
-            echo "✓ Found .autopub directory"
-          else
-            echo "✗ No .autopub directory found"
-            exit 1
-          fi
-
-      - name: Upload .autopub artifact
-        if: steps.check.outputs.has_release == 'true'
-        uses: actions/upload-artifact@v4
+        uses: autopub/autopub-action@v1
         with:
-          name: autopub-data
-          path: .autopub
-          include-hidden-files: true
+          command: check
+          github-token: ${{ secrets.BOT_TOKEN }}
 
       - name: Debug info
         run: |
           echo "GitHub ref: ${{ github.ref }}"
-          echo "has_release: ${{ steps.check.outputs.has_release }}"
+          echo "has_release: ${{ steps.check.outputs.has-release }}"
 
   publish:
     name: 📦 Publish to PyPI
@@ -76,24 +49,20 @@ jobs:
         with:
           token: ${{ secrets.BOT_TOKEN }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Download .autopub artifact
-        uses: actions/download-artifact@v4
+      - name: Prepare release
+        uses: autopub/autopub-action@v1
         with:
-          name: autopub-data
-          path: .autopub
+          command: prepare
 
-      - name: Build and publish
-        run: |
-          echo "✨ Preparing release..."
-          uvx --from autopub==1.0.0a55 --with pygithub autopub prepare
-          echo "✨ Building package..."
-          uvx --from autopub==1.0.0a55 --with pygithub autopub build
-          echo "✨ Publishing to PyPI..."
-          uvx --from autopub==1.0.0a55 --with pygithub autopub publish
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
-          GIT_USERNAME: botberry
-          GIT_EMAIL: bot@strawberry.rocks
+      - name: Build package
+        uses: autopub/autopub-action@v1
+        with:
+          command: build
+
+      - name: Publish to PyPI
+        uses: autopub/autopub-action@v1
+        with:
+          command: publish
+          github-token: ${{ secrets.BOT_TOKEN }}
+          git-username: botberry
+          git-email: bot@strawberry.rocks
