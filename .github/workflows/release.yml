@@ -14,7 +14,7 @@ jobs:
     name: 📦 Check for release
     runs-on: ubuntu-latest
     outputs:
-      has_release: ${{ steps.check.outputs.has-release }}
+      has_release: ${{ steps.check.outputs['has-release'] }}
 
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
       - name: Debug info
         run: |
           echo "GitHub ref: ${{ github.ref }}"
-          echo "has_release: ${{ steps.check.outputs.has-release }}"
+          echo "has_release: ${{ steps.check.outputs['has-release'] }}"
 
   publish:
     name: 📦 Publish to PyPI
