@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+0.75.2 - 2026-02-18
+-------------------
+
+Fixes compatibility with `strawberry-graphql>=0.296.0` by ensuring proper `Info` type resolution.
+
+`Info` is now imported at runtime and resolver arguments include explicit type annotations.
+This aligns with the updated behavior where parameter injection is strictly **type-hint based** rather than name-based.
+
+Before, resolvers relying on implicit name-based injection could fail under newer Strawberry versions.
+
+After this change, resolvers work correctly with the stricter type-based injection system introduced in newer releases.
+
+This release was contributed by [@daudln](https://github.com/daudln) in [#866](https://github.com/strawberry-graphql/strawberry-django/pull/866)
+
+Additional contributors: [@pre-commit-ci[bot]](https://github.com/pre-commit-ci[bot])
+
 0.75.1 - 2026-02-15
 -------------------
 
