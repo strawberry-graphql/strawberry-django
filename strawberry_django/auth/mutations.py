@@ -8,6 +8,7 @@ from asgiref.sync import async_to_sync
 from django.contrib import auth
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from strawberry.types import Info
 
 from strawberry_django.auth.utils import get_current_user
 from strawberry_django.mutations import mutations, resolvers
@@ -25,7 +26,6 @@ except ModuleNotFoundError:
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
-    from strawberry.types import Info
 
 
 @django_resolver

@@ -11,7 +11,7 @@ from django.utils import timezone
 from graphql import GraphQLResolveInfo
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
-from strawberry.types import ExecutionResult, get_object_definition
+from strawberry.types import ExecutionResult, Info, get_object_definition
 
 import strawberry_django
 from strawberry_django.optimizer import (
@@ -888,7 +888,7 @@ def test_user_query_with_prefetch():
                 ),
             ],
         )
-        def custom_field(self, info) -> str:
+        def custom_field(self, info: Info) -> str:
             if hasattr(self, "prefetched_milestones"):
                 return "prefetched"
             return "not prefetched"
@@ -1118,7 +1118,7 @@ def test_query_with_optimizer_paginated_prefetch():
     @strawberry_django.type(Milestone, pagination=True)
     class MilestoneTypeWithNestedPrefetch:
         @strawberry_django.field()
-        def name(self, info) -> str:
+        def name(self, info: Info) -> str:
             return self.name
 
     @strawberry_django.type(
@@ -1126,7 +1126,7 @@ def test_query_with_optimizer_paginated_prefetch():
     )
     class ProjectTypeWithPrefetch:
         @strawberry_django.field()
-        def name(self, info) -> str:
+        def name(self, info: Info) -> str:
             return self.name
 
         milestones: list[MilestoneTypeWithNestedPrefetch]

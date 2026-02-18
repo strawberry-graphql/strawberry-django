@@ -6,7 +6,7 @@ from typing import Annotated, Any, cast
 import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
-from strawberry import Some, auto
+from strawberry import Info, Some, auto
 from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.relay import GlobalID
 from strawberry.types import ExecutionResult, get_object_definition
@@ -76,7 +76,7 @@ class FruitFilter:
     @strawberry_django.filter_field
     def types_number(
         self,
-        info,
+        info: Info,
         queryset: QuerySet,
         prefix,
         value: filter_types.ComparisonFilterLookup[int],
@@ -104,7 +104,7 @@ class FruitFilter:
         return queryset.union(queryset, all=True), Q()
 
     @strawberry_django.filter_field
-    def filter(self, info, queryset: QuerySet, prefix):
+    def filter(self, info: Info, queryset: QuerySet, prefix):
         return process_filters(
             cast("WithStrawberryObjectDefinition", self),
             queryset.filter(~Q(**{f"{prefix}name": "DARK_BERRY"})),
@@ -203,7 +203,7 @@ def test_filter_field():
     try:
 
         @strawberry_django.filter_field
-        def field_method(self, root, info, prefix, value: str, queryset):
+        def field_method(self, root, info: Info, prefix, value: str, queryset):
             pass
 
     except Exception as exc:
@@ -269,7 +269,7 @@ def test_filter_field_on_object():
     try:
 
         @strawberry_django.filter_field
-        def filter(self, root, info, prefix, queryset):
+        def filter(self, root, info: Info, prefix, queryset):
             pass
 
     except Exception as exc:
@@ -280,7 +280,7 @@ def test_filter_field_method():
     @strawberry_django.filter_type(models.Fruit)
     class Filter:
         @strawberry_django.order_field
-        def custom_filter(self, root, info, prefix, value: auto, queryset):
+        def custom_filter(self, root, info: Info, prefix, value: auto, queryset):
             assert self == filter_, "Unexpected self passed"
             assert root == filter_, "Unexpected root passed"
             assert info == fake_info, "Unexpected info passed"
@@ -305,7 +305,7 @@ def test_filter_object_method():
             raise AssertionError("Never called due to object filter override")
 
         @strawberry_django.filter_field
-        def filter(self, root, info, prefix, queryset):
+        def filter(self, root, info: Info, prefix, queryset):
             assert self == filter_, "Unexpected self passed"
             assert root == filter_, "Unexpected root passed"
             assert info == fake_info, "Unexpected info passed"

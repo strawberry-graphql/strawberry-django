@@ -3,14 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from django.core.exceptions import ValidationError
+from strawberry.types import Info
 
 import strawberry_django
 
 from .utils import get_current_user
 
 if TYPE_CHECKING:
-    from strawberry.types import Info
-
     from strawberry_django.utils.typing import UserType
 
 
