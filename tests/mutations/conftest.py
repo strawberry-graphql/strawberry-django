@@ -4,7 +4,7 @@ import pytest
 import strawberry
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
-from strawberry import auto
+from strawberry import Info, auto
 
 import strawberry_django
 from strawberry_django import mutations
@@ -48,7 +48,7 @@ class Mutation:
     )
 
     @strawberry_django.mutation
-    def update_lazy_fruit(self, info, data: FruitPartialInput) -> Fruit:
+    def update_lazy_fruit(self, info: Info, data: FruitPartialInput) -> Fruit:
         fruit = SimpleLazyObject(models.Fruit.objects.get)
         return cast(
             "Fruit",
@@ -61,7 +61,7 @@ class Mutation:
         )
 
     @strawberry_django.mutation
-    def delete_lazy_fruit(self, info) -> Fruit:
+    def delete_lazy_fruit(self, info: Info) -> Fruit:
         fruit = SimpleLazyObject(models.Fruit.objects.get)
         return cast(
             "Fruit",

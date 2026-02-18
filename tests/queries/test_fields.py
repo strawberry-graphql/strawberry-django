@@ -4,7 +4,7 @@ from typing import cast
 import pytest
 import strawberry
 from django.conf import settings
-from strawberry.types import ExecutionResult
+from strawberry.types import ExecutionResult, Info
 
 import strawberry_django
 from tests import models, types, utils
@@ -110,7 +110,7 @@ async def test_sync_resolver(user, group):
     @strawberry_django.type(models.User)
     class MyUser:
         @strawberry_django.field
-        def my_group(self, info) -> types.Group:
+        def my_group(self, info: Info) -> types.Group:
             return cast("types.Group", models.Group.objects.get())
 
     query = generate_query(MyUser)
@@ -128,7 +128,7 @@ async def test_async_resolver(user, group):
     @strawberry_django.type(models.User)
     class MyUser:
         @strawberry_django.field
-        async def my_group(self, info) -> types.Group:
+        async def my_group(self, info: Info) -> types.Group:
             from asgiref.sync import sync_to_async
 
             return cast("types.Group", await sync_to_async(models.Group.objects.get)())

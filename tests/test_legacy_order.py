@@ -7,7 +7,7 @@ import pytest
 import strawberry
 from django.db.models import Case, Count, Value, When
 from pytest_mock import MockFixture
-from strawberry import auto
+from strawberry import Info, auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import MissingArgumentsAnnotationsError
 from strawberry.types import get_object_definition
@@ -319,7 +319,9 @@ def test_order_field():
     try:
 
         @strawberry_django.order_field
-        def field_method(self, root, info, prefix, value: auto, sequence, queryset):
+        def field_method(
+            self, root, info: Info, prefix, value: auto, sequence, queryset
+        ):
             pass
 
     except Exception as exc:
@@ -372,7 +374,7 @@ def test_order_field_on_object():
     try:
 
         @strawberry_django.order_field
-        def order(self, root, info, prefix, sequence, queryset):
+        def order(self, root, info: Info, prefix, sequence, queryset):
             pass
 
     except Exception as exc:
@@ -383,7 +385,9 @@ def test_order_field_method():
     @strawberry_django.ordering.order(models.Fruit)
     class Order:
         @strawberry_django.order_field
-        def custom_order(self, root, info, prefix, value: auto, sequence, queryset):
+        def custom_order(
+            self, root, info: Info, prefix, value: auto, sequence, queryset
+        ):
             assert self == order, "Unexpected self passed"
             assert root == order, "Unexpected root passed"
             assert info == fake_info, "Unexpected info passed"
@@ -407,7 +411,7 @@ def test_order_field_method():
 def test_order_method_not_called_when_not_decorated(mocker: MockFixture):
     @strawberry_django.ordering.order(models.Fruit)
     class Order:
-        def order(self, root, info, prefix, value: auto, sequence, queryset):
+        def order(self, root, info: Info, prefix, value: auto, sequence, queryset):
             pytest.fail("Should not have been called")
 
     mock_order_method = mocker.spy(Order, "order")
@@ -435,7 +439,7 @@ def test_order_object_method():
     @strawberry_django.ordering.order(models.Fruit)
     class Order:
         @strawberry_django.order_field
-        def order(self, root, info, prefix, sequence, queryset):
+        def order(self, root, info: Info, prefix, sequence, queryset):
             assert self == order_, "Unexpected self passed"
             assert root == order_, "Unexpected root passed"
             assert info == fake_info, "Unexpected info passed"

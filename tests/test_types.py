@@ -4,7 +4,7 @@ import pytest
 import strawberry
 from django.test import override_settings
 from strawberry import auto
-from strawberry.types import get_object_definition
+from strawberry.types import Info, get_object_definition
 from strawberry.types.object_type import StrawberryObjectDefinition
 
 import strawberry_django
@@ -189,7 +189,7 @@ class FruitType:
     name: auto
 
     @strawberry.field
-    def color(self, info, root) -> "ColorType":
+    def color(self, info: Info, root) -> "ColorType":
         return root.color
 
 
@@ -346,7 +346,7 @@ def test_resolvers_with_fields():
     @strawberry_django.type(Fruit, fields=["name"])
     class FruitType:
         @strawberry.field
-        def color(self, info, root) -> "ColorType":
+        def color(self, info: Info, root) -> "ColorType":
             return root.color
 
     @strawberry.type

@@ -8,6 +8,7 @@ from django.db.models.functions import Reverse
 from strawberry import auto
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.relay import Node
+from strawberry.types import Info
 from strawberry.types.base import (
     StrawberryOptional,
     get_object_definition,
@@ -62,7 +63,7 @@ class CustomFruitOrder:
     reverse_name: auto
 
     @strawberry_django.order_field
-    def order(self, info, queryset, prefix):
+    def order(self, info: Info, queryset, prefix):
         queryset = queryset.annotate(reverse_name=Reverse(f"{prefix}name"))
         return strawberry_django.ordering.process_ordering_default(
             self, info, queryset, prefix
