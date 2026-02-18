@@ -24,37 +24,10 @@ jobs:
             pyproject.toml
           sparse-checkout-cone-mode: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
       - name: Check for release
         id: check
-        run: |
-          if uvx --from autopub==1.0.0a55 --with pygithub autopub check; then
-            echo "has_release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_release=false" >> "$GITHUB_OUTPUT"
-            if [ "${{ github.event_name }}" = "pull_request_target" ]; then
-              exit 1
-            fi
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
-
-      - name: Verify .autopub directory
-        if: steps.check.outputs.has_release == 'true'
-        run: |
-          if [ -d ".autopub" ]; then
-            echo "✓ Found .autopub directory"
-          else
-            echo "✗ No .autopub directory found"
-            exit 1
-          fi
-
-      - name: Upload .autopub artifact
-        if: steps.check.outputs.has_release == 'true'
-        uses: actions/upload-artifact@v4
+        uses: autopub/autopub-action@v1
         with:
-          name: autopub-data
-          path: .autopub
-          include-hidden-files: true
+          command: check
+          github-token: ${{ secrets.BOT_TOKEN }}
+          fail-on-missing: "true"
