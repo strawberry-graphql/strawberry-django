@@ -1,7 +1,7 @@
 import warnings
 from typing import TYPE_CHECKING, Any
 
-from . import auth, filters, mutations, ordering, pagination, relay
+from . import auth, federation, filters, mutations, ordering, pagination, relay
 from .fields.field import connection, field, node, offset_paginated
 from .fields.filter_order import filter_field, order_field
 from .fields.filter_types import (
@@ -58,6 +58,7 @@ __all__ = [
     "auth",
     "connection",
     "django_resolver",
+    "federation",
     "field",
     "filter_field",
     "filter_type",
