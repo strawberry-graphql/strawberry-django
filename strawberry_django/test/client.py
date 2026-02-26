@@ -1,5 +1,4 @@
 import contextlib
-import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from asgiref.sync import sync_to_async
@@ -65,7 +64,6 @@ class AsyncTestClient(TestClient):
         query: str,
         variables: dict[str, Any] | None = None,
         headers: dict[str, object] | None = None,
-        asserts_errors: bool | None = None,
         files: dict[str, object] | None = None,
         assert_no_errors: bool | None = True,
     ) -> Response:
@@ -80,16 +78,6 @@ class AsyncTestClient(TestClient):
             extensions=data.get("extensions"),
         )
 
-        if asserts_errors is not None:
-            warnings.warn(
-                "The `asserts_errors` argument has been renamed to `assert_no_errors`",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
-        assert_no_errors = (
-            assert_no_errors if asserts_errors is None else asserts_errors
-        )
         if assert_no_errors:
             assert response.errors is None, response.errors
 

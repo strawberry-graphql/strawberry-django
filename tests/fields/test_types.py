@@ -19,7 +19,7 @@ from strawberry.types.base import (
     StrawberryList,
     StrawberryOptional,
 )
-from strawberry.types.enum import EnumDefinition, EnumValue
+from strawberry.types.enum import EnumValue, StrawberryEnumDefinition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
@@ -260,7 +260,7 @@ def test_override_field_type():
     assert [(f.name, f.type) for f in object_definition.fields] == [
         (
             "char",
-            EnumDefinition(
+            StrawberryEnumDefinition(
                 wrapped_cls=EnumType,
                 name="EnumType",
                 values=[EnumValue(name="a", value="A")],

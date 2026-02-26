@@ -13,7 +13,7 @@ urlpatterns = [
     path(
         "graphql/",
         GraphQLView.as_view(
-            graphiql=settings.DEBUG,
+            graphql_ide="graphiql" if settings.DEBUG else None,
             schema=schema,
         ),
     ),
