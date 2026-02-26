@@ -498,10 +498,7 @@ class Query:
 
     favorite_conn: DjangoListConnection[FavoriteType] = strawberry_django.connection()
     issue_conn: DjangoListConnection[
-        strawberry.LazyType[
-            "IssueType",
-            "tests.projects.schema",  # type: ignore  # noqa: F821
-        ]
+        Annotated["IssueType", strawberry.lazy("tests.projects.schema")]
     ] = strawberry_django.connection()
     milestone_conn: DjangoListConnection[MilestoneType] = strawberry_django.connection()
 
