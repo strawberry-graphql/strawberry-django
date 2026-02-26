@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+0.75.3 - 2026-02-26
+-------------------
+
+Add support for strawberry-graphql 0.307.x.
+
+Also, the deprecated `asserts_errors` parameter has been removed from test client `query()` methods. Use `assert_no_errors` instead.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#870](https://github.com/strawberry-graphql/strawberry-django/pull/870)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
 0.75.2 - 2026-02-18
 -------------------
 

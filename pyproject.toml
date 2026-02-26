@@ -1,6 +1,6 @@
 [project]
 name = "strawberry-graphql-django"
-version = "0.75.2"
+version = "0.75.3"
 description = "Strawberry GraphQL Django extension"
 authors = [
   { name = "Lauri Hintsala", email = "lauri.hintsala@verkkopaja.fi" },
