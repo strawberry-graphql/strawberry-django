@@ -5,7 +5,6 @@ import contextvars
 import copy
 import dataclasses
 import itertools
-from collections import Counter
 from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
@@ -369,6 +368,61 @@ class OptimizerStore:
                     True,
                 )
 
+        if config.enable_only:
+            try:
+                from django.contrib.contenttypes.fields import GenericRelation
+            except (ImportError, RuntimeError):
+                GenericRelation = None  # noqa: N806
+
+            parent_model = qs.model
+            for prefetch in to_prefetch.values():
+                if isinstance(prefetch, str) or prefetch.queryset is None:  # type: ignore[reportUnnecessaryComparison]
+                    continue
+
+                inspector = PrefetchInspector(prefetch)
+                if inspector.only is None:
+                    continue
+
+                path = prefetch.prefetch_through
+                if LOOKUP_SEP in path:
+                    continue
+
+                try:
+                    relation = parent_model._meta.get_field(path)
+                except FieldDoesNotExist:
+                    relation = None
+                    for f in parent_model._meta.get_fields():
+                        if getattr(f, "related_name", None) == path:
+                            relation = f
+                            break
+                    if relation is None:
+                        continue
+
+                if isinstance(relation, (models.ManyToManyField, ManyToManyRel)):
+                    continue
+
+                if GenericRelation is not None and isinstance(
+                    relation, GenericRelation
+                ):
+                    fk_fields = frozenset({
+                        relation.object_id_field_name,
+                        relation.content_type_field_name,
+                    })
+                elif isinstance(relation, (ManyToOneRel, OneToOneRel)):
+                    fk_field = getattr(relation, "field", None)
+                    fk_attname = (
+                        getattr(fk_field, "attname", None) if fk_field else None
+                    )
+                    if fk_attname is None:
+                        continue
+                    fk_fields = frozenset({fk_attname})
+                else:
+                    continue
+
+                missing = fk_fields - inspector.only
+                if missing:
+                    inspector.only |= missing
+
         # First prefetch_related(None) to clear all existing prefetches, and then
         # add ours, which also contains them. This is to avoid the
         # "lookup was already seen with a different queryset" error
@@ -653,6 +707,10 @@ def _get_selections(
         cast("GraphQLObjectType", parent_type),
         info.field_nodes,
     )
+
+
+def _get_field_arguments(node: FieldNode) -> tuple:
+    return tuple(sorted(node.arguments or (), key=lambda a: a.name.value))
 
 
 def _generate_selection_resolve_info(
@@ -1239,12 +1297,29 @@ def _get_model_hints(
             lookup_prefix + f for f in model.polymorphic_internal_model_fields
         )
 
+    # Group selections by actual field name to detect aliases
+    selections_by_key = _get_selections(info, parent_type)
+    field_name_groups: dict[str, list[list[FieldNode]]] = {}
+    for field_nodes in selections_by_key.values():
+        name = field_nodes[0].name.value
+        field_name_groups.setdefault(name, []).append(field_nodes)
+
+    # Merge aliased selections with same arguments; skip those with different args
+    merged_node_lists: list[list[FieldNode]] = []
+    for groups in field_name_groups.values():
+        if len(groups) == 1:
+            merged_node_lists.append(groups[0])
+        else:
+            first_args = _get_field_arguments(groups[0][0])
+            if all(_get_field_arguments(g[0]) == first_args for g in groups[1:]):
+                merged_node_lists.append([node for group in groups for node in group])
+
     selections = [
         field_data
-        for f_selection in _get_selections(info, parent_type).values()
+        for f_nodes in merged_node_lists
         if (
             field_data := _get_field_data(
-                f_selection,
+                f_nodes,
                 object_definition,
                 schema,
                 parent_type=parent_type,
@@ -1253,15 +1328,8 @@ def _get_model_hints(
         )
         is not None
     ]
-    fields_counter = Counter(field_data[0] for field_data in selections)
 
     for field, f_definition, f_selection, f_info in selections:
-        # If a field is selected more than once in the query, that means it is being
-        # aliased. In this case, optimizing it would make one query to affect the other,
-        # resulting in wrong results for both.
-        if fields_counter[field] > 1:
-            continue
-
         strawberry_info = schema.config.info_class(_raw_info=f_info, _field=field)
 
         # Add annotations from the field if they exist
@@ -1309,7 +1377,7 @@ def _get_model_hints(
     # In case we skipped optimization for a relation, we might end up with a new QuerySet
     # which would not select its parent relation field on `.only()`, causing n+1 issues.
     # Make sure that in this case we also select it.
-    if level == 0 and store.only and info.path.prev:
+    if level == 0 and store.only:
         own_fk_fields = [
             field
             for field in get_model_fields(model).values()
@@ -1317,18 +1385,23 @@ def _get_model_hints(
         ]
 
         path = info.path
-        while path := path.prev:
+        while path:
+            if not path.typename:
+                path = path.prev
+                continue
+
             type_ = schema.get_type_by_name(path.typename)
             if not isinstance(type_, StrawberryObjectDefinition):
+                path = path.prev
                 continue
 
-            if not (strawberry_django_type := get_django_definition(type_.origin)):
-                continue
+            if strawberry_django_type := get_django_definition(type_.origin):
+                for field in own_fk_fields:
+                    if field.related_model is strawberry_django_type.model:
+                        store.only.append(field.attname)
+                        break
 
-            for field in own_fk_fields:
-                if field.related_model is strawberry_django_type.model:
-                    store.only.append(field.attname)
-                    break
+            path = path.prev
 
     return store
 

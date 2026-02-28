@@ -748,7 +748,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.75.3"
+version = "0.78.0"
 source = { editable = "." }
 dependencies = [
     { name = "asgiref" },
@@ -797,7 +797,7 @@ requires-dist = [
     { name = "django", specifier = ">=4.2" },
     { name = "django-choices-field", marker = "extra == 'enum'", specifier = ">=2.2.2" },
     { name = "django-debug-toolbar", marker = "extra == 'debug-toolbar'", specifier = ">=6.0.0" },
-    { name = "strawberry-graphql", specifier = ">=0.288.0" },
+    { name = "strawberry-graphql", specifier = ">=0.303.0" },
 ]
 provides-extras = ["debug-toolbar", "enum"]
 
@@ -808,7 +808,7 @@ dev = [
     { name = "django-debug-toolbar", specifier = ">=6.0.0" },
     { name = "django-guardian", specifier = ">=3.2.0" },
     { name = "django-model-utils", specifier = ">=5.0.0" },
-    { name = "django-polymorphic", specifier = ">=4.1.0" },
+    { name = "django-polymorphic", specifier = ">=4.1.0,<4.6" },
     { name = "django-tree-queries", specifier = ">=0.23.0" },
     { name = "django-types", specifier = ">=0.22.0" },
     { name = "factory-boy", specifier = ">=3.2.1" },

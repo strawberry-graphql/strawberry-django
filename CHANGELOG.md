@@ -1,6 +1,93 @@
 CHANGELOG
 =========
 
+0.78.0 - 2026-02-28
+-------------------
+
+Add `skip_queryset_filter` parameter to `filter_field()` for declaring virtual (non-filtering) fields on filter types.
+
+Fields marked with `skip_queryset_filter=True` appear in the GraphQL input type but are not applied as database filters. They are accessible via `self.<field>` in custom filter methods, making them useful for passing parameters like thresholds or configuration values.
+
+```python
+@strawberry_django.filter_type(models.Fruit)
+class FruitFilter:
+    min_similarity: float | None = strawberry_django.filter_field(
+        default=0.3, skip_queryset_filter=True
+    )
+
+    @strawberry_django.filter_field
+    def search(self, info: Info, queryset: QuerySet[models.Fruit], value: str, prefix: str):
+        if self.min_similarity is not None:
+            queryset = queryset.annotate(
+                similarity=TrigramSimilarity(f"{prefix}name", value)
+            ).filter(similarity__gte=self.min_similarity)
+        return queryset, Q()
+```
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#876](https://github.com/strawberry-graphql/strawberry-django/pull/876)
+
+0.77.0 - 2026-02-28
+-------------------
+
+Automatically inject FK fields into `.only()` on user-provided `Prefetch` querysets
+when the `only` optimization is enabled.
+
+This prevents N+1 queries caused by Django re-fetching the FK field needed to match
+prefetched rows back to parent objects.
+
+The optimizer now correctly resolves reverse relations by `related_name` and restricts
+FK injection to `ManyToOneRel`, `OneToOneRel`, and `GenericRelation`.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#874](https://github.com/strawberry-graphql/strawberry-django/pull/874)
+
+0.76.2 - 2026-02-28
+-------------------
+
+Fix N+1 queries when using `optimize()` inside a `Prefetch` object with `.only()` optimization. The optimizer now correctly auto-adds the FK field needed by Django to match prefetched objects back to their parent.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#873](https://github.com/strawberry-graphql/strawberry-django/pull/873)
+
+0.76.1 - 2026-02-28
+-------------------
+
+Fix optimizer skipping optimization entirely for aliased fields. When a GraphQL query uses aliases for the same field (e.g., `a: milestones { id }` and `b: milestones { id }`), the optimizer now merges them into a single prefetch instead of skipping optimization, preventing N+1 queries.
+
+Aliases with different arguments (e.g., `a: issues(filters: {search: "Foo"})` and `b: issues(filters: {search: "Bar"})`) are still skipped, since a single prefetch cannot satisfy both filter sets and optimizing one would produce wrong results for the other.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#871](https://github.com/strawberry-graphql/strawberry-django/pull/871)
+
+0.76.0 - 2026-02-28
+-------------------
+
+Add native federation support via `strawberry_django.federation` module.
+
+New decorators that combine `strawberry_django` functionality with Apollo Federation:
+
+- `strawberry_django.federation.type` - Federation-aware Django type with auto-generated `resolve_reference`
+- `strawberry_django.federation.interface` - Federation-aware Django interface
+- `strawberry_django.federation.field` - Federation-aware Django field with directives like `@external`, `@requires`, `@provides`
+
+Example usage:
+
+```python
+import strawberry
+import strawberry_django
+from strawberry.federation import Schema
+
+@strawberry_django.federation.type(models.Product, keys=["upc"])
+class Product:
+    upc: strawberry.auto
+    name: strawberry.auto
+    price: strawberry.auto
+    # resolve_reference is automatically generated!
+
+schema = Schema(query=Query)
+```
+
+The auto-generated `resolve_reference` methods support composite keys and multiple keys, and integrate with the query optimizer.
+
+**Note:** This release requires `strawberry-graphql>=0.303.0`.
+
 0.75.3 - 2026-02-26
 -------------------
 

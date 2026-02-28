@@ -1,6 +1,6 @@
 [project]
 name = "strawberry-graphql-django"
-version = "0.75.3"
+version = "0.78.0"
 description = "Strawberry GraphQL Django extension"
 authors = [
   { name = "Lauri Hintsala", email = "lauri.hintsala@verkkopaja.fi" },
@@ -32,7 +32,7 @@ classifiers = [
   "Framework :: Django :: 6.0",
 ]
 requires-python = ">=3.10,<4.0"
-dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.288.0"]
+dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.303.0"]
 
 [project.urls]
 homepage = "https://strawberry.rocks/docs/django"
@@ -61,7 +61,7 @@ dev = [
   "pytest-watch>=4.2.0",
   "pytest-xdist>=3.8.0",
   "ruff>=0.14.0",
-  "django-polymorphic>=4.1.0",
+  "django-polymorphic>=4.1.0,<4.6",
   "setuptools>=80.1.0",
   "psycopg>=3.2.10",
   "psycopg-binary>=3.2.10",

@@ -1189,6 +1189,87 @@ def test_query_nested_connection_with_filter_and_alias(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_with_aliases_same_field(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          a: milestones {
+            id
+            name
+          }
+          b: milestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestones = MilestoneFactory.create_batch(3, project=project)
+
+    expected_milestones = [
+        {
+            "id": to_base64("MilestoneType", m.id),
+            "name": m.name,
+        }
+        for m in milestones
+    ]
+
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "a": expected_milestones,
+            "b": expected_milestones,
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_with_aliases_different_subselections(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          a: milestones {
+            id
+          }
+          b: milestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestones = MilestoneFactory.create_batch(3, project=project)
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "a": [{"id": to_base64("MilestoneType", m.id)} for m in milestones],
+            "b": [
+                {"id": to_base64("MilestoneType", m.id), "name": m.name}
+                for m in milestones
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_with_optimizer_paginated_prefetch():
     @strawberry_django.type(Milestone, pagination=True)
     class MilestoneTypeWithNestedPrefetch:
@@ -2148,6 +2229,46 @@ def test_custom_prefetch_optimization_model_property_nested(gql_client):
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_custom_prefetch_optimize_auto_selects_fk(gql_client):
+    """Regression test for #862: optimize() inside Prefetch auto-adds FK field to .only()."""
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project, name="Hello")
+
+    query = """\
+      query TestQuery {
+        projectList {
+          customMilestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(query, assert_no_errors=False)
+    assert res.errors is None
+
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+    assert res.data == {
+        "projectList": [
+            {"customMilestones": [{"id": milestone_id, "name": milestone.name}]}
+        ]
+    }
+
+    prefetch_sql = next(
+        q["sql"] for q in ctx.captured_queries if Milestone._meta.db_table in q["sql"]
+    )
+    assert "project_id" in prefetch_sql
+    assert Milestone._meta.get_field("due_date").name not in prefetch_sql
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
 def test_correct_annotation_info(gql_client):
     project = ProjectFactory.create()
     milestone = MilestoneFactory.create(project=project, name="Hello")
@@ -2358,6 +2479,212 @@ def test_nested_annotation_via_select_related(db, gql_client: GraphQLTestClient)
                 },
             },
         ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_annotation_on_type_via_immediate_fk(db):
+    """Test that annotations work on types accessed via an immediate FK (1-level deep).
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/869
+
+    When querying a nested type via FK (e.g., milestone.project) where the nested type
+    has an annotated field, the optimizer should use prefetch_related instead of
+    select_related so the annotation is applied to the related model's queryset.
+    """
+    from django.db.models import Count
+
+    @strawberry_django.type(Project)
+    class ProjectTypeWithAnnotation:
+        name: strawberry.auto
+        milestone_count: int = strawberry_django.field(
+            annotate=Count("milestone"),
+        )
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeWithAnnotation:
+        name: strawberry.auto
+        project: ProjectTypeWithAnnotation
+
+    @strawberry.type
+    class Query:
+        milestones: list[MilestoneTypeWithAnnotation] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="TestProject")
+    MilestoneFactory.create(project=project, name="M1")
+    MilestoneFactory.create(project=project, name="M2")
+
+    query = """\
+      query TestQuery {
+        milestones {
+          name
+          project {
+            name
+            milestoneCount
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    assert result.data is not None
+    milestones = sorted(result.data["milestones"], key=operator.itemgetter("name"))
+    assert milestones == [
+        {
+            "name": "M1",
+            "project": {
+                "name": "TestProject",
+                "milestoneCount": 2,
+            },
+        },
+        {
+            "name": "M2",
+            "project": {
+                "name": "TestProject",
+                "milestoneCount": 2,
+            },
+        },
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_annotation_on_type_via_immediate_fk_dict_style(db):
+    """Test dict-style annotate on type accessed via FK (1-level deep).
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/869
+
+    Uses annotate={"key": expr} format (as reported in the issue) instead of
+    annotate=expr shorthand.
+    """
+    from django.db.models import Count
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeWithAnnotation:
+        name: strawberry.auto
+        issue_count: int = strawberry_django.field(
+            annotate={"issue_count": Count("issue")},
+        )
+
+    @strawberry_django.type(Issue)
+    class IssueTypeWithAnnotation:
+        name: strawberry.auto
+        milestone: MilestoneTypeWithAnnotation
+
+    @strawberry.type
+    class Query:
+        issues: list[IssueTypeWithAnnotation] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="TestProject")
+    milestone = MilestoneFactory.create(project=project, name="Milestone1")
+    IssueFactory.create(milestone=milestone, name="Issue1")
+    IssueFactory.create(milestone=milestone, name="Issue2")
+
+    query = """\
+      query TestQuery {
+        issues {
+          name
+          milestone {
+            name
+            issueCount
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    assert result.data is not None
+    issues = sorted(result.data["issues"], key=operator.itemgetter("name"))
+    assert issues == [
+        {
+            "name": "Issue1",
+            "milestone": {
+                "name": "Milestone1",
+                "issueCount": 2,
+            },
+        },
+        {
+            "name": "Issue2",
+            "milestone": {
+                "name": "Milestone1",
+                "issueCount": 2,
+            },
+        },
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_annotation_on_type_via_reverse_one_to_one(db):
+    """Test annotations on type accessed via reverse OneToOne.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/869
+
+    When querying User → assigned_role (reverse OneToOne) where
+    UserAssignedRoleType has an annotation, the optimizer should use
+    prefetch_related instead of select_related.
+    """
+    from django.contrib.auth import get_user_model
+    from django.db.models import Value
+    from django.db.models.functions import Upper
+
+    from tests.projects.models import Role, UserAssignedRole
+
+    @strawberry_django.type(UserAssignedRole)
+    class UserAssignedRoleTypeWithAnnotation:
+        role_name_upper: str = strawberry_django.field(
+            annotate=Upper(Value("ADMIN")),
+        )
+
+    @strawberry_django.type(get_user_model())
+    class UserTypeWithAssignedRole:
+        username: strawberry.auto
+        assigned_role: UserAssignedRoleTypeWithAnnotation | None
+
+    @strawberry.type
+    class Query:
+        users: list[UserTypeWithAssignedRole] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    user = UserFactory.create(username="testuser")
+    role = Role.objects.create(name="Admin")
+    UserAssignedRole.objects.create(user=user, role=role)
+
+    query = """\
+      query TestQuery {
+        users {
+          username
+          assignedRole {
+            roleNameUpper
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    assert result.data is not None
+    users = [u for u in result.data["users"] if u["username"] == "testuser"]
+    assert len(users) == 1
+    assert users[0] == {
+        "username": "testuser",
+        "assignedRole": {
+            "roleNameUpper": "ADMIN",
+        },
     }
 
 
@@ -2644,3 +2971,73 @@ def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
+def test_prefetch_with_only_injects_fk_field(db, gql_client: GraphQLTestClient):
+    """FK field is injected into .only() on user-provided Prefetch querysets.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/862
+    """
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+
+        @strawberry_django.field(
+            prefetch_related=[
+                lambda info: Prefetch(
+                    "milestones",
+                    queryset=Milestone.objects.filter(
+                        name__startswith="Test",
+                    ).only("id", "name"),
+                    to_attr="_optimized_milestones",
+                )
+            ]
+        )
+        def optimized_milestones(self) -> list[MilestoneTypeTest]:
+            return self._optimized_milestones  # type: ignore
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project1 = ProjectFactory.create(name="Project1")
+    project2 = ProjectFactory.create(name="Project2")
+    MilestoneFactory.create(project=project1, name="TestMilestone1")
+    MilestoneFactory.create(project=project1, name="TestMilestone2")
+    MilestoneFactory.create(project=project1, name="OtherMilestone")
+    MilestoneFactory.create(project=project2, name="TestMilestone3")
+
+    query = """\
+      query TestQuery {
+        projects {
+          name
+          optimizedMilestones {
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data is not None
+    projects_data = sorted(result.data["projects"], key=operator.itemgetter("name"))
+    assert len(projects_data) == 2
+    assert projects_data[0]["name"] == "Project1"
+    assert len(projects_data[0]["optimizedMilestones"]) == 2
+    assert projects_data[1]["name"] == "Project2"
+    assert len(projects_data[1]["optimizedMilestones"]) == 1

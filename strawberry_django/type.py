@@ -53,6 +53,7 @@ from strawberry_django.utils.typing import (
 from .descriptors import ModelProperty
 from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
+from .fields.filter_order import SKIP_FILTER_META
 from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
 
@@ -367,12 +368,12 @@ def _process_type(
             f.description = description
         elif isinstance(f, StrawberryDjangoField):
             f = copy.copy(f)  # noqa: PLW2901
-        elif (
-            not isinstance(f, StrawberryDjangoField)
-            and getattr(f, "base_resolver", None) is not None
+        elif not isinstance(f, StrawberryDjangoField) and (
+            getattr(f, "base_resolver", None) is not None
+            or f.metadata.get(SKIP_FILTER_META, False)
         ):
-            # If this is not a StrawberryDjangoField, but has a base_resolver, no need
-            # avoid forcing it to be a StrawberryDjangoField
+            # If this is not a StrawberryDjangoField, but has a base_resolver or is
+            # a skip_filter field, avoid forcing it to be a StrawberryDjangoField
             new_fields.append(f)
             continue
         else:
