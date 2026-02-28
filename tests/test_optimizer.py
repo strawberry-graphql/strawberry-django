@@ -2337,6 +2337,7 @@ def test_annotation_on_type_via_immediate_fk(db):
 
     result = schema.execute_sync(query)
     assert result.errors is None, result.errors
+    assert result.data is not None
     milestones = sorted(result.data["milestones"], key=operator.itemgetter("name"))
     assert milestones == [
         {
@@ -2407,6 +2408,7 @@ def test_annotation_on_type_via_immediate_fk_dict_style(db):
 
     result = schema.execute_sync(query)
     assert result.errors is None, result.errors
+    assert result.data is not None
     issues = sorted(result.data["issues"], key=operator.itemgetter("name"))
     assert issues == [
         {
@@ -2479,6 +2481,7 @@ def test_annotation_on_type_via_reverse_one_to_one(db):
 
     result = schema.execute_sync(query)
     assert result.errors is None, result.errors
+    assert result.data is not None
     users = [u for u in result.data["users"] if u["username"] == "testuser"]
     assert len(users) == 1
     assert users[0] == {
