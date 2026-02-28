@@ -2961,6 +2961,7 @@ def test_prefetch_with_optimize_and_only(db, gql_client: GraphQLTestClient):
         result = schema.execute_sync(query)
 
     assert result.errors is None, result.errors
+    assert result.data is not None
     projects_data = sorted(result.data["projects"], key=operator.itemgetter("name"))
     assert len(projects_data) == 2
     assert projects_data[0]["name"] == "Project1"
