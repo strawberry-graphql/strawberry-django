@@ -862,7 +862,7 @@ def _get_hints_from_django_foreign_key(
             f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}",
         )
 
-    strawberry_info = Info(_raw_info=field_info, _field=field)
+    strawberry_info = schema.config.info_class(_raw_info=field_info, _field=field)
 
     for _f_type_def, f_model, f_store in nested_stores:
         cache.setdefault(f_model, []).append((level, f_store))
@@ -1262,7 +1262,7 @@ def _get_model_hints(
         if fields_counter[field] > 1:
             continue
 
-        strawberry_info = Info(_raw_info=f_info, _field=field)
+        strawberry_info = schema.config.info_class(_raw_info=f_info, _field=field)
 
         # Add annotations from the field if they exist
         if field_store := _get_hints_from_field(
