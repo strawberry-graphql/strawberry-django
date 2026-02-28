@@ -32,7 +32,6 @@ from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartia
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
-    OptimizerStore,
     optimize,
 )
 from strawberry_django.pagination import OffsetPaginated
@@ -153,7 +152,6 @@ class ProjectType(relay.Node, Named):
             queryset=optimize(
                 Milestone.objects.all(),
                 info,
-                store=OptimizerStore.with_hints(only="project_id"),
             ),
             to_attr="custom_milestones",
         )

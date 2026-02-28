@@ -1318,7 +1318,7 @@ def _get_model_hints(
     # In case we skipped optimization for a relation, we might end up with a new QuerySet
     # which would not select its parent relation field on `.only()`, causing n+1 issues.
     # Make sure that in this case we also select it.
-    if level == 0 and store.only and info.path.prev:
+    if level == 0 and store.only:
         own_fk_fields = [
             field
             for field in get_model_fields(model).values()
@@ -1326,18 +1326,23 @@ def _get_model_hints(
         ]
 
         path = info.path
-        while path := path.prev:
+        while path:
+            if not path.typename:
+                path = path.prev
+                continue
+
             type_ = schema.get_type_by_name(path.typename)
             if not isinstance(type_, StrawberryObjectDefinition):
+                path = path.prev
                 continue
 
-            if not (strawberry_django_type := get_django_definition(type_.origin)):
-                continue
+            if strawberry_django_type := get_django_definition(type_.origin):
+                for field in own_fk_fields:
+                    if field.related_model is strawberry_django_type.model:
+                        store.only.append(field.attname)
+                        break
 
-            for field in own_fk_fields:
-                if field.related_model is strawberry_django_type.model:
-                    store.only.append(field.attname)
-                    break
+            path = path.prev
 
     return store
 

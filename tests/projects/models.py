@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django_choices_field import TextChoicesField
 
 from strawberry_django.descriptors import model_property
-from strawberry_django.optimizer import OptimizerStore, optimize
+from strawberry_django.optimizer import optimize
 from strawberry_django.utils.typing import UserType
 
 if TYPE_CHECKING:
@@ -69,7 +69,6 @@ class Project(NamedModel):
             queryset=optimize(
                 Milestone.objects.all(),
                 info,
-                store=OptimizerStore.with_hints(only="project_id"),
             ),
             to_attr="custom_milestones_property",
         )

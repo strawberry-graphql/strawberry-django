@@ -2154,6 +2154,46 @@ def test_custom_prefetch_optimization_model_property_nested(gql_client):
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_custom_prefetch_optimize_auto_selects_fk(gql_client):
+    """Regression test for #862: optimize() inside Prefetch auto-adds FK field to .only()."""
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project, name="Hello")
+
+    query = """\
+      query TestQuery {
+        projectList {
+          customMilestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(query, assert_no_errors=False)
+    assert res.errors is None
+
+    milestone_id = str(
+        GlobalID(
+            get_object_definition(MilestoneType, strict=True).name, str(milestone.id)
+        )
+    )
+    assert res.data == {
+        "projectList": [
+            {"customMilestones": [{"id": milestone_id, "name": milestone.name}]}
+        ]
+    }
+
+    prefetch_sql = next(
+        q["sql"] for q in ctx.captured_queries if Milestone._meta.db_table in q["sql"]
+    )
+    assert "project_id" in prefetch_sql
+    assert Milestone._meta.get_field("due_date").name not in prefetch_sql
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
 def test_correct_annotation_info(gql_client):
     project = ProjectFactory.create()
     milestone = MilestoneFactory.create(project=project, name="Hello")
