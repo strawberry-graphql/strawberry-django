@@ -29,6 +29,7 @@ from typing_extensions import Self, assert_never, dataclass_transform, deprecate
 
 from strawberry_django.fields.filter_order import (
     RESOLVE_VALUE_META,
+    SKIP_FILTER_META,
     WITH_NONE_META,
     FilterOrderField,
     FilterOrderFieldResolver,
@@ -194,6 +195,9 @@ def process_filters(
             field_value is None
             and not f.metadata.get(WITH_NONE_META, using_old_filters)
         ):
+            continue
+
+        if f.metadata.get(SKIP_FILTER_META, False):
             continue
 
         should_resolve = f.metadata.get(RESOLVE_VALUE_META, UNSET)
