@@ -772,3 +772,30 @@ def test_filterlookup_str_emits_warning():
 def test_filterlookup_uuid_emits_warning():
     with pytest.warns(UserWarning, match="FilterLookup\\[UUID\\].*Use StrFilterLookup"):
         filter_types.FilterLookup[uuid.UUID]
+
+
+def test_skip_filter_field():
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter:
+        name: auto
+        min_similarity: float | None = strawberry_django.filter_field(
+            default=0.3, skip_queryset_filter=True
+        )
+
+        @strawberry_django.filter_field
+        def filter(self, queryset: QuerySet, prefix: str):
+            if self.min_similarity is not None:
+                return queryset, Q(**{f"{prefix}name": self.min_similarity})
+            return queryset, Q()
+
+    filter_: Any = Filter(name="apple", min_similarity=0.5)
+    qs: Any = object()
+    fake_info: Any = object()
+
+    # Object-level filter method can access self.min_similarity
+    _, q = process_filters(filter_, qs, fake_info)
+    assert Q(name=0.5) == q
+
+    # Field-iteration path: min_similarity is skipped, only name produces a Q
+    _, q = process_filters(filter_, qs, fake_info, skip_object_filter_method=True)
+    assert Q(name="apple") == q
