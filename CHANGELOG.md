@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.76.2 - 2026-02-28
+-------------------
+
+Fix N+1 queries when using `optimize()` inside a `Prefetch` object with `.only()` optimization. The optimizer now correctly auto-adds the FK field needed by Django to match prefetched objects back to their parent.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#873](https://github.com/strawberry-graphql/strawberry-django/pull/873)
+
 0.76.1 - 2026-02-28
 -------------------
 
