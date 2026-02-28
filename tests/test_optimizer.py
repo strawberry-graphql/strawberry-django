@@ -1114,6 +1114,87 @@ def test_query_nested_connection_with_filter_and_alias(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_with_aliases_same_field(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          a: milestones {
+            id
+            name
+          }
+          b: milestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestones = MilestoneFactory.create_batch(3, project=project)
+
+    expected_milestones = [
+        {
+            "id": to_base64("MilestoneType", m.id),
+            "name": m.name,
+        }
+        for m in milestones
+    ]
+
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "a": expected_milestones,
+            "b": expected_milestones,
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_with_aliases_different_subselections(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          a: milestones {
+            id
+          }
+          b: milestones {
+            id
+            name
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestones = MilestoneFactory.create_batch(3, project=project)
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "a": [{"id": to_base64("MilestoneType", m.id)} for m in milestones],
+            "b": [
+                {"id": to_base64("MilestoneType", m.id), "name": m.name}
+                for m in milestones
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_with_optimizer_paginated_prefetch():
     @strawberry_django.type(Milestone, pagination=True)
     class MilestoneTypeWithNestedPrefetch:
