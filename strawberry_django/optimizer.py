@@ -236,7 +236,7 @@ class OptimizerStore:
             annotate=annotate,
         )
 
-    def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
+    def with_prefix(self, prefix: str, *, info: Info):
         """Create a copy of this store with the given prefix.
 
         This is useful when we need to apply the same store to a nested field.
@@ -715,7 +715,7 @@ def _get_field_data(
 def _get_hints_from_field(
     field: StrawberryField,
     *,
-    f_info: GraphQLResolveInfo,
+    f_info: Info,
     prefix: str = "",
 ) -> OptimizerStore | None:
     if not (
@@ -739,18 +739,17 @@ def _get_hints_from_field(
     return (
         field_store.with_prefix(prefix, info=f_info)
         if prefix
-        else field_store.with_resolved_callables(Info(_raw_info=f_info, _field=field))
+        else field_store.with_resolved_callables(f_info)
     )
 
 
 def _get_hints_from_model_property(
-    field: StrawberryField,
     model: type[models.Model],
     *,
-    f_info: GraphQLResolveInfo,
+    f_info: Info,
     prefix: str = "",
 ) -> OptimizerStore | None:
-    model_attr = getattr(model, field.python_name, None)
+    model_attr = getattr(model, f_info.python_name, None)
     if (
         model_attr is not None
         and isinstance(model_attr, ModelProperty)
@@ -761,9 +760,7 @@ def _get_hints_from_model_property(
         store = (
             attr_store.with_prefix(prefix, info=f_info)
             if prefix
-            else attr_store.with_resolved_callables(
-                Info(_raw_info=f_info, _field=field)
-            )
+            else attr_store.with_resolved_callables(f_info)
         )
     else:
         store = None
@@ -865,9 +862,11 @@ def _get_hints_from_django_foreign_key(
             f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}",
         )
 
+    strawberry_info = Info(_raw_info=field_info, _field=field)
+
     for _f_type_def, f_model, f_store in nested_stores:
         cache.setdefault(f_model, []).append((level, f_store))
-        store |= f_store.with_prefix(path, info=field_info)
+        store |= f_store.with_prefix(path, info=strawberry_info)
 
     return store
 
@@ -1263,15 +1262,18 @@ def _get_model_hints(
         if fields_counter[field] > 1:
             continue
 
+        strawberry_info = Info(_raw_info=f_info, _field=field)
+
         # Add annotations from the field if they exist
-        if field_store := _get_hints_from_field(field, f_info=f_info, prefix=prefix):
+        if field_store := _get_hints_from_field(
+            field, f_info=strawberry_info, prefix=prefix
+        ):
             store |= field_store
 
         # Then from the model property if one is defined
         if model_property_store := _get_hints_from_model_property(
-            field,
             model,
-            f_info=f_info,
+            f_info=strawberry_info,
             prefix=prefix,
         ):
             store |= model_property_store
