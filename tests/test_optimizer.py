@@ -15,7 +15,6 @@ from django.db.models import (
 )
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from graphql import GraphQLResolveInfo
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
 from strawberry.types import ExecutionResult, Info, get_object_definition
@@ -2874,7 +2873,7 @@ def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
         name: strawberry.auto
 
         @staticmethod
-        def _prefetch_custom_milestones(_: GraphQLResolveInfo) -> Prefetch:
+        def _prefetch_custom_milestones(_: Info) -> Prefetch:
             return Prefetch(
                 "milestones",
                 to_attr="custom_milestones",

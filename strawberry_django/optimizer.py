@@ -326,6 +326,7 @@ class OptimizerStore:
             p: p for p in itertools.chain(*prefetch_lists) if isinstance(p, str)
         }
 
+        strawberry_info = _create_strawberry_info(info)
         # Merge already existing prefetches together
         for p in itertools.chain(*prefetch_lists):
             # Already added above
@@ -334,7 +335,7 @@ class OptimizerStore:
 
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
-                p = p(info)  # noqa: PLW2901
+                p = p(strawberry_info)  # noqa: PLW2901
 
             path = p.prefetch_to
             existing = to_prefetch.get(path)
@@ -498,14 +499,22 @@ class OptimizerStore:
         if not config.enable_annotate or not self.annotate:
             return qs
 
+        strawberry_info = _create_strawberry_info(info)
+
         to_annotate = {}
         for k, v in self.annotate.items():
             if isinstance(v, Callable):
                 assert_type(v, AnnotateCallable)
-                v = v(info)  # noqa: PLW2901
+                v = v(strawberry_info)  # noqa: PLW2901
             to_annotate[k] = v
 
         return qs.annotate(**to_annotate)
+
+
+def _create_strawberry_info(raw_info: GraphQLResolveInfo) -> Info:
+    schema: Schema = raw_info.schema._strawberry_schema  # type: ignore
+    field = schema.get_field_for_type(raw_info.field_name, raw_info.parent_type.name)
+    return schema.config.info_class(raw_info, field)
 
 
 def _get_django_type(
