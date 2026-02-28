@@ -1009,7 +1009,7 @@ def test_strawberry_info_is_passed_to_prefetch_related_and_annotate_callables():
                 annotateCustomField
             }
         }
-    } \
+    }
     """
 
     assert DjangoOptimizerExtension.enabled.get()
