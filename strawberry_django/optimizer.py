@@ -5,7 +5,6 @@ import contextvars
 import copy
 import dataclasses
 import itertools
-from collections import Counter
 from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
@@ -655,6 +654,10 @@ def _get_selections(
     )
 
 
+def _get_field_arguments(node: FieldNode) -> tuple:
+    return tuple(sorted(node.arguments or (), key=lambda a: a.name.value))
+
+
 def _generate_selection_resolve_info(
     info: GraphQLResolveInfo,
     field_nodes: list[FieldNode],
@@ -1238,12 +1241,29 @@ def _get_model_hints(
             lookup_prefix + f for f in model.polymorphic_internal_model_fields
         )
 
+    # Group selections by actual field name to detect aliases
+    selections_by_key = _get_selections(info, parent_type)
+    field_name_groups: dict[str, list[list[FieldNode]]] = {}
+    for field_nodes in selections_by_key.values():
+        name = field_nodes[0].name.value
+        field_name_groups.setdefault(name, []).append(field_nodes)
+
+    # Merge aliased selections with same arguments; skip those with different args
+    merged_node_lists: list[list[FieldNode]] = []
+    for groups in field_name_groups.values():
+        if len(groups) == 1:
+            merged_node_lists.append(groups[0])
+        else:
+            first_args = _get_field_arguments(groups[0][0])
+            if all(_get_field_arguments(g[0]) == first_args for g in groups[1:]):
+                merged_node_lists.append([node for group in groups for node in group])
+
     selections = [
         field_data
-        for f_selection in _get_selections(info, parent_type).values()
+        for f_nodes in merged_node_lists
         if (
             field_data := _get_field_data(
-                f_selection,
+                f_nodes,
                 object_definition,
                 schema,
                 parent_type=parent_type,
@@ -1252,15 +1272,8 @@ def _get_model_hints(
         )
         is not None
     ]
-    fields_counter = Counter(field_data[0] for field_data in selections)
 
     for field, f_definition, f_selection, f_info in selections:
-        # If a field is selected more than once in the query, that means it is being
-        # aliased. In this case, optimizing it would make one query to affect the other,
-        # resulting in wrong results for both.
-        if fields_counter[field] > 1:
-            continue
-
         # Add annotations from the field if they exist
         if field_store := _get_hints_from_field(field, f_info=f_info, prefix=prefix):
             store |= field_store
