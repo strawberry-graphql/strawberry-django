@@ -2287,6 +2287,209 @@ def test_nested_annotation_via_select_related(db, gql_client: GraphQLTestClient)
 
 
 @pytest.mark.django_db(transaction=True)
+def test_annotation_on_type_via_immediate_fk(db):
+    """Test that annotations work on types accessed via an immediate FK (1-level deep).
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/869
+
+    When querying a nested type via FK (e.g., milestone.project) where the nested type
+    has an annotated field, the optimizer should use prefetch_related instead of
+    select_related so the annotation is applied to the related model's queryset.
+    """
+    from django.db.models import Count
+
+    @strawberry_django.type(Project)
+    class ProjectTypeWithAnnotation:
+        name: strawberry.auto
+        milestone_count: int = strawberry_django.field(
+            annotate=Count("milestone"),
+        )
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeWithAnnotation:
+        name: strawberry.auto
+        project: ProjectTypeWithAnnotation
+
+    @strawberry.type
+    class Query:
+        milestones: list[MilestoneTypeWithAnnotation] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="TestProject")
+    MilestoneFactory.create(project=project, name="M1")
+    MilestoneFactory.create(project=project, name="M2")
+
+    query = """\
+      query TestQuery {
+        milestones {
+          name
+          project {
+            name
+            milestoneCount
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    milestones = sorted(result.data["milestones"], key=operator.itemgetter("name"))
+    assert milestones == [
+        {
+            "name": "M1",
+            "project": {
+                "name": "TestProject",
+                "milestoneCount": 2,
+            },
+        },
+        {
+            "name": "M2",
+            "project": {
+                "name": "TestProject",
+                "milestoneCount": 2,
+            },
+        },
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_annotation_on_type_via_immediate_fk_dict_style(db):
+    """Test dict-style annotate on type accessed via FK (1-level deep).
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/869
+
+    Uses annotate={"key": expr} format (as reported in the issue) instead of
+    annotate=expr shorthand.
+    """
+    from django.db.models import Count
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeWithAnnotation:
+        name: strawberry.auto
+        issue_count: int = strawberry_django.field(
+            annotate={"issue_count": Count("issue")},
+        )
+
+    @strawberry_django.type(Issue)
+    class IssueTypeWithAnnotation:
+        name: strawberry.auto
+        milestone: MilestoneTypeWithAnnotation
+
+    @strawberry.type
+    class Query:
+        issues: list[IssueTypeWithAnnotation] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="TestProject")
+    milestone = MilestoneFactory.create(project=project, name="Milestone1")
+    IssueFactory.create(milestone=milestone, name="Issue1")
+    IssueFactory.create(milestone=milestone, name="Issue2")
+
+    query = """\
+      query TestQuery {
+        issues {
+          name
+          milestone {
+            name
+            issueCount
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    issues = sorted(result.data["issues"], key=operator.itemgetter("name"))
+    assert issues == [
+        {
+            "name": "Issue1",
+            "milestone": {
+                "name": "Milestone1",
+                "issueCount": 2,
+            },
+        },
+        {
+            "name": "Issue2",
+            "milestone": {
+                "name": "Milestone1",
+                "issueCount": 2,
+            },
+        },
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_annotation_on_type_via_reverse_one_to_one(db):
+    """Test annotations on type accessed via reverse OneToOne.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/869
+
+    When querying User → assigned_role (reverse OneToOne) where
+    UserAssignedRoleType has an annotation, the optimizer should use
+    prefetch_related instead of select_related.
+    """
+    from django.contrib.auth import get_user_model
+    from django.db.models import Value
+    from django.db.models.functions import Upper
+
+    from tests.projects.models import Role, UserAssignedRole
+
+    @strawberry_django.type(UserAssignedRole)
+    class UserAssignedRoleTypeWithAnnotation:
+        role_name_upper: str = strawberry_django.field(
+            annotate=Upper(Value("ADMIN")),
+        )
+
+    @strawberry_django.type(get_user_model())
+    class UserTypeWithAssignedRole:
+        username: strawberry.auto
+        assigned_role: UserAssignedRoleTypeWithAnnotation | None
+
+    @strawberry.type
+    class Query:
+        users: list[UserTypeWithAssignedRole] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    user = UserFactory.create(username="testuser")
+    role = Role.objects.create(name="Admin")
+    UserAssignedRole.objects.create(user=user, role=role)
+
+    query = """\
+      query TestQuery {
+        users {
+          username
+          assignedRole {
+            roleNameUpper
+          }
+        }
+      }
+    """
+
+    result = schema.execute_sync(query)
+    assert result.errors is None, result.errors
+    users = [u for u in result.data["users"] if u["username"] == "testuser"]
+    assert len(users) == 1
+    assert users[0] == {
+        "username": "testuser",
+        "assignedRole": {
+            "roleNameUpper": "ADMIN",
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
 def test_prefetch_related_without_explicit_ordering(db, gql_client: GraphQLTestClient):
     """Test that prefetch_related works correctly without explicit ordering.
