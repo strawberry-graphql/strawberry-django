@@ -2896,3 +2896,74 @@ def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
+def test_prefetch_with_optimize_and_only(db, gql_client: GraphQLTestClient):
+    """Prefetch with optimize() and only optimization does not cause N+1.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/862
+    """
+    from strawberry_django.optimizer import optimize
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+
+        @strawberry_django.field(
+            prefetch_related=[
+                lambda info: Prefetch(
+                    "milestones",
+                    queryset=optimize(
+                        Milestone.objects.filter(name__startswith="Test"),
+                        info,
+                    ),
+                    to_attr="_optimized_milestones",
+                )
+            ]
+        )
+        def optimized_milestones(self) -> list[MilestoneTypeTest]:
+            return self._optimized_milestones  # type: ignore
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project1 = ProjectFactory.create(name="Project1")
+    project2 = ProjectFactory.create(name="Project2")
+    MilestoneFactory.create(project=project1, name="TestMilestone1")
+    MilestoneFactory.create(project=project1, name="TestMilestone2")
+    MilestoneFactory.create(project=project1, name="OtherMilestone")
+    MilestoneFactory.create(project=project2, name="TestMilestone3")
+
+    query = """\
+      query TestQuery {
+        projects {
+          name
+          optimizedMilestones {
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    projects_data = sorted(result.data["projects"], key=operator.itemgetter("name"))
+    assert len(projects_data) == 2
+    assert projects_data[0]["name"] == "Project1"
+    assert len(projects_data[0]["optimizedMilestones"]) == 2
+    assert projects_data[1]["name"] == "Project2"
+    assert len(projects_data[1]["optimizedMilestones"]) == 1

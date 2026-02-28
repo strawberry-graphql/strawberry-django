@@ -368,6 +368,55 @@ class OptimizerStore:
                     True,
                 )
 
+        if config.enable_only:
+            try:
+                from django.contrib.contenttypes.fields import GenericRelation
+            except (ImportError, RuntimeError):
+                GenericRelation = None  # noqa: N806
+
+            parent_model = qs.model
+            for prefetch in to_prefetch.values():
+                if isinstance(prefetch, str) or prefetch.queryset is None:
+                    continue
+
+                inspector = PrefetchInspector(prefetch)
+                if inspector.only is None:
+                    continue
+
+                path = prefetch.prefetch_through
+                if LOOKUP_SEP in path:
+                    continue
+
+                try:
+                    relation = parent_model._meta.get_field(path)
+                except FieldDoesNotExist:
+                    continue
+
+                if isinstance(relation, (models.ManyToManyField, ManyToManyRel)):
+                    continue
+
+                if GenericRelation is not None and isinstance(
+                    relation, GenericRelation
+                ):
+                    fk_fields = frozenset({
+                        relation.object_id_field_name,
+                        relation.content_type_field_name,
+                    })
+                else:
+                    remote_field = getattr(relation, "remote_field", None)
+                    if remote_field is None:
+                        continue
+                    fk_attname = getattr(remote_field, "attname", None) or getattr(
+                        remote_field, "name", None
+                    )
+                    if fk_attname is None:
+                        continue
+                    fk_fields = frozenset({fk_attname})
+
+                missing = fk_fields - inspector.only
+                if missing:
+                    inspector.only |= missing
+
         # First prefetch_related(None) to clear all existing prefetches, and then
         # add ours, which also contains them. This is to avoid the
         # "lookup was already seen with a different queryset" error
