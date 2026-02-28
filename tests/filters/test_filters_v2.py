@@ -792,7 +792,10 @@ def test_skip_filter_field():
     qs: Any = object()
     fake_info: Any = object()
 
+    # Object-level filter method can access self.min_similarity
     _, q = process_filters(filter_, qs, fake_info)
-    # min_similarity should NOT produce Q(min_similarity=0.5)
-    # The object filter method uses it via self.min_similarity instead
     assert Q(name=0.5) == q
+
+    # Field-iteration path: min_similarity is skipped, only name produces a Q
+    _, q = process_filters(filter_, qs, fake_info, skip_object_filter_method=True)
+    assert Q(name="apple") == q
