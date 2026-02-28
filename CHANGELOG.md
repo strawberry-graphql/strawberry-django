@@ -1,6 +1,20 @@
 CHANGELOG
 =========
 
+0.77.0 - 2026-02-28
+-------------------
+
+Automatically inject FK fields into `.only()` on user-provided `Prefetch` querysets
+when the `only` optimization is enabled.
+
+This prevents N+1 queries caused by Django re-fetching the FK field needed to match
+prefetched rows back to parent objects.
+
+The optimizer now correctly resolves reverse relations by `related_name` and restricts
+FK injection to `ManyToOneRel`, `OneToOneRel`, and `GenericRelation`.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#874](https://github.com/strawberry-graphql/strawberry-django/pull/874)
+
 0.76.2 - 2026-02-28
 -------------------
 
