@@ -26,7 +26,7 @@ jobs:
 
       - name: Check for release
         id: check
-        uses: autopub/autopub-action@v1.0.0
+        uses: autopub/autopub-action@v1.0.1
         with:
           command: check
           autopub-version: "1.0.0a58"

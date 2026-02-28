@@ -23,7 +23,7 @@ jobs:
 
       - name: Check for release
         id: check
-        uses: autopub/autopub-action@v1.0.0
+        uses: autopub/autopub-action@v1.0.1
         with:
           command: check
           autopub-version: "1.0.0a58"
@@ -51,19 +51,19 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
 
       - name: Prepare release
-        uses: autopub/autopub-action@v1.0.0
+        uses: autopub/autopub-action@v1.0.1
         with:
           command: prepare
           autopub-version: "1.0.0a58"
 
       - name: Build package
-        uses: autopub/autopub-action@v1.0.0
+        uses: autopub/autopub-action@v1.0.1
         with:
           command: build
           autopub-version: "1.0.0a58"
 
       - name: Publish to PyPI
-        uses: autopub/autopub-action@v1.0.0
+        uses: autopub/autopub-action@v1.0.1
         with:
           command: publish
           autopub-version: "1.0.0a58"
