@@ -26,6 +26,7 @@ jobs:
         uses: autopub/autopub-action@v1.0.0
         with:
           command: check
+          autopub-version: "1.0.0a58"
           github-token: ${{ secrets.BOT_TOKEN }}
 
       - name: Debug info
@@ -53,16 +54,19 @@ jobs:
         uses: autopub/autopub-action@v1.0.0
         with:
           command: prepare
+          autopub-version: "1.0.0a58"
 
       - name: Build package
         uses: autopub/autopub-action@v1.0.0
         with:
           command: build
+          autopub-version: "1.0.0a58"
 
       - name: Publish to PyPI
         uses: autopub/autopub-action@v1.0.0
         with:
           command: publish
+          autopub-version: "1.0.0a58"
           github-token: ${{ secrets.BOT_TOKEN }}
           git-username: botberry
           git-email: bot@strawberry.rocks
