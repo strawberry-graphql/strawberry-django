@@ -14,10 +14,10 @@ class FruitFilter:
     )
 
     @strawberry_django.filter_field
-    def filter(self, queryset: QuerySet, prefix: str):
+    def search(self, info: Info, queryset: QuerySet[models.Fruit], value: str, prefix: str):
         if self.min_similarity is not None:
             queryset = queryset.annotate(
-                similarity=TrigramSimilarity(f"{prefix}name", self.search)
+                similarity=TrigramSimilarity(f"{prefix}name", value)
             ).filter(similarity__gte=self.min_similarity)
         return queryset, Q()
 ```
