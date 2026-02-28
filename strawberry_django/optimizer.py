@@ -34,7 +34,6 @@ from graphql import (
     GraphQLWrappingType,
     get_argument_values,
 )
-from graphql.execution.collect_fields import collect_sub_fields
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry import UNSET, relay
@@ -55,6 +54,7 @@ from strawberry_django.relay.list_connection import DjangoListConnection
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
+from .utils.gql_compat import get_sub_field_selections
 from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
@@ -646,13 +646,7 @@ def _get_selections(
     info: GraphQLResolveInfo,
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ) -> dict[str, list[FieldNode]]:
-    return collect_sub_fields(
-        info.schema,
-        info.fragments,
-        info.variable_values,
-        cast("GraphQLObjectType", parent_type),
-        info.field_nodes,
-    )
+    return get_sub_field_selections(info, parent_type)
 
 
 def _generate_selection_resolve_info(
