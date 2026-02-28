@@ -2185,8 +2185,9 @@ def test_custom_prefetch_optimize_auto_selects_fk(gql_client):
         ]
     }
 
-    prefetch_sql = ctx.captured_queries[1]["sql"]
-    assert Milestone._meta.db_table in prefetch_sql
+    prefetch_sql = next(
+        q["sql"] for q in ctx.captured_queries if Milestone._meta.db_table in q["sql"]
+    )
     assert "project_id" in prefetch_sql
     assert Milestone._meta.get_field("due_date").name not in prefetch_sql
 
