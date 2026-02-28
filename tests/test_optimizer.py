@@ -2900,12 +2900,11 @@ def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
-def test_prefetch_with_optimize_and_only(db, gql_client: GraphQLTestClient):
-    """Prefetch with optimize() and only optimization does not cause N+1.
+def test_prefetch_with_only_injects_fk_field(db, gql_client: GraphQLTestClient):
+    """FK field is injected into .only() on user-provided Prefetch querysets.
 
     Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/862
     """
-    from strawberry_django.optimizer import optimize
 
     @strawberry_django.type(Milestone)
     class MilestoneTypeTest:
@@ -2919,10 +2918,9 @@ def test_prefetch_with_optimize_and_only(db, gql_client: GraphQLTestClient):
             prefetch_related=[
                 lambda info: Prefetch(
                     "milestones",
-                    queryset=optimize(
-                        Milestone.objects.filter(name__startswith="Test"),
-                        info,
-                    ),
+                    queryset=Milestone.objects.filter(
+                        name__startswith="Test",
+                    ).only("id", "name"),
                     to_attr="_optimized_milestones",
                 )
             ]

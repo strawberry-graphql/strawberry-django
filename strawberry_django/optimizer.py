@@ -376,7 +376,7 @@ class OptimizerStore:
 
             parent_model = qs.model
             for prefetch in to_prefetch.values():
-                if isinstance(prefetch, str) or prefetch.queryset is None:
+                if isinstance(prefetch, str) or prefetch.queryset is None:  # type: ignore[reportUnnecessaryComparison]
                     continue
 
                 inspector = PrefetchInspector(prefetch)
@@ -390,7 +390,13 @@ class OptimizerStore:
                 try:
                     relation = parent_model._meta.get_field(path)
                 except FieldDoesNotExist:
-                    continue
+                    relation = None
+                    for f in parent_model._meta.get_fields():
+                        if getattr(f, "related_name", None) == path:
+                            relation = f
+                            break
+                    if relation is None:
+                        continue
 
                 if isinstance(relation, (models.ManyToManyField, ManyToManyRel)):
                     continue
@@ -402,16 +408,16 @@ class OptimizerStore:
                         relation.object_id_field_name,
                         relation.content_type_field_name,
                     })
-                else:
-                    remote_field = getattr(relation, "remote_field", None)
-                    if remote_field is None:
-                        continue
-                    fk_attname = getattr(remote_field, "attname", None) or getattr(
-                        remote_field, "name", None
+                elif isinstance(relation, (ManyToOneRel, OneToOneRel)):
+                    fk_field = getattr(relation, "field", None)
+                    fk_attname = (
+                        getattr(fk_field, "attname", None) if fk_field else None
                     )
                     if fk_attname is None:
                         continue
                     fk_fields = frozenset({fk_attname})
+                else:
+                    continue
 
                 missing = fk_fields - inspector.only
                 if missing:
