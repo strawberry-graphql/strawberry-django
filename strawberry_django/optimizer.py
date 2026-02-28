@@ -368,6 +368,61 @@ class OptimizerStore:
                     True,
                 )
 
+        if config.enable_only:
+            try:
+                from django.contrib.contenttypes.fields import GenericRelation
+            except (ImportError, RuntimeError):
+                GenericRelation = None  # noqa: N806
+
+            parent_model = qs.model
+            for prefetch in to_prefetch.values():
+                if isinstance(prefetch, str) or prefetch.queryset is None:  # type: ignore[reportUnnecessaryComparison]
+                    continue
+
+                inspector = PrefetchInspector(prefetch)
+                if inspector.only is None:
+                    continue
+
+                path = prefetch.prefetch_through
+                if LOOKUP_SEP in path:
+                    continue
+
+                try:
+                    relation = parent_model._meta.get_field(path)
+                except FieldDoesNotExist:
+                    relation = None
+                    for f in parent_model._meta.get_fields():
+                        if getattr(f, "related_name", None) == path:
+                            relation = f
+                            break
+                    if relation is None:
+                        continue
+
+                if isinstance(relation, (models.ManyToManyField, ManyToManyRel)):
+                    continue
+
+                if GenericRelation is not None and isinstance(
+                    relation, GenericRelation
+                ):
+                    fk_fields = frozenset({
+                        relation.object_id_field_name,
+                        relation.content_type_field_name,
+                    })
+                elif isinstance(relation, (ManyToOneRel, OneToOneRel)):
+                    fk_field = getattr(relation, "field", None)
+                    fk_attname = (
+                        getattr(fk_field, "attname", None) if fk_field else None
+                    )
+                    if fk_attname is None:
+                        continue
+                    fk_fields = frozenset({fk_attname})
+                else:
+                    continue
+
+                missing = fk_fields - inspector.only
+                if missing:
+                    inspector.only |= missing
+
         # First prefetch_related(None) to clear all existing prefetches, and then
         # add ours, which also contains them. This is to avoid the
         # "lookup was already seen with a different queryset" error
