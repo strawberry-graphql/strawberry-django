@@ -514,6 +514,7 @@ class OptimizerStore:
 def _create_strawberry_info(raw_info: GraphQLResolveInfo) -> Info:
     schema: Schema = raw_info.schema._strawberry_schema  # type: ignore
     field = schema.get_field_for_type(raw_info.field_name, raw_info.parent_type.name)
+    assert field
     return schema.config.info_class(raw_info, field)
 
 
