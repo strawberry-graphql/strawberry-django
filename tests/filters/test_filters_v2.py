@@ -779,7 +779,7 @@ def test_skip_filter_field():
     class Filter:
         name: auto
         min_similarity: float | None = strawberry_django.filter_field(
-            default=0.3, skip_filter=True
+            default=0.3, skip_queryset_filter=True
         )
 
         @strawberry_django.filter_field

@@ -35,7 +35,7 @@ OBJECT_FILTER_NAME: Final[str] = "filter"
 OBJECT_ORDER_NAME: Final[str] = "order"
 WITH_NONE_META: Final[str] = "WITH_NONE_META"
 RESOLVE_VALUE_META: Final[str] = "RESOLVE_VALUE_META"
-SKIP_FILTER_META: Final[str] = "SKIP_FILTER_META"
+SKIP_FILTER_META: Final[str] = "SKIP_QUERYSET_FILTER_META"
 
 
 class FilterOrderFieldResolver(StrawberryResolver):
@@ -176,7 +176,7 @@ def filter_field(
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
     resolve_value: bool = UNSET,
-    skip_filter: bool = False,
+    skip_queryset_filter: bool = False,
 ) -> T: ...
 
 
@@ -195,7 +195,7 @@ def filter_field(
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
     resolve_value: bool = UNSET,
-    skip_filter: bool = False,
+    skip_queryset_filter: bool = False,
 ) -> Any: ...
 
 
@@ -214,7 +214,7 @@ def filter_field(
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
     resolve_value: bool = UNSET,
-    skip_filter: bool = False,
+    skip_queryset_filter: bool = False,
 ) -> StrawberryField: ...
 
 
@@ -232,7 +232,7 @@ def filter_field(
     extensions: list[FieldExtension] | None = None,
     filter_none: bool = False,
     resolve_value: bool = UNSET,
-    skip_filter: bool = False,
+    skip_queryset_filter: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -259,7 +259,7 @@ def filter_field(
     metadata["_FIELD_TYPE"] = OBJECT_FILTER_NAME
     metadata[RESOLVE_VALUE_META] = resolve_value
     metadata[WITH_NONE_META] = filter_none
-    metadata[SKIP_FILTER_META] = skip_filter
+    metadata[SKIP_FILTER_META] = skip_queryset_filter
 
     field_ = FilterOrderField(
         python_name=None,

@@ -283,11 +283,11 @@ class FruitFilter:
 > - False - never resolve
 > - UNSET (default) - resolves for filters without custom method only
 >
-> #### virtual (non-filtering) fields
+> #### Virtual (non-filtering) fields
 >
 > Sometimes you need a field on the filter input that is not a database filter itself, but a
 > parameter consumed by a custom `filter` method (e.g. a similarity threshold, a search mode flag).
-> Use `strawberry_django.filter_field(skip_filter=True)` to declare such fields. They appear in
+> Use `strawberry_django.filter_field(skip_queryset_filter=True)` to declare such fields. They appear in
 > the GraphQL schema but are skipped during filter processing. Access them via `self.<field>` in
 > your custom filter method.
 >
@@ -295,7 +295,7 @@ class FruitFilter:
 > @strawberry_django.filter_type(models.Fruit)
 > class FruitFilter:
 >     min_similarity: float | None = strawberry_django.filter_field(
->         default=0.3, skip_filter=True
+>         default=0.3, skip_queryset_filter=True
 >     )
 >
 >     @strawberry_django.filter_field
