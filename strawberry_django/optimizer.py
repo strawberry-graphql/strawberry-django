@@ -212,7 +212,7 @@ class OptimizerStore:
             ),
         )
 
-    def with_resolved_callables(self, info: GraphQLResolveInfo):
+    def with_resolved_callables(self, info: Info):
         """Resolve any prefetch/annotate callables using the provided info and return a new store.
 
         This is used to resolve callables using the correct info object, scoped to their respective fields.
@@ -739,7 +739,7 @@ def _get_hints_from_field(
     return (
         field_store.with_prefix(prefix, info=f_info)
         if prefix
-        else field_store.with_resolved_callables(f_info)
+        else field_store.with_resolved_callables(Info(_raw_info=f_info, _field=field))
     )
 
 
@@ -761,7 +761,9 @@ def _get_hints_from_model_property(
         store = (
             attr_store.with_prefix(prefix, info=f_info)
             if prefix
-            else attr_store.with_resolved_callables(f_info)
+            else attr_store.with_resolved_callables(
+                Info(_raw_info=f_info, _field=field)
+            )
         )
     else:
         store = None
