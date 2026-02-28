@@ -23,7 +23,7 @@ jobs:
 
       - name: Check for release
         id: check
-        uses: autopub/autopub-action@v1
+        uses: autopub/autopub-action@v1.0.0
         with:
           command: check
           github-token: ${{ secrets.BOT_TOKEN }}
@@ -50,17 +50,17 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
 
       - name: Prepare release
-        uses: autopub/autopub-action@v1
+        uses: autopub/autopub-action@v1.0.0
         with:
           command: prepare
 
       - name: Build package
-        uses: autopub/autopub-action@v1
+        uses: autopub/autopub-action@v1.0.0
         with:
           command: build
 
       - name: Publish to PyPI
-        uses: autopub/autopub-action@v1
+        uses: autopub/autopub-action@v1.0.0
         with:
           command: publish
           github-token: ${{ secrets.BOT_TOKEN }}
