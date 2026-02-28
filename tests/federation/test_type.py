@@ -280,9 +280,9 @@ def test_federation_type_without_keys_no_resolve_reference():
         name: strawberry.auto
 
     # Should NOT have auto-generated resolve_reference
-    # (might have inherited one, but not from our auto-generation)
     type_def = get_object_definition(FruitType, strict=True)
     assert not any(isinstance(d, Key) for d in type_def.directives or [])
+    assert "resolve_reference" not in FruitType.__dict__
 
 
 # =============================================================================

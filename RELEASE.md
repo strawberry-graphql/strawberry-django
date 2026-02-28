@@ -28,3 +28,5 @@ schema = Schema(query=Query)
 ```
 
 The auto-generated `resolve_reference` methods support composite keys and multiple keys, and integrate with the query optimizer.
+
+**Note:** This release requires `strawberry-graphql>=0.303.0`.

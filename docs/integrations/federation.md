@@ -53,20 +53,21 @@ schema = FederationSchema(query=Query)
 The `@strawberry_django.federation.type` decorator accepts all standard
 `@strawberry_django.type` parameters plus federation-specific ones:
 
-| Parameter         | Type              | Description                                                               |
-| ----------------- | ----------------- | ------------------------------------------------------------------------- |
-| `keys`            | `list[str]`       | Key fields for entity resolution (e.g., `["id"]` or `["sku", "package"]`) |
-| `extend`          | `bool`            | Whether this type extends a type from another subgraph                    |
-| `shareable`       | `bool`            | Whether this type can be resolved by multiple subgraphs                   |
-| `inaccessible`    | `bool`            | Whether this type is hidden from the public API                           |
-| `authenticated`   | `bool`            | Whether this type requires authentication                                 |
-| `policy`          | `list[list[str]]` | Access policy for this type                                               |
-| `requires_scopes` | `list[list[str]]` | Required OAuth scopes for this type                                       |
-| `tags`            | `list[str]`       | Metadata tags for this type                                               |
+| Parameter         | Type               | Description                                                                          |
+| ----------------- | ------------------ | ------------------------------------------------------------------------------------ |
+| `keys`            | `list[str \| Key]` | Key fields for entity resolution (e.g., `["id"]` or `["sku package"]` for composite) |
+| `extend`          | `bool`             | Whether this type extends a type from another subgraph                               |
+| `shareable`       | `bool`             | Whether this type can be resolved by multiple subgraphs                              |
+| `inaccessible`    | `bool`             | Whether this type is hidden from the public API                                      |
+| `authenticated`   | `bool`             | Whether this type requires authentication                                            |
+| `policy`          | `list[list[str]]`  | Access policy for this type                                                          |
+| `requires_scopes` | `list[list[str]]`  | Required OAuth scopes for this type                                                  |
+| `tags`            | `list[str]`        | Metadata tags for this type                                                          |
 
 ### Multiple Keys
 
-You can define multiple key fields:
+You can define multiple key fields. Each string in the list creates a separate `@key`
+directive — the entity can be resolved by **either** key independently:
 
 ```python
 @strawberry_django.federation.type(models.Product, keys=["id", "upc"])
@@ -118,7 +119,10 @@ class Product:
     id: strawberry.auto
     name: strawberry.auto = strawberry_django.federation.field(external=True)
     price: strawberry.auto = strawberry_django.federation.field(shareable=True)
-    display_name: str = strawberry_django.federation.field(requires=["name"])
+    display_name: str = strawberry_django.federation.field(
+        requires=["name"],
+        resolver=lambda self: f"Product: {self.name}",
+    )
 ```
 
 Field parameters:

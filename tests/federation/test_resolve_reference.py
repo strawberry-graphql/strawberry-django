@@ -148,7 +148,7 @@ def test_resolve_reference_with_select_related():
 
 @pytest.mark.django_db
 def test_resolve_reference_with_multiple_keys():
-    """Test type with multiple @key directives uses first key's fields."""
+    """Test type with multiple @key directives resolves whichever matching key fields are present."""
 
     @strawberry_django.federation.type(
         models.Fruit,

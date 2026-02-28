@@ -784,6 +784,7 @@ def test_sdl_with_extend():
     sdl = str(schema)
 
     assert "@key" in sdl
+    assert "extend" in sdl
 
 
 def test_sdl_with_field_directives():

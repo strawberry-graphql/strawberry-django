@@ -74,6 +74,12 @@ def generate_resolve_reference(key_fields: list[str]) -> classmethod:
         # Extract only the key fields from kwargs
         # (federation may pass additional fields)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in key_fields}
+        if not filtered_kwargs:
+            msg = (
+                f"No matching key fields found in kwargs. "
+                f"Expected one of {key_fields}, got {list(kwargs.keys())}."
+            )
+            raise ValueError(msg)
         return resolve_model_reference(cls, info=info, **filtered_kwargs)
 
     return classmethod(resolve_reference)

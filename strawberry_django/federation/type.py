@@ -62,6 +62,16 @@ def _get_keys_from_directives(directives: Sequence[object]) -> list[str]:
             fields = str(directive.fields).split()
             key_fields.extend(fields)
 
+    # Detect nested FieldSet syntax that we can't auto-resolve
+    unsupported = [f for f in key_fields if any(c in f for c in "{}.(")]
+    if unsupported:
+        msg = (
+            f"Unsupported FieldSet syntax in key fields: {unsupported}. "
+            "Nested fields (e.g. 'organization { id }') cannot be auto-resolved. "
+            "Please provide a custom resolve_reference classmethod."
+        )
+        raise ValueError(msg)
+
     # Remove duplicates while preserving order
     return list(dict.fromkeys(key_fields))
 
