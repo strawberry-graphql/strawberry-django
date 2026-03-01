@@ -5,6 +5,7 @@ from pytest_snapshot.plugin import Snapshot
 
 import strawberry_django
 from strawberry_django import mutations
+from tests.conftest import normalize_sdl
 
 from .models import Issue, Milestone, Project
 from .schema import IssueInput, IssueType, MilestoneType, ProjectType, schema
@@ -14,7 +15,7 @@ SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 
 def test_schema(snapshot: Snapshot):
     snapshot.snapshot_dir = SNAPSHOTS_DIR
-    snapshot.assert_match(str(schema), "schema.gql")
+    snapshot.assert_match(normalize_sdl(str(schema)), "schema.gql")
 
 
 def test_schema_with_inheritance(snapshot: Snapshot):
@@ -42,4 +43,4 @@ def test_schema_with_inheritance(snapshot: Snapshot):
 
     schema = strawberry.Schema(query=Query, mutation=Mutation)
     snapshot.snapshot_dir = SNAPSHOTS_DIR
-    snapshot.assert_match(str(schema), "schema_with_inheritance.gql")
+    snapshot.assert_match(normalize_sdl(str(schema)), "schema_with_inheritance.gql")
