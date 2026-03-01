@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+0.79.0 - 2026-03-01
+-------------------
+
+Pass `Info` instead of `GraphQLResolveInfo` to callables provided in `prefetch_related` and `annotate` arguments of `strawberry_django.field`.
+
+This is technically a breaking change because the argument type passed to these callables has changed. However, `Info` acts as a proxy for `GraphQLResolveInfo` and is compatible with the utilities typically used within prefetch or annotate functions, such as `optimize`.
+
+This release was contributed by [@rcybulski1122012](https://github.com/rcybulski1122012) in [#872](https://github.com/strawberry-graphql/strawberry-django/pull/872)
+
 0.78.0 - 2026-02-28
 -------------------
 
