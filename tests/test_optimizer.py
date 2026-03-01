@@ -5,10 +5,16 @@ from typing import Any, cast
 import pytest
 import strawberry
 from django.db import DEFAULT_DB_ALIAS, connections
-from django.db.models import Prefetch
+from django.db.models import (
+    CharField,
+    Expression,
+    ExpressionWrapper,
+    F,
+    Prefetch,
+    QuerySet,
+)
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from graphql import GraphQLResolveInfo
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
 from strawberry.types import ExecutionResult, Info, get_object_definition
@@ -942,6 +948,74 @@ def test_user_query_with_prefetch():
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_strawberry_info_is_passed_to_prefetch_related_and_annotate_callables():
+    captured_info_prefetch = None
+    captured_info_annotate = None
+
+    def get_prefetch_queryset(info: Info) -> QuerySet:
+        nonlocal captured_info_prefetch
+        captured_info_prefetch = info
+        return Milestone.objects.all()
+
+    def get_annotate_expression(info: Info) -> Expression:
+        nonlocal captured_info_annotate
+        captured_info_annotate = info
+        return ExpressionWrapper(F("name"), output_field=CharField())
+
+    @strawberry_django.type(
+        Project,
+    )
+    class ProjectTypeWithPrefetch:
+        @strawberry_django.field(
+            prefetch_related=[
+                lambda info: Prefetch(
+                    "milestones",
+                    queryset=get_prefetch_queryset(info),
+                    to_attr="prefetched_milestones",
+                ),
+            ],
+        )
+        def prefetch_custom_field(self, info: Info) -> str:
+            if hasattr(self, "prefetched_milestones"):
+                return "prefetched"
+            return "not prefetched"
+
+        @strawberry_django.field(annotate={"annotated_value": get_annotate_expression})
+        def annotate_custom_field(self, info: Info) -> str:
+            return "annotated"
+
+    @strawberry_django.type(
+        Milestone,
+    )
+    class MilestoneTypeWithNestedPrefetch:
+        project: ProjectTypeWithPrefetch
+
+    MilestoneFactory.create()
+
+    @strawberry.type
+    class Query:
+        milestones: list[MilestoneTypeWithNestedPrefetch] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    query_str = """
+    query TestQuery {
+        milestones {
+            project {
+                prefetchCustomField
+                annotateCustomField
+            }
+        }
+    }
+    """
+
+    assert DjangoOptimizerExtension.enabled.get()
+    query(query_str)
+
+    assert isinstance(captured_info_prefetch, Info)
+    assert isinstance(captured_info_annotate, Info)
 
 
 @pytest.mark.django_db(transaction=True)
@@ -2799,7 +2873,7 @@ def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
         name: strawberry.auto
 
         @staticmethod
-        def _prefetch_custom_milestones(_: GraphQLResolveInfo) -> Prefetch:
+        def _prefetch_custom_milestones(_: Info) -> Prefetch:
             return Prefetch(
                 "milestones",
                 to_attr="custom_milestones",

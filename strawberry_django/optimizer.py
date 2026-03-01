@@ -211,7 +211,7 @@ class OptimizerStore:
             ),
         )
 
-    def with_resolved_callables(self, info: GraphQLResolveInfo):
+    def with_resolved_callables(self, info: Info):
         """Resolve any prefetch/annotate callables using the provided info and return a new store.
 
         This is used to resolve callables using the correct info object, scoped to their respective fields.
@@ -235,7 +235,7 @@ class OptimizerStore:
             annotate=annotate,
         )
 
-    def with_prefix(self, prefix: str, *, info: GraphQLResolveInfo):
+    def with_prefix(self, prefix: str, *, info: Info):
         """Create a copy of this store with the given prefix.
 
         This is useful when we need to apply the same store to a nested field.
@@ -326,6 +326,7 @@ class OptimizerStore:
             p: p for p in itertools.chain(*prefetch_lists) if isinstance(p, str)
         }
 
+        strawberry_info = _create_strawberry_info(info)
         # Merge already existing prefetches together
         for p in itertools.chain(*prefetch_lists):
             # Already added above
@@ -334,7 +335,7 @@ class OptimizerStore:
 
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
-                p = p(info)  # noqa: PLW2901
+                p = p(strawberry_info)  # noqa: PLW2901
 
             path = p.prefetch_to
             existing = to_prefetch.get(path)
@@ -498,14 +499,23 @@ class OptimizerStore:
         if not config.enable_annotate or not self.annotate:
             return qs
 
+        strawberry_info = _create_strawberry_info(info)
+
         to_annotate = {}
         for k, v in self.annotate.items():
             if isinstance(v, Callable):
                 assert_type(v, AnnotateCallable)
-                v = v(info)  # noqa: PLW2901
+                v = v(strawberry_info)  # noqa: PLW2901
             to_annotate[k] = v
 
         return qs.annotate(**to_annotate)
+
+
+def _create_strawberry_info(raw_info: GraphQLResolveInfo) -> Info:
+    schema: Schema = raw_info.schema._strawberry_schema  # type: ignore
+    field = schema.get_field_for_type(raw_info.field_name, raw_info.parent_type.name)
+    assert field
+    return schema.config.info_class(raw_info, field)
 
 
 def _get_django_type(
@@ -773,7 +783,7 @@ def _get_field_data(
 def _get_hints_from_field(
     field: StrawberryField,
     *,
-    f_info: GraphQLResolveInfo,
+    f_info: Info,
     prefix: str = "",
 ) -> OptimizerStore | None:
     if not (
@@ -802,13 +812,12 @@ def _get_hints_from_field(
 
 
 def _get_hints_from_model_property(
-    field: StrawberryField,
     model: type[models.Model],
     *,
-    f_info: GraphQLResolveInfo,
+    f_info: Info,
     prefix: str = "",
 ) -> OptimizerStore | None:
-    model_attr = getattr(model, field.python_name, None)
+    model_attr = getattr(model, f_info.python_name, None)
     if (
         model_attr is not None
         and isinstance(model_attr, ModelProperty)
@@ -921,9 +930,11 @@ def _get_hints_from_django_foreign_key(
             f"{path}{LOOKUP_SEP}{resolve_model_field_name(remote_field)}",
         )
 
+    strawberry_info = schema.config.info_class(_raw_info=field_info, _field=field)
+
     for _f_type_def, f_model, f_store in nested_stores:
         cache.setdefault(f_model, []).append((level, f_store))
-        store |= f_store.with_prefix(path, info=field_info)
+        store |= f_store.with_prefix(path, info=strawberry_info)
 
     return store
 
@@ -1329,15 +1340,18 @@ def _get_model_hints(
     ]
 
     for field, f_definition, f_selection, f_info in selections:
+        strawberry_info = schema.config.info_class(_raw_info=f_info, _field=field)
+
         # Add annotations from the field if they exist
-        if field_store := _get_hints_from_field(field, f_info=f_info, prefix=prefix):
+        if field_store := _get_hints_from_field(
+            field, f_info=strawberry_info, prefix=prefix
+        ):
             store |= field_store
 
         # Then from the model property if one is defined
         if model_property_store := _get_hints_from_model_property(
-            field,
             model,
-            f_info=f_info,
+            f_info=strawberry_info,
             prefix=prefix,
         ):
             store |= model_property_store
