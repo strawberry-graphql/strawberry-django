@@ -1705,7 +1705,7 @@ class DjangoOptimizerExtension(SchemaExtension):
         Add the following to your schema configuration.
 
         >>> import strawberry
-        >>> from strawberry_django_plus.optimizer import DjangoOptimizerExtension
+        >>> from strawberry_django.optimizer import DjangoOptimizerExtension
         ...
         >>> schema = strawberry.Schema(
         ...     Query,
