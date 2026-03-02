@@ -1700,6 +1700,20 @@ optimizer: contextvars.ContextVar[DjangoOptimizerExtension | None] = (
 class DjangoOptimizerExtension(SchemaExtension):
     """Automatically optimize returned querysets from internal resolvers.
 
+    Examples
+    --------
+        Add the following to your schema configuration.
+
+        >>> import strawberry
+        >>> from strawberry_django.optimizer import DjangoOptimizerExtension
+        ...
+        >>> schema = strawberry.Schema(
+        ...     Query,
+        ...     extensions=[
+        ...         DjangoOptimizerExtension(),
+        ...     ]
+        ... )
+
     Attributes
     ----------
         enable_only_optimization:
@@ -1716,20 +1730,6 @@ class DjangoOptimizerExtension(SchemaExtension):
             is not safe to be applied automatically for custom connections.
         enable_annotate_optimization:
             Enable `QuerySet.annotate` optimizations
-
-    Examples
-    --------
-        Add the following to your schema configuration.
-
-        >>> import strawberry
-        >>> from strawberry_django_plus.optimizer import DjangoOptimizerExtension
-        ...
-        >>> schema = strawberry.Schema(
-        ...     Query,
-        ...     extensions=[
-        ...         DjangoOptimizerExtension(),
-        ...     ]
-        ... )
 
     """
 
