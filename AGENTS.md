@@ -105,7 +105,14 @@ For list fields, the queryset flows: `get_queryset()` → filters → ordering �
 
 - **Matrix:** Django 4.2–6.0 × Python 3.10–3.14 × std/geos modes
 - **Type checking:** pyright runs as a separate CI job
-- **Release:** This project uses [autopub](https://github.com/autopub/autopub). PRs with releasable changes must include a `RELEASE.md` file at the repo root (CI enforces this). On merge to `main`, autopub reads this file and auto-publishes to PyPI. The file format:
+
+## PR Checklist
+- [ ] Tests added for new features and bug fixes
+- [ ] All tests pass
+- [ ] Code is linted and formatted (ruff)
+- [ ] Type checks pass (pyright)
+- [ ] Documentation updated as needed
+- [ ] `RELEASE.md` added for releasable changes. This project uses [autopub](https://github.com/autopub/autopub). PRs with releasable changes must include a `RELEASE.md` file at the repo root (CI enforces this). On merge to `main`, autopub reads this file and auto-publishes to PyPI. The file format:
 
 ```markdown
 ---
