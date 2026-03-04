@@ -589,3 +589,53 @@ def test_create_with_fk_id_field(db):
     }
     fruit = models.Fruit.objects.get()
     assert fruit.color_id == color.pk
+
+
+def test_update_with_fk_id_field(db):
+    """FK _id fields should work with mutations.update() and clear cached relations."""
+    import strawberry
+
+    import strawberry_django
+    from strawberry_django import mutations
+
+    @strawberry_django.input(models.Fruit)
+    class FruitUpdateInput:
+        id: strawberry.auto
+        color_id: strawberry.auto
+
+    @strawberry_django.type(models.Fruit)
+    class FruitOutput:
+        id: strawberry.auto
+        name: strawberry.auto
+        color_id: strawberry.auto
+
+    @strawberry.type
+    class Mutation:
+        update_fruit: FruitOutput = mutations.update(FruitUpdateInput)
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def noop(self) -> str:
+            return ""
+
+    schema = strawberry.Schema(query=Query, mutation=Mutation)
+
+    red = models.Color.objects.create(name="Red")
+    blue = models.Color.objects.create(name="Blue")
+    fruit = models.Fruit.objects.create(name="strawberry", color=red)
+
+    result = schema.execute_sync(
+        "mutation($data: FruitUpdateInput!) { updateFruit(data: $data) { id name colorId } }",
+        variable_values={"data": {"id": fruit.pk, "colorId": blue.pk}},
+    )
+    assert not result.errors
+    assert result.data == {
+        "updateFruit": {
+            "id": str(fruit.pk),
+            "name": "strawberry",
+            "colorId": str(blue.pk),
+        },
+    }
+    fruit.refresh_from_db()
+    assert fruit.color_id == blue.pk

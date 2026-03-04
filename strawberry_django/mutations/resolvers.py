@@ -258,11 +258,7 @@ def prepare_create_update(
     # Map FK attname (e.g. "color_id") so inputs using _id column names are recognized
     fk_attname_fields: dict[str, models.ForeignKey] = {}
     for f in model._meta.get_fields():
-        if (
-            isinstance(f, models.ForeignKey)
-            and hasattr(f, "attname")
-            and f.attname not in fields
-        ):
+        if isinstance(f, models.ForeignKey) and f.attname not in fields:
             fk_attname_fields[f.attname] = f
     m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
     direct_field_values: dict[str, object] = {}
@@ -274,7 +270,10 @@ def prepare_create_update(
     for name, value in data.items():
         # FK _id fields (e.g. color_id) carry raw PK values — pass through directly
         if name in fk_attname_fields and value is not UNSET:
+            fk_field = fk_attname_fields[name]
             setattr(instance, name, value)
+            if fk_field.is_cached(instance):
+                fk_field.delete_cached_value(instance)
             direct_field_values[name] = value
             continue
 
