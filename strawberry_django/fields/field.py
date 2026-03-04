@@ -217,6 +217,15 @@ class StrawberryDjangoField(
             # sync_to_async context if the value is already cached, since it will not
             # hit the db anymore
             attname = self.django_name or self.python_name
+
+            # Check for to_attr-based prefetch from optimizer (aliased field with filters)
+            if info is not None:
+                response_key = info._raw_info.path.key
+                alias_attr = f"_strawberry_alias_{response_key}"
+                prefetched = getattr(source, alias_attr, None)
+                if prefetched is not None:
+                    return prefetched
+
             attr = getattr(source.__class__, attname, None)
             try:
                 if isinstance(attr, ModelProperty):
