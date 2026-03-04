@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.79.1 - 2026-03-04
+-------------------
+
+Fix FK `_id` fields (e.g. `color_id: auto`) in input types failing with `mutations.create()`. Previously, `prepare_create_update()` didn't recognize FK attnames, causing the value to be silently dropped and `full_clean()` to fail. Now attname fields are mapped and their raw PK values are passed through directly.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#880](https://github.com/strawberry-graphql/strawberry-django/pull/880)
+
 0.79.0 - 2026-03-01
 -------------------
 
