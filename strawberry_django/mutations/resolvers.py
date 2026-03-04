@@ -256,10 +256,11 @@ def prepare_create_update(
     model = instance.__class__
     fields = get_model_fields(model)
     # Map FK attname (e.g. "color_id") so inputs using _id column names are recognized
-    fk_attname_fields: dict[str, models.ForeignKey] = {}
-    for f in model._meta.get_fields():
-        if isinstance(f, models.ForeignKey) and f.attname not in fields:
-            fk_attname_fields[f.attname] = f
+    fk_attname_fields: dict[str, models.ForeignKey] = {
+        f.attname: f
+        for f in fields.values()
+        if isinstance(f, models.ForeignKey) and f.attname not in fields
+    }
     m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
     direct_field_values: dict[str, object] = {}
     exclude_m2m = exclude_m2m or []

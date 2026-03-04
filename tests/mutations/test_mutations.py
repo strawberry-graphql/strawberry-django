@@ -592,7 +592,7 @@ def test_create_with_fk_id_field(db):
 
 
 def test_update_with_fk_id_field(db):
-    """FK _id fields should work with mutations.update() and clear cached relations."""
+    """FK _id fields should work with mutations.update()."""
     import strawberry
 
     import strawberry_django
