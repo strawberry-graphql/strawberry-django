@@ -245,7 +245,7 @@ class FruitFilter:
             filters=value,
             queryset=queryset,
             info=info,
-            prefix=f"{prefix}_fullname"
+            prefix=f"{prefix}_fullname__"
         )
 ```
 
