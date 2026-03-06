@@ -5,6 +5,7 @@ import strawberry
 from django.db.models import CharField, Q, QuerySet, Value
 from django.db.models.functions import Concat
 from strawberry import auto
+from strawberry.types.base import WithStrawberryObjectDefinition
 
 import strawberry_django
 from strawberry_django.fields import filter_types
