@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.79.2 - 2026-03-08
+-------------------
+
+Fix docs example for `process_filters` custom filter method where `prefix` was missing a trailing `__`, causing Django `FieldError`. Also add a `UserWarning` in `process_filters()` when a non-empty prefix doesn't end with `__` to help users catch this mistake early.
+
+This release was contributed by [@Ckk3](https://github.com/Ckk3) in [#883](https://github.com/strawberry-graphql/strawberry-django/pull/883)
+
 0.79.1 - 2026-03-04
 -------------------
 
