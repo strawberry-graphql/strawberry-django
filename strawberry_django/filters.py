@@ -168,6 +168,15 @@ def process_filters(
     prefix: str = "",
     skip_object_filter_method: bool = False,
 ) -> tuple[_QS, Q]:
+    if prefix and not prefix.endswith("__"):
+        warnings.warn(
+            f"process_filters received prefix={prefix!r} which does not end with '__'. "
+            "This will likely cause Django FieldError. "
+            "Prefix should end with '__' for correct ORM lookups (e.g., 'my_field__').",
+            UserWarning,
+            stacklevel=2,
+        )
+
     using_old_filters = strawberry_django_settings()["USE_DEPRECATED_FILTERS"]
 
     q = Q()

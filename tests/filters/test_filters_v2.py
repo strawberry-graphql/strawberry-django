@@ -293,7 +293,8 @@ def test_filter_field_method():
     fake_info: Any = object()
     qs: Any = object()
 
-    q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
+    with pytest.warns(UserWarning, match="does not end with '__'"):
+        q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
     assert q_object, "Filter was not called"
 
 
@@ -317,7 +318,8 @@ def test_filter_object_method():
     fake_info: Any = object()
     qs: Any = object()
 
-    q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
+    with pytest.warns(UserWarning, match="does not end with '__'"):
+        q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
     assert q_object, "Filter was not called"
 
 
