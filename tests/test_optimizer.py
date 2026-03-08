@@ -1532,28 +1532,33 @@ def test_query_prefetch_mixed_filtered_and_unfiltered_aliases(
     milestone_2b = MilestoneFactory.create(project=project_2, name="b")
     with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
         res = gql_client.query(query)
-    assert res.data["projectsPaginated"]["results"] == [
-        {
-            "id": to_base64("ProjectType", project_1.pk),
-            "milestones": [
-                {"id": to_base64("MilestoneType", milestone_1a.pk)},
-                {"id": to_base64("MilestoneType", milestone_1b.pk)},
-            ],
-            "a": [
-                {"id": to_base64("MilestoneType", milestone_1a.pk)},
-            ],
-        },
-        {
-            "id": to_base64("ProjectType", project_2.pk),
-            "milestones": [
-                {"id": to_base64("MilestoneType", milestone_2a.pk)},
-                {"id": to_base64("MilestoneType", milestone_2b.pk)},
-            ],
-            "a": [
-                {"id": to_base64("MilestoneType", milestone_2a.pk)},
-            ],
-        },
-    ]
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.pk),
+                    "milestones": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                    "a": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.pk),
+                    "milestones": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                        {"id": to_base64("MilestoneType", milestone_2b.pk)},
+                    ],
+                    "a": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                    ],
+                },
+            ]
+        }
+    }
 
 
 @pytest.mark.django_db(transaction=True)
