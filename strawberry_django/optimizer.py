@@ -102,6 +102,8 @@ _M = TypeVar("_M", bound=models.Model)
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
 
+ALIAS_PREFIX = "_strawberry_alias_"
+
 
 @dataclasses.dataclass
 class OptimizerConfig:
@@ -1337,7 +1339,7 @@ def _get_model_hints(
                 # Different args - each alias gets its own to_attr
                 for group in groups:
                     alias = group[0].alias
-                    to_attr = f"_strawberry_alias_{alias.value}" if alias else None
+                    to_attr = f"{ALIAS_PREFIX}{alias.value}" if alias else None
                     merged_node_lists.append((group, to_attr))
 
     selections = [
