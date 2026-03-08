@@ -5,6 +5,7 @@ from pytest_snapshot.plugin import Snapshot
 
 import strawberry_django
 from strawberry_django.relay import DjangoListConnection
+from tests.conftest import normalize_sdl
 
 from .a import TreeNodeAuthorConnection, TreeNodeAuthorType
 from .b import TreeNodeBookConnection, TreeNodeBookType
@@ -25,4 +26,4 @@ def test_lazy_type_annotations_in_schema(snapshot: Snapshot):
         )
 
     schema = strawberry.Schema(query=Query)
-    snapshot.assert_match(str(schema), "authors_and_books_schema.gql")
+    snapshot.assert_match(normalize_sdl(str(schema)), "authors_and_books_schema.gql")
