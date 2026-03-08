@@ -1237,15 +1237,15 @@ def test_query_prefetch_aliases_with_different_filters(
     query = """
       query TestQuery {
         projectsPaginated{
-            results {
-                id
-                 a: milestones(filters: { name: {contains: "a"}}) {
-                    id
-                  }
-                  b: milestones(filters: { name: {contains: "b"}}) {
-                    id
-                  }
+          results {
+            id
+            a: milestones(filters: { name: {contains: "a"}}) {
+              id
             }
+            b: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
         }
       }
     """
@@ -1290,19 +1290,19 @@ def test_query_prefetch_aliases_with_different_filters(
 def test_query_prefetch_aliases_with_same_filters(db, gql_client: GraphQLTestClient):
     # even though these have the same filters, query is not optimized
     query = """
-    query TestQuery {
+      query TestQuery {
         projectsPaginated{
-            results {
-                id
-                a: milestones(filters: { name: {contains: "a"}}) {
-                    id
-                }
-                aa: milestones(filters: { name: {contains: "a"}}) {
-                    id
-                }
+          results {
+            id
+            a: milestones(filters: { name: {contains: "a"}}) {
+              id
             }
+            aa: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+          }
         }
-    }
+      }
     """
 
     project_1 = ProjectFactory.create()
@@ -1340,15 +1340,15 @@ def test_query_prefetch_aliases_with_ordering(db, gql_client: GraphQLTestClient)
     query = """
       query TestQuery {
         projectsPaginated{
-            results {
-                id
-                 asc: milestones(order: { name: ASC }) {
-                    id
-                  }
-                  desc: milestones(order: { name: DESC}) {
-                    id
-                  }
+          results {
+            id
+            asc: milestones(order: { name: ASC }) {
+              id
             }
+            desc: milestones(order: { name: DESC}) {
+              id
+            }
+          }
         }
       }
     """
@@ -1398,19 +1398,19 @@ def test_query_prefetch_aliases_with_filters_and_ordering(
     db, gql_client: GraphQLTestClient
 ):
     query = """
-    query TestQuery {
+      query TestQuery {
         projectsPaginated{
-            results {
-                id
-                aAsc: milestones(filters: { name: {contains: "a"}}, order: { name: ASC }) {
-                    id
-                }
-                bDesc: milestones(filters: { name: {contains: "b"}}, order: { name: DESC }) {
-                    id
-                }
+          results {
+            id
+            aAsc: milestones(filters: { name: {contains: "a"}}, order: { name: ASC }) {
+              id
             }
+            bDesc: milestones(filters: { name: {contains: "b"}}, order: { name: DESC }) {
+              id
+            }
+          }
         }
-    }
+      }
     """
 
     project_1 = ProjectFactory.create()
