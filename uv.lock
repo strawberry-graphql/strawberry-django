@@ -732,7 +732,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.307.1"
+version = "0.310.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cross-web" },
@@ -741,14 +741,14 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d6/6a/d2facfa92a81f8c1869e70eb2be09b229bd4d17711513dfea85e87f95317/strawberry_graphql-0.307.1.tar.gz", hash = "sha256:924d94e0218fbce081d6661a659bbd1f9b5bd02b9462e18bc46c203b4babbebe", size = 210786, upload-time = "2026-02-24T17:43:22Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/65/8fc31347cd1a2809ea72ec4c354fc6996c79f64f0cd84df9707117045d2e/strawberry_graphql-0.310.1.tar.gz", hash = "sha256:bd01edc3016d8caea543dc8a1d2394d5257a87a36e9fbe8c3aedeeda7c2c8ec1", size = 211966, upload-time = "2026-03-08T14:00:46.91Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/57/258b718472733bf077abf92588f06d251a77d7f180b814097c6a5dab7941/strawberry_graphql-0.307.1-py3-none-any.whl", hash = "sha256:7eca104e81d0108435326ee60a3c3c2e498f73949898ec7a4f274c0de283149b", size = 307503, upload-time = "2026-02-24T17:43:23.565Z" },
+    { url = "https://files.pythonhosted.org/packages/42/f7/90f885565fb3fbc44c54bda17dd4c36a5c6d9b84ecfa7a6d49d30084cab3/strawberry_graphql-0.310.1-py3-none-any.whl", hash = "sha256:d6da1f16cab2b9cb4a9d5e0c196a33f98f76157d559e5afbb48e81348db163d0", size = 309316, upload-time = "2026-03-08T14:00:49.099Z" },
 ]
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.79.2"
+version = "0.80.0"
 source = { editable = "." }
 dependencies = [
     { name = "asgiref" },
@@ -797,7 +797,7 @@ requires-dist = [
     { name = "django", specifier = ">=4.2" },
     { name = "django-choices-field", marker = "extra == 'enum'", specifier = ">=2.2.2" },
     { name = "django-debug-toolbar", marker = "extra == 'debug-toolbar'", specifier = ">=6.0.0" },
-    { name = "strawberry-graphql", specifier = ">=0.303.0" },
+    { name = "strawberry-graphql", specifier = ">=0.310.1" },
 ]
 provides-extras = ["debug-toolbar", "enum"]
 

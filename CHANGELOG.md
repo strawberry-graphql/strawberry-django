@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.80.0 - 2026-03-08
+-------------------
+
+Add support for graphql-core 3.3.x alongside existing 3.2.x support.
+
+The minimum supported version of strawberry-graphql has been increased to 0.310.1.
+When using the graphql-core 3.3.x series, the minimum supported version is 3.3.0a12.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#850](https://github.com/strawberry-graphql/strawberry-django/pull/850)
+
 0.79.2 - 2026-03-08
 -------------------
 
