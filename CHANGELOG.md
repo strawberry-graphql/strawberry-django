@@ -1,6 +1,30 @@
 CHANGELOG
 =========
 
+0.80.0 - 2026-03-08
+-------------------
+
+Add support for graphql-core 3.3.x alongside existing 3.2.x support.
+
+The minimum supported version of strawberry-graphql has been increased to 0.310.1.
+When using the graphql-core 3.3.x series, the minimum supported version is 3.3.0a12.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#850](https://github.com/strawberry-graphql/strawberry-django/pull/850)
+
+0.79.2 - 2026-03-08
+-------------------
+
+Fix docs example for `process_filters` custom filter method where `prefix` was missing a trailing `__`, causing Django `FieldError`. Also add a `UserWarning` in `process_filters()` when a non-empty prefix doesn't end with `__` to help users catch this mistake early.
+
+This release was contributed by [@Ckk3](https://github.com/Ckk3) in [#883](https://github.com/strawberry-graphql/strawberry-django/pull/883)
+
+0.79.1 - 2026-03-04
+-------------------
+
+Fix FK `_id` fields (e.g. `color_id: auto`) in input types failing with `mutations.create()`. Previously, `prepare_create_update()` didn't recognize FK attnames, causing the value to be silently dropped and `full_clean()` to fail. Now attname fields are mapped and their raw PK values are passed through directly.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#880](https://github.com/strawberry-graphql/strawberry-django/pull/880)
+
 0.79.0 - 2026-03-01
 -------------------
 

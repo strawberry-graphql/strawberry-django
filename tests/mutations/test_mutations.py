@@ -542,3 +542,100 @@ def test_parse_input_unwraps_some():
     assert parse_input(info, Some(Color.RED)) == "red"
     assert parse_input(info, [Some("a"), Some("b")]) == ["a", "b"]
     assert parse_input(info, {"key": Some("value")}) == {"key": "value"}
+
+
+def test_create_with_fk_id_field(db):
+    """FK _id fields (e.g. color_id) in input types should work with mutations.create()."""
+    import strawberry
+
+    import strawberry_django
+    from strawberry_django import mutations
+
+    @strawberry_django.input(models.Fruit)
+    class FruitWithFkIdInput:
+        name: strawberry.auto
+        color_id: strawberry.auto
+
+    @strawberry_django.type(models.Fruit)
+    class FruitOutput:
+        id: strawberry.auto
+        name: strawberry.auto
+        color_id: strawberry.auto
+
+    @strawberry.type
+    class Mutation:
+        create_fruit: FruitOutput = mutations.create(FruitWithFkIdInput)
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def noop(self) -> str:
+            return ""
+
+    schema = strawberry.Schema(query=Query, mutation=Mutation)
+
+    color = models.Color.objects.create(name="Red")
+
+    result = schema.execute_sync(
+        f'mutation {{ createFruit(data: {{ name: "strawberry", colorId: {color.pk} }}) {{ id name colorId }} }}',
+    )
+    assert not result.errors
+    assert result.data == {
+        "createFruit": {
+            "id": str(models.Fruit.objects.get().pk),
+            "name": "strawberry",
+            "colorId": str(color.pk),
+        },
+    }
+    fruit = models.Fruit.objects.get()
+    assert fruit.color_id == color.pk
+
+
+def test_update_with_fk_id_field(db):
+    """FK _id fields should work with mutations.update()."""
+    import strawberry
+
+    import strawberry_django
+    from strawberry_django import mutations
+
+    @strawberry_django.input(models.Fruit)
+    class FruitUpdateInput:
+        id: strawberry.auto
+        color_id: strawberry.auto
+
+    @strawberry_django.type(models.Fruit)
+    class FruitOutput:
+        id: strawberry.auto
+        name: strawberry.auto
+        color_id: strawberry.auto
+
+    @strawberry.type
+    class Mutation:
+        update_fruit: FruitOutput = mutations.update(FruitUpdateInput)
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def noop(self) -> str:
+            return ""
+
+    schema = strawberry.Schema(query=Query, mutation=Mutation)
+
+    red = models.Color.objects.create(name="Red")
+    blue = models.Color.objects.create(name="Blue")
+    fruit = models.Fruit.objects.create(name="strawberry", color=red)
+
+    result = schema.execute_sync(
+        "mutation($data: FruitUpdateInput!) { updateFruit(data: $data) { id name colorId } }",
+        variable_values={"data": {"id": fruit.pk, "colorId": blue.pk}},
+    )
+    assert not result.errors
+    assert result.data == {
+        "updateFruit": {
+            "id": str(fruit.pk),
+            "name": "strawberry",
+            "colorId": str(blue.pk),
+        },
+    }
+    fruit.refresh_from_db()
+    assert fruit.color_id == blue.pk
