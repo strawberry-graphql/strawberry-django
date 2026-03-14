@@ -19,7 +19,7 @@ poetry add strawberry-graphql-django
 poetry add django-choices-field  # Not required but recommended
 ```
 
-(Not using poetry yet? `pip install strawberry-graphql-django` works fine too.)
+(Not using poetry? `pip install strawberry-graphql-django` works fine too.)
 
 ## Define your application models
 
