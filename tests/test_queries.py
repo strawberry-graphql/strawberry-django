@@ -88,12 +88,19 @@ def query(db):
 
 @pytest.fixture
 def query_id_as_pk(db):
+    def _clear_cached_arguments():
+        for field in Query.__strawberry_definition__.fields:
+            if hasattr(field, "_cached_arguments"):
+                field._cached_arguments = None
+
+    _clear_cached_arguments()
     with override_settings(
         STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
             DEFAULT_PK_FIELD_NAME="id",
         ),
     ):
         yield utils.generate_query(Query)
+    _clear_cached_arguments()
 
 
 pytestmark = [
