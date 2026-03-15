@@ -49,7 +49,9 @@ class FruitFilter:
     )
 
     @strawberry_django.filter_field
-    def search(self, info: Info, queryset: QuerySet[models.Fruit], value: str, prefix: str):
+    def search(
+        self, info: Info, queryset: QuerySet[models.Fruit], value: str, prefix: str
+    ):
         if self.min_similarity is not None:
             queryset = queryset.annotate(
                 similarity=TrigramSimilarity(f"{prefix}name", value)
@@ -107,12 +109,14 @@ import strawberry
 import strawberry_django
 from strawberry.federation import Schema
 
+
 @strawberry_django.federation.type(models.Product, keys=["upc"])
 class Product:
     upc: strawberry.auto
     name: strawberry.auto
     price: strawberry.auto
     # resolve_reference is automatically generated!
+
 
 schema = Schema(query=Query)
 ```
@@ -161,6 +165,7 @@ Users should migrate from:
 ```python
 from strawberry_django import FilterLookup
 
+
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     name: FilterLookup[str] | None
@@ -169,6 +174,7 @@ class FruitFilter:
 To:
 ```python
 from strawberry_django import StrFilterLookup
+
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:

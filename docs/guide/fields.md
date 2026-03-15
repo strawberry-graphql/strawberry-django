@@ -14,12 +14,15 @@ Fields can be defined manually or `auto` type can be used for automatic type res
 import strawberry_django
 from strawberry import auto
 
+
 @strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
 
+
 # equivalent type, inferred by `strawberry`
+
 
 @strawberry_django.type(models.Fruit)
 class Fruit2:
@@ -66,14 +69,14 @@ All Django types are encoded using the `strawberry_django.field()` field type by
 ```python title="types.py"
 @strawberry_django.type(models.Color)
 class Color:
-    another_name: auto = strawberry_django.field(field_name='name')
+    another_name: auto = strawberry_django.field(field_name="name")
     internal_name: auto = strawberry_django.field(
-        name='fruits',
-        field_name='fruit_set',
+        name="fruits",
+        field_name="fruit_set",
         filters=FruitFilter,
         order=FruitOrder,
         pagination=True,
-        description="A list of fruits with this color"
+        description="A list of fruits with this color",
     )
 ```
 
@@ -87,19 +90,20 @@ class Role(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
 
+
 class UserAssignedRole(models.Model):
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
     user = models.OneToOneField(
-        User,
-        related_name="assigned_role",
-        on_delete=models.CASCADE
+        User, related_name="assigned_role", on_delete=models.CASCADE
     )
+
 
 # GraphQL Types - Using field_name traversal
 @strawberry_django.type(Role)
 class RoleType:
     name: auto
     description: auto
+
 
 @strawberry_django.type(User)
 class UserType:
@@ -171,9 +175,10 @@ Slug = strawberry.scalar(
     parse_value=lambda v: v,
 )
 
+
 @strawberry.type
-class MyCustomFileType:
-    ...
+class MyCustomFileType: ...
+
 
 field_type_map.update({
     models.SlugField: Slug,
@@ -238,6 +243,7 @@ it is possible to use your own custom field class when decorating a `strawberry_
 class CustomStrawberryDjangoField(StrawberryDjangoField):
     """Your custom behaviour goes here."""
 
+
 @strawberry_django.type(User, field_cls=CustomStrawberryDjangoField)
 class UserType:
     # Each of these fields will be an instance of `CustomStrawberryDjangoField`.
@@ -249,7 +255,6 @@ class UserType:
 class UserQuery:
     # You can directly create your custom field class on a plain strawberry type
     user: UserType = CustomStrawberryDjangoField()
-
 ```
 
 In this example, each of the fields of the `UserType` will be automatically created by `CustomStrawberryDjangoField`,

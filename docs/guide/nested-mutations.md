@@ -15,9 +15,11 @@ Strawberry Django's `mutations.create` and `mutations.update` automatically hand
 ```python title="models.py"
 from django.db import models
 
+
 class Author(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField()
+
 
 class Book(models.Model):
     title = models.CharField(max_length=200)
@@ -29,12 +31,14 @@ class Book(models.Model):
 import strawberry_django
 from strawberry import auto
 
+
 @strawberry_django.type(models.Author)
 class Author:
     id: auto
     name: auto
     email: auto
     books: list["Book"]
+
 
 @strawberry_django.type(models.Book)
 class Book:
@@ -43,11 +47,13 @@ class Book:
     author: Author
     published_date: auto
 
+
 @strawberry_django.input(models.Book)
 class BookInput:
     title: auto
     author_id: auto
     published_date: auto
+
 
 @strawberry_django.input(models.Author)
 class AuthorInput:
@@ -58,6 +64,7 @@ class AuthorInput:
 ```python title="mutations.py"
 import strawberry
 from strawberry_django import mutations
+
 
 @strawberry.type
 class Mutation:
@@ -95,6 +102,7 @@ For many-to-many relationships, use `ListInput` to add, remove, or set related o
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
+
 class Article(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
@@ -104,6 +112,7 @@ class Article(models.Model):
 ```python title="types.py"
 from strawberry_django import ListInput, NodeInput
 
+
 @strawberry_django.type(models.Article)
 class Article:
     id: auto
@@ -111,16 +120,19 @@ class Article:
     content: auto
     tags: list["Tag"]
 
+
 @strawberry_django.type(models.Tag)
 class Tag:
     id: auto
     name: auto
+
 
 @strawberry_django.input(models.Article)
 class ArticleInput:
     title: auto
     content: auto
     tags: ListInput[strawberry.ID] | None = None
+
 
 @strawberry_django.partial(models.Article)
 class ArticleInputPartial(NodeInput):
@@ -191,19 +203,14 @@ class AuthorInputWithBooks:
 from typing import cast
 from django.db import transaction
 
+
 @strawberry.type
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
     @transaction.atomic
-    def create_author_with_books(
-        self,
-        data: AuthorInputWithBooks
-    ) -> Author:
+    def create_author_with_books(self, data: AuthorInputWithBooks) -> Author:
         # Create the author
-        author = models.Author.objects.create(
-            name=data.name,
-            email=data.email
-        )
+        author = models.Author.objects.create(name=data.name, email=data.email)
 
         # Create associated books
         if data.books:
@@ -211,7 +218,7 @@ class Mutation:
                 models.Book.objects.create(
                     title=book_data.title,
                     author=author,
-                    published_date=book_data.published_date
+                    published_date=book_data.published_date,
                 )
 
         # Return fresh object so relationships are loaded
@@ -247,6 +254,7 @@ mutation CreateAuthorWithBooks {
 class Order(models.Model):
     customer_name = models.CharField(max_length=100)
 
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     product_name = models.CharField(max_length=100)
@@ -259,10 +267,12 @@ class OrderItemInput:
     product_name: auto
     quantity: auto
 
+
 @strawberry_django.partial(models.OrderItem)
 class OrderItemInputPartial(NodeInput):
     product_name: auto
     quantity: auto
+
 
 @strawberry_django.partial(models.Order)
 class OrderInputPartial(NodeInput):
@@ -275,10 +285,7 @@ class OrderInputPartial(NodeInput):
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
     @transaction.atomic
-    def update_order_with_items(
-        self,
-        data: OrderInputPartial
-    ) -> Order:
+    def update_order_with_items(self, data: OrderInputPartial) -> Order:
         order = models.Order.objects.get(pk=data.id)
 
         # Update order fields
@@ -294,16 +301,13 @@ class Mutation:
                     models.OrderItem.objects.create(
                         order=order,
                         product_name=item_data.product_name,
-                        quantity=item_data.quantity
+                        quantity=item_data.quantity,
                     )
 
             # Remove items
             if data.items.remove:
                 item_ids = [item.id for item in data.items.remove]
-                models.OrderItem.objects.filter(
-                    id__in=item_ids,
-                    order=order
-                ).delete()
+                models.OrderItem.objects.filter(id__in=item_ids, order=order).delete()
 
         return models.Order.objects.get(pk=order.pk)
 ```
@@ -313,20 +317,17 @@ class Mutation:
 ```python title="mutations.py"
 from django.core.exceptions import ValidationError
 
+
 @strawberry.type
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
     @transaction.atomic
     def create_order_with_items(
-        self,
-        customer_name: str,
-        items: list[OrderItemInput]
+        self, customer_name: str, items: list[OrderItemInput]
     ) -> Order:
         # Validate before creating
         if not items:
-            raise ValidationError({
-                'items': 'At least one item is required'
-            })
+            raise ValidationError({"items": "At least one item is required"})
 
         # Create order
         order = models.Order.objects.create(customer_name=customer_name)
@@ -336,7 +337,7 @@ class Mutation:
             models.OrderItem.objects.create(
                 order=order,
                 product_name=item_data.product_name,
-                quantity=item_data.quantity
+                quantity=item_data.quantity,
             )
 
         return order
@@ -382,9 +383,11 @@ For M2M relationships with extra fields:
 class Student(models.Model):
     name = models.CharField(max_length=100)
 
+
 class Course(models.Model):
     name = models.CharField(max_length=100)
-    students = models.ManyToManyField(Student, through='Enrollment')
+    students = models.ManyToManyField(Student, through="Enrollment")
+
 
 class Enrollment(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
@@ -398,22 +401,19 @@ class EnrollmentInput:
     student_id: auto
     grade: auto
 
+
 @strawberry.type
 class Mutation:
     @strawberry_django.mutation(handle_django_errors=True)
     @transaction.atomic
     def enroll_students(
-        self,
-        course_id: strawberry.ID,
-        enrollments: list[EnrollmentInput]
+        self, course_id: strawberry.ID, enrollments: list[EnrollmentInput]
     ) -> Course:
         course = models.Course.objects.get(pk=course_id)
 
         for enrollment in enrollments:
             models.Enrollment.objects.create(
-                course=course,
-                student_id=enrollment.student_id,
-                grade=enrollment.grade
+                course=course, student_id=enrollment.student_id, grade=enrollment.grade
             )
 
         return course

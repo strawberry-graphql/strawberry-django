@@ -28,6 +28,7 @@ Define your model and type as usual—geographic fields are handled automaticall
 # models.py
 from django.contrib.gis.db import models
 
+
 class Location(models.Model):
     name = models.CharField(max_length=100)
     point = models.PointField()
@@ -42,18 +43,21 @@ from django.contrib.gis.geos import Point, Polygon
 
 from . import models
 
+
 @strawberry_django.type(models.Location)
 class Location:
     id: auto
     name: auto
     point: auto  # Automatically uses Point scalar
-    area: auto   # Automatically uses Polygon scalar
+    area: auto  # Automatically uses Polygon scalar
+
 
 @strawberry_django.input(models.Location)
 class LocationInput:
     name: auto
     point: auto
     area: auto
+
 
 # You can also use geos types directly in annotations
 @strawberry_django.type(models.Location)
@@ -88,6 +92,7 @@ For spatial filtering (distance, contains, etc.), implement custom resolvers:
 ```python
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
+
 
 @strawberry.type
 class Query:

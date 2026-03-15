@@ -23,7 +23,7 @@ from strawberry.django.views import AsyncGraphQLView
 from .schema import schema
 
 urlpatterns = [
-    path('graphql', AsyncGraphQLView.as_view(schema=schema)),
+    path("graphql", AsyncGraphQLView.as_view(schema=schema)),
 ]
 ```
 
@@ -38,6 +38,6 @@ from strawberry.django.views import GraphQLView
 from .schema import schema
 
 urlpatterns = [
-    path('graphql', GraphQLView.as_view(schema=schema)),
+    path("graphql", GraphQLView.as_view(schema=schema)),
 ]
 ```

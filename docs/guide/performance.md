@@ -48,22 +48,27 @@ The N+1 problem occurs when fetching a list of objects (1 query) and then fetchi
 class Author(models.Model):
     name = models.CharField(max_length=100)
 
+
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
 
 # schema.py
 import strawberry
 import strawberry_django
 
+
 @strawberry_django.type(Author)
 class AuthorType:
     name: strawberry.auto
+
 
 @strawberry_django.type(Book)
 class BookType:
     title: strawberry.auto
     author: AuthorType  # N+1 problem here!
+
 
 @strawberry.type
 class Query:
@@ -97,7 +102,7 @@ schema = strawberry.Schema(
     query=Query,
     extensions=[
         DjangoOptimizerExtension(),  # Automatically optimizes queries
-    ]
+    ],
 )
 ```
 
@@ -125,7 +130,7 @@ schema = strawberry.Schema(
     mutation=Mutation,
     extensions=[
         DjangoOptimizerExtension(),
-    ]
+    ],
 )
 ```
 
@@ -136,9 +141,11 @@ schema = strawberry.Schema(
 class Publisher(models.Model):
     name = models.CharField(max_length=100)
 
+
 class Author(models.Model):
     name = models.CharField(max_length=100)
     publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE)
+
 
 class Book(models.Model):
     title = models.CharField(max_length=200)
@@ -178,9 +185,9 @@ Publisher.objects.get(id=author.publisher_id)
 
 ```python
 # Single optimized query
-Book.objects.all() \
-    .select_related('author__publisher') \
-    .only('title', 'isbn', 'author__name', 'author__publisher__name')
+Book.objects.all().select_related("author__publisher").only(
+    "title", "isbn", "author__name", "author__publisher__name"
+)
 ```
 
 ### Manual Optimization Hints
@@ -191,14 +198,15 @@ You can provide hints to the optimizer using field options:
 import strawberry
 from strawberry_django import field
 
+
 @strawberry_django.type(Book)
 class BookType:
     title: str
     author: AuthorType = field(
         # Optimization hints
-        select_related=['author__publisher'],
-        prefetch_related=['author__books'],
-        only=['author__name'],
+        select_related=["author__publisher"],
+        prefetch_related=["author__books"],
+        only=["author__name"],
     )
 ```
 
@@ -206,6 +214,7 @@ class BookType:
 
 ```python
 from strawberry_django import field
+
 
 @strawberry_django.type(Book)
 class BookType:
@@ -224,18 +233,15 @@ class BookType:
 from django.db.models import Count, Avg
 from strawberry_django import field
 
+
 @strawberry_django.type(Author)
 class AuthorType:
     name: str
 
     # Annotate with aggregation
-    book_count: int = field(
-        annotate={'book_count': Count('books')}
-    )
+    book_count: int = field(annotate={"book_count": Count("books")})
 
-    avg_rating: float = field(
-        annotate={'avg_rating': Avg('books__rating')}
-    )
+    avg_rating: float = field(annotate={"avg_rating": Avg("books__rating")})
 ```
 
 ## DataLoaders
@@ -259,22 +265,23 @@ See the [DataLoaders Guide](dataloaders.md) for comprehensive documentation.
 from strawberry.dataloader import DataLoader
 from typing import List
 
+
 async def load_authors(keys: List[int]) -> List[Author]:
     """Batch load authors by ID"""
     authors = Author.objects.filter(id__in=keys)
     author_map = {author.id: author for author in authors}
     return [author_map.get(key) for key in keys]
 
+
 # In context
 def get_context():
-    return {
-        'author_loader': DataLoader(load_fn=load_authors)
-    }
+    return {"author_loader": DataLoader(load_fn=load_authors)}
+
 
 # In resolver
 @strawberry.field
 async def author(self, info) -> Author:
-    loader = info.context['author_loader']
+    loader = info.context["author_loader"]
     return await loader.load(self.author_id)
 ```
 
@@ -290,7 +297,7 @@ class Book(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['author', 'publication_date']),
+            models.Index(fields=["author", "publication_date"]),
         ]
 ```
 
@@ -299,11 +306,14 @@ Use database aggregations in GraphQL resolvers:
 ```python
 from django.db.models import Count, Avg
 
+
 @strawberry_django.type(models.Author)
 class Author:
     name: auto
-    book_count: int = strawberry_django.field(annotate={'book_count': Count('books')})
-    avg_rating: float = strawberry_django.field(annotate={'avg_rating': Avg('books__rating')})
+    book_count: int = strawberry_django.field(annotate={"book_count": Count("books")})
+    avg_rating: float = strawberry_django.field(
+        annotate={"avg_rating": Avg("books__rating")}
+    )
 ```
 
 For general Django database optimization (bulk operations, efficient queries, etc.), see the [Django database optimization documentation](https://docs.djangoproject.com/en/stable/topics/db/optimization/).
@@ -315,9 +325,10 @@ Cache expensive resolver computations using Django's cache framework:
 ```python
 from django.core.cache import cache
 
+
 @strawberry.field
 def featured_books(self) -> List[BookType]:
-    cache_key = 'featured_books'
+    cache_key = "featured_books"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -344,7 +355,7 @@ schema = strawberry.Schema(
     query=Query,
     extensions=[
         QueryDepthLimiter(max_depth=10),  # Prevent deeply nested queries
-    ]
+    ],
 )
 ```
 
@@ -362,6 +373,7 @@ from strawberry_django.pagination import OffsetPaginationInput
 import strawberry_django
 from strawberry_django.pagination import OffsetPaginated
 
+
 @strawberry.type
 class Query:
     # Use built-in pagination support
@@ -377,9 +389,11 @@ class Query:
 from strawberry import relay
 import strawberry_django
 
+
 @strawberry.type
 class Query:
     books: relay.Connection[BookType] = strawberry_django.connection()
+
 
 # Efficiently handles large datasets
 # Better for infinite scroll
@@ -393,12 +407,12 @@ Use Django Debug Toolbar in development to identify N+1 queries:
 ```python
 # settings.py
 INSTALLED_APPS = [
-    'debug_toolbar',
+    "debug_toolbar",
     # ...
 ]
 
 MIDDLEWARE = [
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     # ...
 ]
 ```
@@ -408,16 +422,16 @@ Enable query logging to monitor database queries:
 ```python
 # settings.py
 LOGGING = {
-    'version': 1,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "version": 1,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
         },
     },
-    'loggers': {
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
+    "loggers": {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
         },
     },
 }
@@ -433,7 +447,7 @@ schema = strawberry.Schema(
     query=Query,
     extensions=[
         DjangoOptimizerExtension(),
-    ]
+    ],
 )
 ```
 
@@ -445,13 +459,13 @@ schema = strawberry.Schema(
 def books(self) -> List[BookType]:
     return Book.objects.all()  # Could return millions!
 
+
 # Good: Always paginate
 @strawberry.field
 def books(
-    self,
-    pagination: OffsetPaginationInput = OffsetPaginationInput(offset=0, limit=20)
+    self, pagination: OffsetPaginationInput = OffsetPaginationInput(offset=0, limit=20)
 ) -> List[BookType]:
-    return Book.objects.all()[pagination.offset:pagination.offset + pagination.limit]
+    return Book.objects.all()[pagination.offset : pagination.offset + pagination.limit]
 ```
 
 ### 3. Add Database Indexes
@@ -464,7 +478,7 @@ class Book(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['author', 'publication_date']),
+            models.Index(fields=["author", "publication_date"]),
         ]
 ```
 
@@ -473,14 +487,15 @@ class Book(models.Model):
 ```python
 from django.core.cache import cache
 
+
 @strawberry.field
 def statistics(self) -> StatisticsType:
-    cached = cache.get('statistics')
+    cached = cache.get("statistics")
     if cached:
         return cached
 
     stats = compute_expensive_statistics()
-    cache.set('statistics', stats, 300)  # 5 minutes
+    cache.set("statistics", stats, 300)  # 5 minutes
     return stats
 ```
 
@@ -495,11 +510,14 @@ Use Django Debug Toolbar in development and enable query logging to identify per
 ```python
 from django.db.models import Count, Avg
 
+
 @strawberry_django.type(models.Author)
 class Author:
     name: auto
-    book_count: int = strawberry_django.field(annotate={'book_count': Count('books')})
-    avg_rating: float = strawberry_django.field(annotate={'avg_rating': Avg('books__rating')})
+    book_count: int = strawberry_django.field(annotate={"book_count": Count("books")})
+    avg_rating: float = strawberry_django.field(
+        annotate={"avg_rating": Avg("books__rating")}
+    )
 ```
 
 ### Model Properties with Optimization Hints
@@ -508,10 +526,11 @@ class Author:
 from strawberry_django.descriptors import model_property
 from django.db.models import Count
 
+
 class Author(models.Model):
     name = models.CharField(max_length=100)
 
-    @model_property(annotate={'_book_count': Count('books')})
+    @model_property(annotate={"_book_count": Count("books")})
     def book_count(self) -> int:
         return self._book_count  # type: ignore
 ```
@@ -534,7 +553,7 @@ for author in Author.objects.all():
     book_count = author.books.count()
 
 # ✅ Fast: Single query with annotation
-authors = Author.objects.annotate(book_count=Count('books'))
+authors = Author.objects.annotate(book_count=Count("books"))
 ```
 
 ### Memory Issues

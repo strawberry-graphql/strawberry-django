@@ -10,13 +10,13 @@ and allows sorting by multiple fields.
 ```python title="types.py"
 @strawberry_django.order_type(models.Color)
 class ColorOrder:
-  name: auto
+    name: auto
 
 
 @strawberry_django.order_type(models.Fruit)
 class FruitOrder:
-  name: auto
-  color: ColorOrder | None
+    name: auto
+    color: ColorOrder | None
 ```
 
 > [!TIP]
@@ -56,27 +56,25 @@ You can define custom order method by defining your own resolver.
 ```python title="types.py"
 @strawberry_django.order_type(models.Fruit)
 class FruitOrder:
-  name: auto
+    name: auto
 
-  @strawberry_django.order_field
-  def discovered_by(self, value: bool, prefix: str) -> list[str]:
-    if not value:
-      return []
-    return [f"{prefix}discover_by__name", f"{prefix}name"]
+    @strawberry_django.order_field
+    def discovered_by(self, value: bool, prefix: str) -> list[str]:
+        if not value:
+            return []
+        return [f"{prefix}discover_by__name", f"{prefix}name"]
 
-  @strawberry_django.order_field
-  def order_number(
-          self,
-          info: Info,
-          queryset: QuerySet,
-          value: strawberry_django.Ordering,  # `auto` can be used instead
-          prefix: str,
-  ) -> tuple[QuerySet, list[str]] | list[str]:
-    queryset = queryset.alias(
-      _ordered_num=Count(f"{prefix}orders__id")
-    )
-    ordering = value.resolve(f"{prefix}_ordered_num")
-    return queryset, [ordering]
+    @strawberry_django.order_field
+    def order_number(
+        self,
+        info: Info,
+        queryset: QuerySet,
+        value: strawberry_django.Ordering,  # `auto` can be used instead
+        prefix: str,
+    ) -> tuple[QuerySet, list[str]] | list[str]:
+        queryset = queryset.alias(_ordered_num=Count(f"{prefix}orders__id"))
+        ordering = value.resolve(f"{prefix}_ordered_num")
+        return queryset, [ordering]
 ```
 
 > [!WARNING]
@@ -117,18 +115,18 @@ input FruitOrder @oneOf {
 ```python title="Why prefix?"
 @strawberry_django.order_type(models.Fruit)
 class FruitOrder:
-  name: auto
-  color: ColorOrder | None
+    name: auto
+    color: ColorOrder | None
 
 
 @strawberry_django.order_type(models.Color)
 class ColorOrder:
-  @strawberry_django.order_field
-  def name(self, value: bool, prefix: str):
-    # prefix is "fruit_set__" if unused root object is ordered instead
-    if value:
-      return ["name"]
-    return []
+    @strawberry_django.order_field
+    def name(self, value: bool, prefix: str):
+        # prefix is "fruit_set__" if unused root object is ordered instead
+        if value:
+            return ["name"]
+        return []
 ```
 
 ```graphql
@@ -171,39 +169,36 @@ Works similar to field order method, but:
 ```python title="types.py"
 @strawberry_django.order_type(models.Fruit)
 class FruitOrder:
-  name: auto
+    name: auto
 
-  @strawberry_django.order_field
-  def ordered(
-          self,
-          info: Info,
-          queryset: QuerySet,
-          value: strawberry_django.Ordering,
-          prefix: str
-  ) -> tuple[QuerySet, list[str]] | list[str]:
-    queryset = queryset.alias(
-      _ordered_num=Count(f"{prefix}orders__id")
-    )
-    return queryset, [value.resolve(f"{prefix}_ordered_num")]
+    @strawberry_django.order_field
+    def ordered(
+        self,
+        info: Info,
+        queryset: QuerySet,
+        value: strawberry_django.Ordering,
+        prefix: str,
+    ) -> tuple[QuerySet, list[str]] | list[str]:
+        queryset = queryset.alias(_ordered_num=Count(f"{prefix}orders__id"))
+        return queryset, [value.resolve(f"{prefix}_ordered_num")]
 
-  @strawberry_django.order_field
-  def order(
-          self,
-          info: Info,
-          queryset: QuerySet,
-          prefix: str,
-  ) -> tuple[QuerySet, list[str]]:
-    queryset = queryset.filter(
-      ...  # Do some query modification
-    )
+    @strawberry_django.order_field
+    def order(
+        self,
+        info: Info,
+        queryset: QuerySet,
+        prefix: str,
+    ) -> tuple[QuerySet, list[str]]:
+        queryset = queryset.filter(
+            ...  # Do some query modification
+        )
 
-    return strawberry_django.ordering.process_ordering_default(
-      self,
-      info=info,
-      queryset=queryset,
-      prefix=prefix,
-    )
-
+        return strawberry_django.ordering.process_ordering_default(
+            self,
+            info=info,
+            queryset=queryset,
+            prefix=prefix,
+        )
 ```
 
 > [!TIP]
@@ -217,8 +212,7 @@ So, if you have a field like this:
 
 ```python title="types.py"
 @strawberry_django.type(models.Fruit, ordering=FruitOrder)
-class Fruit:
-    ...
+class Fruit: ...
 ```
 
 The `fruits` field will inherit the `ordering` of the type the same way as

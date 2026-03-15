@@ -13,9 +13,11 @@ when defining the fields using the
 from django.db import models
 from django_choices_field import TextChoicesField
 
+
 class Status(models.TextChoices):
     ACTIVE = "active", "Is Active"
     INACTIVE = "inactive", "Inactive"
+
 
 class Company(models.Model):
     status = TextChoicesField(
@@ -29,6 +31,7 @@ import strawberry
 import strawberry_django
 
 from . import models
+
 
 @strawberry_django.type(models.Company)
 class Company:

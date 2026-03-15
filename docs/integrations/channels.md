@@ -38,11 +38,11 @@ Add `daphne` and `channels` to your `INSTALLED_APPS` in `settings.py`:
 
 ```python title="settings.py"
 INSTALLED_APPS = [
-    'daphne',  # Must be before staticfiles for runserver override
-    'django.contrib.staticfiles',
+    "daphne",  # Must be before staticfiles for runserver override
+    "django.contrib.staticfiles",
     # ... other apps
-    'channels',
-    'strawberry_django',
+    "channels",
+    "strawberry_django",
 ]
 ```
 
@@ -51,7 +51,7 @@ INSTALLED_APPS = [
 Set the ASGI application path:
 
 ```python title="settings.py"
-ASGI_APPLICATION = 'myproject.asgi.application'
+ASGI_APPLICATION = "myproject.asgi.application"
 ```
 
 ### 3. Set Up ASGI Routing
@@ -87,9 +87,9 @@ application = AuthGraphQLProtocolTypeRouter(
 from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
 
 application = AuthGraphQLProtocolTypeRouter(
-    schema,                           # Your Strawberry schema
-    django_application=django_asgi,   # Optional: Django ASGI app for non-GraphQL routes
-    url_pattern="^graphql",           # Optional: URL pattern (default: "^graphql")
+    schema,  # Your Strawberry schema
+    django_application=django_asgi,  # Optional: Django ASGI app for non-GraphQL routes
+    url_pattern="^graphql",  # Optional: URL pattern (default: "^graphql")
 )
 ```
 
@@ -132,11 +132,7 @@ For subscriptions that need to broadcast to multiple clients (e.g., chat applica
 
 ```python title="settings.py"
 # Development (in-memory, single-process only)
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-    }
-}
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 # Production (Redis)
 CHANNEL_LAYERS = {
@@ -156,6 +152,7 @@ With `AuthGraphQLProtocolTypeRouter`, you can access the authenticated user:
 ```python
 import strawberry
 from strawberry.types import Info
+
 
 @strawberry.type
 class Query:

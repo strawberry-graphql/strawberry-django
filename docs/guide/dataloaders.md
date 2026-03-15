@@ -21,12 +21,12 @@ from asgiref.sync import sync_to_async
 
 from . import models
 
+
 async def load_authors(keys: list[int]) -> list[models.Author | None]:
     """Batch load authors by their IDs."""
     # Build map from async queryset iteration
     author_map = {
-        author.id: author
-        async for author in models.Author.objects.filter(id__in=keys)
+        author.id: author async for author in models.Author.objects.filter(id__in=keys)
     }
     return [author_map.get(key) for key in keys]
 ```
@@ -40,6 +40,7 @@ from strawberry.dataloader import DataLoader
 from .dataloaders import load_authors
 from . import models
 
+
 class GraphQLContext:
     def __init__(self, request):
         self.request = request
@@ -50,6 +51,7 @@ class GraphQLContext:
         if self._author_loader is None:
             self._author_loader = DataLoader(load_fn=load_authors)
         return self._author_loader
+
 
 def get_context(request):
     return GraphQLContext(request)
@@ -62,10 +64,9 @@ from .schema import schema
 from .context import get_context
 
 urlpatterns = [
-    path('graphql/', AsyncGraphQLView.as_view(
-        schema=schema,
-        context_getter=get_context
-    )),
+    path(
+        "graphql/", AsyncGraphQLView.as_view(schema=schema, context_getter=get_context)
+    ),
 ]
 ```
 
@@ -75,6 +76,7 @@ urlpatterns = [
 import strawberry_django
 from strawberry import field
 from strawberry.types import Info
+
 
 @strawberry_django.type(models.Book)
 class Book:
@@ -94,6 +96,7 @@ class Book:
 ```python title="dataloaders.py"
 from collections import defaultdict
 
+
 async def load_books_by_author(author_ids: list[int]) -> list[list[models.Book]]:
     """Load all books for multiple authors."""
     books_by_author = defaultdict(list)
@@ -112,7 +115,7 @@ async def load_tags(article_ids: list[int]) -> list[list[models.Tag]]:
         article.id: await sync_to_async(list)(article.tags.all())
         async for article in models.Article.objects.filter(
             id__in=article_ids
-        ).prefetch_related('tags')
+        ).prefetch_related("tags")
     }
 
     return [tags_by_article.get(article_id, []) for article_id in article_ids]
