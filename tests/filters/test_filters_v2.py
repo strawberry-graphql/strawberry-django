@@ -386,7 +386,7 @@ def test_filter_type():
         if f.name not in {"NOT", "AND", "OR", "DISTINCT"}
     ] == [
         ("id", StrawberryDjangoField, "BaseFilterLookup", None),
-        ("name", StrawberryDjangoField, "FilterLookup", None),
+        ("name", StrawberryDjangoField, "StrFilterLookup", None),
         ("sweetness", StrawberryDjangoField, "ComparisonFilterLookup", None),
         (
             "custom_filter",
@@ -695,7 +695,7 @@ def test_process_filters_with_some_wrapped_values():
         name: strawberry_django.StrFilterLookup | None
 
     name_lookup = strawberry_django.StrFilterLookup(
-        exact=Some("strawberry"),
+        exact=Some("strawberry"),  # type: ignore[arg-type]
         contains=Some("berry"),  # type: ignore[arg-type]
     )
     filter_: Any = Filter(name=name_lookup)
@@ -705,6 +705,23 @@ def test_process_filters_with_some_wrapped_values():
         ("name__exact", "strawberry"),
         ("name__contains", "berry"),
     }
+
+
+def test_str_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        name: strawberry_django.StrFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input StrFilterLookup {" in schema.as_str()
 
 
 def test_process_filters_with_some_global_id_in_lookup():
