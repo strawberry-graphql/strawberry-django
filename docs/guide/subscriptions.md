@@ -31,7 +31,9 @@ import os
 from django.core.asgi import get_asgi_application
 from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MyProject.settings")  # CHANGE the project name
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE", "MyProject.settings"
+)  # CHANGE the project name
 django_asgi_app = get_asgi_application()
 
 # Import your Strawberry schema after creating the django ASGI application
@@ -39,6 +41,7 @@ django_asgi_app = get_asgi_application()
 # for the schema.
 
 from .schema import schema  # CHANGE path to where you housed your schema file.
+
 application = AuthGraphQLProtocolTypeRouter(
     schema,
     django_application=django_asgi_app,
@@ -75,7 +78,7 @@ and add your `ASGI_APPLICATION` setting in your settings.py
 ```python
 # settings.py
 ...
-ASGI_APPLICATION = 'MyProject.asgi.application'
+ASGI_APPLICATION = "MyProject.asgi.application"
 ...
 ```
 
@@ -93,6 +96,7 @@ Go and edit your schema-file and add:
 ```python
 import asyncio
 import strawberry
+
 
 @strawberry.type
 class Subscription:

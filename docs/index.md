@@ -36,15 +36,19 @@ We'll build an example database of fruit and their colours.
 from django.db import models
 from django_choices_field import TextChoicesField
 
+
 class FruitCategory(models.TextChoices):
     CITRUS = "citrus", "Citrus"
     BERRY = "berry", "Berry"
+
 
 class Fruit(models.Model):
     """A tasty treat"""
 
     name = models.CharField(max_length=20, help_text="The name of the fruit variety")
-    category = TextChoicesField(choices_enum=FruitCategory, help_text="The category of the fruit")
+    category = TextChoicesField(
+        choices_enum=FruitCategory, help_text="The category of the fruit"
+    )
     color = models.ForeignKey(
         "Color",
         on_delete=models.CASCADE,
@@ -53,6 +57,7 @@ class Fruit(models.Model):
         null=True,
         help_text="The color of this kind of fruit",
     )
+
 
 class Color(models.Model):
     """The hue of your tasty treat"""
@@ -89,6 +94,7 @@ from strawberry import auto
 
 from . import models
 
+
 @strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
@@ -96,11 +102,14 @@ class Fruit:
     category: auto
     color: "Color"  # Strawberry will understand that this refers to the "Color" type that's defined below
 
+
 @strawberry_django.type(models.Color)
 class Color:
     id: auto
     name: auto
-    fruits: list[Fruit] # This tells strawberry about the ForeignKey to the Fruit model and how to represent the Fruit instances on that relation
+    fruits: list[
+        Fruit
+    ]  # This tells strawberry about the ForeignKey to the Fruit model and how to represent the Fruit instances on that relation
 ```
 
 ## Build the queries and schema
@@ -125,9 +134,11 @@ from strawberry_django.optimizer import DjangoOptimizerExtension
 
 from .types import Fruit
 
+
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field()
+
 
 schema = strawberry.Schema(
     query=Query,
@@ -159,7 +170,7 @@ from strawberry.django.views import AsyncGraphQLView
 from .schema import schema
 
 urlpatterns = [
-    path('graphql', AsyncGraphQLView.as_view(schema=schema)),
+    path("graphql", AsyncGraphQLView.as_view(schema=schema)),
 ]
 ```
 
@@ -226,13 +237,12 @@ from typing import Optional
 from . import models
 from .types import Fruit, Color
 
+
 @strawberry.type
 class Query:
     @strawberry_django.field
     def fruits(
-        self,
-        category: Optional[str] = None,
-        color_name: Optional[str] = None
+        self, category: Optional[str] = None, color_name: Optional[str] = None
     ) -> list[Fruit]:
         """Get fruits with optional filtering"""
         queryset = models.Fruit.objects.all()
@@ -244,6 +254,7 @@ class Query:
             queryset = queryset.filter(color__name__icontains=color_name)
 
         return queryset
+
 
 schema = strawberry.Schema(
     query=Query,
@@ -277,11 +288,13 @@ from strawberry_django import mutations
 from .types import Fruit
 from . import models
 
+
 @strawberry_django.input(models.Fruit)
 class FruitInput:
     name: auto
     category: auto
     color_id: auto
+
 
 @strawberry_django.partial(models.Fruit)
 class FruitInputPartial(strawberry.relay.NodeInput):
@@ -289,23 +302,19 @@ class FruitInputPartial(strawberry.relay.NodeInput):
     category: auto
     color_id: auto
 
+
 @strawberry.type
 class Mutation:
     # Automatic CRUD mutations with Django error handling
-    create_fruit: Fruit = mutations.create(
-        FruitInput,
-        handle_django_errors=True
-    )
+    create_fruit: Fruit = mutations.create(FruitInput, handle_django_errors=True)
 
-    update_fruit: Fruit = mutations.update(
-        FruitInputPartial,
-        handle_django_errors=True
-    )
+    update_fruit: Fruit = mutations.update(FruitInputPartial, handle_django_errors=True)
 
     delete_fruit: Fruit = mutations.delete(
         FruitInputPartial,  # Need input type with id field
-        handle_django_errors=True
+        handle_django_errors=True,
     )
+
 
 schema = strawberry.Schema(
     query=Query,
@@ -343,18 +352,18 @@ Limit the number of results for better performance:
 ```python title="schema.py"
 from strawberry_django.pagination import OffsetPaginationInput
 
+
 @strawberry.type
 class Query:
     @strawberry_django.field
-    def fruits(
-        self,
-        pagination: Optional[OffsetPaginationInput] = None
-    ) -> list[Fruit]:
+    def fruits(self, pagination: Optional[OffsetPaginationInput] = None) -> list[Fruit]:
         """Get fruits with pagination"""
         queryset = models.Fruit.objects.all()
 
         if pagination:
-            queryset = queryset[pagination.offset:pagination.offset + pagination.limit]
+            queryset = queryset[
+                pagination.offset : pagination.offset + pagination.limit
+            ]
         else:
             queryset = queryset[:20]  # Default limit
 
@@ -380,11 +389,13 @@ Protect your API with authentication:
 from strawberry.permission import BasePermission
 from strawberry.types import Info
 
+
 class IsAuthenticated(BasePermission):
     message = "User is not authenticated"
 
     def has_permission(self, source, info: Info, **kwargs) -> bool:
         return info.context.request.user.is_authenticated
+
 
 @strawberry.type
 class Mutation:
@@ -392,9 +403,7 @@ class Mutation:
     def create_fruit(self, info: Info, name: str, category: str) -> Fruit:
         """Create a fruit (requires authentication)"""
         return models.Fruit.objects.create(
-            name=name,
-            category=category,
-            created_by=info.context.request.user
+            name=name, category=category, created_by=info.context.request.user
         )
 ```
 
@@ -405,6 +414,7 @@ Add fields that are computed rather than stored:
 ```python title="types.py"
 import strawberry_django
 from strawberry import auto
+
 
 @strawberry_django.type(models.Fruit)
 class Fruit:
@@ -444,9 +454,11 @@ The `DjangoOptimizerExtension` automatically prevents N+1 query problems:
 # Without optimizer: 1 query for fruits + N queries for colors (N+1 problem)
 # With optimizer: 2 queries total (1 for fruits + 1 JOIN for colors)
 
+
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field()
+
 
 # Query that fetches related data efficiently
 query = """
@@ -472,7 +484,7 @@ Handle validation and database errors gracefully:
 class Mutation:
     create_fruit: Fruit = mutations.create(
         FruitInput,
-        handle_django_errors=True  # Automatically returns structured errors
+        handle_django_errors=True,  # Automatically returns structured errors
     )
 ```
 
@@ -513,11 +525,13 @@ from typing import Optional
 from .types import Fruit, Color
 from . import models
 
+
 class IsAuthenticated(BasePermission):
     message = "User is not authenticated"
 
     def has_permission(self, source, info: Info, **kwargs) -> bool:
         return info.context.request.user.is_authenticated
+
 
 @strawberry.type
 class Query:
@@ -525,7 +539,7 @@ class Query:
     def fruits(
         self,
         category: Optional[str] = None,
-        pagination: Optional[OffsetPaginationInput] = None
+        pagination: Optional[OffsetPaginationInput] = None,
     ) -> list[Fruit]:
         """Get fruits with optional filtering and pagination"""
         queryset = models.Fruit.objects.all()
@@ -534,7 +548,9 @@ class Query:
             queryset = queryset.filter(category=category)
 
         if pagination:
-            queryset = queryset[pagination.offset:pagination.offset + pagination.limit]
+            queryset = queryset[
+                pagination.offset : pagination.offset + pagination.limit
+            ]
         else:
             queryset = queryset[:20]
 
@@ -550,24 +566,20 @@ class Query:
         """Get all colors"""
         return models.Color.objects.all()
 
+
 @strawberry.type
 class Mutation:
     # CRUD operations with automatic error handling
-    create_fruit: Fruit = mutations.create(
-        FruitInput,
-        handle_django_errors=True
-    )
+    create_fruit: Fruit = mutations.create(FruitInput, handle_django_errors=True)
 
-    update_fruit: Fruit = mutations.update(
-        FruitInputPartial,
-        handle_django_errors=True
-    )
+    update_fruit: Fruit = mutations.update(FruitInputPartial, handle_django_errors=True)
 
     @strawberry.mutation(permission_classes=[IsAuthenticated])
     def delete_fruit(self, info: Info, id: strawberry.ID) -> bool:
         """Delete a fruit (requires authentication)"""
         models.Fruit.objects.filter(id=id).delete()
         return True
+
 
 schema = strawberry.Schema(
     query=Query,

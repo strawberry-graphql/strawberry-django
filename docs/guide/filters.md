@@ -12,14 +12,15 @@ import strawberry_django
 from strawberry import auto
 from typing_extensions import Self
 
+
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     id: auto
     name: auto
 
+
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
-class Fruit:
-    ...
+class Fruit: ...
 ```
 
 > [!TIP]
@@ -154,6 +155,7 @@ Use specific lookup types like `StrFilterLookup` for strings, `ComparisonFilterL
 ```python title="types.py"
 from strawberry_django import StrFilterLookup
 
+
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     name: StrFilterLookup | None
@@ -171,6 +173,7 @@ class FruitFilter:
 class ColorFilter:
     id: auto
     name: auto
+
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
@@ -216,15 +219,10 @@ class FruitFilter:
 
     @strawberry_django.filter_field
     def full_name(
-        self,
-        queryset: QuerySet,
-        value: str,
-        prefix: str
+        self, queryset: QuerySet, value: str, prefix: str
     ) -> tuple[QuerySet, Q]:
         queryset = queryset.alias(
-            _fullname=Concat(
-                f"{prefix}name", Value(" "), f"{prefix}last_name"
-            )
+            _fullname=Concat(f"{prefix}name", Value(" "), f"{prefix}last_name")
         )
         return queryset, Q(**{"_fullname": value})
 
@@ -234,18 +232,13 @@ class FruitFilter:
         info: Info,
         queryset: QuerySet,
         value: strawberry_django.StrFilterLookup,
-        prefix: str
+        prefix: str,
     ) -> tuple[QuerySet, Q]:
         queryset = queryset.alias(
-            _fullname=Concat(
-                f"{prefix}name", Value(" "), f"{prefix}last_name"
-            )
+            _fullname=Concat(f"{prefix}name", Value(" "), f"{prefix}last_name")
         )
         return strawberry_django.process_filters(
-            filters=value,
-            queryset=queryset,
-            info=info,
-            prefix=f"{prefix}_fullname__"
+            filters=value, queryset=queryset, info=info, prefix=f"{prefix}_fullname__"
         )
 ```
 
@@ -332,6 +325,7 @@ class FruitFilter:
     name: auto
     color: ColorFilter | None
 
+
 @strawberry_django.filter_type(models.Color)
 class ColorFilter:
     @strawberry_django.filter_field
@@ -387,9 +381,7 @@ class FruitFilter:
         prefix: str,
         queryset: QuerySet,
     ):
-        queryset = queryset.alias(
-          _ordered_num=Count(f"{prefix}orders__id")
-        )
+        queryset = queryset.alias(_ordered_num=Count(f"{prefix}orders__id"))
         return queryset, Q(**{f"{prefix}_ordered_num": value})
 
     @strawberry_django.filter_field
@@ -400,7 +392,7 @@ class FruitFilter:
         prefix: str,
     ) -> tuple[QuerySet, list[Q]]:
         queryset = queryset.filter(
-            ... # Do some query modification
+            ...  # Do some query modification
         )
 
         return strawberry_django.process_filters(
@@ -408,7 +400,7 @@ class FruitFilter:
             info=info,
             queryset=queryset,
             prefix=prefix,
-            skip_object_filter_method=True
+            skip_object_filter_method=True,
         )
 ```
 
@@ -424,8 +416,8 @@ So, if you have a field like this:
 
 ```python title="types.py"
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
-class Fruit:
-    ...
+class Fruit: ...
+
 
 @strawberry.type
 class Query:

@@ -101,8 +101,7 @@ class MyOffsetPaginationInput(OffsetPaginationInput):
 
 # Pass it to the pagination argument when defining the type
 @strawberry_django.type(models.Fruit, pagination=MyOffsetPaginationInput)
-class Fruit:
-    ...
+class Fruit: ...
 
 
 @strawberry.type
@@ -189,7 +188,6 @@ Suppose we want to pre-filter a queryset of fruits for only available ones,
 while also adding [ordering](./ordering.md) to it. This can be achieved with:
 
 ```python title="types.py"
-
 @strawberry_django.type(models.Fruit)
 class Fruit:
     name: auto
