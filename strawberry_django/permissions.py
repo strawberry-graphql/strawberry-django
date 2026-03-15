@@ -600,17 +600,6 @@ class HasPerm(DjangoPermissionExtension):
     Given a `app` name, the user can access the decorated object/field
     if he has any of the permissions defined in this directive.
 
-    Examples
-    --------
-        To indicate that a mutation can only be done by someone who
-        has "product.add_product" perm in the django system:
-
-        >>> @strawberry.type
-        ... class Query:
-        ...     @strawberry.mutation(directives=[HasPerm("product.add_product")])
-        ...     def create_product(self, name: str) -> ProductType:
-        ...         ...
-
     Attributes
     ----------
         perms:
@@ -629,6 +618,17 @@ class HasPerm(DjangoPermissionExtension):
             as having permissions foe everything. This is false by default to avoid
             returning unexpected results. Setting this to true will avoid triggering
             has_perm checks.
+
+    Examples
+    --------
+        To indicate that a mutation can only be done by someone who
+        has "product.add_product" perm in the django system:
+
+        >>> @strawberry.type
+        ... class Query:
+        ...     @strawberry.mutation(directives=[HasPerm("product.add_product")])
+        ...     def create_product(self, name: str) -> ProductType:
+        ...         ...
 
     """
 

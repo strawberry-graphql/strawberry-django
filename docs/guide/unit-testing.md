@@ -169,7 +169,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 def test_file_upload(db):
     client = TestClient("/graphql")
-    test_file = SimpleUploadedFile("test.txt", b"file content", content_type="text/plain")
+    test_file = SimpleUploadedFile(
+        "test.txt", b"file content", content_type="text/plain"
+    )
 
     response = client.query(
         """

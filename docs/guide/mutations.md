@@ -114,10 +114,10 @@ from strawberry_django import mutations, NodeInput
 from strawberry.relay import Node
 
 
-
 @strawberry_django.type(SomeModel)
 class SomeModelType(Node):
     name: auto
+
 
 @strawberry_django.input(SomeModel)
 class SomeModelInput:
@@ -127,6 +127,7 @@ class SomeModelInput:
 @strawberry_django.partial(SomeModel)
 class SomeModelInputPartial(NodeInput):
     name: auto
+
 
 @strawberry.type
 class Mutation:
@@ -153,6 +154,7 @@ Some things to note here:
 class SomeModelInputPartial:
     unique_field: strawberry.auto
 
+
 @strawberry.type
 class Mutation:
     update_model: SomeModelType = mutations.update(
@@ -178,6 +180,7 @@ The [`Maybe`](https://strawberry.rocks/docs/types/maybe) type solves this:
 ```python title="types.py"
 from strawberry import Maybe
 
+
 @strawberry_django.input(models.Fruit)
 class FruitUpdateInput:
     id: strawberry.relay.GlobalID
@@ -185,6 +188,7 @@ class FruitUpdateInput:
     name: Maybe[str]
     # color is optional, can be explicitly set to null
     color: Maybe[str | None]
+
 
 @strawberry.type
 class Mutation:
@@ -223,10 +227,12 @@ Filters can be added to update and delete mutations. More information in the
 import strawberry
 from strawberry_django import mutations
 
+
 @strawberry.type
 class Mutation:
     updateFruits: list[Fruit] = mutations.update(FruitPartialInput, filters=FruitFilter)
     deleteFruits: list[Fruit] = mutations.delete(filters=FruitFilter)
+
 
 schema = strawberry.Schema(mutation=Mutation)
 ```
@@ -239,11 +245,13 @@ If you need to make multiple creates, updates, or deletes as part of one atomic 
 import strawberry
 from strawberry_django import mutations
 
+
 @strawberry.type
 class Mutation:
     createFruits: list[Fruit] = mutations.create(list[FruitPartialInput])
     updateFruits: list[Fruit] = mutations.update(list[FruitPartialInput])
     deleteFruits: list[Fruit] = mutations.delete(list[FruitPartialInput])
+
 
 schema = strawberry.Schema(mutation=Mutation)
 ```

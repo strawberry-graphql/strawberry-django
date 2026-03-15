@@ -18,10 +18,12 @@ import strawberry_django
 from strawberry import auto
 from django.contrib.auth import get_user_model
 
+
 @strawberry_django.type(get_user_model())
 class User:
     username: auto
     email: auto
+
 
 @strawberry_django.input(get_user_model())
 class UserInput:
@@ -37,9 +39,11 @@ import strawberry
 import strawberry_django
 from .types import User, UserInput
 
+
 @strawberry.type
 class Query:
     me: User = strawberry_django.auth.current_user()
+
 
 @strawberry.type
 class Mutation:
@@ -171,19 +175,19 @@ The `register` mutation automatically validates passwords against Django's `AUTH
 ```python title="settings.py"
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 8,
+        },
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 ```
@@ -194,6 +198,7 @@ The auth functions work with custom user models. Ensure your type and input refe
 
 ```python title="types.py"
 from django.contrib.auth import get_user_model
+
 
 @strawberry_django.type(get_user_model())
 class User:
@@ -223,6 +228,7 @@ You can access the current user in any resolver:
 ```python
 from strawberry.types import Info
 
+
 @strawberry.type
 class Query:
     @strawberry.field
@@ -237,6 +243,7 @@ Or use the utility function:
 
 ```python
 from strawberry_django.auth.utils import get_current_user
+
 
 @strawberry.field
 def my_data(self, info: Info) -> str:
@@ -260,16 +267,16 @@ Ensure your Django session settings are properly configured:
 ```python title="settings.py"
 # Required middleware
 MIDDLEWARE = [
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     # ...
 ]
 
 # Session settings
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Or cache, file, etc.
+SESSION_ENGINE = "django.contrib.sessions.backends.db"  # Or cache, file, etc.
 SESSION_COOKIE_SECURE = True  # For HTTPS
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'  # Or 'Strict' for more security
+SESSION_COOKIE_SAMESITE = "Lax"  # Or 'Strict' for more security
 ```
 
 ## Error Handling

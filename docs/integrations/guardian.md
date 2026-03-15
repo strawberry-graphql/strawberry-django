@@ -29,16 +29,18 @@ Add guardian to your Django settings:
 ```python title="settings.py"
 INSTALLED_APPS = [
     # ...
-    'guardian',
+    "guardian",
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',  # Default backend
-    'guardian.backends.ObjectPermissionBackend',   # Guardian backend
+    "django.contrib.auth.backends.ModelBackend",  # Default backend
+    "guardian.backends.ObjectPermissionBackend",  # Guardian backend
 ]
 
 # Optional: Configure anonymous user handling
-ANONYMOUS_USER_NAME = None  # Set to a username string to enable anonymous user permissions
+ANONYMOUS_USER_NAME = (
+    None  # Set to a username string to enable anonymous user permissions
+)
 ```
 
 Run migrations to create guardian's permission tables:
@@ -60,6 +62,7 @@ from strawberry_django.permissions import (
 )
 from . import models
 
+
 @strawberry_django.type(models.Document)
 class DocumentType:
     id: auto
@@ -76,6 +79,7 @@ class DocumentType:
 import strawberry
 import strawberry_django
 from strawberry_django.permissions import HasRetvalPerm, HasSourcePerm
+
 
 @strawberry.type
 class Query:
@@ -98,11 +102,11 @@ The permission extensions accept several parameters for fine-grained control:
 
 ```python
 HasRetvalPerm(
-    perms="app.permission",         # Required: permission string or list of permissions
-    any_perm=True,                  # If True, user needs ANY of the perms; if False, needs ALL
-    with_anonymous=True,            # If True, skip permission check for anonymous users (faster)
-    with_superuser=False,           # If True, superusers bypass permission checks
-    fail_silently=True,             # If True, return None/empty instead of raising error
+    perms="app.permission",  # Required: permission string or list of permissions
+    any_perm=True,  # If True, user needs ANY of the perms; if False, needs ALL
+    with_anonymous=True,  # If True, skip permission check for anonymous users (faster)
+    with_superuser=False,  # If True, superusers bypass permission checks
+    fail_silently=True,  # If True, return None/empty instead of raising error
 )
 ```
 
@@ -145,13 +149,13 @@ from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
 
 # Assign permission to a user for a specific object
 document = Document.objects.get(pk=1)
-assign_perm('documents.view_document', user, document)
+assign_perm("documents.view_document", user, document)
 
 # Remove permission
-remove_perm('documents.view_document', user, document)
+remove_perm("documents.view_document", user, document)
 
 # Get all objects a user has permission for
-user_documents = get_objects_for_user(user, 'documents.view_document')
+user_documents = get_objects_for_user(user, "documents.view_document")
 ```
 
 ## How List Filtering Works
@@ -171,10 +175,11 @@ The filtering happens after the queryset is evaluated, so for better performance
 ```python
 from guardian.shortcuts import get_objects_for_user
 
+
 @strawberry_django.field
 def my_documents(self, info: Info) -> list[DocumentType]:
     user = info.context.request.user
-    return get_objects_for_user(user, 'documents.view_document')
+    return get_objects_for_user(user, "documents.view_document")
 ```
 
 ## Global vs Object Permissions
@@ -208,6 +213,7 @@ class Mutation:
 
 ```python
 from guardian.shortcuts import get_perms
+
 get_perms(user, document)  # Returns list of permission codenames
 ```
 
