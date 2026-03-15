@@ -1,5 +1,5 @@
 ---
-release type: patch
+release type: minor
 ---
 
 Fix `FieldExtension` arguments being silently lost on `StrawberryDjangoField`.
