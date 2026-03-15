@@ -94,9 +94,9 @@ class FilterLookup(BaseFilterLookup[T]):
         return super().__class_getitem__(item)  # type: ignore[misc]
 
 
-@strawberry.input(name="FilterLookup")
-class StrFilterLookup(BaseFilterLookup[T]):
-    i_exact: T | None = filter_field(
+@strawberry.input
+class StrFilterLookup(BaseFilterLookup[str]):
+    i_exact: str | None = filter_field(
         description=f"Case-insensitive exact match. {_SKIP_MSG}"
     )
     contains: str | None = filter_field(
@@ -123,6 +123,9 @@ class StrFilterLookup(BaseFilterLookup[T]):
     i_regex: str | None = filter_field(
         description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
     )
+
+    def __class_getitem__(cls, item: Any) -> type:
+        return cls
 
 
 @strawberry.input
