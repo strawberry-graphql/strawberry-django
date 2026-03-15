@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.81.0 - 2026-03-15
+-------------------
+
+Fix `StrFilterLookup` so it can be used without a type parameter (e.g., `name: StrFilterLookup | None`). Previously this raised `TypeError: "StrFilterLookup" is generic, but no type has been passed` at schema build time.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#891](https://github.com/strawberry-graphql/strawberry-django/pull/891)
+
 0.80.0 - 2026-03-08
 -------------------
 
