@@ -721,8 +721,7 @@ def test_str_filter_lookup_without_type_parameter():
         fruits: list[FruitType] = strawberry_django.field()
 
     schema = strawberry.Schema(query=Query)
-    expected = schema.as_str()
-    assert "FilterLookup" in expected
+    assert "input StrFilterLookup {" in schema.as_str()
 
 
 def test_process_filters_with_some_global_id_in_lookup():
