@@ -139,13 +139,27 @@ class StrawberryDjangoField(
         )
         # FIXME: Probably remove this when depending on graphql-core 3.3.0+
         self.disable_fetch_list_results: bool = False
+        self._cached_arguments: list[StrawberryArgument] | None = None
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def arguments(self) -> list[StrawberryArgument]:
+        if self._cached_arguments is None:
+            self._cached_arguments = super().arguments
+        return self._cached_arguments
+
+    @arguments.setter
+    def arguments(self, value: list[StrawberryArgument]) -> None:
+        self._cached_arguments = None
+        args_prop = super(StrawberryDjangoField, self.__class__).arguments
+        args_prop.fset(self, value)  # type: ignore
 
     def __copy__(self) -> Self:
         new_field = super().__copy__()
         new_field.disable_optimization = self.disable_optimization
         new_field.store = self.store.copy()
+        new_field._cached_arguments = None
         return new_field
 
     def _need_remove_argument(
