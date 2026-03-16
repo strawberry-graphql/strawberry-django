@@ -22,6 +22,7 @@ from strawberry.types import ExecutionResult, Info, get_object_definition
 import strawberry_django
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
+    get_field_arguments,
 )
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
@@ -3040,3 +3041,213 @@ def test_prefetch_with_only_injects_fk_field(db, gql_client: GraphQLTestClient):
     assert len(projects_data[0]["optimizedMilestones"]) == 2
     assert projects_data[1]["name"] == "Project2"
     assert len(projects_data[1]["optimizedMilestones"]) == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_callable_receives_field_kwargs():
+    """Prefetch callable that declares extra params gets resolved field arguments."""
+    captured_kwargs: dict[str, Any] = {}
+
+    def filtered_prefetch(
+        info: Info,
+        date: datetime.date | None = None,
+    ) -> Prefetch:
+        captured_kwargs["date"] = date
+        qs = Milestone.objects.all()
+        if date is not None:
+            qs = qs.filter(due_date=date)
+        return Prefetch("milestones", queryset=qs, to_attr="filtered_milestones")
+
+    @strawberry_django.type(Project)
+    class ProjectTypeFiltered:
+        @strawberry_django.field(
+            prefetch_related=[filtered_prefetch],
+        )
+        def filtered_milestone_names(
+            self,
+            info: Info,
+            date: datetime.date | None = None,
+        ) -> list[str]:
+            return [m.name for m in self.filtered_milestones]  # type: ignore
+
+    target_date = datetime.date(2025, 6, 15)
+    project = ProjectFactory.create()
+    MilestoneFactory.create(project=project, due_date=target_date, name="match")
+    MilestoneFactory.create(
+        project=project, due_date=datetime.date(2025, 1, 1), name="no-match"
+    )
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeFiltered] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    result = query(
+        """
+        query TestQuery($date: Date!) {
+            projects {
+                filteredMilestoneNames(date: $date)
+            }
+        }
+        """,
+        variable_values={"date": target_date.isoformat()},
+    )
+
+    assert result.errors is None, result.errors
+    assert captured_kwargs["date"] == target_date
+    assert result.data == {"projects": [{"filteredMilestoneNames": ["match"]}]}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_callable_backwards_compat():
+    """Existing callables that only accept info still work."""
+    captured_info = None
+
+    def simple_prefetch(info: Info) -> Prefetch:
+        nonlocal captured_info
+        captured_info = info
+        return Prefetch("milestones", queryset=Milestone.objects.all())
+
+    @strawberry_django.type(Project)
+    class ProjectTypeSimple:
+        @strawberry_django.field(
+            prefetch_related=[simple_prefetch],
+        )
+        def milestone_count(self, info: Info) -> int:
+            return len(self.milestones.all())  # type: ignore
+
+    ProjectFactory.create()
+    MilestoneFactory.create()
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeSimple] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    result = query("""
+        query TestQuery {
+            projects { milestoneCount }
+        }
+    """)
+
+    assert result.errors is None, result.errors
+    assert isinstance(captured_info, Info)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_callable_with_var_kwargs():
+    """Callable with **kwargs receives all resolved field arguments."""
+    captured_kwargs: dict[str, Any] = {}
+
+    def prefetch_with_kwargs(info: Info, **kwargs: Any) -> Prefetch:
+        captured_kwargs.update(kwargs)
+        return Prefetch("milestones", queryset=Milestone.objects.all())
+
+    @strawberry_django.type(Project)
+    class ProjectTypeVarKw:
+        @strawberry_django.field(
+            prefetch_related=[prefetch_with_kwargs],
+        )
+        def milestone_names(
+            self,
+            info: Info,
+            name_filter: str | None = None,
+            limit: int | None = None,
+        ) -> list[str]:
+            return [m.name for m in self.milestones.all()]  # type: ignore
+
+    ProjectFactory.create()
+    MilestoneFactory.create()
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeVarKw] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    result = query("""
+        query TestQuery {
+            projects { milestoneNames(nameFilter: "test", limit: 5) }
+        }
+    """)
+
+    assert result.errors is None, result.errors
+    assert captured_kwargs["name_filter"] == "test"
+    assert captured_kwargs["limit"] == 5
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_callable_subset_args():
+    """Callable declaring only a subset of field args gets only those."""
+    captured_kwargs: dict[str, Any] = {}
+
+    def subset_prefetch(
+        info: Info,
+        active_only: bool = False,
+    ) -> Prefetch:
+        captured_kwargs["active_only"] = active_only
+        return Prefetch("milestones", queryset=Milestone.objects.all())
+
+    @strawberry_django.type(Project)
+    class ProjectTypeSubset:
+        @strawberry_django.field(
+            prefetch_related=[subset_prefetch],
+        )
+        def milestone_names(
+            self,
+            info: Info,
+            active_only: bool = False,
+            extra_param: str | None = None,
+        ) -> list[str]:
+            return [m.name for m in self.milestones.all()]  # type: ignore
+
+    ProjectFactory.create()
+    MilestoneFactory.create()
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeSubset] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    result = query("""
+        query TestQuery {
+            projects { milestoneNames(activeOnly: true, extraParam: "ignored") }
+        }
+    """)
+
+    assert result.errors is None, result.errors
+    assert captured_kwargs["active_only"] is True
+    # extra_param should not be passed to the callable
+    assert "extra_param" not in captured_kwargs
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_field_arguments_utility():
+    """Public get_field_arguments utility resolves args correctly."""
+    captured_args: dict[str, Any] = {}
+
+    @strawberry_django.type(Project)
+    class ProjectTypeUtil:
+        @strawberry_django.field
+        def dynamic_field(
+            self,
+            info: Info,
+            some_arg: str = "default",
+        ) -> str:
+            captured_args.update(get_field_arguments(info))
+            return "ok"
+
+    ProjectFactory.create()
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeUtil] = strawberry_django.field()
+
+    query = utils.generate_query(Query, enable_optimizer=True)
+    result = query("""
+        query TestQuery {
+            projects { dynamicField(someArg: "hello") }
+        }
+    """)
+
+    assert result.errors is None, result.errors
+    assert captured_args["some_arg"] == "hello"
