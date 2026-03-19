@@ -257,15 +257,16 @@ wheels = [
 
 [[package]]
 name = "django-polymorphic"
-version = "4.5.2"
+version = "4.11.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django", version = "5.2.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "django", version = "6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/3e/fc59daaaffb27dc5cbde391a65057b6391feb58ca64f133189700b3515e0/django_polymorphic-4.5.2.tar.gz", hash = "sha256:8fa7074dc455c7ff123e40196e74f1ff29862aead2b62484a618c52b3781b583", size = 50332, upload-time = "2026-01-01T19:35:59.944Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/a8/1e3355d85b14fe192c802377bbd6bb3e60410f35aefd0f6b669b7264cf24/django_polymorphic-4.11.2.tar.gz", hash = "sha256:0b16060f50f0f196a8c5141a2f8f7d7d5289e7c78cf81aef2d63ff55762011ca", size = 61767, upload-time = "2026-03-07T16:02:14.2Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/1a/0c5cc218eec87ba2cd49963173c3f51b228a72cd21e42d001a6cca57da0b/django_polymorphic-4.5.2-py3-none-any.whl", hash = "sha256:f836a120d4d813495f9428890d9e99910d20241ae6587072fcb9ab0a4dd66c7d", size = 64483, upload-time = "2026-01-01T19:35:58.405Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/17/c56283bead21d36e401d200d04321dd1f788766d330e7e88ae83a52e48e4/django_polymorphic-4.11.2-py3-none-any.whl", hash = "sha256:4bf61d6faec4870aee91b997292be45db3ebbd644dea072607efcee8ca27301a", size = 79070, upload-time = "2026-03-07T16:02:12.94Z" },
 ]
 
 [[package]]
@@ -764,6 +765,9 @@ debug-toolbar = [
 enum = [
     { name = "django-choices-field" },
 ]
+polymorphic = [
+    { name = "django-polymorphic" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -797,9 +801,10 @@ requires-dist = [
     { name = "django", specifier = ">=4.2" },
     { name = "django-choices-field", marker = "extra == 'enum'", specifier = ">=2.2.2" },
     { name = "django-debug-toolbar", marker = "extra == 'debug-toolbar'", specifier = ">=6.0.0" },
+    { name = "django-polymorphic", marker = "extra == 'polymorphic'", specifier = ">=4.0.0" },
     { name = "strawberry-graphql", specifier = ">=0.310.1" },
 ]
-provides-extras = ["debug-toolbar", "enum"]
+provides-extras = ["debug-toolbar", "enum", "polymorphic"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -808,7 +813,7 @@ dev = [
     { name = "django-debug-toolbar", specifier = ">=6.0.0" },
     { name = "django-guardian", specifier = ">=3.2.0" },
     { name = "django-model-utils", specifier = ">=5.0.0" },
-    { name = "django-polymorphic", specifier = ">=4.1.0,<4.6" },
+    { name = "django-polymorphic", specifier = ">=4.0.0" },
     { name = "django-tree-queries", specifier = ">=0.23.0" },
     { name = "django-types", specifier = ">=0.22.0" },
     { name = "factory-boy", specifier = ">=3.2.1" },
