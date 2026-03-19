@@ -1263,7 +1263,7 @@ def _get_model_hints(
                     parent_type=parent_type,
                     info=info,
                     config=config,
-                    prefix=f"{prefix}{dj_definition.model._meta.app_label}__{dj_definition.model._meta.model_name}_",
+                    prefix=f"{prefix}{dj_definition.model.__name__}_",
                 )
             if is_inheritance_manager(model._default_manager) and (
                 path_from_parent := dj_definition.model._meta.get_path_from_parent(
