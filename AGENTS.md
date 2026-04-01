@@ -103,7 +103,7 @@ For list fields, the queryset flows: `get_queryset()` → filters → ordering �
 
 ## CI & Releases
 
-- **Matrix:** Django 4.2–6.0 × Python 3.10–3.14 × std/geos modes
+- **Matrix:** Django 5.0–6.0 × Python 3.10–3.14 × std/geos modes
 - **Type checking:** pyright runs as a separate CI job
 
 ## PR Checklist

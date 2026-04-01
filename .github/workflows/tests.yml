@@ -39,7 +39,6 @@ jobs:
       fail-fast: false
       matrix:
         django-version:
-          - 4.2.*
           - 5.0.*
           - 5.1.*
           - 5.2.*
@@ -57,11 +56,6 @@ jobs:
           - '3.2'
           - '3.3'
         exclude:
-          # Django 4.2 only supports python 3.8-3.12
-          - django-version: 4.2.*
-            python-version: '3.13'
-          - django-version: 4.2.*
-            python-version: '3.14'
           # Django 5.0 only supports python 3.10-3.12
           - django-version: 5.0.*
             python-version: '3.13'

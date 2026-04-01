@@ -25,14 +25,13 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Framework :: Django",
-  "Framework :: Django :: 4.2",
   "Framework :: Django :: 5.0",
   "Framework :: Django :: 5.1",
   "Framework :: Django :: 5.2",
   "Framework :: Django :: 6.0",
 ]
 requires-python = ">=3.10,<4.0"
-dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.310.1"]
+dependencies = ["django>=5.0", "asgiref>=3.8", "strawberry-graphql>=0.310.1"]
 
 [project.urls]
 homepage = "https://strawberry.rocks/docs/django"
