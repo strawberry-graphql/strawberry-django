@@ -3,8 +3,7 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-import django
-from django.db.models import ForeignKey
+from django.db.models import ForeignKey, GeneratedField  # type: ignore
 from strawberry import relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import get_object_definition
@@ -40,11 +39,6 @@ if TYPE_CHECKING:
     from strawberry_django.type import StrawberryDjangoDefinition
 
 _QS = TypeVar("_QS", bound="models.QuerySet")
-
-if django.VERSION >= (5, 0):
-    from django.db.models import GeneratedField  # type: ignore
-else:
-    GeneratedField = None
 
 
 class StrawberryDjangoFieldBase(StrawberryField):

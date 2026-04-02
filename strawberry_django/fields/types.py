@@ -13,7 +13,6 @@ from typing import (
     cast,
 )
 
-import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
@@ -41,11 +40,7 @@ except (ImportError, ModuleNotFoundError):  # pragma: no cover
     # ArrayField will not be importable if psycopg2 is not installed
     ArrayField = None
 
-if django.VERSION >= (5, 0):
-    from django.db.models import GeneratedField  # type: ignore
-else:
-    GeneratedField = None
-
+from django.db.models import GeneratedField  # type: ignore
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
