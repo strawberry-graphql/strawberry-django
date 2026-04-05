@@ -84,11 +84,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.autopub]
-plugins = ["autopub.plugins.github", "autopub.plugins.uv"]
+plugins = [
+  "autopub.plugins.github",
+  "autopub.plugins.uv",
+  "strawberry_autopub_plugins.typefully",
+]
 git-username = "Botberry"
 git-email = "bot@strawberry.rocks"
 project-name = "strawberry-graphql-django"
 append-github-contributor = true
+
+[tool.autopub.typefully]
+publish-mode = "now"
 
 [tool.ruff]
 target-version = "py310"
