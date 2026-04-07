@@ -31,7 +31,7 @@ jobs:
           command: check
           autopub-version: "1.0.0a58"
           github-token: ${{ secrets.BOT_TOKEN }}
-          extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
+          extra-plugins: "strawberry-autopub-plugins==0.1.0"
 
       - name: Debug info
         run: |
@@ -62,14 +62,14 @@ jobs:
         with:
           command: prepare
           autopub-version: "1.0.0a58"
-          extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
+          extra-plugins: "strawberry-autopub-plugins==0.1.0"
 
       - name: Build package
         uses: autopub/autopub-action@v1.1.0
         with:
           command: build
           autopub-version: "1.0.0a58"
-          extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
+          extra-plugins: "strawberry-autopub-plugins==0.1.0"
 
       - name: Publish to PyPI
         uses: autopub/autopub-action@v1.1.0
@@ -79,4 +79,4 @@ jobs:
           github-token: ${{ secrets.BOT_TOKEN }}
           git-username: botberry
           git-email: bot@strawberry.rocks
-          extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
+          extra-plugins: "strawberry-autopub-plugins==0.1.0"
