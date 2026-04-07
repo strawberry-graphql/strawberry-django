@@ -96,6 +96,7 @@ append-github-contributor = true
 
 [tool.autopub.typefully]
 publish-mode = "next-free-slot"
+platforms = ["x", "linkedin", "threads", "bluesky", "mastodon"]
 
 [tool.ruff]
 target-version = "py310"
