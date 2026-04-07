@@ -94,7 +94,7 @@ git-email = "bot@strawberry.rocks"
 project-name = "strawberry-graphql-django"
 append-github-contributor = true
 
-[tool.autopub.typefully]
+[tool.autopub.plugin_config.typefully]
 publish-mode = "next-free-slot"
 platforms = ["x", "linkedin", "threads", "bluesky", "mastodon"]
 
