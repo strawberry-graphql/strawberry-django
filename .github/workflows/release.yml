@@ -23,11 +23,12 @@ jobs:
 
       - name: Check for release
         id: check
-        uses: autopub/autopub-action@v1.0.1
+        uses: autopub/autopub-action@5fdc82e84c048a82303de6b5c5a9d027665e73cf # v1.1.1
         with:
           command: check
           autopub-version: "1.0.0a58"
           github-token: ${{ secrets.BOT_TOKEN }}
+          extra-plugins: strawberry-autopub-plugins
 
       - name: Debug info
         run: |
@@ -51,22 +52,28 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
 
       - name: Prepare release
-        uses: autopub/autopub-action@v1.0.1
+        uses: autopub/autopub-action@5fdc82e84c048a82303de6b5c5a9d027665e73cf # v1.1.1
         with:
           command: prepare
           autopub-version: "1.0.0a58"
+          extra-plugins: strawberry-autopub-plugins
 
       - name: Build package
-        uses: autopub/autopub-action@v1.0.1
+        uses: autopub/autopub-action@5fdc82e84c048a82303de6b5c5a9d027665e73cf # v1.1.1
         with:
           command: build
           autopub-version: "1.0.0a58"
+          extra-plugins: strawberry-autopub-plugins
 
       - name: Publish to PyPI
-        uses: autopub/autopub-action@v1.0.1
+        uses: autopub/autopub-action@5fdc82e84c048a82303de6b5c5a9d027665e73cf # v1.1.1
         with:
           command: publish
           autopub-version: "1.0.0a58"
+          extra-plugins: strawberry-autopub-plugins
           github-token: ${{ secrets.BOT_TOKEN }}
           git-username: botberry
           git-email: bot@strawberry.rocks
+        env:
+          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+          TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
