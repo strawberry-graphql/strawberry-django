@@ -87,7 +87,7 @@ build-backend = "hatchling.build"
 plugins = [
   "autopub.plugins.github",
   "autopub.plugins.uv",
-  "strawberry_autopub_plugins.typefully",
+  "strawberry_autopub_plugins.typefully:TypefullyPlugin",
 ]
 git-username = "Botberry"
 git-email = "bot@strawberry.rocks"
@@ -95,8 +95,9 @@ project-name = "strawberry-graphql-django"
 append-github-contributor = true
 
 [tool.autopub.plugin_config.typefully]
-publish-mode = "next-free-slot"
+project-name = "Strawberry GraphQL Django"
 platforms = ["x", "linkedin", "threads", "bluesky", "mastodon"]
+publish-mode = "next-free-slot"
 
 [tool.ruff]
 target-version = "py310"
