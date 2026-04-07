@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has_release: ${{ steps.check.outputs['has-release'] }}
+    env:
+      TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+      TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,9 +32,6 @@ jobs:
           autopub-version: "1.0.0a58"
           github-token: ${{ secrets.BOT_TOKEN }}
           extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
-        env:
-          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
-          TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
 
       - name: Debug info
         run: |
@@ -43,6 +43,9 @@ jobs:
     needs: check-release
     if: ${{ github.ref == 'refs/heads/main' && needs.check-release.outputs.has_release == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+      TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
 
     steps:
       - name: Debug info
@@ -60,9 +63,6 @@ jobs:
           command: prepare
           autopub-version: "1.0.0a58"
           extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
-        env:
-          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
-          TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
 
       - name: Build package
         uses: autopub/autopub-action@v1.1.0
@@ -70,9 +70,6 @@ jobs:
           command: build
           autopub-version: "1.0.0a58"
           extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
-        env:
-          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
-          TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
 
       - name: Publish to PyPI
         uses: autopub/autopub-action@v1.1.0
@@ -83,6 +80,3 @@ jobs:
           git-username: botberry
           git-email: bot@strawberry.rocks
           extra-plugins: "strawberry-autopub-plugins @ git+https://github.com/strawberry-graphql/autopub-plugins.git"
-        env:
-          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
-          TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
