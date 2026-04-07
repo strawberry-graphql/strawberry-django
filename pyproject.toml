@@ -87,7 +87,7 @@ build-backend = "hatchling.build"
 plugins = [
   "autopub.plugins.github",
   "autopub.plugins.uv",
-  "strawberry_autopub_plugins.typefully",
+  "strawberry_autopub_plugins.typefully:TypefullyPlugin",
 ]
 git-username = "Botberry"
 git-email = "bot@strawberry.rocks"
