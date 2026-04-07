@@ -95,7 +95,7 @@ project-name = "strawberry-graphql-django"
 append-github-contributor = true
 
 [tool.autopub.typefully]
-publish-mode = "now"
+publish-mode = "next-free-slot"
 
 [tool.ruff]
 target-version = "py310"
