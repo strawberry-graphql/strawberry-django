@@ -28,6 +28,7 @@ from .fields.types import (
 )
 from .filters import filter_type, process_filters
 from .mutations.mutations import input_mutation, mutation
+from .optimizer import get_field_arguments
 from .ordering import Ordering, order, order_type, process_order
 from .resolvers import django_resolver
 from .type import input, interface, partial, type  # noqa: A004
@@ -63,6 +64,7 @@ __all__ = [
     "filter_field",
     "filter_type",
     "filters",
+    "get_field_arguments",
     "input",
     "input_mutation",
     "interface",

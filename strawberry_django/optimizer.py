@@ -4,6 +4,7 @@ import contextlib
 import contextvars
 import copy
 import dataclasses
+import inspect
 import itertools
 from collections.abc import Callable
 from typing import (
@@ -94,6 +95,7 @@ __all__ = [
     "OptimizerConfig",
     "OptimizerStore",
     "PrefetchType",
+    "get_field_arguments",
     "optimize",
 ]
 
@@ -211,7 +213,11 @@ class OptimizerStore:
             ),
         )
 
-    def with_resolved_callables(self, info: Info):
+    def with_resolved_callables(
+        self,
+        info: Info,
+        field_kwargs: dict[str, Any] | None = None,
+    ):
         """Resolve any prefetch/annotate callables using the provided info and return a new store.
 
         This is used to resolve callables using the correct info object, scoped to their respective fields.
@@ -222,7 +228,8 @@ class OptimizerStore:
             return self
 
         prefetch_related: list[PrefetchType] = [
-            p(info) if callable(p) else p for p in self.prefetch_related
+            _invoke_prefetch_callable(p, info, field_kwargs) if callable(p) else p
+            for p in self.prefetch_related
         ]
         annotate: dict[str, AnnotateType] = {
             label: annotation(info) if callable(annotation) else annotation
@@ -235,7 +242,13 @@ class OptimizerStore:
             annotate=annotate,
         )
 
-    def with_prefix(self, prefix: str, *, info: Info):
+    def with_prefix(
+        self,
+        prefix: str,
+        *,
+        info: Info,
+        field_kwargs: dict[str, Any] | None = None,
+    ):
         """Create a copy of this store with the given prefix.
 
         This is useful when we need to apply the same store to a nested field.
@@ -246,7 +259,7 @@ class OptimizerStore:
         for p in self.prefetch_related:
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
-                p = p(info)  # noqa: PLW2901
+                p = _invoke_prefetch_callable(p, info, field_kwargs)  # noqa: PLW2901
 
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
@@ -516,6 +529,65 @@ def _create_strawberry_info(raw_info: GraphQLResolveInfo) -> Info:
     field = schema.get_field_for_type(raw_info.field_name, raw_info.parent_type.name)
     assert field
     return schema.config.info_class(raw_info, field)
+
+
+def get_field_arguments(info: Info) -> dict[str, Any]:
+    """Resolve the current field's GraphQL arguments into Python kwargs.
+
+    This uses the same argument resolution pipeline as the optimizer
+    (``get_argument_values`` + ``get_arguments``), so variables, defaults,
+    and input-type conversions are all handled transparently.
+
+    Returns a dict of keyword arguments (excluding ``info`` itself).
+    """
+    raw_info = info._raw_info
+    strawberry_schema = cast("Schema", raw_info.schema._strawberry_schema)  # type: ignore
+    field = info._field
+    field_name = strawberry_schema.config.name_converter.from_field(field)
+    gql_field = raw_info.parent_type.fields.get(field_name)
+    if gql_field is None:
+        return {}
+    _, kwargs = get_arguments(
+        field=field,
+        source=None,
+        info=info,
+        kwargs=get_argument_values(
+            gql_field,
+            raw_info.field_nodes[0],
+            raw_info.variable_values,
+        ),
+        config=strawberry_schema.config,
+        scalar_registry=strawberry_schema.schema_converter.scalar_registry,
+    )
+    kwargs.pop("info", None)
+    return kwargs
+
+
+def _invoke_prefetch_callable(
+    p: PrefetchCallable,
+    info: Info,
+    field_kwargs: dict[str, Any] | None = None,
+) -> Prefetch:
+    if field_kwargs:
+        sig = inspect.signature(p, eval_str=True)
+        params = sig.parameters
+        has_var_keyword = any(
+            param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values()
+        )
+        if has_var_keyword:
+            return p(info, **field_kwargs)
+        named_extra = {
+            name
+            for name, param in params.items()
+            if name != "info"
+            and param.kind
+            not in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}
+        }
+        if named_extra:
+            filtered = {k: v for k, v in field_kwargs.items() if k in named_extra}
+            if filtered:
+                return p(info, **filtered)
+    return p(info)
 
 
 def _get_django_type(
@@ -797,11 +869,15 @@ def _get_hints_from_field(
             field.name: field_store.annotate[_annotate_placeholder],
         }
 
+    field_kwargs: dict[str, Any] | None = None
+    if any(callable(p) for p in field_store.prefetch_related):
+        field_kwargs = get_field_arguments(f_info)
+
     # with_prefix also resolves callables, so we only need one or the other
     return (
-        field_store.with_prefix(prefix, info=f_info)
+        field_store.with_prefix(prefix, info=f_info, field_kwargs=field_kwargs)
         if prefix
-        else field_store.with_resolved_callables(f_info)
+        else field_store.with_resolved_callables(f_info, field_kwargs)
     )
 
 
@@ -818,11 +894,16 @@ def _get_hints_from_model_property(
         and model_attr.store
     ):
         attr_store = model_attr.store
+
+        field_kwargs: dict[str, Any] | None = None
+        if any(callable(p) for p in attr_store.prefetch_related):
+            field_kwargs = get_field_arguments(f_info)
+
         # with_prefix also resolves callables, so we only need one or the other
         store = (
-            attr_store.with_prefix(prefix, info=f_info)
+            attr_store.with_prefix(prefix, info=f_info, field_kwargs=field_kwargs)
             if prefix
-            else attr_store.with_resolved_callables(f_info)
+            else attr_store.with_resolved_callables(f_info, field_kwargs)
         )
     else:
         store = None
