@@ -152,7 +152,7 @@ def process_order(
             args.append(f_value.resolve(f"{prefix}{f.name}"))
         else:
             queryset, subargs = process_order(
-                f_value,
+                cast("WithStrawberryObjectDefinition", f_value),
                 info,
                 queryset,
                 prefix=f"{prefix}{f.name}__",
@@ -236,7 +236,7 @@ def process_ordering_default(
             assert has_object_definition(ordering_cls)
             queryset, subargs = process_ordering(
                 ordering_cls,
-                (f_value,),
+                (cast("WithStrawberryObjectDefinition", f_value),),
                 info,
                 queryset,
                 prefix=f"{prefix}{f.name}__",

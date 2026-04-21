@@ -420,6 +420,7 @@ def test_update_geo(mutation):
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
+    assert geofield_obj.point is not None
     assert deep_tuple_to_list(geofield_obj.point.tuple) == point
 
     # Test for lineString
@@ -435,6 +436,7 @@ def test_update_geo(mutation):
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
+    assert geofield_obj.line_string is not None
     assert deep_tuple_to_list(geofield_obj.line_string.tuple) == line_string
 
     # Test for polygon
@@ -453,6 +455,7 @@ def test_update_geo(mutation):
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
+    assert geofield_obj.polygon is not None
     assert deep_tuple_to_list(geofield_obj.polygon.tuple) == polygon
 
     # Test for multi_point
@@ -468,6 +471,7 @@ def test_update_geo(mutation):
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
+    assert geofield_obj.multi_point is not None
     assert deep_tuple_to_list(geofield_obj.multi_point.tuple) == multi_point
 
     # Test for multiLineString
@@ -487,6 +491,7 @@ def test_update_geo(mutation):
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
+    assert geofield_obj.multi_line_string is not None
     assert deep_tuple_to_list(geofield_obj.multi_line_string.tuple) == multi_line_string
 
     # Test for multiPolygon
@@ -511,10 +516,17 @@ def test_update_geo(mutation):
     )
     assert not result.errors
     geofield_obj.refresh_from_db()
+    assert geofield_obj.multi_polygon is not None
     assert deep_tuple_to_list(geofield_obj.multi_polygon.tuple) == multi_polygon
 
     # Test everything not overwritten
     geofield_obj.refresh_from_db()
+    assert geofield_obj.point is not None
+    assert geofield_obj.line_string is not None
+    assert geofield_obj.polygon is not None
+    assert geofield_obj.multi_point is not None
+    assert geofield_obj.multi_line_string is not None
+    assert geofield_obj.multi_polygon is not None
     assert deep_tuple_to_list(geofield_obj.point.tuple) == point
     assert deep_tuple_to_list(geofield_obj.line_string.tuple) == line_string
     assert deep_tuple_to_list(geofield_obj.polygon.tuple) == polygon
