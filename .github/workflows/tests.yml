@@ -40,8 +40,6 @@ jobs:
       matrix:
         django-version:
           - 4.2.*
-          - 5.0.*
-          - 5.1.*
           - 5.2.*
           - 6.0.*
         python-version:
@@ -62,14 +60,7 @@ jobs:
             python-version: '3.13'
           - django-version: 4.2.*
             python-version: '3.14'
-          # Django 5.0 only supports python 3.10-3.12
-          - django-version: 5.0.*
-            python-version: '3.13'
-          - django-version: 5.0.*
-            python-version: '3.14'
-          # Django 5.1 only supports python 3.10-3.13
-          - django-version: 5.1.*
-            python-version: '3.14'
+
           # Django 6.0 only supports python 3.12+
           - django-version: 6.0.*
             python-version: '3.10'
