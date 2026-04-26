@@ -221,9 +221,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
                 self.origin_django_type,
             )
 
-            is_generated_field = GeneratedField is not None and isinstance(
-                model_field, GeneratedField
-            )
+            is_generated_field = isinstance(model_field, GeneratedField)
             field_to_check = (
                 model_field.output_field if is_generated_field else model_field  # type: ignore
             )

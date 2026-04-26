@@ -27,6 +27,7 @@ class Project(models.Model):
     class Meta:
         constraints = (
             models.CheckConstraint(
+                # type: ignore[arg-type]
                 condition=(
                     (models.Q(artist="") | models.Q(supervisor=""))
                     & (~models.Q(topic="") | ~models.Q(topic=""))
