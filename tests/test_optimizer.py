@@ -3040,3 +3040,138 @@ def test_prefetch_with_only_injects_fk_field(db, gql_client: GraphQLTestClient):
     assert len(projects_data[0]["optimizedMilestones"]) == 2
     assert projects_data[1]["name"] == "Project2"
     assert len(projects_data[1]["optimizedMilestones"]) == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_method_resolver_propagates_child_only_hints(db):
+    """Propagate child-type `only=` hints through a parent method resolver.
+
+    When a method resolver declares the relation via `select_related`, the
+    optimizer must descend into the child type and pull its `only=` hints
+    up so the child column ends up in the first SELECT, with no deferred
+    load.
+    """
+
+    @strawberry_django.type(Milestone)
+    class NestedMilestoneType:
+        name: strawberry.auto
+
+        @strawberry_django.field(only=["due_date"])
+        def extra(self) -> str:
+            return str(self.due_date)  # type: ignore
+
+    @strawberry_django.type(Issue)
+    class IssueWithMethodResolver:
+        name: strawberry.auto
+
+        @strawberry_django.field(
+            select_related=["milestone", "milestone__project"],
+        )
+        def milestone(self) -> NestedMilestoneType | None:
+            return getattr(self, "milestone", None)
+
+    @strawberry.type
+    class Query:
+        issues: list[IssueWithMethodResolver] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="P1")
+    due_date = datetime.date(2026, 1, 1)
+    milestone = MilestoneFactory.create(project=project, name="M1", due_date=due_date)
+    IssueFactory.create(milestone=milestone, name="I1")
+
+    query = """
+      query TestQuery {
+        issues {
+          milestone {
+            extra
+          }
+        }
+      }
+    """
+
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "issues": [{"milestone": {"extra": str(due_date)}}],
+    }, result.data
+    # Child's `only=["due_date"]` must propagate up so `due_date` is in the
+    # first SELECT — no deferred load.
+    sqls = [q["sql"] for q in ctx.captured_queries]
+    assert len(sqls) == 1, sqls
+    assert "due_date" in sqls[0], sqls[0]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_method_resolver_without_relation_hint_does_not_descend(db):
+    """Do not auto-descend into a method resolver without an explicit hint.
+
+    If the resolver declares no `select_related` / `prefetch_related`, the
+    optimizer must not infer the relation from a name collision with a
+    Django field on the parent model — the resolver's body is opaque and
+    may not return the standard relation.
+    """
+    sentinel: dict[str, Any] = {}
+
+    @strawberry_django.type(Milestone)
+    class MilestoneNoDescend:
+        name: strawberry.auto
+
+        @strawberry_django.field(only=["due_date"])
+        def extra(self) -> str:
+            return str(self.due_date)  # type: ignore
+
+    @strawberry_django.type(Issue)
+    class IssueNoRelationHint:
+        name: strawberry.auto
+
+        # `milestone` collides with the Django FK name but no select_related
+        # / prefetch_related is declared. The optimizer must not auto-add it.
+        @strawberry_django.field
+        def milestone(self) -> MilestoneNoDescend | None:
+            sentinel["called"] = True
+            return getattr(self, "milestone", None)
+
+    @strawberry.type
+    class Query:
+        issues: list[IssueNoRelationHint] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    project = ProjectFactory.create(name="P1")
+    milestone = MilestoneFactory.create(project=project, name="M1")
+    IssueFactory.create(milestone=milestone, name="I1")
+
+    query = """
+      query TestQuery {
+        issues {
+          milestone {
+            extra
+          }
+        }
+      }
+    """
+
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert sentinel.get("called") is True
+    assert result.data == {
+        "issues": [{"milestone": {"extra": str(milestone.due_date)}}],
+    }
+    # Without the relation hint, the optimizer must NOT have joined `milestone`
+    # into the parent SELECT — the resolver fetches it on its own. The first
+    # SELECT therefore should not reference `projects_milestone` at all.
+    sqls = [q["sql"] for q in ctx.captured_queries]
+    assert sqls, sqls
+    assert "projects_milestone" not in sqls[0], sqls[0]
