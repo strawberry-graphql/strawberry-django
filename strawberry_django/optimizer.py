@@ -1063,18 +1063,17 @@ def _get_hints_from_django_relation(
     return store
 
 
-def _store_declares_relation(
+def _store_declares_select_related(
     field_store: OptimizerStore | None,
     relation_name: str,
 ) -> bool:
-    """Check whether the user-declared store contracts the given relation.
+    """Whether the user-declared store contracts a `select_related` join on the relation.
 
-    Returns True when the store contains an entry in `select_related` or
-    `prefetch_related` whose first lookup segment matches `relation_name`.
-    Callable `prefetch_related` entries are skipped (we cannot introspect
-    them without invoking them, and the resolver-name path would already
-    have returned earlier for callable-prefetch fields whose name doesn't
-    map to a Django model field).
+    Only `select_related` is considered. The `prefetch_related` branch of the
+    optimizer (`_get_hints_from_django_relation`) short-circuits whenever the
+    field's store carries any `prefetch_related`, so allowing the gate to pass
+    for prefetch-declared method resolvers would not actually propagate child
+    hints. Keep the contract narrow until the prefetch path is reworked.
     """
     if not field_store:
         return False
@@ -1082,16 +1081,6 @@ def _store_declares_relation(
     for sr in field_store.select_related:
         if sr == relation_name or sr.startswith(f"{relation_name}{LOOKUP_SEP}"):
             return True
-
-    for pr in field_store.prefetch_related:
-        if isinstance(pr, str):
-            first = pr.split(LOOKUP_SEP, 1)[0]
-            if first == relation_name:
-                return True
-        elif isinstance(pr, Prefetch):
-            first = pr.prefetch_through.split(LOOKUP_SEP, 1)[0]
-            if first == relation_name:
-                return True
 
     return False
 
@@ -1180,17 +1169,16 @@ def _get_hints_from_django_field(
     # exceptions handled above.
     #
     # However, if the user has explicitly declared the relation in the field's store
-    # (via `select_related` or `prefetch_related`), they have contracted that the
-    # resolver returns the relation as the Django ORM would — so it is safe to
-    # descend into the child type and propagate its hints (e.g. nested `only=`).
-    # Without this, child-type `@strawberry_django.field(only=[...])` hints get
-    # silently dropped whenever the parent uses a method resolver (issue #904).
+    # via `select_related`, they have contracted that the resolver returns the
+    # relation as the Django ORM would — so it is safe to descend into the child
+    # type and propagate its hints (e.g. nested `only=`). Without this, child-type
+    # `@strawberry_django.field(only=[...])` hints get silently dropped whenever the
+    # parent uses a method resolver (issue #904).
     if has_base_resolver and not (
-        isinstance(
-            model_field,
-            (models.ForeignKey, OneToOneRel, *relation_fields),
+        isinstance(model_field, (models.ForeignKey, OneToOneRel))
+        and _store_declares_select_related(
+            getattr(field, "store", None), model_fieldname
         )
-        and _store_declares_relation(getattr(field, "store", None), model_fieldname)
     ):
         return None
 

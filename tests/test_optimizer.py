@@ -3161,12 +3161,17 @@ def test_method_resolver_without_relation_hint_does_not_descend(db):
       }
     """
 
-    result = schema.execute_sync(query)
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        result = schema.execute_sync(query)
 
-    # The query must still resolve correctly; we are only asserting that the
-    # optimizer didn't blow up by trying to auto-descend into the resolver.
     assert result.errors is None, result.errors
     assert sentinel.get("called") is True
     assert result.data == {
         "issues": [{"milestone": {"extra": str(milestone.due_date)}}],
     }
+    # Without the relation hint, the optimizer must NOT have joined `milestone`
+    # into the parent SELECT — the resolver fetches it on its own. The first
+    # SELECT therefore should not reference `projects_milestone` at all.
+    sqls = [q["sql"] for q in ctx.captured_queries]
+    assert sqls, sqls
+    assert "projects_milestone" not in sqls[0], sqls[0]

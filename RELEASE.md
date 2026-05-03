@@ -3,10 +3,10 @@ release type: minor
 ---
 
 Propagate child-type `only=` hints through method resolvers that declare the
-relation via `select_related` / `prefetch_related`. Previously they were
-silently dropped, causing deferred loads or `KeyError`s on descriptors
-without a deferred-load fallback (e.g. `djmoney.MoneyField`) once the
-parent's `select_related` reached past a single hop.
+relation via `select_related`. Previously they were silently dropped, causing
+deferred loads or `KeyError`s on descriptors without a deferred-load fallback
+(e.g. `djmoney.MoneyField`) once the parent's `select_related` reached past a
+single hop.
 
 ```python
 @strawberry_django.type(Child)
