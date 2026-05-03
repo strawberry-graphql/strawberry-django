@@ -1,4 +1,3 @@
-import django
 from django.db import models
 
 
@@ -28,16 +27,10 @@ class Project(models.Model):
     class Meta:
         constraints = (
             models.CheckConstraint(
-                **(
-                    {  # type: ignore[arg-type]
-                        "condition": (models.Q(artist="") | models.Q(supervisor=""))
-                        & (~models.Q(topic="") | ~models.Q(topic=""))
-                    }
-                    if django.VERSION >= (5, 1)
-                    else {
-                        "check": (models.Q(artist="") | models.Q(supervisor=""))
-                        & (~models.Q(topic="") | ~models.Q(topic=""))
-                    }
+                # type: ignore[arg-type]
+                condition=(
+                    (models.Q(artist="") | models.Q(supervisor=""))
+                    & (~models.Q(topic="") | ~models.Q(topic=""))
                 ),
                 name="artist_xor_supervisor",
             ),

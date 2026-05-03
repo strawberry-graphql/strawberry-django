@@ -13,7 +13,6 @@ from typing import (
     cast,
 )
 
-import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
@@ -41,11 +40,7 @@ except (ImportError, ModuleNotFoundError):  # pragma: no cover
     # ArrayField will not be importable if psycopg2 is not installed
     ArrayField = None
 
-if django.VERSION >= (5, 0):
-    from django.db.models import GeneratedField  # type: ignore
-else:
-    GeneratedField = None
-
+from django.db.models import GeneratedField  # type: ignore
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -513,7 +508,7 @@ def resolve_model_field_type(
             )
             model_field._strawberry_enum = field_type  # type: ignore
     # Generated fields
-    elif GeneratedField is not None and isinstance(model_field, GeneratedField):
+    elif isinstance(model_field, GeneratedField):
         model_field_type = type(model_field.output_field)  # type: ignore
         field_type = field_type_map.get(model_field_type, NotImplemented)
     elif ArrayField is not None and isinstance(model_field, ArrayField):
