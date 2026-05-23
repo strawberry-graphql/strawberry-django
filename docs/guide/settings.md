@@ -66,7 +66,7 @@ A dictionary with the following optional keys:
 
       Default limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
 
-- **`PAGINATION_MAX_LIMIT`** (default: `1000`)
+- **`PAGINATION_MAX_LIMIT`** (default: `100`)
 
       Maximum limit for [pagination](pagination.md) that can be requested by clients. This caps any limit value requested
       by clients, including `None` (unlimited) requests, preventing clients from exfiltrating entire tables in a single query

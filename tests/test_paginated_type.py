@@ -1002,14 +1002,27 @@ def test_pagination_default_limit():
             -5,
             None,
             20,
-            1000,
-        ),  # Negative limit without explicit max clamps to the default max (1000)
+            100,
+        ),  # Negative limit without explicit max clamps to the default max (100)
         (
             -5,
             None,
             None,
-            1000,
-        ),  # Negative limit without any settings clamps to the default max (1000)
+            100,
+        ),  # Negative limit without any settings clamps to the default max (100)
+        # Large positive limits should be clamped to max_limit
+        (
+            9999999,
+            None,
+            None,
+            100,
+        ),  # Very large limit with default settings → clamped to default max (100)
+        (
+            9999999,
+            500,
+            20,
+            500,
+        ),  # Very large limit with overridden max → clamped to max_limit
     ],
 )
 def test_page_info_reflects_effective_limit(

@@ -75,17 +75,17 @@ To prevent clients from requesting too many records at once (which could cause p
 issues or expose more data than intended), `PAGINATION_MAX_LIMIT` caps any limit value
 requested by clients, including `None` (unlimited) requests.
 
-For example, with the default `PAGINATION_MAX_LIMIT` of `1000`, a client requesting `limit: 5000`
-or `limit: null` will only receive a maximum of 1000 records.
+For example, with the default `PAGINATION_MAX_LIMIT` of `100`, a client requesting `limit: 5000`
+or `limit: null` will only receive a maximum of 100 records.
 
 ```python title="settings.py"
 STRAWBERRY_DJANGO = {
     "PAGINATION_DEFAULT_LIMIT": 100,
-    "PAGINATION_MAX_LIMIT": 1000,  # Cap all pagination requests at 1000 records
+    "PAGINATION_MAX_LIMIT": 100,  # Cap all pagination requests at 100 records
 }
 ```
 
-The default is `1000`. Tune it to fit your data volume and threat model. Setting it to `None`
+The default is `100`. Tune it to fit your data volume and threat model. Setting it to `None`
 disables the cap and allows clients to request unbounded result sets, which is strongly
 discouraged in production: a single query can then return entire tables and trigger
 expensive joins across related models.
