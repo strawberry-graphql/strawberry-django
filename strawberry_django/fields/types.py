@@ -554,9 +554,16 @@ def resolve_model_field_type(
         if using_old_filters:
             field_type = filters.FilterLookup[field_type]
         else:
-            field_type = filter_types.type_filter_map.get(  # type: ignore
+            lookup_type: Any = filter_types.type_filter_map.get(
                 field_type, filter_types.FilterLookup
-            )[field_type]
+            )
+            # Concrete lookups (e.g. StrFilterLookup, DateFilterLookup) are not
+            # subscriptable; only parametrize when the lookup is still generic.
+            field_type = (
+                lookup_type[field_type]
+                if getattr(lookup_type, "__parameters__", ())
+                else lookup_type
+            )
 
     return field_type
 

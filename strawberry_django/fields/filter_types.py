@@ -124,12 +124,9 @@ class StrFilterLookup(BaseFilterLookup[str]):
         description=f"Case-insensitive regular expression match. {_SKIP_MSG}"
     )
 
-    def __class_getitem__(cls, item: Any) -> type:
-        return cls
-
 
 @strawberry.input
-class DateFilterLookup(ComparisonFilterLookup[T]):
+class DateFilterLookup(ComparisonFilterLookup[datetime.date]):
     year: ComparisonFilterLookup[int] | None = UNSET
     month: ComparisonFilterLookup[int] | None = UNSET
     day: ComparisonFilterLookup[int] | None = UNSET
@@ -141,7 +138,7 @@ class DateFilterLookup(ComparisonFilterLookup[T]):
 
 
 @strawberry.input
-class TimeFilterLookup(ComparisonFilterLookup[T]):
+class TimeFilterLookup(ComparisonFilterLookup[datetime.time]):
     hour: ComparisonFilterLookup[int] | None = UNSET
     minute: ComparisonFilterLookup[int] | None = UNSET
     second: ComparisonFilterLookup[int] | None = UNSET
@@ -150,8 +147,20 @@ class TimeFilterLookup(ComparisonFilterLookup[T]):
 
 
 @strawberry.input
-class DatetimeFilterLookup(DateFilterLookup[T], TimeFilterLookup[T]):
-    pass
+class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
+    year: ComparisonFilterLookup[int] | None = UNSET
+    month: ComparisonFilterLookup[int] | None = UNSET
+    day: ComparisonFilterLookup[int] | None = UNSET
+    week_day: ComparisonFilterLookup[int] | None = UNSET
+    iso_week_day: ComparisonFilterLookup[int] | None = UNSET
+    week: ComparisonFilterLookup[int] | None = UNSET
+    iso_year: ComparisonFilterLookup[int] | None = UNSET
+    quarter: ComparisonFilterLookup[int] | None = UNSET
+    hour: ComparisonFilterLookup[int] | None = UNSET
+    minute: ComparisonFilterLookup[int] | None = UNSET
+    second: ComparisonFilterLookup[int] | None = UNSET
+    date: ComparisonFilterLookup[int] | None = UNSET
+    time: ComparisonFilterLookup[int] | None = UNSET
 
 
 type_filter_map = {
