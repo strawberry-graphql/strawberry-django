@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+0.85.0 - 2026-05-23
+-------------------
+
+**Breaking change**: `PAGINATION_MAX_LIMIT` now defaults to `100` instead of `None`, so clients can
+no longer request more than 100 rows in a single page by default.
+
+Previously, the cap was off and `PAGINATION_DEFAULT_LIMIT` only applied when the client omitted the
+limit, which let any client send `limit: 9999999` and receive the full table in one response.
+
+To restore the old behavior, set `PAGINATION_MAX_LIMIT` to `None` in `STRAWBERRY_DJANGO`
+(not recommended for production).
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#909](https://github.com/strawberry-graphql/strawberry-django/pull/909)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
 0.84.0 - 2026-05-03
 -------------------
 
