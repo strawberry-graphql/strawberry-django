@@ -166,6 +166,19 @@ class FruitFilter:
 > instead to prevent `DuplicatedTypeName` errors. See the [Generic Lookup reference](#generic-lookup-reference)
 > for the full list of available lookup types.
 
+> [!WARNING]
+> `StrFilterLookup` and `FilterLookup` expose `regex` and `iRegex`, which forward the
+> pattern to Django's [`__regex` / `__iregex`](https://docs.djangoproject.com/en/stable/ref/models/querysets/#regex)
+> lookups. The regex engine is provided by the database backend, and SQLite (Python's `re`)
+> and MySQL (POSIX ERE) are vulnerable to catastrophic backtracking on crafted patterns
+> (ReDoS). PostgreSQL uses RE2 and is not affected.
+>
+> If untrusted users can submit filter input, prefer one of:
+>
+> - Use PostgreSQL, or
+> - Apply a database statement timeout, or
+> - Subclass the lookup type and omit `regex` / `iRegex` from the fields you expose.
+
 ## Filtering over relationships
 
 ```python title="types.py"
@@ -461,6 +474,7 @@ There is 7 already defined Generic Lookup `strawberry.input` classes importable 
 - inherits `BaseFilterLookup`
 - additionally contains `iExact`, `contains`, `iContains`, `startsWith`, `iStartsWith`, `endsWith`, `iEndsWith`, `regex` & `iRegex`
 - used for string based fields and as default
+- see the [warning on `regex` / `iRegex`](#lookups) before exposing these on untrusted input
 
 #### `DateFilterLookup`
 
