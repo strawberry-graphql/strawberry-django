@@ -142,8 +142,6 @@ class TimeFilterLookup(ComparisonFilterLookup[datetime.time]):
     hour: ComparisonFilterLookup[int] | None = UNSET
     minute: ComparisonFilterLookup[int] | None = UNSET
     second: ComparisonFilterLookup[int] | None = UNSET
-    date: ComparisonFilterLookup[int] | None = UNSET
-    time: ComparisonFilterLookup[int] | None = UNSET
 
 
 @strawberry.input
@@ -159,8 +157,8 @@ class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
     hour: ComparisonFilterLookup[int] | None = UNSET
     minute: ComparisonFilterLookup[int] | None = UNSET
     second: ComparisonFilterLookup[int] | None = UNSET
-    date: ComparisonFilterLookup[int] | None = UNSET
-    time: ComparisonFilterLookup[int] | None = UNSET
+    date: ComparisonFilterLookup[datetime.date] | None = UNSET
+    time: ComparisonFilterLookup[datetime.time] | None = UNSET
 
 
 type_filter_map = {

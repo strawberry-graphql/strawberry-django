@@ -9,3 +9,9 @@ release type: minor
 class ProjectFilter:
     due_date: strawberry_django.DateFilterLookup | None
 ```
+
+Migrating:
+
+- Drop the type argument from `StrFilterLookup[str]`, `DateFilterLookup[datetime.date]`, etc. The bare lookup now works; using the bracket form raises `TypeError` at import time.
+- `DatetimeFilterLookup.date` and `.time` now accept `Date` / `Time` values (previously typed as `Int`, which never matched Django's `__date` / `__time` transforms).
+- `TimeFilterLookup.date` and `.time` were removed. Django's `__date` / `__time` transforms don't apply to `TimeField`.
