@@ -23,7 +23,7 @@ def test_process_filters_prefix(db):
             self,
             info: strawberry.Info,
             queryset: QuerySet,
-            value: filter_types.StrFilterLookup[str],
+            value: filter_types.StrFilterLookup,
             prefix: str,
         ) -> tuple[QuerySet, Q]:
             queryset = queryset.alias(
@@ -76,7 +76,7 @@ def test_process_filters_prefix_missing_trailing_underscores(db):
             self,
             info: strawberry.Info,
             queryset: QuerySet,
-            value: filter_types.StrFilterLookup[str],
+            value: filter_types.StrFilterLookup,
             prefix: str,
         ) -> tuple[QuerySet, Q]:
             queryset = queryset.alias(

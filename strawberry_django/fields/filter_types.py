@@ -21,6 +21,15 @@ T = TypeVar("T")
 _SKIP_MSG = "Filter will be skipped on `null` value"
 
 
+def _warn_concrete_lookup(cls: type) -> None:
+    warnings.warn(
+        f"{cls.__name__} is not generic; the type argument is ignored. "
+        "Use the bare class instead.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
 @strawberry.input
 class BaseFilterLookup(Generic[T]):
     exact: T | None = filter_field(description=f"Exact match. {_SKIP_MSG}")
@@ -125,11 +134,12 @@ class StrFilterLookup(BaseFilterLookup[str]):
     )
 
     def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
         return cls
 
 
 @strawberry.input
-class DateFilterLookup(ComparisonFilterLookup[T]):
+class DateFilterLookup(ComparisonFilterLookup[datetime.date]):
     year: ComparisonFilterLookup[int] | None = UNSET
     month: ComparisonFilterLookup[int] | None = UNSET
     day: ComparisonFilterLookup[int] | None = UNSET
@@ -139,19 +149,41 @@ class DateFilterLookup(ComparisonFilterLookup[T]):
     iso_year: ComparisonFilterLookup[int] | None = UNSET
     quarter: ComparisonFilterLookup[int] | None = UNSET
 
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
+
 
 @strawberry.input
-class TimeFilterLookup(ComparisonFilterLookup[T]):
+class TimeFilterLookup(ComparisonFilterLookup[datetime.time]):
     hour: ComparisonFilterLookup[int] | None = UNSET
     minute: ComparisonFilterLookup[int] | None = UNSET
     second: ComparisonFilterLookup[int] | None = UNSET
-    date: ComparisonFilterLookup[int] | None = UNSET
-    time: ComparisonFilterLookup[int] | None = UNSET
+
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
 
 
 @strawberry.input
-class DatetimeFilterLookup(DateFilterLookup[T], TimeFilterLookup[T]):
-    pass
+class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
+    year: ComparisonFilterLookup[int] | None = UNSET
+    month: ComparisonFilterLookup[int] | None = UNSET
+    day: ComparisonFilterLookup[int] | None = UNSET
+    week_day: ComparisonFilterLookup[int] | None = UNSET
+    iso_week_day: ComparisonFilterLookup[int] | None = UNSET
+    week: ComparisonFilterLookup[int] | None = UNSET
+    iso_year: ComparisonFilterLookup[int] | None = UNSET
+    quarter: ComparisonFilterLookup[int] | None = UNSET
+    hour: ComparisonFilterLookup[int] | None = UNSET
+    minute: ComparisonFilterLookup[int] | None = UNSET
+    second: ComparisonFilterLookup[int] | None = UNSET
+    date: ComparisonFilterLookup[datetime.date] | None = UNSET
+    time: ComparisonFilterLookup[datetime.time] | None = UNSET
+
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
 
 
 type_filter_map = {

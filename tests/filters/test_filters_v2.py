@@ -724,6 +724,57 @@ def test_str_filter_lookup_without_type_parameter():
     assert "input StrFilterLookup {" in schema.as_str()
 
 
+def test_date_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        date: strawberry_django.DateFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input DateFilterLookup {" in schema.as_str()
+
+
+def test_time_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        time: strawberry_django.TimeFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input TimeFilterLookup {" in schema.as_str()
+
+
+def test_datetime_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        created_at: strawberry_django.DatetimeFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input DatetimeFilterLookup {" in schema.as_str()
+
+
 def test_process_filters_with_some_global_id_in_lookup():
     @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
