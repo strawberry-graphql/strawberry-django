@@ -169,13 +169,11 @@ class FruitFilter:
 > [!WARNING]
 > `StrFilterLookup` and `FilterLookup` expose `regex` and `iRegex`, which forward the
 > pattern to Django's [`__regex` / `__iregex`](https://docs.djangoproject.com/en/stable/ref/models/querysets/#regex)
-> lookups. The regex engine is provided by the database backend, and SQLite (Python's `re`)
-> and MySQL (POSIX ERE) are vulnerable to catastrophic backtracking on crafted patterns
-> (ReDoS). PostgreSQL uses RE2 and is not affected.
+> lookups. Regex execution is provided by the database backend. Crafted patterns can cause
+> expensive backtracking or high CPU usage depending on backend behavior (ReDoS risk).
 >
 > If untrusted users can submit filter input, prefer one of:
 >
-> - Use PostgreSQL, or
 > - Apply a database statement timeout, or
 > - Subclass the lookup type and omit `regex` / `iRegex` from the fields you expose.
 
