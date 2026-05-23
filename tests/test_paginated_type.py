@@ -1002,14 +1002,14 @@ def test_pagination_default_limit():
             -5,
             None,
             20,
-            -5,
-        ),  # Negative limit without max passes through (unlimited in practice)
+            1000,
+        ),  # Negative limit without explicit max clamps to the default max (1000)
         (
             -5,
             None,
             None,
-            -5,
-        ),  # Negative limit without settings passes through (unlimited in practice)
+            1000,
+        ),  # Negative limit without any settings clamps to the default max (1000)
     ],
 )
 def test_page_info_reflects_effective_limit(

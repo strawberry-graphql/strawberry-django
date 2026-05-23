@@ -66,11 +66,12 @@ A dictionary with the following optional keys:
 
       Default limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
 
-- **`PAGINATION_MAX_LIMIT`** (default: `None`)
+- **`PAGINATION_MAX_LIMIT`** (default: `1000`)
 
-      Maximum limit for [pagination](pagination.md) that can be requested by clients. When set, this will cap any limit value requested
-      by clients, including `None` (unlimited) requests. This is useful to prevent clients from requesting too many records at once,
-      which could cause performance issues. Can be set to `None` to allow unlimited requests (not recommended for production).
+      Maximum limit for [pagination](pagination.md) that can be requested by clients. This caps any limit value requested
+      by clients, including `None` (unlimited) requests, preventing clients from exfiltrating entire tables in a single query
+      or triggering expensive full-table scans. Tune it to fit your data volume and threat model. Can be set to `None` to allow
+      unlimited requests, but doing so is strongly discouraged in production.
 
 - **`ALLOW_MUTATIONS_WITHOUT_FILTERS`** (default: `False`)
 
