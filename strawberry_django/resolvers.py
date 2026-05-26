@@ -83,7 +83,7 @@ def django_resolver(
             return resolver
 
         def sync_resolver(*args, **kwargs):
-            try:
+            def resolve():
                 retval = resolver(*args, **kwargs)
 
                 if callable(retval):
@@ -94,6 +94,10 @@ def django_resolver(
 
                 if qs_hook is not None and isinstance(retval, models.QuerySet):
                     retval = qs_hook(retval)
+                return retval
+
+            try:
+                retval = resolve()
             except Exception as e:
                 if except_as_none is not None and isinstance(e, except_as_none):
                     return None
