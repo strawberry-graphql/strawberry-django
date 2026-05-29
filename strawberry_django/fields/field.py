@@ -557,6 +557,15 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             forwarded_kwargs["order"] = order
         if "filters" not in forwarded_kwargs:
             forwarded_kwargs["filters"] = filters
+        # `filters`/`order`/`pagination` are forwarded to the inner resolver (above)
+        # so field extensions and custom resolvers can access them (see #853/#854).
+        # The inner resolver already applies them via ``get_queryset_hook`` ->
+        # ``get_queryset``, so we must NOT apply them again here. Re-applying runs
+        # the filter pipeline twice, and a second ``queryset.filter(...)`` makes
+        # Django emit a duplicate set of JOINs for any multivalued relation in the
+        # filter, squaring the row count of the resulting query.
+        # This mirrors ``StrawberryDjangoConnectionExtension.resolve`` above, which
+        # likewise passes the ``next_`` result straight to ``resolve_connection``.
         queryset = cast(
             "models.QuerySet",
             next_(
@@ -566,22 +575,13 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             ),
         )
 
-        def get_queryset(queryset):
-            return cast("StrawberryDjangoField", info._field).get_queryset(
-                queryset,
-                info,
-                pagination=pagination,
-                order=order,
-                filters=filters,
-            )
-
         # We have a single resolver for both sync and async, so we need to check if
         # nodes is awaitable or not and resolve it accordingly
         if inspect.isawaitable(queryset):
 
             async def async_resolver(queryset=queryset):
                 resolved = self.paginated_type.resolve_paginated(
-                    get_queryset(await queryset),
+                    await queryset,
                     info=info,
                     pagination=pagination,
                     **kwargs,
@@ -594,7 +594,7 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             return async_resolver()
 
         return self.paginated_type.resolve_paginated(
-            get_queryset(queryset),
+            queryset,
             info=info,
             pagination=pagination,
             **kwargs,
