@@ -1381,3 +1381,145 @@ def test_offset_paginated_runs_perms_optimizer_and_type_hook_once(mocker):
     assert perms_spy.call_count == 1  # was 2 before the fix
     assert optimize_spy.call_count == 1  # was 2 before the fix
     assert type_get_queryset_calls == 1  # guarded by type_get_queryset_did_run
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_offset_paginated_applies_filter_pipeline_only_once_async():
+    """Async variant of ``test_offset_paginated_applies_filter_pipeline_only_once``.
+
+    Exercises the awaitable branch of ``StrawberryOffsetPaginatedExtension.resolve``;
+    the filter pipeline must still run exactly once.
+    """
+    from django.db.models import Q
+
+    call_count = 0
+
+    @strawberry_django.filter_type(models.Fruit)
+    class FruitFilter:
+        @strawberry_django.filter_field
+        def name_contains(self, queryset, value: str, prefix: str):
+            nonlocal call_count
+            call_count += 1
+            return queryset, Q(**{f"{prefix}name__icontains": value})
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class Fruit:
+        id: int
+        name: str
+
+    @strawberry.type
+    class Query:
+        fruits: OffsetPaginated[Fruit] = strawberry_django.offset_paginated(
+            filters=FruitFilter
+        )
+
+    schema = strawberry.Schema(query=Query)
+    await models.Fruit.objects.acreate(name="Apple")
+
+    query = """
+      query ($filters: FruitFilter) {
+        fruits(filters: $filters) {
+          results { name }
+        }
+      }
+    """
+    res = await schema.execute(
+        query, variable_values={"filters": {"nameContains": "App"}}
+    )
+
+    assert res.errors is None
+    assert res.data == {"fruits": {"results": [{"name": "Apple"}]}}
+    assert call_count == 1, (
+        f"filter pipeline ran {call_count} times for a single async OffsetPaginated "
+        "resolution (expected 1); it is being applied twice"
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_offset_paginated_does_not_duplicate_joins_with_or_across_relations():
+    """OR across two multivalued relations + DISTINCT must not double the JOINs.
+
+    Mirrors the query shape that originally surfaced the double-filter bug: an
+    ``OR`` spanning two multivalued relations with ``DISTINCT``. The paginated
+    field must emit the same JOINs as the equivalent non-paginated list field;
+    the bug applied the filter twice, joining each relation twice and squaring
+    the row count.
+    """
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    @strawberry_django.filter_type(models.Tag, lookups=True)
+    class TagFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(models.User, lookups=True)
+    class UserFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(models.Group, lookups=True)
+    class GroupFilter:
+        name: strawberry.auto
+        tags: TagFilter | None
+        users: UserFilter | None
+
+    @strawberry_django.type(models.Group, filters=GroupFilter)
+    class GroupType:
+        id: int
+        name: str
+
+    @strawberry.type
+    class Query:
+        groups_paginated: OffsetPaginated[GroupType] = (
+            strawberry_django.offset_paginated(filters=GroupFilter)
+        )
+        groups_list: list[GroupType] = strawberry_django.field(filters=GroupFilter)
+
+    schema = strawberry.Schema(query=Query)
+    group = models.Group.objects.create(name="g1")
+    tag = models.Tag.objects.create(name="t1")
+    group.tags.add(tag)
+    models.User.objects.create(name="u1", group=group)
+
+    variables = {
+        "filters": {
+            "tags": {"name": {"exact": "t1"}},
+            "OR": {"users": {"name": {"exact": "u1"}}},
+            "DISTINCT": True,
+        }
+    }
+
+    list_query = """
+      query ($filters: GroupFilter) {
+        groupsList(filters: $filters) { name }
+      }
+    """
+    with CaptureQueriesContext(connection) as list_ctx:
+        list_res = schema.execute_sync(list_query, variable_values=variables)
+    assert list_res.errors is None
+    list_sql = next(
+        q["sql"]
+        for q in list_ctx.captured_queries
+        if q["sql"].lstrip().upper().startswith("SELECT") and "tests_group" in q["sql"]
+    )
+    list_joins = list_sql.upper().count(" JOIN ")
+
+    paginated_query = """
+      query ($filters: GroupFilter) {
+        groupsPaginated(filters: $filters) { results { name } }
+      }
+    """
+    with CaptureQueriesContext(connection) as pag_ctx:
+        pag_res = schema.execute_sync(paginated_query, variable_values=variables)
+    assert pag_res.errors is None
+    pag_sql = next(
+        q["sql"]
+        for q in pag_ctx.captured_queries
+        if q["sql"].lstrip().upper().startswith("SELECT") and "tests_group" in q["sql"]
+    )
+    pag_joins = pag_sql.upper().count(" JOIN ")
+
+    assert pag_joins == list_joins, (
+        f"OffsetPaginated query has {pag_joins} JOINs but the equivalent list "
+        f"query has {list_joins}; the OR/relation filter is being applied twice.\n"
+        f"paginated SQL: {pag_sql}"
+    )
