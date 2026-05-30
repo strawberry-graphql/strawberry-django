@@ -1327,3 +1327,57 @@ def test_offset_paginated_does_not_duplicate_relation_joins():
         f"query has {list_joins}; the relation filter is being applied twice.\n"
         f"paginated SQL: {pag_sql}"
     )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_offset_paginated_runs_perms_optimizer_and_type_hook_once(mocker):
+    """An OffsetPaginated resolution must run the get_queryset pipeline once.
+
+    The extension forwards filters/order/pagination to the inner resolver (#854),
+    which already runs ``get_queryset_hook`` -> ``get_queryset``. The extension
+    must not call ``get_queryset`` a second time, otherwise permission filtering
+    (``filter_with_perms``) and the optimizer pass silently run twice (and
+    relation filters duplicate their JOINs). The type-level ``get_queryset`` hook
+    is guarded by ``type_get_queryset_did_run`` and runs once regardless.
+    """
+    from strawberry_django.fields import field as field_mod
+    from strawberry_django.optimizer import DjangoOptimizerExtension
+
+    type_get_queryset_calls = 0
+
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class Fruit:
+        id: int
+        name: str
+
+        @classmethod
+        def get_queryset(cls, queryset, info, **kwargs):
+            nonlocal type_get_queryset_calls
+            type_get_queryset_calls += 1
+            return queryset
+
+    @strawberry.type
+    class Query:
+        fruits: OffsetPaginated[Fruit] = strawberry_django.offset_paginated(
+            filters=FruitFilter
+        )
+
+    perms_spy = mocker.spy(field_mod, "filter_with_perms")
+    optimize_spy = mocker.spy(DjangoOptimizerExtension, "optimize")
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
+    models.Fruit.objects.create(name="Apple")
+
+    res = schema.execute_sync(
+        "query ($f: FruitFilter){ fruits(filters: $f){ results { name } } }",
+        variable_values={"f": {"name": {"exact": "Apple"}}},
+    )
+
+    assert res.errors is None
+    assert perms_spy.call_count == 1  # was 2 before the fix
+    assert optimize_spy.call_count == 1  # was 2 before the fix
+    assert type_get_queryset_calls == 1  # guarded by type_get_queryset_did_run
