@@ -4,7 +4,6 @@ import dataclasses
 import functools
 import itertools
 import weakref
-from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
