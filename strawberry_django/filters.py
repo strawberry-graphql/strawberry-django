@@ -5,7 +5,6 @@ import inspect
 import operator
 import warnings
 from enum import Enum
-from types import FunctionType
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -46,6 +45,7 @@ from .settings import strawberry_django_settings
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from types import FunctionType
 
     from django.db.models import Model
     from strawberry.types import Info

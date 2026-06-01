@@ -4,7 +4,6 @@ import dataclasses
 import functools
 import itertools
 import weakref
-from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -32,7 +31,7 @@ from .pyutils import DictTree, dicttree_insersection_differs, dicttree_merge
 from .typing import get_django_definition
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
 
     from django.db import models
     from django.db.models.expressions import Expression
