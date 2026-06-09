@@ -3,11 +3,13 @@ from typing import Annotated
 
 import pytest
 import strawberry
-from django.db.models import QuerySet
-from django.test.utils import override_settings
+from django.db import connection
+from django.db.models import Q, QuerySet
+from django.test.utils import CaptureQueriesContext, override_settings
 from strawberry.extensions.field_extension import FieldExtension
 
 import strawberry_django
+from strawberry_django.fields import field as field_mod
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import OffsetPaginated, OffsetPaginationInput
 from strawberry_django.settings import StrawberryDjangoSettings
@@ -1207,8 +1209,6 @@ def test_offset_paginated_applies_filter_pipeline_only_once():
     *second*, independent set of JOINs, squaring the row count of the query (this
     is what took a production query from <1s to >30s).
     """
-    from django.db.models import Q
-
     call_count = 0
 
     @strawberry_django.filter_type(models.Fruit)
@@ -1261,8 +1261,6 @@ def test_offset_paginated_does_not_duplicate_relation_joins():
     applied the filter twice, so the paginated query joined the related table
     twice (e.g. ``tests_group_tags`` appearing as two aliases), squaring rows.
     """
-    from django.db import connection
-    from django.test.utils import CaptureQueriesContext
 
     @strawberry_django.filter_type(models.Tag, lookups=True)
     class TagFilter:
@@ -1340,9 +1338,6 @@ def test_offset_paginated_runs_perms_optimizer_and_type_hook_once(mocker):
     relation filters duplicate their JOINs). The type-level ``get_queryset`` hook
     is guarded by ``type_get_queryset_did_run`` and runs once regardless.
     """
-    from strawberry_django.fields import field as field_mod
-    from strawberry_django.optimizer import DjangoOptimizerExtension
-
     type_get_queryset_calls = 0
 
     @strawberry_django.filter_type(models.Fruit, lookups=True)
@@ -1390,8 +1385,6 @@ async def test_offset_paginated_applies_filter_pipeline_only_once_async():
     Exercises the awaitable branch of ``StrawberryOffsetPaginatedExtension.resolve``;
     the filter pipeline must still run exactly once.
     """
-    from django.db.models import Q
-
     call_count = 0
 
     @strawberry_django.filter_type(models.Fruit)
@@ -1445,8 +1438,6 @@ def test_offset_paginated_does_not_duplicate_joins_with_or_across_relations():
     the bug applied the filter twice, joining each relation twice and squaring
     the row count.
     """
-    from django.db import connection
-    from django.test.utils import CaptureQueriesContext
 
     @strawberry_django.filter_type(models.Tag, lookups=True)
     class TagFilter:
