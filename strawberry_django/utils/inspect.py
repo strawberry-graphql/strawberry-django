@@ -400,7 +400,10 @@ def callable_returns_queryset(resolver: StrawberryResolver) -> bool:
         annotation = eval_type(annotation, resolver._namespace, None)
 
     if is_union(annotation) and is_optional(annotation):
-        annotation = get_args(annotation)[0]
+        non_none = [a for a in get_args(annotation) if a is not type(None)]
+        if len(non_none) != 1:
+            return False
+        annotation = non_none[0]
 
     origin = get_origin(annotation) or annotation
     return isinstance(origin, type) and issubclass(origin, QuerySet)

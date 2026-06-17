@@ -96,14 +96,17 @@ def test_connection_resolver_with_queryset_annotation():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_connection_resolver_with_queryset_annotation_resolves():
+@pytest.mark.parametrize(
+    "connection_type", [DjangoListConnection, DjangoCursorConnection]
+)
+def test_connection_resolver_with_queryset_annotation_resolves(connection_type):
     """A `QuerySet[Model]`-annotated resolver resolves its nodes correctly."""
     User.objects.create(name="user1")
     User.objects.create(name="user2")
 
     @strawberry.type
     class QuerySetQuery:
-        @strawberry_django.connection(DjangoListConnection[UserType])
+        @strawberry_django.connection(connection_type[UserType])
         def users(self) -> QuerySet[User]:
             return User.objects.all().order_by("name")
 
