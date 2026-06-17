@@ -1,6 +1,25 @@
 CHANGELOG
 =========
 
+0.86.3 - 2026-06-17
+-------------------
+
+Connection resolvers can now be annotated with a `QuerySet[Model]` return type
+instead of being forced to widen it to `Iterable[Model]`:
+
+```python
+@strawberry_django.connection(DjangoCursorConnection[FruitType])
+@staticmethod
+def fruits() -> QuerySet[Fruit]:
+    return Fruit.objects.all()
+```
+
+Previously this raised `RelayWrongResolverAnnotationError` because Django's
+`QuerySet[Model]` collapses to the bare `QuerySet` class, which the relay
+annotation check did not recognize as iterable.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#920](https://github.com/strawberry-graphql/strawberry-django/pull/920)
+
 0.86.2 - 2026-06-17
 -------------------
 
