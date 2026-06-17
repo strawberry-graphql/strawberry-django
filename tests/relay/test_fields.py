@@ -4,8 +4,10 @@ from strawberry.relay.utils import to_base64
 
 from .schema import FruitModel, schema
 
+pytestmark = pytest.mark.usefixtures("_fixtures")
 
-@pytest.fixture(autouse=True)
+
+@pytest.fixture
 def _fixtures(transactional_db):
     for pk, name, color in [
         (1, "Banana", "yellow"),

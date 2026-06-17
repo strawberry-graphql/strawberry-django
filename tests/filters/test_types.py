@@ -14,7 +14,10 @@ from tests import models
 DjangoModelFilterInput = get_django_model_filter_input_type()
 
 
-@pytest.fixture(autouse=True)
+pytestmark = pytest.mark.usefixtures("_filter_order_settings")
+
+
+@pytest.fixture
 def _filter_order_settings(settings):
     settings.STRAWBERRY_DJANGO = {
         **strawberry_django_settings(),

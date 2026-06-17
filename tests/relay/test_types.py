@@ -7,8 +7,10 @@ from typing_extensions import assert_type
 
 from .schema import Fruit, FruitModel, schema
 
+pytestmark = pytest.mark.usefixtures("_fixtures")
 
-@pytest.fixture(autouse=True)
+
+@pytest.fixture
 def _fixtures(transactional_db):
     for pk, name, color in [
         (1, "Banana", "yellow"),

@@ -112,7 +112,10 @@ with override_settings(STRAWBERRY_DJANGO={"USE_DEPRECATED_FILTERS": True}):
     _ = strawberry.Schema(query=Query)
 
 
-@pytest.fixture(autouse=True)
+pytestmark = pytest.mark.usefixtures("_autouse_old_filters")
+
+
+@pytest.fixture
 def _autouse_old_filters(settings):
     settings.STRAWBERRY_DJANGO = {"USE_DEPRECATED_FILTERS": True}
 
