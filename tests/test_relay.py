@@ -1,3 +1,7 @@
+import asyncio
+import inspect
+from typing import Any, cast
+
 import strawberry
 from strawberry import auto, relay
 from typing_extensions import Self
@@ -82,3 +86,22 @@ def test_relay_with_resolve_id_and_node_id():
     assert str(schema) == expected_schema.strip()
     # check that resolve_id_attr resolves correctly
     assert UserType.resolve_id_attr() == "id"
+
+
+async def test_resolve_id_is_sync_in_async_context():
+    @strawberry_django.type(User)
+    class DefaultPkType(relay.Node):
+        name: auto
+
+    @strawberry_django.type(User)
+    class NodeIdType(relay.Node):
+        id: relay.NodeID[int]
+        name: auto
+
+    # Resolving the id off an in-memory instance must not hop threads via
+    # sync_to_async, even when called inside an async context.
+    await asyncio.sleep(0)  # ensure a running event loop (in_async_context() is true)
+    for node_type in (DefaultPkType, NodeIdType):
+        result = node_type.resolve_id(cast("Any", User(pk=1)), info=cast("Any", None))
+        assert result == "1"
+        assert not inspect.isawaitable(result)

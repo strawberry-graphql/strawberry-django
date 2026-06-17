@@ -283,7 +283,9 @@ def resolve_model_node(
 
 
 def resolve_model_id_attr(source: type) -> str:
-    """Resolve the model id, ensuring it is retrieved in a sync context.
+    """Resolve the name of the model attribute holding the node id.
+
+    This is a pure annotation scan, so it never touches the database.
 
     Args:
     ----
@@ -309,7 +311,11 @@ def resolve_model_id(
     *,
     info: Info | None = None,
 ) -> AwaitableOrValue[str]:
-    """Resolve the model id, ensuring it is retrieved in a sync context.
+    """Resolve the model id, reading it off the in-memory instance.
+
+    The pk is read directly from the instance's ``__dict__``, so the common case
+    stays synchronous. Only a deferred id field falls back to ``django_getattr``,
+    which bridges the resulting database read to the current sync/async context.
 
     Args:
     ----

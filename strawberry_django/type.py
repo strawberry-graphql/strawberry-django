@@ -213,17 +213,21 @@ def _process_type(
     # Default querying methods for relay
     if issubclass(cls, relay.Node):
         for attr, func in [
+            # resolve_id / resolve_id_attr read the pk off the in-memory instance;
+            # wrapping them in django_resolver would force every id resolution
+            # through sync_to_async (a thread hop) in async contexts. They bridge
+            # the rare deferred-field DB read themselves via django_getattr.
             ("resolve_id", resolve_model_id),
             ("resolve_id_attr", resolve_model_id_attr),
-            ("resolve_node", resolve_model_node),
-            ("resolve_nodes", resolve_model_nodes),
+            ("resolve_node", django_resolver(resolve_model_node)),
+            ("resolve_nodes", django_resolver(resolve_model_nodes)),
         ]:
             existing_resolver = getattr(cls, attr, None)
             if (
                 existing_resolver is None
                 or existing_resolver.__func__ is getattr(relay.Node, attr).__func__
             ):
-                setattr(cls, attr, types.MethodType(django_resolver(func), cls))  # type: ignore
+                setattr(cls, attr, types.MethodType(func, cls))
 
             # Adjust types that inherit from other types/interfaces that implement Node
             # to make sure they pass themselves as the node type
