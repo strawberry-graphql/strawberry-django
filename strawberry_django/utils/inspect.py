@@ -7,7 +7,10 @@ import weakref
 from typing import (
     TYPE_CHECKING,
     Any,
+    ForwardRef,
     cast,
+    get_args,
+    get_origin,
 )
 
 from django.db.models.query import Prefetch, QuerySet
@@ -23,6 +26,7 @@ from strawberry.types.base import (
 from strawberry.types.lazy_type import LazyType
 from strawberry.types.union import StrawberryUnion
 from strawberry.utils.str_converters import to_camel_case
+from strawberry.utils.typing import eval_type, is_optional, is_union
 from typing_extensions import TypeIs, assert_never
 
 from strawberry_django.fields.types import resolve_model_field_name
@@ -43,6 +47,7 @@ if TYPE_CHECKING:
         InheritanceQuerySetMixin,
     )
     from polymorphic.models import PolymorphicModel
+    from strawberry.types.fields.resolver import StrawberryResolver
 
 
 @functools.lru_cache
@@ -384,3 +389,21 @@ class PrefetchInspector:
         self.prefetch_related = prefetch_related.values()
 
         return self
+
+
+def callable_returns_queryset(resolver: StrawberryResolver) -> bool:
+    """Check whether a resolver's return annotation resolves to a `QuerySet`."""
+    annotation = resolver.signature.return_annotation
+    if isinstance(annotation, str):
+        annotation = ForwardRef(annotation)
+    if isinstance(annotation, ForwardRef):
+        annotation = eval_type(annotation, resolver._namespace, None)
+
+    if is_union(annotation) and is_optional(annotation):
+        non_none = [a for a in get_args(annotation) if a is not type(None)]
+        if len(non_none) != 1:
+            return False
+        annotation = non_none[0]
+
+    origin = get_origin(annotation) or annotation
+    return isinstance(origin, type) and issubclass(origin, QuerySet)

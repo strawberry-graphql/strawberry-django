@@ -69,6 +69,7 @@ from strawberry_django.resolvers import (
     django_resolver,
     resolve_base_manager,
 )
+from strawberry_django.utils.inspect import callable_returns_queryset
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -475,7 +476,25 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
             field.base_resolver = StrawberryResolver(default_resolver)
 
-        return super().apply(field)
+        # Django's ``QuerySet.__class_getitem__`` returns the bare class, so a
+        # ``QuerySet[Foo]`` return annotation collapses to ``QuerySet`` and
+        # upstream's ``get_origin()``-based iterable check rejects it even though
+        # ``QuerySet`` is a genuine ``Iterable``. Normalize it to a plain list for
+        # the duration of ``super().apply()``; the annotation is only used there.
+        resolver = field.base_resolver
+        original_signature = resolver.__dict__.get("signature", UNSET)
+        if callable_returns_queryset(resolver):
+            resolver.__dict__["signature"] = resolver.signature.replace(
+                return_annotation=list[Any]
+            )
+
+        try:
+            return super().apply(field)
+        finally:
+            if original_signature is UNSET:
+                resolver.__dict__.pop("signature", None)
+            else:
+                resolver.__dict__["signature"] = original_signature
 
     def resolve(
         self,
