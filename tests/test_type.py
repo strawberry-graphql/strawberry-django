@@ -8,6 +8,7 @@ from strawberry.types import get_object_definition
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.utils.typing import get_django_definition
+from tests import models as test_models
 
 
 def test_non_dataclass_annotations_are_ignored_on_type():
@@ -85,6 +86,46 @@ def test_non_dataclass_annotations_are_ignored_on_input():
     }
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_input_can_extend_existing_input_type():
+    @strawberry_django.input(test_models.User, name="UserInput", fields=["name"])
+    class UserInput: ...
+
+    @strawberry_django.input(test_models.User, name="UserInput", extend=True)
+    class UserInputExtension:
+        extra: str
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def some_field(self, my_input: UserInput) -> str:
+            return my_input.name
+
+    schema = strawberry.Schema(query=Query, types=[UserInputExtension])
+    expected = """\
+    type Query {
+      someField(myInput: UserInput!): String!
+    }
+
+    input UserInput {
+      name: String!
+    }
+
+    extend input UserInput {
+      extra: String!
+    }
+    """
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+def test_partial_can_extend_existing_input_type():
+    @strawberry_django.partial(test_models.User, name="UserInput", extend=True)
+    class UserInputExtension:
+        extra: str | None
+
+    type_def = get_object_definition(UserInputExtension, strict=True)
+    assert type_def.extend is True
 
 
 def test_optimizer_hints_on_type():
