@@ -70,9 +70,6 @@ dev = [
 [tool.uv]
 default-groups = ["dev"]
 
-[tool.uv.sources]
-strawberry-graphql = { path = "../strawberry", editable = true }
-
 [tool.hatch.build.targets.wheel]
 packages = ["strawberry_django"]
 

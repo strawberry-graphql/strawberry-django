@@ -100,7 +100,7 @@ def test_input_can_extend_existing_input_type():
     class Query:
         @strawberry.field
         def some_field(self, my_input: UserInput) -> str:
-            return my_input.name
+            return f"{my_input.name} {my_input.extra}"
 
     schema = strawberry.Schema(query=Query, types=[UserInputExtension])
     expected = """\
@@ -118,6 +118,13 @@ def test_input_can_extend_existing_input_type():
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
 
+    result = schema.execute_sync(
+        '{ someField(myInput: { name: "Ada", extra: "Lovelace" }) }'
+    )
+
+    assert result.errors is None
+    assert result.data == {"someField": "Ada Lovelace"}
+
 
 def test_partial_can_extend_existing_input_type():
     @strawberry_django.partial(test_models.User, name="UserInput", extend=True)
@@ -126,6 +133,46 @@ def test_partial_can_extend_existing_input_type():
 
     type_def = get_object_definition(UserInputExtension, strict=True)
     assert type_def.extend is True
+
+
+def test_type_can_extend_existing_type():
+    @strawberry_django.type(test_models.User, name="UserType", fields=["name"])
+    class UserType: ...
+
+    @strawberry_django.type(test_models.User, name="UserType", extend=True)
+    class UserTypeExtension:
+        @strawberry.field
+        def extra(self) -> str:
+            return self.extra
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def user(self) -> UserType:
+            user = test_models.User(name="Ada")
+            user.extra = "Lovelace"
+            return user
+
+    schema = strawberry.Schema(query=Query, types=[UserTypeExtension])
+    expected = """\
+    type Query {
+      user: UserType!
+    }
+
+    type UserType {
+      name: String!
+    }
+
+    extend type UserType {
+      extra: String!
+    }
+    """
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync("{ user { name extra } }")
+
+    assert result.errors is None
+    assert result.data == {"user": {"name": "Ada", "extra": "Lovelace"}}
 
 
 def test_optimizer_hints_on_type():
