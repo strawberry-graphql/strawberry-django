@@ -573,11 +573,11 @@ def input(  # noqa: A001
     field_cls: builtins.type[StrawberryDjangoField] = StrawberryDjangoField,
     description: str | None = None,
     directives: Sequence[object] | None = (),
-    extend: bool = False,
     is_filter: Literal["lookups"] | bool = False,
     partial: bool = False,
     fields: list[str] | Literal["__all__"] | None = None,
     exclude: list[str] | None = None,
+    extend: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL input.
 
@@ -626,9 +626,9 @@ def partial(
     field_cls: builtins.type[StrawberryDjangoField] = StrawberryDjangoField,
     description: str | None = None,
     directives: Sequence[object] | None = (),
-    extend: bool = False,
     fields: list[str] | Literal["__all__"] | None = None,
     exclude: list[str] | None = None,
+    extend: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 
