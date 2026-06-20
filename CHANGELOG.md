@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+0.86.4 - 2026-06-20
+-------------------
+
+`@strawberry_django.type` types no longer overwrite `is_type_of` methods in superclasses.
+Instead, the superclass' result will be taken into account as well.
+
+This release was contributed by [@diesieben07](https://github.com/diesieben07) in [#922](https://github.com/strawberry-graphql/strawberry-django/pull/922)
+
 0.86.3 - 2026-06-17
 -------------------
 
