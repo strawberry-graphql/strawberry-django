@@ -203,10 +203,14 @@ def _process_type(
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
 
-        def is_type_of(obj, info):
+        @classmethod
+        def is_type_of(virtual_cls, obj, info):
             if (type_cast := get_strawberry_type_cast(obj)) is not None:
                 return type_cast is cls
-            return isinstance(obj, (cls, model))
+            super_func = getattr(super(cls, virtual_cls), "is_type_of", None)
+            return (super_func is None or super_func(obj, info)) and isinstance(
+                obj, (cls, model)
+            )
 
         cls.is_type_of = is_type_of
 
