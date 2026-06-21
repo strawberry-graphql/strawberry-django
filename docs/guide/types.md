@@ -21,11 +21,13 @@ import strawberry_django
 
 from strawberry import auto
 
+
 @strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
     color: "Color"
+
 
 @strawberry_django.type(models.Color)
 class Color:
@@ -57,12 +59,14 @@ Non-`auto` type annotations will be respected—and therefore required—unless 
 class FruitPartialInput(FruitInput):
     color: list["ColorPartialInput"]
 
+
 # Auto fields are optional
 @strawberry_django.input(models.Color, partial=True)
 class ColorPartialInput:
     id: auto
     name: auto
     fruits: list[FruitPartialInput]
+
 
 # Alternate input; "name" field will be required
 @strawberry_django.input(models.Color, partial=True)
@@ -79,9 +83,9 @@ Django models can be converted to `strawberry` Types with the `strawberry_django
 ```python title="types.py"
 import strawberry_django
 
+
 @strawberry_django.type(models.Fruit, description="A tasty snack")
-class Fruit:
-    ...
+class Fruit: ...
 ```
 
 ### Adding fields to the type
@@ -103,7 +107,6 @@ like filtering it further.
 ```python title="types.py"
 @strawberry_django.type(models.Fruit)
 class Berry:
-
     @classmethod
     def get_queryset(cls, queryset, info, **kwargs):
         return queryset.filter(name__contains="berry")
@@ -118,9 +121,9 @@ limit access to results based on the current user in the request:
 ```python title="types.py"
 from strawberry_django.auth.utils import get_current_user
 
+
 @strawberry_django.type(models.Fruit)
 class Berry:
-
     @classmethod
     def get_queryset(cls, queryset, info, **kwargs):
         user = get_current_user(info)

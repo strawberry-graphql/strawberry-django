@@ -4,13 +4,13 @@ import enum
 import uuid
 from typing import Any, cast
 
-import django
 import pytest
 import strawberry
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models import GeneratedField  # type: ignore
 from strawberry import auto
 from strawberry.scalars import JSON
 from strawberry.types import get_object_definition
@@ -24,11 +24,6 @@ from strawberry.types.enum import EnumValue, StrawberryEnumDefinition
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.type import _process_type  # noqa: PLC2701
-
-if django.VERSION >= (5, 0):
-    from django.db.models import GeneratedField  # type: ignore
-else:
-    GeneratedField = None
 
 
 class FieldTypesModel(models.Model):
@@ -143,12 +138,11 @@ def test_field_types():
         ("json", JSON),
     ]
 
-    if django.VERSION >= (5, 0):
-        Type.__annotations__["generated_decimal"] = auto
-        expected_types.append(("generated_decimal", decimal.Decimal))
+    Type.__annotations__["generated_decimal"] = auto
+    expected_types.append(("generated_decimal", decimal.Decimal))
 
-        Type.__annotations__["generated_nullable_decimal"] = auto
-        expected_types.append(("generated_nullable_decimal", decimal.Decimal | None))
+    Type.__annotations__["generated_nullable_decimal"] = auto
+    expected_types.append(("generated_nullable_decimal", decimal.Decimal | None))
 
     type_to_test = _process_type(Type, model=FieldTypesModel)
     object_definition = get_object_definition(type_to_test, strict=True)

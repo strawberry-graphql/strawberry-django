@@ -24,6 +24,7 @@ from decimal import Decimal
 from django.db import models
 from strawberry_django.descriptors import model_property
 
+
 class OrderItem(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField()
@@ -37,6 +38,7 @@ class OrderItem(models.Model):
 ```python title="types.py"
 import strawberry_django
 from strawberry import auto
+
 
 @strawberry_django.type(models.OrderItem)
 class OrderItem:
@@ -55,12 +57,11 @@ For expensive computations that should only be calculated once per instance, use
 from django.db import models
 from strawberry_django.descriptors import cached_model_property
 
+
 class Product(models.Model):
     name = models.CharField(max_length=100)
 
-    @cached_model_property(
-        prefetch_related=["reviews"]
-    )
+    @cached_model_property(prefetch_related=["reviews"])
     def average_rating(self) -> float:
         """Calculate average rating from all reviews."""
         reviews = list(self.reviews.all())
@@ -85,14 +86,14 @@ from django.db import models
 from django.db.models import Sum
 from strawberry_django.descriptors import model_property, cached_model_property
 
+
 class Order(models.Model):
     customer = models.ForeignKey("Customer", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20)
 
     @model_property(
-        prefetch_related=["items"],
-        annotate={"_total": Sum("items__total")}
+        prefetch_related=["items"], annotate={"_total": Sum("items__total")}
     )
     def total_amount(self) -> Decimal:
         """Calculate total order amount."""
@@ -108,12 +109,13 @@ class Order(models.Model):
 import strawberry_django
 from strawberry import auto
 
+
 @strawberry_django.type(models.Order)
 class Order:
     created_at: auto
     status: auto
-    total_amount: auto      # Uses model_property optimization hints
-    customer_name: auto     # Uses cached_model_property hints
+    total_amount: auto  # Uses model_property optimization hints
+    customer_name: auto  # Uses cached_model_property hints
 ```
 
 ## Best Practices
@@ -138,10 +140,12 @@ class Order:
 def book_count(self) -> int:
     return self.books.count()  # Issues a COUNT(*) query!
 
+
 # ✅ Good: len() uses prefetch cache
 @model_property(prefetch_related=["books"])
 def book_count(self) -> int:
     return len(self.books.all())  # Uses prefetched data
+
 
 # ✅ Best: Use database annotation when prefetch not needed
 @model_property(annotate={"_book_count": Count("books")})
@@ -169,6 +173,7 @@ If Strawberry can't resolve the type:
 @model_property(only=["name"])
 def display_name(self):
     return self.name.upper()
+
 
 # ✅ With return type annotation
 @model_property(only=["name"])

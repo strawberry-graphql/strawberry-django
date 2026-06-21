@@ -13,7 +13,6 @@ from typing import (
     cast,
 )
 
-import django
 import strawberry
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, Model, fields
@@ -41,11 +40,7 @@ except (ImportError, ModuleNotFoundError):  # pragma: no cover
     # ArrayField will not be importable if psycopg2 is not installed
     ArrayField = None
 
-if django.VERSION >= (5, 0):
-    from django.db.models import GeneratedField  # type: ignore
-else:
-    GeneratedField = None
-
+from django.db.models import GeneratedField  # type: ignore
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -513,7 +508,7 @@ def resolve_model_field_type(
             )
             model_field._strawberry_enum = field_type  # type: ignore
     # Generated fields
-    elif GeneratedField is not None and isinstance(model_field, GeneratedField):
+    elif isinstance(model_field, GeneratedField):
         model_field_type = type(model_field.output_field)  # type: ignore
         field_type = field_type_map.get(model_field_type, NotImplemented)
     elif ArrayField is not None and isinstance(model_field, ArrayField):
@@ -559,9 +554,16 @@ def resolve_model_field_type(
         if using_old_filters:
             field_type = filters.FilterLookup[field_type]
         else:
-            field_type = filter_types.type_filter_map.get(  # type: ignore
+            lookup_type: Any = filter_types.type_filter_map.get(
                 field_type, filter_types.FilterLookup
-            )[field_type]
+            )
+            # Concrete lookups (e.g. StrFilterLookup, DateFilterLookup) are not
+            # subscriptable; only parametrize when the lookup is still generic.
+            field_type = (
+                lookup_type[field_type]
+                if getattr(lookup_type, "__parameters__", ())
+                else lookup_type
+            )
 
     return field_type
 

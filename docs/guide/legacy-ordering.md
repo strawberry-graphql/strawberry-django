@@ -16,6 +16,7 @@ in the desired order. This is not always feasible and contradicts the way object
 class ColorOrder:
     name: auto
 
+
 @strawberry_django.order(models.Fruit)
 class FruitOrder:
     name: auto
@@ -69,13 +70,11 @@ class FruitOrder:
         self,
         info: Info,
         queryset: QuerySet,
-        value: strawberry_django.Ordering, # `auto` can be used instead
+        value: strawberry_django.Ordering,  # `auto` can be used instead
         prefix: str,
-        sequence: dict[str, strawberry_django.Ordering] | None
+        sequence: dict[str, strawberry_django.Ordering] | None,
     ) -> tuple[QuerySet, list[str]] | list[str]:
-        queryset = queryset.alias(
-            _ordered_num=Count(f"{prefix}orders__id")
-        )
+        queryset = queryset.alias(_ordered_num=Count(f"{prefix}orders__id"))
         ordering = value.resolve(f"{prefix}_ordered_num")
         return queryset, [ordering]
 ```
@@ -120,6 +119,7 @@ input FruitOrder {
 class FruitOrder:
     name: auto
     color: ColorOrder | None
+
 
 @strawberry_django.order(models.Color)
 class ColorOrder:
@@ -186,12 +186,10 @@ class FruitOrder:
         info: Info,
         queryset: QuerySet,
         value: strawberry_django.Ordering,
-        prefix: str
+        prefix: str,
     ) -> tuple[QuerySet, list[str]] | list[str]:
-        queryset = queryset.alias(
-          _ordered_num=Count(f"{prefix}orders__id")
-        )
-        return queryset, [value.resolve(f"{prefix}_ordered_num") ]
+        queryset = queryset.alias(_ordered_num=Count(f"{prefix}orders__id"))
+        return queryset, [value.resolve(f"{prefix}_ordered_num")]
 
     @strawberry_django.order_field
     def order(
@@ -199,10 +197,10 @@ class FruitOrder:
         info: Info,
         queryset: QuerySet,
         prefix: str,
-        sequence: dict[str, strawberry_django.Ordering] | None
+        sequence: dict[str, strawberry_django.Ordering] | None,
     ) -> tuple[QuerySet, list[str]]:
         queryset = queryset.filter(
-            ... # Do some query modification
+            ...  # Do some query modification
         )
 
         return strawberry_django.process_order(
@@ -211,9 +209,8 @@ class FruitOrder:
             queryset=queryset,
             sequence=sequence,
             prefix=prefix,
-            skip_object_order_method=True
+            skip_object_order_method=True,
         )
-
 ```
 
 > [!TIP]
@@ -228,8 +225,7 @@ So, if you have a field like this:
 
 ```python title="types.py"
 @strawberry_django.type(models.Fruit, order=FruitOrder)
-class Fruit:
-    ...
+class Fruit: ...
 ```
 
 The `fruits` field will inherit the `order` of the type same same way as

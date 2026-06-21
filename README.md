@@ -34,9 +34,11 @@ pip install strawberry-graphql-django
 # models.py
 from django.db import models
 
+
 class Fruit(models.Model):
     name = models.CharField(max_length=20)
     color = models.ForeignKey("Color", on_delete=models.CASCADE, related_name="fruits")
+
 
 class Color(models.Model):
     name = models.CharField(max_length=20)
@@ -48,11 +50,13 @@ import strawberry_django
 from strawberry import auto
 from . import models
 
+
 @strawberry_django.type(models.Fruit)
 class Fruit:
     id: auto
     name: auto
     color: "Color"
+
 
 @strawberry_django.type(models.Color)
 class Color:
@@ -68,9 +72,11 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from .types import Fruit
 
+
 @strawberry.type
 class Query:
     fruits: list[Fruit] = strawberry_django.field()
+
 
 schema = strawberry.Schema(
     query=Query,

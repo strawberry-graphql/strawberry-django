@@ -279,6 +279,7 @@ class Context(StrawberryDjangoContext):
         # Implementation with proper typing
         ...
 
+
 Info = info.Info["Context", None]
 ```
 
@@ -299,8 +300,8 @@ Use permission extensions instead of manual checks in resolvers:
 ```python
 # Only authenticated users
 @strawberry_django.connection(extensions=[IsAuthenticated()])
-def my_orders(self, info: Info) -> Iterable[Order]:
-    ...
+def my_orders(self, info: Info) -> Iterable[Order]: ...
+
 
 # Only staff users
 orders_conn: DjangoListConnection[OrderType] = strawberry_django.connection(
@@ -314,6 +315,7 @@ Use `@model_property` for computed fields to enable query optimization:
 
 ```python
 from strawberry_django.descriptors import model_property
+
 
 class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
@@ -335,6 +337,7 @@ Use the current Strawberry Django APIs for filters and ordering:
 class UserFilter:
     username: auto
     email: auto
+
 
 @strawberry_django.order_type(User)
 class UserOrder:
@@ -491,8 +494,8 @@ If you're new to Strawberry Django, we recommend exploring the example in this o
 ```python
 # Query-level permission
 @strawberry_django.field(extensions=[IsAuthenticated()])
-def my_data(self, info: Info) -> list[MyType]:
-    ...
+def my_data(self, info: Info) -> list[MyType]: ...
+
 
 # Field-level permission
 @strawberry_django.field(extensions=[IsStaff()])
@@ -509,8 +512,8 @@ def sensitive_field(self, root: MyModel) -> str:
     select_related=["fk_relation"],  # JOIN these FKs
     prefetch_related=["m2m_relation"],  # Prefetch these M2M/reverse FKs
 )
-def computed_value(self) -> int:
-    ...
+def computed_value(self) -> int: ...
+
 
 # For custom resolvers
 @strawberry_django.field(
@@ -562,9 +565,7 @@ def checkout(self, user):
 
 ```python
 # BAD - cart.pk might change before callback runs
-transaction.on_commit(
-    lambda: info.context.request.session.update({"cart_pk": cart.pk})
-)
+transaction.on_commit(lambda: info.context.request.session.update({"cart_pk": cart.pk}))
 ```
 
 ```python

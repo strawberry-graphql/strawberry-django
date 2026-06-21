@@ -43,8 +43,10 @@ class TestClient(BaseGraphQLTestClient):
     @contextlib.contextmanager
     def login(self, user: AbstractBaseUser):
         self.client.force_login(user)
-        yield
-        self.client.logout()
+        try:
+            yield
+        finally:
+            self.client.logout()
 
 
 class AsyncTestClient(TestClient):
@@ -86,5 +88,7 @@ class AsyncTestClient(TestClient):
     @contextlib.asynccontextmanager
     async def login(self, user: AbstractBaseUser):  # type: ignore
         await sync_to_async(self.client.force_login)(user)
-        yield
-        await sync_to_async(self.client.logout)()
+        try:
+            yield
+        finally:
+            await sync_to_async(self.client.logout)()

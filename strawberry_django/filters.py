@@ -5,7 +5,6 @@ import inspect
 import operator
 import warnings
 from enum import Enum
-from types import FunctionType
 from typing import (
     TYPE_CHECKING,
     Annotated,

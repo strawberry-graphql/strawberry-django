@@ -16,10 +16,12 @@ import strawberry_django
 
 from .types import Fruit
 
+
 @strawberry.type
 class Query:
     fruit: Fruit = strawberry_django.field()
     fruits: list[Fruit] = strawberry_django.field()
+
 
 schema = strawberry.Schema(query=Query)
 ```
@@ -53,11 +55,13 @@ Add filters to your queries to enable flexible data filtering. Filters are defin
 import strawberry_django
 from strawberry import auto
 
+
 @strawberry_django.filter_type(models.Fruit, lookups=True)
 class FruitFilter:
     id: auto
     name: auto
     color: auto
+
 
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
 class Fruit:
@@ -110,10 +114,12 @@ Add ordering to control the sort order of your results.
 import strawberry_django
 from strawberry import auto
 
+
 @strawberry_django.order_type(models.Fruit)
 class FruitOrder:
     name: auto
     price: auto
+
 
 @strawberry_django.type(models.Fruit, order=FruitOrder)
 class Fruit:
@@ -149,6 +155,7 @@ Always paginate large result sets to prevent performance issues.
 ```python title="schema.py"
 from strawberry_django.pagination import OffsetPaginationInput
 
+
 @strawberry.type
 class Query:
     @strawberry_django.field
@@ -158,7 +165,7 @@ class Query:
     ) -> list[Fruit]:
         qs = models.Fruit.objects.all()
         if pagination:
-            return qs[pagination.offset:pagination.offset + pagination.limit]
+            return qs[pagination.offset : pagination.offset + pagination.limit]
         return qs[:100]  # Default limit
 ```
 
@@ -179,6 +186,7 @@ query {
 ```python title="schema.py"
 from strawberry_django.relay import DjangoListConnection
 import strawberry_django
+
 
 @strawberry.type
 class Query:
@@ -212,6 +220,7 @@ Override default resolvers for custom query logic.
 ```python title="schema.py"
 from strawberry.types import Info
 
+
 @strawberry.type
 class Query:
     @strawberry_django.field
@@ -231,10 +240,9 @@ class Query:
     @strawberry_django.field
     def featured_fruits(self, info: Info) -> list[Fruit]:
         """Return only featured fruits"""
-        return models.Fruit.objects.filter(
-            is_featured=True,
-            available=True
-        ).order_by('-created_at')[:5]
+        return models.Fruit.objects.filter(is_featured=True, available=True).order_by(
+            "-created_at"
+        )[:5]
 ```
 
 ```graphql
@@ -260,14 +268,13 @@ For ASGI applications, you can define async queries for improved concurrency.
 ```python title="schema.py"
 from asgiref.sync import sync_to_async
 
+
 @strawberry.type
 class Query:
     @strawberry_django.field
     async def fruits(self) -> list[Fruit]:
         # Django ORM calls must be wrapped in sync_to_async
-        return await sync_to_async(list)(
-            models.Fruit.objects.all()
-        )
+        return await sync_to_async(list)(models.Fruit.objects.all())
 
     @strawberry_django.field
     async def fruit(self, pk: int) -> Fruit | None:
@@ -288,6 +295,7 @@ Strawberry Django automatically handles related objects with optimal queries usi
 class Author(models.Model):
     name = models.CharField(max_length=100)
 
+
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
@@ -298,7 +306,8 @@ class Book(models.Model):
 class Author:
     id: auto
     name: auto
-    books: list['Book']
+    books: list["Book"]
+
 
 @strawberry_django.type(models.Book)
 class Book:
@@ -331,6 +340,7 @@ Add custom arguments to your queries for flexibility.
 
 ```python title="schema.py"
 from datetime import date
+
 
 @strawberry.type
 class Query:
@@ -372,17 +382,16 @@ Use annotations for database-level aggregations.
 from django.db.models import Count, Avg
 import strawberry_django
 
+
 @strawberry_django.type(models.Author)
 class Author:
     id: auto
     name: auto
 
-    book_count: int = strawberry_django.field(
-        annotate={'book_count': Count('books')}
-    )
+    book_count: int = strawberry_django.field(annotate={"book_count": Count("books")})
 
     avg_book_rating: float = strawberry_django.field(
-        annotate={'avg_book_rating': Avg('books__rating')}
+        annotate={"avg_book_rating": Avg("books__rating")}
     )
 ```
 
@@ -417,6 +426,7 @@ from strawberry_django.pagination import OffsetPaginationInput
 from . import models
 from .types import Fruit, FruitFilter, FruitOrder
 
+
 @strawberry.type
 class Query:
     # Single object query with PK filter
@@ -437,7 +447,7 @@ class Query:
 
         # Apply pagination
         if pagination:
-            qs = qs[pagination.offset:pagination.offset + pagination.limit]
+            qs = qs[pagination.offset : pagination.offset + pagination.limit]
         else:
             qs = qs[:100]  # Default limit
 
@@ -446,17 +456,17 @@ class Query:
     # Custom query with business logic
     @strawberry_django.field
     def featured_fruits(self) -> list[Fruit]:
-        return models.Fruit.objects.filter(
-            is_featured=True,
-            available=True
-        ).order_by('-created_at')[:10]
+        return models.Fruit.objects.filter(is_featured=True, available=True).order_by(
+            "-created_at"
+        )[:10]
+
 
 # Enable Query Optimizer
 schema = strawberry.Schema(
     query=Query,
     extensions=[
         DjangoOptimizerExtension(),
-    ]
+    ],
 )
 ```
 

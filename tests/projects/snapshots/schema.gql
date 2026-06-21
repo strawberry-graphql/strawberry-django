@@ -107,7 +107,7 @@ union CreateQuizPayload = QuizType | OperationInfo
 """Date (isoformat)"""
 scalar Date
 
-input DateDateFilterLookup {
+input DateFilterLookup {
   """Exact match. Filter will be skipped on `null` value"""
   exact: Date
 
@@ -559,7 +559,7 @@ type ProjectConnection {
 
 input ProjectFilter {
   name: StrFilterLookup
-  dueDate: DateDateFilterLookup
+  dueDate: DateFilterLookup
   AND: ProjectFilter
   OR: ProjectFilter
   NOT: ProjectFilter

@@ -36,7 +36,7 @@ schema = strawberry.Schema(
     extensions=[
         # other extensions...
         DjangoOptimizerExtension,
-    ]
+    ],
 )
 ```
 
@@ -46,12 +46,12 @@ The extension accepts several parameters to customize its behavior:
 
 ```python
 DjangoOptimizerExtension(
-    enable_only_optimization=True,           # Enable QuerySet.only() optimization
-    enable_select_related_optimization=True, # Enable QuerySet.select_related() optimization
-    enable_prefetch_related_optimization=True, # Enable QuerySet.prefetch_related() optimization
-    enable_annotate_optimization=True,       # Enable QuerySet.annotate() optimization
-    enable_nested_relations_prefetch=True,   # Enable prefetch of nested relations
-    prefetch_custom_queryset=False,          # Use default manager instead of base manager
+    enable_only_optimization=True,  # Enable QuerySet.only() optimization
+    enable_select_related_optimization=True,  # Enable QuerySet.select_related() optimization
+    enable_prefetch_related_optimization=True,  # Enable QuerySet.prefetch_related() optimization
+    enable_annotate_optimization=True,  # Enable QuerySet.annotate() optimization
+    enable_nested_relations_prefetch=True,  # Enable prefetch of nested relations
+    prefetch_custom_queryset=False,  # Use default manager instead of base manager
 )
 ```
 
@@ -93,6 +93,7 @@ class Song(models.Model):
 ```python title="types.py"
 from strawberry import auto
 import strawberry_django
+
 
 @strawberry_django.type(Artist)
 class ArtistType:
@@ -165,16 +166,17 @@ Would produce an ORM query like this:
 Artist.objects.all().only("id", "name").prefetch_related(
     Prefetch(
         "albums",
-        queryset=Album.objects.all().only("id", "name").prefetch_related(
+        queryset=Album.objects
+        .all()
+        .only("id", "name")
+        .prefetch_related(
             Prefetch(
-               "songs",
-               Song.objects.all().only("id", "name"),
+                "songs",
+                Song.objects.all().only("id", "name"),
             )
-        )
+        ),
     ),
-).annotate(
-    albums_count=Count("albums")
-)
+).annotate(albums_count=Count("albums"))
 
 # For "songs" query
 Song.objects.all().only(
@@ -190,7 +192,7 @@ Song.objects.all().only(
     "album__artist",
 ).prefetch_related(
     Prefetch(
-       "album__artist__albums",
+        "album__artist__albums",
         Album.objects.all().only("id", "name", "release_date"),
     )
 )
@@ -220,6 +222,7 @@ class OrderItem(models.Model):
 from strawberry import auto
 import strawberry_django
 
+
 @strawberry_django.type(models.OrderItem)
 class OrderItem:
     price: auto
@@ -238,6 +241,7 @@ A solution in this case would be to "tell the optimizer" how to optimize that fi
 from strawberry import auto
 import strawberry_django
 
+
 @strawberry_django.type(models.OrderItem)
 class OrderItem:
     price: auto
@@ -254,6 +258,7 @@ import decimal
 
 from strawberry import auto
 import strawberry_django
+
 
 @strawberry_django.type(models.OrderItem)
 class OrderItem:
@@ -299,6 +304,7 @@ The example in the previous section could be written using `@model_property` lik
 ```python title="models.py"
 from strawberry_django.descriptors import model_property
 
+
 class OrderItem(models.Model):
     price = models.DecimalField()
     quantity = models.IntegerField()
@@ -311,6 +317,7 @@ class OrderItem(models.Model):
 ```python title="types.py"
 from strawberry import auto
 import strawberry_django
+
 
 @strawberry_django.type(models.OrderItem)
 class OrderItem:
@@ -338,11 +345,14 @@ polymorphic queries work out of the box.
 from django.db import models
 from polymorphic.models import PolymorphicModel
 
+
 class Project(PolymorphicModel):
     topic = models.CharField(max_length=255)
 
+
 class ResearchProject(Project):
     supervisor = models.CharField(max_length=30)
+
 
 class ArtProject(Project):
     artist = models.CharField(max_length=30)
@@ -395,13 +405,16 @@ are also supported.
 from django.db import models
 from model_utils.managers import InheritanceManager
 
+
 class Project(models.Model):
     topic = models.CharField(max_length=255)
 
     objects = InheritanceManager()
 
+
 class ResearchProject(Project):
     supervisor = models.CharField(max_length=30)
+
 
 class ArtProject(Project):
     artist = models.CharField(max_length=30)
@@ -461,11 +474,11 @@ The optimizer also supports polymorphism even if your models are not polymorphic
 ```python title="models.py"
 from django.db import models
 
+
 class Project(models.Model):
     topic = models.CharField(max_length=255)
     supervisor = models.CharField(max_length=30)
     artist = models.CharField(max_length=30)
-
 ```
 
 ```python title="types.py"
@@ -483,9 +496,9 @@ class ProjectType:
         if not isinstance(value, models.Project):
             raise TypeError()
         if value.artist:
-            return 'ArtProjectType'
+            return "ArtProjectType"
         if value.supervisor:
-            return 'ResearchProjectType'
+            return "ResearchProjectType"
         raise TypeError()
 
     @classmethod
@@ -519,6 +532,7 @@ You can temporarily turn off the optimizer using the `disabled()` context manage
 ```python
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
+
 def my_resolver(info):
     # Optimizer is turned off within this block
     with DjangoOptimizerExtension.disabled():
@@ -545,6 +559,7 @@ If you see errors about accessing deferred fields, it usually means a property o
 @property
 def total(self):
     return self.price * self.quantity
+
 
 # Solution: Use optimization hints
 @strawberry_django.field(only=["price", "quantity"])

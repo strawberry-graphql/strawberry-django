@@ -4,12 +4,13 @@ from typing import Any
 import pytest
 import strawberry
 from django.db import connections
+from django.db.models import QuerySet
 from django.test.utils import CaptureQueriesContext
 from strawberry import Info, auto, relay
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from strawberry_django.relay import DjangoListConnection
+from strawberry_django.relay import DjangoCursorConnection, DjangoListConnection
 from tests.models import Group, Tag, User
 
 
@@ -63,6 +64,60 @@ class Query:
     )
     def users(self, info: Info) -> Iterable[User]:
         return User.objects.all()
+
+
+def test_connection_resolver_with_queryset_annotation():
+    """A `QuerySet[Model]` return annotation must not break schema building.
+
+    Django's ``QuerySet.__class_getitem__`` returns the bare class, so
+    ``QuerySet[User]`` collapses to ``QuerySet`` and the upstream relay check
+    used to reject it even though ``QuerySet`` is iterable (#917).
+    """
+
+    @strawberry.type
+    class QuerySetQuery:
+        @strawberry_django.connection(DjangoListConnection[UserType])
+        def users_list(self) -> QuerySet[User]:
+            return User.objects.all()
+
+        @strawberry_django.connection(DjangoCursorConnection[UserType])
+        def users_cursor(self) -> QuerySet[User]:
+            return User.objects.all()
+
+        @strawberry_django.connection(DjangoListConnection[UserType])
+        def users_optional(self) -> QuerySet[User] | None:
+            return User.objects.all()
+
+        @strawberry_django.connection(DjangoListConnection[UserType])
+        async def users_async(self) -> QuerySet[User]:
+            return User.objects.all()
+
+    strawberry.Schema(query=QuerySetQuery)
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "connection_type", [DjangoListConnection, DjangoCursorConnection]
+)
+def test_connection_resolver_with_queryset_annotation_resolves(connection_type):
+    """A `QuerySet[Model]`-annotated resolver resolves its nodes correctly."""
+    User.objects.create(name="user1")
+    User.objects.create(name="user2")
+
+    @strawberry.type
+    class QuerySetQuery:
+        @strawberry_django.connection(connection_type[UserType])
+        def users(self) -> QuerySet[User]:
+            return User.objects.all().order_by("name")
+
+    schema = strawberry.Schema(query=QuerySetQuery)
+
+    result = schema.execute_sync("{ users { edges { node { name } } } }")
+
+    assert result.errors is None
+    assert result.data == {
+        "users": {"edges": [{"node": {"name": "user1"}}, {"node": {"name": "user2"}}]}
+    }
 
 
 @pytest.mark.django_db(transaction=True)

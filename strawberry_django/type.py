@@ -203,27 +203,35 @@ def _process_type(
     # Make sure model is also considered a "virtual subclass" of cls
     if "is_type_of" not in cls.__dict__:
 
-        def is_type_of(obj, info):
+        @classmethod
+        def is_type_of(virtual_cls, obj, info):
             if (type_cast := get_strawberry_type_cast(obj)) is not None:
                 return type_cast is cls
-            return isinstance(obj, (cls, model))
+            super_func = getattr(super(cls, virtual_cls), "is_type_of", None)
+            return (super_func is None or super_func(obj, info)) and isinstance(
+                obj, (cls, model)
+            )
 
         cls.is_type_of = is_type_of
 
     # Default querying methods for relay
     if issubclass(cls, relay.Node):
         for attr, func in [
+            # resolve_id / resolve_id_attr read the pk off the in-memory instance;
+            # wrapping them in django_resolver would force every id resolution
+            # through sync_to_async (a thread hop) in async contexts. They bridge
+            # the rare deferred-field DB read themselves via django_getattr.
             ("resolve_id", resolve_model_id),
             ("resolve_id_attr", resolve_model_id_attr),
-            ("resolve_node", resolve_model_node),
-            ("resolve_nodes", resolve_model_nodes),
+            ("resolve_node", django_resolver(resolve_model_node)),
+            ("resolve_nodes", django_resolver(resolve_model_nodes)),
         ]:
             existing_resolver = getattr(cls, attr, None)
             if (
                 existing_resolver is None
                 or existing_resolver.__func__ is getattr(relay.Node, attr).__func__
             ):
-                setattr(cls, attr, types.MethodType(django_resolver(func), cls))  # type: ignore
+                setattr(cls, attr, types.MethodType(func, cls))
 
             # Adjust types that inherit from other types/interfaces that implement Node
             # to make sure they pass themselves as the node type

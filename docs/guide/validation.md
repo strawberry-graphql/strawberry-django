@@ -25,17 +25,19 @@ import strawberry
 import strawberry_django
 from strawberry_django import mutations
 
+
 @strawberry_django.input(models.User)
 class UserInput:
     email: auto
     username: auto
     age: auto
 
+
 @strawberry.type
 class Mutation:
     create_user: User = mutations.create(
         UserInput,
-        handle_django_errors=True  # Automatically validates
+        handle_django_errors=True,  # Automatically validates
     )
 ```
 
@@ -59,14 +61,15 @@ Use `FullCleanOptions` to control what `full_clean()` validates:
 ```python
 from strawberry_django.mutations.types import FullCleanOptions
 
+
 @strawberry.type
 class Mutation:
     create_user: User = mutations.create(
         UserInput,
         full_clean=FullCleanOptions(
-            exclude=["field_to_skip"],      # Fields to exclude from validation
-            validate_unique=True,           # Check unique constraints (default: True)
-            validate_constraints=True,      # Check model constraints (default: True)
+            exclude=["field_to_skip"],  # Fields to exclude from validation
+            validate_unique=True,  # Check unique constraints (default: True)
+            validate_constraints=True,  # Check model constraints (default: True)
         ),
     )
 ```
@@ -134,6 +137,7 @@ Define validation logic in your Django models using the `clean()` method:
 from django.db import models
 from django.core.exceptions import ValidationError
 
+
 class User(models.Model):
     email = models.EmailField(unique=True)
     age = models.IntegerField()
@@ -145,10 +149,10 @@ class User(models.Model):
         errors = {}
 
         if self.age < 18:
-            errors['age'] = "Must be at least 18 years old"
+            errors["age"] = "Must be at least 18 years old"
 
         if self.username and len(self.username) < 3:
-            errors['username'] = "Must be at least 3 characters"
+            errors["username"] = "Must be at least 3 characters"
 
         if errors:
             raise ValidationError(errors)
@@ -164,16 +168,12 @@ Django field validators work automatically with Strawberry Django:
 from django.db import models
 from django.core.validators import MinValueValidator, RegexValidator
 
+
 class Product(models.Model):
     price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0)]
+        max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
     )
-    sku = models.CharField(
-        max_length=20,
-        validators=[RegexValidator(r'^[A-Z0-9-]+$')]
-    )
+    sku = models.CharField(max_length=20, validators=[RegexValidator(r"^[A-Z0-9-]+$")])
 ```
 
 See [Django Validators](https://docs.djangoproject.com/en/stable/ref/validators/) for built-in validators and how to create custom validators.
@@ -186,6 +186,7 @@ For custom validation logic in mutations, raise `ValidationError` with field-spe
 import strawberry
 import strawberry_django
 from django.core.exceptions import ValidationError
+
 
 @strawberry.type
 class Mutation:
@@ -213,6 +214,7 @@ For async mutations, use Django's async ORM methods (Django 4.1+):
 import strawberry
 from django.core.exceptions import ValidationError
 
+
 @strawberry.type
 class Mutation:
     @strawberry.mutation
@@ -221,7 +223,7 @@ class Mutation:
         exists = await models.Article.objects.filter(title=title).aexists()
 
         if exists:
-            raise ValidationError({'title': "Article with this title already exists"})
+            raise ValidationError({"title": "Article with this title already exists"})
 
         return await models.Article.objects.acreate(title=title)
 ```
@@ -238,26 +240,34 @@ import strawberry_django
 from django import forms
 from django.core.exceptions import ValidationError
 
+
 class UserForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['email', 'username', 'age']
+        fields = ["email", "username", "age"]
 
     def clean_username(self):
-        username = self.cleaned_data['username']
+        username = self.cleaned_data["username"]
         if User.objects.filter(username__iexact=username).exists():
             raise ValidationError("Username already taken")
         return username
+
 
 @strawberry.type
 class Mutation:
     @strawberry_django.mutation
     def create_user(self, data: UserInput) -> User:
-        form = UserForm({'email': data.email, 'username': data.username, 'age': data.age})
+        form = UserForm({
+            "email": data.email,
+            "username": data.username,
+            "age": data.age,
+        })
 
         if not form.is_valid():
             # Convert form errors to ValidationError
-            error_dict = {field: error_list[0] for field, error_list in form.errors.items()}
+            error_dict = {
+                field: error_list[0] for field, error_list in form.errors.items()
+            }
             raise ValidationError(error_dict)
 
         return form.save()
@@ -274,7 +284,7 @@ See [Django Forms documentation](https://docs.djangoproject.com/en/stable/topics
 3. **Use dict-style ValidationError** for field-specific errors:
 
    ```python
-   raise ValidationError({'field': 'Error message'})
+   raise ValidationError({"field": "Error message"})
    ```
 
 4. **Test validation** using the test client:
@@ -307,7 +317,7 @@ If validation isn't running automatically, ensure:
 create_user: User = mutations.create(UserInput, handle_django_errors=True)
 
 # ❌ Validation doesn't run
-user = User.objects.create(email='invalid')  # Bypasses validation
+user = User.objects.create(email="invalid")  # Bypasses validation
 ```
 
 ### Unique Constraint Errors
@@ -317,7 +327,7 @@ Unique constraints raise `IntegrityError` instead of `ValidationError`. Validate
 ```python
 def clean(self):
     if User.objects.filter(email=self.email).exclude(pk=self.pk).exists():
-        raise ValidationError({'email': "Email already exists"})
+        raise ValidationError({"email": "Email already exists"})
 ```
 
 ## See Also

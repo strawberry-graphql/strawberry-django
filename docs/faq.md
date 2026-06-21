@@ -14,6 +14,7 @@ The request object is accessible via the `get_request` method.
 from strawberry_django.utils.requests import get_request
 from strawberry.types import Info
 
+
 def resolver(root, info: Info):
     request = get_request(info)
     # Access request properties
@@ -28,6 +29,7 @@ The current user object is accessible via the `get_current_user` method.
 ```python
 from strawberry_django.auth.utils import get_current_user
 from strawberry.types import Info
+
 
 def resolver(root, info: Info):
     current_user = get_current_user(info)
@@ -49,10 +51,13 @@ If your type checker (PyLance, mypy) shows errors with `strawberry.auto`, it's b
 ```python
 from typing import cast
 
+
 @strawberry_django.mutation
 def create_fruit(self, name: str) -> Fruit:  # Fruit is the GraphQL type
     fruit = models.Fruit.objects.create(name=name)  # Returns Django model
-    return cast(Fruit, fruit)  # Tell type checker: model is compatible with GraphQL type
+    return cast(
+        Fruit, fruit
+    )  # Tell type checker: model is compatible with GraphQL type
 ```
 
 This is only needed when the annotation is a GraphQL type but you're returning a Django model instance. The cast is purely for type checking and has no runtime effect.
@@ -102,10 +107,7 @@ schema = strawberry.Schema(
 2. **Add optimization hints** to custom fields:
 
 ```python
-@strawberry_django.field(
-    select_related=["author"],
-    prefetch_related=["tags"]
-)
+@strawberry_django.field(select_related=["author"], prefetch_related=["tags"])
 def custom_field(self, root) -> str:
     return f"{root.author.name}: {root.tags.count()}"
 ```
@@ -120,6 +122,7 @@ Define nested filter types:
 @strawberry_django.filter_type(models.Author)
 class AuthorFilter:
     name: auto
+
 
 @strawberry_django.filter_type(models.Book)
 class BookFilter:
@@ -147,20 +150,16 @@ Yes, use custom filter/order methods:
 ```python
 from django.db.models import Count, Q, QuerySet
 
+
 @strawberry_django.filter_type(models.Author)
 class AuthorFilter:
     name: auto
 
     @strawberry_django.filter_field
     def book_count(
-        self,
-        queryset: QuerySet,
-        value: int,
-        prefix: str
+        self, queryset: QuerySet, value: int, prefix: str
     ) -> tuple[QuerySet, Q]:
-        queryset = queryset.alias(
-            _book_count=Count(f"{prefix}books")
-        )
+        queryset = queryset.alias(_book_count=Count(f"{prefix}books"))
         return queryset, Q(**{f"{prefix}_book_count": value})
 ```
 
@@ -176,10 +175,12 @@ import strawberry_django
 from strawberry_django import mutations
 from . import models
 
+
 @strawberry_django.input(models.Author)
 class AuthorInput:
     name: auto
     books: auto  # Automatically handles nested book creation
+
 
 @strawberry.type
 class Mutation:
@@ -201,19 +202,18 @@ See the [tests in the repository](https://github.com/strawberry-graphql/strawber
 ```python
 from django.db import transaction
 
+
 @strawberry_django.input(models.Author)
 class AuthorInputWithBooks:
     name: auto
     email: auto
     books: list[BookInput] | None = None
 
+
 @strawberry_django.mutation(handle_django_errors=True)
 @transaction.atomic
 def create_author_with_books(self, data: AuthorInputWithBooks) -> Author:
-    author = models.Author.objects.create(
-        name=data.name,
-        email=data.email
-    )
+    author = models.Author.objects.create(name=data.name, email=data.email)
 
     if data.books:
         for book_data in data.books:
@@ -234,10 +234,12 @@ Use `ListInput` with `set`, `add`, or `remove` operations:
 ```python
 from strawberry_django import ListInput, NodeInput
 
+
 @strawberry_django.partial(models.Article)
 class ArticleInputPartial(NodeInput):
     title: auto
     tags: ListInput[strawberry.ID] | None = None
+
 
 @strawberry_django.mutation
 def update_article(self, data: ArticleInputPartial) -> Article:
@@ -280,6 +282,7 @@ Use dict-style `ValidationError` for field-specific errors:
 ```python
 from django.core.exceptions import ValidationError
 
+
 @strawberry_django.mutation(handle_django_errors=True)
 def create_user(self, email: str, age: int) -> User:
     errors = {}
@@ -307,6 +310,7 @@ Use permission extensions:
 ```python
 from strawberry_django.permissions import IsAuthenticated, HasPerm
 
+
 @strawberry_django.type(models.Document)
 class Document:
     title: auto
@@ -329,11 +333,10 @@ Yes, with django-guardian:
 ```python
 from strawberry_django.permissions import HasRetvalPerm
 
+
 @strawberry_django.type(models.Document)
 class Document:
-    @strawberry_django.field(
-        extensions=[HasRetvalPerm("documents.view_document")]
-    )
+    @strawberry_django.field(extensions=[HasRetvalPerm("documents.view_document")])
     def content(self) -> str:
         # Permission checked against this specific document instance
         return self.content
@@ -354,6 +357,7 @@ import strawberry
 
 # For django-money
 from djmoney.models.fields import MoneyField
+
 MoneyScalar = strawberry.scalar(...)
 
 field_type_map.update({
@@ -372,6 +376,7 @@ Three options:
 from decimal import Decimal
 from strawberry_django.descriptors import model_property
 
+
 class Order(models.Model):
     price = models.DecimalField(...)
     quantity = models.IntegerField(...)
@@ -385,6 +390,7 @@ class Order(models.Model):
 
 ```python
 from decimal import Decimal
+
 
 @strawberry_django.type(models.Order)
 class Order:
@@ -400,6 +406,7 @@ class Order:
 
 ```python
 from django.db.models import F
+
 
 @strawberry_django.type(models.Order)
 class Order:
@@ -419,9 +426,11 @@ Use [django-choices-field](./integrations/choices-field.md):
 ```python
 from django_choices_field import TextChoicesField
 
+
 class Status(models.TextChoices):
     ACTIVE = "active", "Active"
     INACTIVE = "inactive", "Inactive"
+
 
 class Company(models.Model):
     status = TextChoicesField(choices_enum=Status)
@@ -438,9 +447,11 @@ import strawberry
 from strawberry import relay
 import strawberry_django
 
+
 @strawberry_django.type(models.Fruit)
 class Fruit(relay.Node):
     name: auto
+
 
 @strawberry.type
 class Query:
@@ -473,6 +484,7 @@ Use the test client:
 
 ```python
 from strawberry_django.test.client import TestClient
+
 
 def test_create_fruit(db):
     client = TestClient("/graphql")
@@ -512,6 +524,7 @@ Use `pytest-asyncio`:
 ```python
 import pytest
 
+
 @pytest.mark.django_db
 @pytest.mark.asyncio
 async def test_async_resolver():
@@ -531,6 +544,7 @@ Use Strawberry's `Upload` scalar:
 
 ```python
 from strawberry.file_uploads import Upload
+
 
 @strawberry.type
 class Mutation:
@@ -604,6 +618,7 @@ Usually caused by circular type references. Use string annotations:
 @strawberry_django.type(models.Author)
 class AuthorType:
     books: list["BookType"]  # String annotation for forward reference
+
 
 @strawberry_django.type(models.Book)
 class BookType:

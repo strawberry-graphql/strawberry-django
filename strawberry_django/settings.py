@@ -48,7 +48,8 @@ class StrawberryDjangoSettings(TypedDict):
 
     #: The maximum limit for pagination that can be requested by clients.
     #: If set, this will cap any limit value (including None/unlimited requests).
-    #: Can be set to `None` to allow unlimited requests (not recommended).
+    #: Can be set to `None` to allow unlimited requests (not recommended,
+    #: as it lets clients exfiltrate entire tables in a single query).
     PAGINATION_MAX_LIMIT: int | None
 
     #: If True, filters used in mutations can be omitted
@@ -65,7 +66,7 @@ DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     DEFAULT_PK_FIELD_NAME="pk",
     USE_DEPRECATED_FILTERS=False,
     PAGINATION_DEFAULT_LIMIT=100,
-    PAGINATION_MAX_LIMIT=None,
+    PAGINATION_MAX_LIMIT=100,
     ALLOW_MUTATIONS_WITHOUT_FILTERS=False,
 )
 

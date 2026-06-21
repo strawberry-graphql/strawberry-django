@@ -18,6 +18,7 @@ import strawberry_django
 from strawberry import auto
 from . import models
 
+
 @strawberry_django.type(models.Color)
 class Color:
     id: auto
@@ -37,6 +38,7 @@ import strawberry_django
 from strawberry import auto
 from . import models
 from asgiref.sync import sync_to_async
+
 
 @strawberry_django.type(models.Color)
 class Color:
@@ -94,7 +96,7 @@ class Query:
         self,
         info: Info,
         filters: FruitFilter | None = strawberry.UNSET,
-        order: FruitOrder | None = strawberry.UNSET
+        order: FruitOrder | None = strawberry.UNSET,
     ) -> list[Fruit]:
         qs = models.Fruit.objects.all()
 

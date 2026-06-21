@@ -1,6 +1,6 @@
 import io
 import textwrap
-from typing import Optional
+from typing import Optional, cast
 from unittest import mock
 
 import pytest
@@ -11,8 +11,10 @@ from django.test import override_settings
 from graphql import GraphQLError
 from PIL import Image
 from strawberry import auto
+from strawberry.types.base import WithStrawberryObjectDefinition
 
 import strawberry_django
+from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.settings import StrawberryDjangoSettings
 
 from . import models, utils
@@ -88,12 +90,21 @@ def query(db):
 
 @pytest.fixture
 def query_id_as_pk(db):
+    def _clear_cached_arguments():
+        for field in cast(
+            "WithStrawberryObjectDefinition", Query
+        ).__strawberry_definition__.fields:
+            if isinstance(field, StrawberryDjangoField):
+                field._cached_arguments = None
+
+    _clear_cached_arguments()
     with override_settings(
         STRAWBERRY_DJANGO=StrawberryDjangoSettings(  # type: ignore
             DEFAULT_PK_FIELD_NAME="id",
         ),
     ):
         yield utils.generate_query(Query)
+    _clear_cached_arguments()
 
 
 pytestmark = [

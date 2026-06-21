@@ -53,6 +53,7 @@ class Author:
     name: auto
     books: list["Book"]  # String reference, not Book
 
+
 @strawberry_django.type(models.Book)
 class Book:
     id: auto
@@ -68,6 +69,7 @@ class Book:
 
 ```python
 from typing import Optional
+
 
 @strawberry_django.order_type(models.User)
 class UserOrder:
@@ -102,6 +104,7 @@ See [DataLoaders guide](./dataloaders.md) for details.
 ```python
 from strawberry_django.descriptors import model_property
 
+
 @model_property(select_related=["author"], only=["author__name"])
 def author_name(self) -> str:
     return self.author.name
@@ -119,9 +122,8 @@ def author_name(self) -> str:
 from django.db.models import Count
 from strawberry_django.descriptors import model_property
 
-@model_property(
-    annotate={"_book_count": Count("books")}
-)
+
+@model_property(annotate={"_book_count": Count("books")})
 def book_count(self) -> int:
     return self._book_count  # type: ignore
 ```
@@ -134,6 +136,7 @@ def book_count(self) -> int:
 
 ```python
 from decimal import Decimal
+
 
 @strawberry_django.field(only=["price", "quantity"])
 def total(self) -> Decimal:
@@ -152,6 +155,7 @@ def total(self) -> Decimal:
 
 ```python
 from django.db import transaction
+
 
 @strawberry_django.mutation
 @transaction.atomic
@@ -186,6 +190,7 @@ class ArticleInputPartial(NodeInput):
     title: auto
     tags: ListInput[strawberry.ID] | None = None  # ✅ ListInput for M2M
 
+
 @strawberry_django.mutation
 def update_article(self, data: ArticleInputPartial) -> Article:
     article = models.Article.objects.get(pk=data.id)
@@ -215,6 +220,7 @@ See [Nested Mutations guide](./nested-mutations.md) for comprehensive examples.
 ```python
 from model_utils.managers import InheritanceManager
 
+
 class Project(models.Model):
     # ...
     objects = InheritanceManager()
@@ -223,7 +229,11 @@ class Project(models.Model):
 Then ensure relationships use `select_subclasses()`:
 
 ```python
-existing = set(manager.select_subclasses() if isinstance(manager, InheritanceManager) else manager.all())
+existing = set(
+    manager.select_subclasses()
+    if isinstance(manager, InheritanceManager)
+    else manager.all()
+)
 ```
 
 See [GitHub Issue #793](https://github.com/strawberry-graphql/strawberry-django/issues/793) for details.
@@ -241,13 +251,10 @@ from django.core.exceptions import ValidationError
 raise ValidationError("Invalid email")
 
 # ✅ With field info
-raise ValidationError({'email': 'Invalid email address'})
+raise ValidationError({"email": "Invalid email address"})
 
 # ✅ Multiple fields
-raise ValidationError({
-    'email': 'Invalid email address',
-    'age': 'Must be at least 18'
-})
+raise ValidationError({"email": "Invalid email address", "age": "Must be at least 18"})
 ```
 
 ## Permissions and Authentication
@@ -266,10 +273,11 @@ raise ValidationError({
 def sensitive_data(self) -> str:
     return self.data
 
+
 # 2. Ensure Django middleware is configured
 MIDDLEWARE = [
     # ...
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     # ...
 ]
 
@@ -285,6 +293,7 @@ from strawberry_django.routers import AuthGraphQLProtocolTypeRouter
 
 ```python
 from strawberry_django.auth.utils import get_current_user
+
 
 def resolver(self, info: Info):
     request = info.context.request
@@ -308,10 +317,11 @@ Ensure authentication middleware is properly configured and the view is set up c
 ```python
 import strawberry
 
+
 @strawberry.field
 def total_count(self, root) -> int:
     # Custom count logic that handles DISTINCT properly
-    return root.values('pk').distinct().count()
+    return root.values("pk").distinct().count()
 ```
 
 ### Filter on Relationships Not Working
@@ -325,6 +335,7 @@ def total_count(self, root) -> int:
 class ColorFilter:
     id: auto
     name: auto
+
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
@@ -387,6 +398,7 @@ STRAWBERRY_DJANGO = {
 ```python title="types.py"
 from strawberry.relay import Node
 
+
 @strawberry_django.type(models.Fruit)
 class Fruit(Node):  # ✅ Inherit from Node
     id: auto  # Will be mapped to GlobalID
@@ -402,6 +414,7 @@ class Fruit(Node):  # ✅ Inherit from Node
 ```python
 import strawberry
 from strawberry.relay import Node
+
 
 @strawberry_django.type(models.Fruit)
 class Fruit(Node):
@@ -442,12 +455,12 @@ application = AuthGraphQLProtocolTypeRouter(
 
 ```python title="settings.py"
 INSTALLED_APPS = [
-    'daphne',  # Must be before 'django.contrib.staticfiles'
-    'django.contrib.staticfiles',
+    "daphne",  # Must be before 'django.contrib.staticfiles'
+    "django.contrib.staticfiles",
     # ...
 ]
 
-ASGI_APPLICATION = 'project.asgi.application'
+ASGI_APPLICATION = "project.asgi.application"
 ```
 
 ## Testing
@@ -460,6 +473,7 @@ ASGI_APPLICATION = 'project.asgi.application'
 
 ```python
 import pytest
+
 
 @pytest.mark.django_db
 @pytest.mark.asyncio
@@ -477,8 +491,9 @@ async def test_async_resolver():
 ```python
 from strawberry_django.test.client import TestClient
 
+
 def test_authenticated_query(db):
-    user = User.objects.create_user(username='test')
+    user = User.objects.create_user(username="test")
     client = TestClient("/graphql")
 
     with client.login(user):  # ✅ Use context manager
@@ -513,6 +528,7 @@ class Fruit:
 
 ```python
 from strawberry_django.relay import DjangoCursorConnection
+
 
 @strawberry.type
 class Query:
@@ -550,6 +566,7 @@ STRAWBERRY_DJANGO = {
 ```python
 from typing import cast
 
+
 @strawberry_django.mutation
 def create_fruit(self, name: str) -> Fruit:
     fruit = models.Fruit.objects.create(name=name)
@@ -570,7 +587,7 @@ If your issue isn't covered here:
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('strawberry_django')
+logger = logging.getLogger("strawberry_django")
 logger.setLevel(logging.DEBUG)
 ```
 

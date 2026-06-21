@@ -1,6 +1,168 @@
 CHANGELOG
 =========
 
+0.86.4 - 2026-06-20
+-------------------
+
+`@strawberry_django.type` types no longer overwrite `is_type_of` methods in superclasses.
+Instead, the superclass' result will be taken into account as well.
+
+This release was contributed by [@diesieben07](https://github.com/diesieben07) in [#922](https://github.com/strawberry-graphql/strawberry-django/pull/922)
+
+0.86.3 - 2026-06-17
+-------------------
+
+Connection resolvers can now be annotated with a `QuerySet[Model]` return type
+instead of being forced to widen it to `Iterable[Model]`:
+
+```python
+@strawberry_django.connection(DjangoCursorConnection[FruitType])
+@staticmethod
+def fruits() -> QuerySet[Fruit]:
+    return Fruit.objects.all()
+```
+
+Previously this raised `RelayWrongResolverAnnotationError` because Django's
+`QuerySet[Model]` collapses to the bare `QuerySet` class, which the relay
+annotation check did not recognize as iterable.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#920](https://github.com/strawberry-graphql/strawberry-django/pull/920)
+
+0.86.2 - 2026-06-17
+-------------------
+
+Resolving a Relay node's `id` no longer goes through `sync_to_async` on every call.
+`resolve_id`/`resolve_id_attr` now read the primary key directly off the in-memory
+instance, removing an unnecessary thread hop (and contextvars copy) in async contexts.
+The deferred-field fallback still bridges database access safely.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#921](https://github.com/strawberry-graphql/strawberry-django/pull/921)
+
+0.86.1 - 2026-06-10
+-------------------
+
+Fix `offset_paginated` fields applying the filter pipeline twice per resolution.
+
+`StrawberryOffsetPaginatedExtension.resolve` forwards `filters`/`order`/`pagination`
+to the inner resolver (so extensions and custom resolvers can access them), but then
+re-applied them on the queryset the resolver returned. Filters, permission filtering
+and the optimizer pass all ran twice; for a filter spanning a multivalued relation
+the second `.filter()` duplicated the relation JOINs, which can grow the intermediate
+row count quadratically and turn a sub-second query into a multi-minute one.
+
+The queryset returned by the inner resolver is now passed straight to
+`resolve_paginated`, matching the behavior of relay connection fields.
+
+This release was contributed by [@aprams](https://github.com/aprams) in [#916](https://github.com/strawberry-graphql/strawberry-django/pull/916)
+
+0.86.0 - 2026-05-23
+-------------------
+
+`DateFilterLookup`, `TimeFilterLookup` and `DatetimeFilterLookup` no longer require a type parameter, matching `StrFilterLookup`. The generated GraphQL input names also lose their type prefix (e.g. `DateDateFilterLookup` becomes `DateFilterLookup`).
+
+```python
+@strawberry_django.filter_type(models.Project)
+class ProjectFilter:
+    due_date: strawberry_django.DateFilterLookup | None
+```
+
+Migrating:
+
+- Drop the type argument from `StrFilterLookup[str]`, `DateFilterLookup[datetime.date]`, etc. The bare lookup now works; the bracket form still resolves to the same class but emits a `DeprecationWarning`.
+- `DatetimeFilterLookup.date` and `.time` now accept `Date` / `Time` values (previously typed as `Int`, which never matched Django's `__date` / `__time` transforms).
+- `TimeFilterLookup.date` and `.time` were removed. Django's `__date` / `__time` transforms don't apply to `TimeField`.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#910](https://github.com/strawberry-graphql/strawberry-django/pull/910)
+
+0.85.0 - 2026-05-23
+-------------------
+
+**Breaking change**: `PAGINATION_MAX_LIMIT` now defaults to `100` instead of `None`, so clients can
+no longer request more than 100 rows in a single page by default.
+
+Previously, the cap was off and `PAGINATION_DEFAULT_LIMIT` only applied when the client omitted the
+limit, which let any client send `limit: 9999999` and receive the full table in one response.
+
+To restore the old behavior, set `PAGINATION_MAX_LIMIT` to `None` in `STRAWBERRY_DJANGO`
+(not recommended for production).
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#909](https://github.com/strawberry-graphql/strawberry-django/pull/909)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
+0.84.0 - 2026-05-03
+-------------------
+
+Propagate child-type `only=` hints through method resolvers that declare the
+relation via `select_related`. Previously they were silently dropped, causing
+deferred loads or `KeyError`s on descriptors without a deferred-load fallback
+(e.g. `djmoney.MoneyField`) once the parent's `select_related` reached past a
+single hop.
+
+```python
+@strawberry_django.type(Child)
+class ChildType:
+    @strawberry_django.field(only=["extra_data"])
+    def extra(self) -> str:
+        return self.extra_data
+
+
+@strawberry_django.type(Parent)
+class ParentType:
+    @strawberry_django.field(select_related=["child", "child__site"])
+    def child(self) -> ChildType | None:
+        return self.child
+```
+
+`child.extra_data` is now included in the parent's first SELECT.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#905](https://github.com/strawberry-graphql/strawberry-django/pull/905)
+
+0.83.0 - 2026-05-03
+-------------------
+
+Drop support for Django 4.2.
+- Django 4.2 will reach end of support on April 30, 2026. check [here](https://endoflife.date/django)
+
+Drop support for Django 5.0.
+- Django 5.0 has reached end of support on April 2, 2025. See https://endoflife.date/django
+
+Drop support for Django 5.1.
+- Django 5.1 has reached end of support on December 2, 2025. See https://endoflife.date/django
+
+This release was contributed by [@p-r-a-v-i-n](https://github.com/p-r-a-v-i-n) in [#897](https://github.com/strawberry-graphql/strawberry-django/pull/897)
+
+0.82.1 - 2026-03-28
+-------------------
+
+Fix `FieldError` when using the optimizer with `django-polymorphic` models.
+
+The optimizer now uses the CamelCase model name for polymorphic optimization hints (e.g., `ArtProject___field` instead of `app_label__artproject___field`). This ensures that `django-polymorphic` correctly handles mismatched optimization hints during the realization of mixed querysets by raising an `AssertionError` (which it catches) instead of an unhandled `FieldError`. This change also avoids potential name collisions with lowercase reverse relations in multi-table inheritance.
+
+A `polymorphic` optional dependency extra has been added, which sets the lower limit version to `4.0.0`. Install with `pip install strawberry-graphql-django[polymorphic]` to pull in `django-polymorphic`.
+
+This release was contributed by [@valkrypton](https://github.com/valkrypton) in [#894](https://github.com/strawberry-graphql/strawberry-django/pull/894)
+
+Additional contributors: [@bellini666](https://github.com/bellini666)
+
+0.82.0 - 2026-03-15
+-------------------
+
+Fix `FieldExtension` arguments being silently lost on `StrawberryDjangoField`.
+
+When a `FieldExtension` appended arguments to `field.arguments` in its `apply()` method, the arguments worked with `strawberry.field` but silently disappeared with `strawberry_django.field`. This was because the mixin chain (Pagination → Ordering → Filters → Base) created a new list on every `.arguments` access, so `.append()` mutated a temporary copy.
+
+Added a caching `arguments` property to `StrawberryDjangoField` so that the first access computes and caches the full arguments list, and subsequent accesses (including `.append()` from extensions) operate on the same cached list.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#892](https://github.com/strawberry-graphql/strawberry-django/pull/892)
+
+0.81.0 - 2026-03-15
+-------------------
+
+Fix `StrFilterLookup` so it can be used without a type parameter (e.g., `name: StrFilterLookup | None`). Previously this raised `TypeError: "StrFilterLookup" is generic, but no type has been passed` at schema build time.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#891](https://github.com/strawberry-graphql/strawberry-django/pull/891)
+
 0.80.0 - 2026-03-08
 -------------------
 
@@ -49,7 +211,9 @@ class FruitFilter:
     )
 
     @strawberry_django.filter_field
-    def search(self, info: Info, queryset: QuerySet[models.Fruit], value: str, prefix: str):
+    def search(
+        self, info: Info, queryset: QuerySet[models.Fruit], value: str, prefix: str
+    ):
         if self.min_similarity is not None:
             queryset = queryset.annotate(
                 similarity=TrigramSimilarity(f"{prefix}name", value)
@@ -107,12 +271,14 @@ import strawberry
 import strawberry_django
 from strawberry.federation import Schema
 
+
 @strawberry_django.federation.type(models.Product, keys=["upc"])
 class Product:
     upc: strawberry.auto
     name: strawberry.auto
     price: strawberry.auto
     # resolve_reference is automatically generated!
+
 
 schema = Schema(query=Query)
 ```
@@ -161,6 +327,7 @@ Users should migrate from:
 ```python
 from strawberry_django import FilterLookup
 
+
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:
     name: FilterLookup[str] | None
@@ -169,6 +336,7 @@ class FruitFilter:
 To:
 ```python
 from strawberry_django import StrFilterLookup
+
 
 @strawberry_django.filter_type(models.Fruit)
 class FruitFilter:

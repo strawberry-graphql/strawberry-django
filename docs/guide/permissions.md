@@ -71,6 +71,7 @@ Checks if the user is authenticated and active.
 ```python
 from strawberry_django.permissions import IsAuthenticated
 
+
 @strawberry_django.field(extensions=[IsAuthenticated()])
 def protected_field(self) -> str:
     return "secret"
@@ -87,6 +88,7 @@ Checks if the user is a staff member (`user.is_staff`).
 
 ```python
 from strawberry_django.permissions import IsStaff
+
 
 @strawberry_django.field(extensions=[IsStaff()])
 def admin_field(self) -> str:
@@ -105,6 +107,7 @@ Checks if the user is a superuser (`user.is_superuser`).
 ```python
 from strawberry_django.permissions import IsSuperuser
 
+
 @strawberry_django.field(extensions=[IsSuperuser()])
 def superuser_field(self) -> str:
     return "superuser only"
@@ -122,9 +125,9 @@ Checks if the user has global (model-level) permissions.
 ```python
 from strawberry_django.permissions import HasPerm
 
+
 @strawberry_django.field(extensions=[HasPerm("app.add_model")])
-def create_something(self) -> Model:
-    ...
+def create_something(self) -> Model: ...
 ```
 
 **Parameters:**
@@ -145,22 +148,21 @@ def create_something(self) -> Model:
 @strawberry_django.field(
     extensions=[HasPerm(["app.view_model", "app.change_model"], any_perm=False)]
 )
-def sensitive_field(self) -> str:
-    ...
+def sensitive_field(self) -> str: ...
+
 
 # Allow superusers to bypass
 @strawberry_django.field(
     extensions=[HasPerm("app.special_permission", with_superuser=True)]
 )
-def special_field(self) -> str:
-    ...
+def special_field(self) -> str: ...
+
 
 # Raise error instead of returning None
 @strawberry_django.field(
     extensions=[HasPerm("app.required_permission", fail_silently=False)]
 )
-def required_field(self) -> str:
-    ...
+def required_field(self) -> str: ...
 ```
 
 ### HasSourcePerm
@@ -171,6 +173,7 @@ This is useful when you want to check permissions on the object that contains th
 
 ```python
 from strawberry_django.permissions import HasSourcePerm
+
 
 @strawberry_django.type(models.Document)
 class DocumentType:
@@ -196,6 +199,7 @@ This is useful for:
 
 ```python
 from strawberry_django.permissions import HasRetvalPerm
+
 
 @strawberry.type
 class Query:
@@ -233,11 +237,8 @@ When permission checks fail, the following is returned (in priority order):
 To always raise an error instead, set `fail_silently=False`:
 
 ```python
-@strawberry_django.field(
-    extensions=[IsAuthenticated(fail_silently=False)]
-)
-def must_be_authenticated(self) -> str:
-    ...
+@strawberry_django.field(extensions=[IsAuthenticated(fail_silently=False)])
+def must_be_authenticated(self) -> str: ...
 ```
 
 ## Combining Multiple Permissions
@@ -251,8 +252,7 @@ You can apply multiple permission extensions to a single field:
         HasPerm("app.special_permission"),
     ]
 )
-def protected_field(self) -> str:
-    ...
+def protected_field(self) -> str: ...
 ```
 
 All extensions must pass for the field to resolve.
@@ -268,8 +268,7 @@ All permission extensions accept a `message` parameter:
         HasPerm("premium.access", message="This requires a premium subscription"),
     ]
 )
-def premium_content(self) -> str:
-    ...
+def premium_content(self) -> str: ...
 ```
 
 ## Custom Permission Extensions
@@ -278,6 +277,7 @@ Create custom permission logic by subclassing `DjangoPermissionExtension`:
 
 ```python
 from strawberry_django.permissions import DjangoPermissionExtension, DjangoNoPermission
+
 
 class IsVerifiedEmail(DjangoPermissionExtension):
     DEFAULT_ERROR_MESSAGE = "Email verification required."
@@ -293,7 +293,7 @@ class IsVerifiedEmail(DjangoPermissionExtension):
         if not user or not user.is_authenticated:
             raise DjangoNoPermission
 
-        if not getattr(user, 'email_verified', False):
+        if not getattr(user, "email_verified", False):
             raise DjangoNoPermission
 
         return resolver()
@@ -303,8 +303,7 @@ Usage:
 
 ```python
 @strawberry_django.field(extensions=[IsVerifiedEmail()])
-def verified_only_field(self) -> str:
-    ...
+def verified_only_field(self) -> str: ...
 ```
 
 ## Schema Directives
@@ -312,11 +311,8 @@ def verified_only_field(self) -> str:
 Permission extensions automatically add schema directives to your GraphQL schema, making permissions visible in introspection. This can be turned off:
 
 ```python
-@strawberry_django.field(
-    extensions=[HasPerm("app.permission", use_directives=False)]
-)
-def field_without_directive(self) -> str:
-    ...
+@strawberry_django.field(extensions=[HasPerm("app.permission", use_directives=False)])
+def field_without_directive(self) -> str: ...
 ```
 
 ## See Also

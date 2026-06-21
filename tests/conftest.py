@@ -46,7 +46,7 @@ _TESTS_DIR = pathlib.Path(__file__).parent
 _ROOT_DIR = _TESTS_DIR.parent
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)  # noqa: RUF076
 def _cleanup(request):
     def cleanup_function():
         shutil.rmtree(_ROOT_DIR / ".tmp_upload", ignore_errors=True)

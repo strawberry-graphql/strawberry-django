@@ -13,13 +13,11 @@ import strawberry_django
 from strawberry_django.relay import DjangoListConnection
 
 
-class Fruit(models.Model):
-    ...
+class Fruit(models.Model): ...
 
 
 @strawberry_django.type(Fruit)
-class FruitType(relay.Node):
-    ...
+class FruitType(relay.Node): ...
 
 
 @strawberry.type
@@ -31,9 +29,9 @@ class Query:
 
     # Option 2: Strawberry django also comes with DjangoListConnection
     # this will allow you to get total-count on your query.
-    fruit_with_total_count: DjangoListConnection[
-        FruitType
-    ] = strawberry_django.connection()
+    fruit_with_total_count: DjangoListConnection[FruitType] = (
+        strawberry_django.connection()
+    )
 
     # Option 3: You can manually create resolver by your method manually.
     @strawberry_django.connection(DjangoListConnection[FruitType])

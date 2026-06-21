@@ -73,6 +73,7 @@ from strawberry_django.resolvers import (
     django_resolver,
     resolve_base_manager,
 )
+from strawberry_django.utils.inspect import callable_returns_queryset
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -143,13 +144,27 @@ class StrawberryDjangoField(
         )
         # FIXME: Probably remove this when depending on graphql-core 3.3.0+
         self.disable_fetch_list_results: bool = False
+        self._cached_arguments: list[StrawberryArgument] | None = None
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def arguments(self) -> list[StrawberryArgument]:
+        if self._cached_arguments is None:
+            self._cached_arguments = super().arguments
+        return self._cached_arguments
+
+    @arguments.setter
+    def arguments(self, value: list[StrawberryArgument]) -> None:
+        self._cached_arguments = None
+        args_prop = super(StrawberryDjangoField, self.__class__).arguments
+        args_prop.fset(self, value)  # type: ignore
 
     def __copy__(self) -> Self:
         new_field = super().__copy__()
         new_field.disable_optimization = self.disable_optimization
         new_field.store = self.store.copy()
+        new_field._cached_arguments = None
         return new_field
 
     def _need_remove_argument(
@@ -231,27 +246,30 @@ class StrawberryDjangoField(
                     return prefetched
 
             attr = getattr(source.__class__, attname, None)
-            try:
+
+            def get_cached_result():
                 if isinstance(attr, ModelProperty):
-                    result = source.__dict__[attr.name]
-                elif isinstance(attr, DeferredAttribute):
+                    return source.__dict__[attr.name]
+                if isinstance(attr, DeferredAttribute):
                     # If the value is cached, retrieve it with getattr because
                     # some fields wrap values at that time (e.g. FileField).
                     # If this next like fails, it will raise KeyError and get
                     # us out of the loop before we can do getattr
                     source.__dict__[attr.field.attname]
-                    result = getattr(source, attr.field.attname)
-                elif isinstance(attr, ForwardManyToOneDescriptor):
+                    return getattr(source, attr.field.attname)
+                if isinstance(attr, ForwardManyToOneDescriptor):
                     # This will raise KeyError if it is not cached
-                    result = attr.field.get_cached_value(source)  # type: ignore
-                elif isinstance(attr, ReverseOneToOneDescriptor):
+                    return attr.field.get_cached_value(source)  # type: ignore
+                if isinstance(attr, ReverseOneToOneDescriptor):
                     # This will raise KeyError if it is not cached
-                    result = attr.related.get_cached_value(source)
-                elif isinstance(attr, ReverseManyToOneDescriptor):
+                    return attr.related.get_cached_value(source)
+                if isinstance(attr, ReverseManyToOneDescriptor):
                     # This returns a queryset, it is async safe
-                    result = getattr(source, attname)
-                else:
-                    raise KeyError  # noqa: TRY301
+                    return getattr(source, attname)
+                raise KeyError
+
+            try:
+                result = get_cached_result()
             except KeyError:
                 if "info" not in kwargs:
                     kwargs["info"] = info
@@ -471,7 +489,25 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
             field.base_resolver = StrawberryResolver(default_resolver)
 
-        return super().apply(field)
+        # Django's ``QuerySet.__class_getitem__`` returns the bare class, so a
+        # ``QuerySet[Foo]`` return annotation collapses to ``QuerySet`` and
+        # upstream's ``get_origin()``-based iterable check rejects it even though
+        # ``QuerySet`` is a genuine ``Iterable``. Normalize it to a plain list for
+        # the duration of ``super().apply()``; the annotation is only used there.
+        resolver = field.base_resolver
+        original_signature = resolver.__dict__.get("signature", UNSET)
+        if callable_returns_queryset(resolver):
+            resolver.__dict__["signature"] = resolver.signature.replace(
+                return_annotation=list[Any]
+            )
+
+        try:
+            return super().apply(field)
+        finally:
+            if original_signature is UNSET:
+                resolver.__dict__.pop("signature", None)
+            else:
+                resolver.__dict__["signature"] = original_signature
 
     def resolve(
         self,
@@ -553,6 +589,15 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             forwarded_kwargs["order"] = order
         if "filters" not in forwarded_kwargs:
             forwarded_kwargs["filters"] = filters
+        # `filters`/`order`/`pagination` are forwarded to the inner resolver (above)
+        # so field extensions and custom resolvers can access them (see #853/#854).
+        # The inner resolver already applies them via ``get_queryset_hook`` ->
+        # ``get_queryset``, so we must NOT apply them again here. Re-applying runs
+        # the filter pipeline twice, and a second ``queryset.filter(...)`` makes
+        # Django emit a duplicate set of JOINs for any multivalued relation in the
+        # filter, squaring the row count of the resulting query.
+        # This mirrors ``StrawberryDjangoConnectionExtension.resolve`` above, which
+        # likewise passes the ``next_`` result straight to ``resolve_connection``.
         queryset = cast(
             "models.QuerySet",
             next_(
@@ -562,22 +607,13 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             ),
         )
 
-        def get_queryset(queryset):
-            return cast("StrawberryDjangoField", info._field).get_queryset(
-                queryset,
-                info,
-                pagination=pagination,
-                order=order,
-                filters=filters,
-            )
-
         # We have a single resolver for both sync and async, so we need to check if
         # nodes is awaitable or not and resolve it accordingly
         if inspect.isawaitable(queryset):
 
             async def async_resolver(queryset=queryset):
                 resolved = self.paginated_type.resolve_paginated(
-                    get_queryset(await queryset),
+                    await queryset,
                     info=info,
                     pagination=pagination,
                     **kwargs,
@@ -590,7 +626,7 @@ class StrawberryOffsetPaginatedExtension(FieldExtension):
             return async_resolver()
 
         return self.paginated_type.resolve_paginated(
-            get_queryset(queryset),
+            queryset,
             info=info,
             pagination=pagination,
             **kwargs,

@@ -1,6 +1,6 @@
 [project]
 name = "strawberry-graphql-django"
-version = "0.80.0"
+version = "0.86.4"
 description = "Strawberry GraphQL Django extension"
 authors = [
   { name = "Lauri Hintsala", email = "lauri.hintsala@verkkopaja.fi" },
@@ -25,14 +25,11 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Framework :: Django",
-  "Framework :: Django :: 4.2",
-  "Framework :: Django :: 5.0",
-  "Framework :: Django :: 5.1",
   "Framework :: Django :: 5.2",
   "Framework :: Django :: 6.0",
 ]
 requires-python = ">=3.10,<4.0"
-dependencies = ["django>=4.2", "asgiref>=3.8", "strawberry-graphql>=0.310.1"]
+dependencies = ["django>=5.2", "asgiref>=3.8", "strawberry-graphql>=0.310.1"]
 
 [project.urls]
 homepage = "https://strawberry.rocks/docs/django"
@@ -42,6 +39,7 @@ documentation = "https://strawberry.rocks/docs/django"
 [project.optional-dependencies]
 debug-toolbar = ["django-debug-toolbar>=6.0.0"]
 enum = ["django-choices-field>=2.2.2"]
+polymorphic = ["django-polymorphic>=4.0.0"]
 
 [dependency-groups]
 dev = [
@@ -60,8 +58,8 @@ dev = [
   "pytest-snapshot>=0.9.0",
   "pytest-watch>=4.2.0",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.14.0",
-  "django-polymorphic>=4.1.0,<4.6",
+  "ruff>=0.15.17",
+  "django-polymorphic>=4.0.0",
   "setuptools>=80.1.0",
   "psycopg>=3.2.10",
   "psycopg-binary>=3.2.10",
@@ -83,11 +81,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.autopub]
-plugins = ["autopub.plugins.github", "autopub.plugins.uv"]
+plugins = [
+  "autopub.plugins.github",
+  "autopub.plugins.uv",
+  "strawberry_autopub_plugins.typefully:TypefullyPlugin",
+]
 git-username = "Botberry"
 git-email = "bot@strawberry.rocks"
 project-name = "strawberry-graphql-django"
 append-github-contributor = true
+
+[tool.autopub.plugin_config.typefully]
+project-name = "Strawberry GraphQL Django"
+platforms = ["x", "linkedin", "threads", "bluesky", "mastodon"]
+publish-mode = "next-free-slot"
 
 [tool.ruff]
 target-version = "py310"
