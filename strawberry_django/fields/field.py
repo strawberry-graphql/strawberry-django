@@ -241,9 +241,8 @@ class StrawberryDjangoField(
             if info is not None:
                 response_key = info._raw_info.path.key
                 alias_attr = f"{ALIAS_PREFIX}{response_key}"
-                prefetched = getattr(source, alias_attr, None)
-                if prefetched is not None:
-                    return prefetched
+                if hasattr(source, alias_attr):
+                    return getattr(source, alias_attr)
 
             attr = getattr(source.__class__, attname, None)
 
