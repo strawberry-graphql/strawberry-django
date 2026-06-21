@@ -1360,7 +1360,8 @@ def _get_model_hints(
         name = field_nodes[0].name.value
         field_name_groups.setdefault(name, []).append(field_nodes)
 
-    # Merge aliased selections with same arguments; skip those with different args
+    # Merge aliased selections with the same arguments; keep aliases with
+    # different args as separate entries by assigning distinct to_attr values.
     # list of (field_nodes, to_attr)
     merged_node_lists: list[tuple[list[FieldNode], str | None]] = []
     for groups in field_name_groups.values():

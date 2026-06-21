@@ -1344,7 +1344,7 @@ def test_query_prefetch_alias_and_field_with_different_filters(
 
 @pytest.mark.django_db(transaction=True)
 def test_query_prefetch_aliases_with_same_filters(db, gql_client: GraphQLTestClient):
-    # even though these have the same filters, query is not optimized
+    # Even with two aliases using the same filters, the optimized query count is expected.
     query = """
       query TestQuery {
         projectsPaginated{
