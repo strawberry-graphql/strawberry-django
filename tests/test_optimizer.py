@@ -1600,6 +1600,130 @@ def test_query_prefetch_with_aliases_different_subselections(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_nested_selections(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          a: milestones {
+            id
+            issues {
+              id
+            }
+          }
+          b: milestones {
+            id
+            name
+            issues {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestone_1 = MilestoneFactory.create(project=project)
+    milestone_2 = MilestoneFactory.create(project=project)
+    issue_1a = IssueFactory.create(milestone=milestone_1)
+    issue_1b = IssueFactory.create(milestone=milestone_1)
+    issue_2a = IssueFactory.create(milestone=milestone_2)
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 7):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "a": [
+                {
+                    "id": to_base64("MilestoneType", milestone_1.id),
+                    "issues": [
+                        {"id": to_base64("IssueType", issue_1a.id)},
+                        {"id": to_base64("IssueType", issue_1b.id)},
+                    ],
+                },
+                {
+                    "id": to_base64("MilestoneType", milestone_2.id),
+                    "issues": [
+                        {"id": to_base64("IssueType", issue_2a.id)},
+                    ],
+                },
+            ],
+            "b": [
+                {
+                    "id": to_base64("MilestoneType", milestone_1.id),
+                    "name": milestone_1.name,
+                    "issues": [
+                        {
+                            "id": to_base64("IssueType", issue_1a.id),
+                            "name": issue_1a.name,
+                        },
+                        {
+                            "id": to_base64("IssueType", issue_1b.id),
+                            "name": issue_1b.name,
+                        },
+                    ],
+                },
+                {
+                    "id": to_base64("MilestoneType", milestone_2.id),
+                    "name": milestone_2.name,
+                    "issues": [
+                        {
+                            "id": to_base64("IssueType", issue_2a.id),
+                            "name": issue_2a.name,
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_different_pagination(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          first: milestones(pagination: {limit: 2}) {
+            id
+          }
+          second: milestones(pagination: {limit: 1}) {
+            id
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestones = MilestoneFactory.create_batch(3, project=project)
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(3):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "first": [
+                {"id": to_base64("MilestoneType", milestones[0].id)},
+                {"id": to_base64("MilestoneType", milestones[1].id)},
+            ],
+            "second": [
+                {"id": to_base64("MilestoneType", milestones[0].id)},
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_with_optimizer_paginated_prefetch():
     @strawberry_django.type(Milestone, pagination=True)
     class MilestoneTypeWithNestedPrefetch:
