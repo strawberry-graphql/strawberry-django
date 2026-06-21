@@ -32,6 +32,7 @@ from graphql import (
     GraphQLOutputType,
     GraphQLWrappingType,
     get_argument_values,
+    print_ast,
 )
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
@@ -716,7 +717,9 @@ def _get_selections(
 
 
 def _get_field_arguments(node: FieldNode) -> tuple:
-    return tuple(sorted(node.arguments or (), key=lambda a: a.name.value))
+    return tuple(
+        print_ast(a) for a in sorted(node.arguments or (), key=lambda a: a.name.value)
+    )
 
 
 def _generate_selection_resolve_info(
