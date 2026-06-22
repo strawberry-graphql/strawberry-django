@@ -10,10 +10,10 @@
 
     function update(data) {
       if (data === null || !data.hasOwnProperty("debugToolbar")) return data;
-      
+
       const djDebug = getDebugElement();
       if (!djDebug) return data;
-      
+
       Object.entries(data.debugToolbar.panels).map(([id, panel]) => {
         if (panel.title) {
           const content = djDebug.querySelector(`#${id}`);
@@ -22,12 +22,12 @@
             if (titleEl) {
               titleEl.textContent = panel.title;
             }
-            
+
             const scrollEl = content.querySelector(".djdt-scroll");
             if (scrollEl) {
               scrollEl.innerHTML = "";
             }
-            
+
             if (content.querySelector(".djdt-loader") === null) {
               const loader = document.createElement("div");
               loader.className = "djdt-loader";
@@ -63,6 +63,6 @@
     Response.prototype.json = function () {
       return origJson.apply(this, arguments).then((data) => update(data));
     };
-    
+
   })(JSON, Response);
 </script>
