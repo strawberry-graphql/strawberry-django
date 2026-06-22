@@ -12,8 +12,11 @@
       if (data === null || !data.hasOwnProperty("debugToolbar")) return data;
 
       const djDebug = getDebugElement();
-      if (!djDebug) return data;
-
+      if (!djDebug) {
+        delete data.debugToolbar;
+        return data;
+      }
+      
       Object.entries(data.debugToolbar.panels).map(([id, panel]) => {
         if (panel.title) {
           const content = djDebug.querySelector(`#${id}`);
