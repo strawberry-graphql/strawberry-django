@@ -56,6 +56,20 @@ _T = TypeVar("_T")
 _M = TypeVar("_M", bound=Model)
 
 
+def _pk_lookup(model: type[Model], key_attr: str | None, value: Any) -> dict[str, Any]:
+    """Build the `get()` lookup that resolves an instance by its key.
+
+    Honors `DEFAULT_PK_FIELD_NAME` the same way filters do: when `key_attr`
+    names a non-pk field, look the instance up by that field; otherwise fall
+    back to `pk` so the default path stays byte-for-byte equivalent.
+    """
+    pk = model._meta.pk
+    assert pk is not None
+    if key_attr in (None, "pk", pk.name, pk.attname):  # noqa: PLR6201
+        return {"pk": value}
+    return {key_attr: value}
+
+
 def _parse_pk(
     value: ParsedObject | strawberry.ID | _M | None,
     model: type[_M],
@@ -79,11 +93,14 @@ def _parse_pk(
         if key_attr in value:
             obj_pk = value[key_attr]
             if obj_pk is not strawberry.UNSET:
-                return model._default_manager.get(pk=obj_pk), value
+                return (
+                    model._default_manager.get(**_pk_lookup(model, key_attr, obj_pk)),
+                    value,
+                )
 
         return None, value
 
-    return model._default_manager.get(pk=value), None
+    return model._default_manager.get(**_pk_lookup(model, key_attr, value)), None
 
 
 def _parse_data(
