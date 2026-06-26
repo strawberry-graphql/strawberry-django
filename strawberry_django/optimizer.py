@@ -32,6 +32,7 @@ from graphql import (
     GraphQLOutputType,
     GraphQLWrappingType,
     get_argument_values,
+    print_ast,
 )
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
@@ -101,6 +102,8 @@ _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
+
+ALIAS_PREFIX = "_strawberry_alias_"
 
 
 @dataclasses.dataclass
@@ -714,7 +717,9 @@ def _get_selections(
 
 
 def _get_field_arguments(node: FieldNode) -> tuple:
-    return tuple(sorted(node.arguments or (), key=lambda a: a.name.value))
+    return tuple(
+        print_ast(a) for a in sorted(node.arguments or (), key=lambda a: a.name.value)
+    )
 
 
 def _generate_selection_resolve_info(
@@ -953,6 +958,7 @@ def _get_hints_from_django_relation(
     path: str,
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
     level: int = 0,
+    to_attr: str | None = None,
 ) -> OptimizerStore:
     try:
         from django.contrib.contenttypes.fields import GenericRelation
@@ -1056,7 +1062,15 @@ def _get_hints_from_django_relation(
     if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
-    field_prefetch = Prefetch(path, queryset=field_qs)
+    # Don't use to_attr for connection/paginated fields - their resolvers
+    # expect data in _prefetched_objects_cache, not as a plain list attribute.
+    # If to_attr was requested but can't be used, skip optimization entirely
+    # to avoid merging conflicting prefetches for the same path.
+    if to_attr and (
+        getattr(field, "is_connection", False) or getattr(field, "is_paginated", False)
+    ):
+        return store
+    field_prefetch = Prefetch(path, queryset=field_qs, to_attr=to_attr)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)
 
@@ -1098,6 +1112,7 @@ def _get_hints_from_django_field(
     prefix: str = "",
     cache: dict[type[models.Model], list[tuple[int, OptimizerStore]]],
     level: int = 0,
+    to_attr: str | None = None,
 ) -> OptimizerStore | None:
     try:
         from django.contrib.contenttypes.fields import (
@@ -1218,6 +1233,7 @@ def _get_hints_from_django_field(
             path=path,
             cache=cache,
             level=level,
+            to_attr=to_attr,
         )
     else:
         store = OptimizerStore.with_hints(only=[path])
@@ -1347,19 +1363,31 @@ def _get_model_hints(
         name = field_nodes[0].name.value
         field_name_groups.setdefault(name, []).append(field_nodes)
 
-    # Merge aliased selections with same arguments; skip those with different args
-    merged_node_lists: list[list[FieldNode]] = []
+    # Merge aliased selections with the same arguments; keep aliases with
+    # different args as separate entries by assigning distinct to_attr values.
+    # list of (field_nodes, to_attr)
+    merged_node_lists: list[tuple[list[FieldNode], str | None]] = []
     for groups in field_name_groups.values():
         if len(groups) == 1:
-            merged_node_lists.append(groups[0])
+            merged_node_lists.append((groups[0], None))
         else:
             first_args = _get_field_arguments(groups[0][0])
             if all(_get_field_arguments(g[0]) == first_args for g in groups[1:]):
-                merged_node_lists.append([node for group in groups for node in group])
+                # Same args across all aliases - merge into single entry, no to_attr
+                merged_node_lists.append((
+                    [node for group in groups for node in group],
+                    None,
+                ))
+            else:
+                # Different args - each alias gets its own to_attr
+                for group in groups:
+                    alias = group[0].alias
+                    to_attr = f"{ALIAS_PREFIX}{alias.value}" if alias else None
+                    merged_node_lists.append((group, to_attr))
 
     selections = [
-        field_data
-        for f_nodes in merged_node_lists
+        (*field_data, to_attr)
+        for f_nodes, to_attr in merged_node_lists
         if (
             field_data := _get_field_data(
                 f_nodes,
@@ -1372,7 +1400,7 @@ def _get_model_hints(
         is not None
     ]
 
-    for field, f_definition, f_selection, f_info in selections:
+    for field, f_definition, f_selection, f_info, to_attr in selections:
         strawberry_info = schema.config.info_class(_raw_info=f_info, _field=field)
 
         # Add annotations from the field if they exist
@@ -1402,6 +1430,7 @@ def _get_model_hints(
             prefix=prefix,
             cache=cache,
             level=level,
+            to_attr=to_attr,
         ):
             store |= model_field_store
 
