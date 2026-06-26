@@ -581,6 +581,7 @@ def input(  # noqa: A001
     partial: bool = False,
     fields: list[str] | Literal["__all__"] | None = None,
     exclude: list[str] | None = None,
+    extend: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL input.
 
@@ -605,6 +606,7 @@ def input(  # noqa: A001
             is_filter=is_filter,
             description=description,
             directives=directives,
+            extend=extend,
             partial=partial,
             fields=fields,
             exclude=exclude,
@@ -630,6 +632,7 @@ def partial(
     directives: Sequence[object] | None = (),
     fields: list[str] | Literal["__all__"] | None = None,
     exclude: list[str] | None = None,
+    extend: bool = False,
 ) -> Callable[[_T], _T]:
     """Annotates a class as a Django GraphQL partial.
 
@@ -653,6 +656,7 @@ def partial(
             is_input=True,
             description=description,
             directives=directives,
+            extend=extend,
             partial=True,
             fields=fields,
             exclude=exclude,
