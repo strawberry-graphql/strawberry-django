@@ -143,3 +143,10 @@ except ImproperlyConfigured:
 class UUIDModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     text = models.CharField(max_length=50)
+
+
+class NonIdPkModel(models.Model):
+    # Primary key field is deliberately *not* named ``id``/``pk`` so tests can
+    # exercise the ``pk.name``/``pk.attname`` branch of ``_pk_lookup``.
+    code = models.CharField(primary_key=True, max_length=50)
+    text = models.CharField(max_length=50)
