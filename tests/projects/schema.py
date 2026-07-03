@@ -13,6 +13,7 @@ from django.db.models import (
     Count,
     Exists,
     ExpressionWrapper,
+    Max,
     OuterRef,
     Prefetch,
     Q,
@@ -290,6 +291,33 @@ class MilestoneType(relay.Node, Named):
             # The optimizer is disabled, compute the value directly
             value = root.issues.filter(name__contains=name_contains).count()
         return value
+
+    @strawberry_django.field(
+        annotate={
+            "_matching_count": lambda info: Count(
+                "issue",
+                filter=Q(
+                    issue__name__contains=get_field_arguments(info)["nameContains"],
+                ),
+            ),
+            "_max_matching_name": lambda info: Max(
+                "issue__name",
+                filter=Q(
+                    issue__name__contains=get_field_arguments(info)["nameContains"],
+                ),
+            ),
+        },
+    )
+    def issues_summary(self, root: Milestone, info: Info, name_contains: str) -> str:
+        count = get_hint_value(root, info, "_matching_count", default=None)
+        if count is None:
+            # The optimizer is turned off, compute the values directly
+            issues_qs = root.issues.filter(name__contains=name_contains)
+            count = issues_qs.count()
+            max_name = issues_qs.aggregate(max_name=Max("name"))["max_name"]
+        else:
+            max_name = get_hint_value(root, info, "_max_matching_name")
+        return f"{count}: {max_name}"
 
     @strawberry_django.field(
         prefetch_related=lambda info: Prefetch(

@@ -360,11 +360,37 @@ class Order:
         return value
 ```
 
+A field can also annotate multiple values and combine them in the resolver.
+Declare the annotations as a dict with custom labels and read each one back
+with `get_hint_value` passing the label as `default_attr` - when the field is
+aliased, callable annotations are stored under an alias-scoped variant of the
+label, and `get_hint_value` checks that variant first:
+
+```python title="types.py"
+@strawberry_django.type(models.Order)
+class Order:
+    @strawberry_django.field(
+        annotate={
+            "_matching_count": lambda info: Count(
+                "items",
+                filter=Q(items__price__lte=get_field_arguments(info)["maxPrice"]),
+            ),
+            "_matching_total": lambda info: Sum(
+                "items__price",
+                filter=Q(items__price__lte=get_field_arguments(info)["maxPrice"]),
+            ),
+        },
+    )
+    def items_summary(self, root: models.Order, info: Info, max_price: int) -> str:
+        count = get_hint_value(root, info, "_matching_count")
+        total = get_hint_value(root, info, "_matching_total")
+        return f"{count} items, {total} total"
+```
+
 > [!NOTE]
-> Annotations declared as a dict with custom labels
-> (e.g. `annotate={"_my_label": lambda info: ...}`) keep their static label and
-> thus don't support being aliased with different arguments - use the single
-> expression form (`annotate=lambda info: ...`) for that.
+> Static (non-callable) annotate expressions can't depend on the field's
+> arguments, so they keep their shared label and are annotated only once, no
+> matter how many aliases select the field.
 
 ## Optimization hints on model (ModelProperty)
 

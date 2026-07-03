@@ -1862,6 +1862,46 @@ def test_query_aliased_annotate_callable_with_variables(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_aliased_dict_annotate_callables_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          foo: issuesSummary(nameContains: "foo")
+          bar: issuesSummary(nameContains: "bar")
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="foo2")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 9):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "foo": "2: foo2",
+                "bar": "1: bar1",
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "foo": "0: None",
+                "bar": "1: bar2",
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_aliased_prefetch_callable_with_different_arguments(
     db, gql_client: GraphQLTestClient
 ):

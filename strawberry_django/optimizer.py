@@ -751,14 +751,25 @@ def get_hint_value(
 
     Probe order:
 
-    1. the alias-scoped attribute (`optimizer_hint_key(info)`) - set when the
-       hint callable ran for this specific selection
-    2. `default_attr`, if given - e.g. the static annotation label used when
-       the field is not aliased
-    3. `default`, if given - useful to handle the optimizer being disabled
-    4. raise `AttributeError`
+    1. the alias-scoped label (`optimizer_hint_key(info)` + `default_attr`),
+       if `default_attr` is given - set when a dict annotation callable with
+       that label ran for this specific selection
+    2. the alias-scoped attribute (`optimizer_hint_key(info)`) - set when a
+       single-expression annotation callable ran for this specific selection,
+       or by a `Prefetch(to_attr=optimizer_hint_key(info))`
+    3. `default_attr`, if given - the plain annotation label used when the
+       field is not aliased
+    4. `default`, if given - useful to handle the optimizer being turned off
+    5. raise `AttributeError`
     """
-    value = getattr(source, optimizer_hint_key(info), _sentinel)
+    hint_key = optimizer_hint_key(info)
+
+    if default_attr is not None:
+        value = getattr(source, f"{hint_key}{LOOKUP_SEP}{default_attr}", _sentinel)
+        if value is not _sentinel:
+            return value
+
+    value = getattr(source, hint_key, _sentinel)
     if value is not _sentinel:
         return value
 
@@ -897,14 +908,20 @@ def _get_hints_from_field(
     if hint_key and field_store.annotate:
         # The field is selected multiple times via aliases with its callables
         # resolved once per alias, so each callable annotation gets an
-        # alias-scoped label to avoid clashing with the other aliases.
-        # Resolvers can read the value back with `get_hint_value`.
+        # alias-scoped label to avoid clashing with the other aliases:
+        # the single-expression form (labeled with the field's name) becomes
+        # the hint key itself, while custom dict labels get prefixed by it.
+        # Resolvers can read the values back with `get_hint_value`.
         # Static expressions can't depend on the alias arguments, so they keep
         # their shared label and are annotated only once.
-        annotate = {
-            (hint_key if k == field.name and callable(v) else k): v
-            for k, v in field_store.annotate.items()
-        }
+        def _scoped_label(label: str, value: AnnotateType) -> str:
+            if not callable(value):
+                return label
+            if label == field.name:
+                return hint_key
+            return f"{hint_key}{LOOKUP_SEP}{label}"
+
+        annotate = {_scoped_label(k, v): v for k, v in field_store.annotate.items()}
         if annotate.keys() != field_store.annotate.keys():
             field_store = field_store.__class__(
                 only=field_store.only,
