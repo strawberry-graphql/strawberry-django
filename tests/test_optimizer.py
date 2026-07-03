@@ -1724,6 +1724,225 @@ def test_query_prefetch_aliases_with_different_pagination(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          foo: issuesCountFiltered(nameContains: "foo")
+          bar: issuesCountFiltered(nameContains: "bar")
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="foo2")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "foo": 2,
+                "bar": 1,
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "foo": 0,
+                "bar": 1,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_with_same_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          a: issuesCountFiltered(nameContains: "foo")
+          b: issuesCountFiltered(nameContains: "foo")
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "a": 1,
+                "b": 1,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_annotate_callable_alias_and_field_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          issuesCountFiltered(nameContains: "foo")
+          bar: issuesCountFiltered(nameContains: "bar")
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+    IssueFactory.create(milestone=milestone, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "issuesCountFiltered": 1,
+                "bar": 2,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_with_variables(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($fooName: String!, $barName: String!) {
+        milestoneList {
+          id
+          foo: issuesCountFiltered(nameContains: $fooName)
+          bar: issuesCountFiltered(nameContains: $barName)
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+    IssueFactory.create(milestone=milestone, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query, {"fooName": "foo", "barName": "bar"})
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "foo": 1,
+                "bar": 2,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_prefetch_callable_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          foo: issuesFiltered(nameContains: "foo") {
+            name
+          }
+          bar: issuesFiltered(nameContains: "bar") {
+            name
+          }
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="foo2")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "foo": [{"name": "foo1"}],
+                "bar": [{"name": "bar1"}],
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "foo": [{"name": "foo2"}],
+                "bar": [],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_callable_alias_and_field_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          issuesFiltered(nameContains: "foo") {
+            name
+          }
+          bar: issuesFiltered(nameContains: "bar") {
+            name
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+
+    # 3 queries in both cases: with the optimizer, one for the milestones and
+    # one prefetch per response key; without it, one query per resolver call.
+    with assert_num_queries(3):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "issuesFiltered": [{"name": "foo1"}],
+                "bar": [{"name": "bar1"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_with_optimizer_paginated_prefetch():
     @strawberry_django.type(Milestone, pagination=True)
     class MilestoneTypeWithNestedPrefetch:

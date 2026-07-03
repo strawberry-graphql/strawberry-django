@@ -287,6 +287,85 @@ The following options are accepted for optimizer hints:
   or a callable in the format of `Callable[[Info], BaseExpression]`
   (e.g. `annotate={"total": lambda info: Sum(...)}`)
 
+## Aliased fields with optimization hint callables
+
+A field whose hints are callables can produce argument-dependent optimizations,
+which means the same field can be selected multiple times via
+[aliases](https://graphql.org/learn/queries/#aliases) with different arguments:
+
+```graphql
+query {
+  orderItems {
+    cheap: totalFiltered(maxPrice: 10)
+    expensive: totalFiltered(maxPrice: 1000)
+  }
+}
+```
+
+Each alias resolves the hint callables with its own `info`, scoped to that
+specific selection. Since every annotation and `Prefetch(to_attr=...)` needs a
+unique name, three helpers keep the hint and the resolver in sync:
+
+- `strawberry_django.optimizer_hint_key(info)`: returns a unique attribute name
+  for the current selection, derived from its response key (the alias if the
+  field is aliased). It returns the same value inside a hint callable and
+  inside the resolver.
+- `strawberry_django.get_hint_value(source, info, default_attr=None, *, default=...)`:
+  reads the value produced by a hint for the current selection. It checks the
+  alias-scoped attribute first, then `default_attr` (e.g. the plain annotation
+  label used when the field is not aliased), then returns `default` if given
+  (useful when the optimizer is turned off), and raises `AttributeError` otherwise.
+- `strawberry_django.get_field_arguments(info)`: resolves the argument values of
+  the current selection (keyed by their GraphQL names, with variables resolved).
+
+For annotations, callable values are automatically stored under the
+alias-scoped name when the field is aliased, so the resolver only needs
+`get_hint_value`:
+
+```python title="types.py"
+@strawberry_django.type(models.Order)
+class Order:
+    @strawberry_django.field(
+        annotate=lambda info: Sum(
+            "items__price",
+            filter=Q(items__price__lte=get_field_arguments(info)["maxPrice"]),
+        ),
+    )
+    def total_filtered(self, root: models.Order, info: Info, max_price: int) -> int:
+        return get_hint_value(root, info, "total_filtered", default=0)
+```
+
+For prefetches, name the `to_attr` with `optimizer_hint_key` and read it back
+the same way:
+
+```python title="types.py"
+@strawberry_django.type(models.Order)
+class Order:
+    @strawberry_django.field(
+        prefetch_related=lambda info: Prefetch(
+            "items",
+            queryset=models.OrderItem.objects.filter(
+                price__lte=get_field_arguments(info)["maxPrice"],
+            ),
+            to_attr=optimizer_hint_key(info),
+        ),
+    )
+    def items_filtered(
+        self, root: models.Order, info: Info, max_price: int
+    ) -> list[OrderItem]:
+        value = get_hint_value(root, info, default=None)
+        if value is None:
+            # The optimizer is turned off, resolve the value directly
+            value = list(root.items.filter(price__lte=max_price))
+        return value
+```
+
+> [!NOTE]
+> Annotations declared as a dict with custom labels
+> (e.g. `annotate={"_my_label": lambda info: ...}`) keep their static label and
+> thus don't support being aliased with different arguments - use the single
+> expression form (`annotate=lambda info: ...`) for that.
+
 ## Optimization hints on model (ModelProperty)
 
 It is also possible to include type hints directly in the models' `@property`

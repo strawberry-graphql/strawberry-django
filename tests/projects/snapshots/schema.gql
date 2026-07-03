@@ -410,6 +410,8 @@ type MilestoneType implements Node & Named {
   ): IssueTypeConnection!
   myIssues: [IssueType!]!
   myBugsCount: Int!
+  issuesCountFiltered(nameContains: String!): Int!
+  issuesFiltered(nameContains: String!): [IssueType!]!
   asyncField(value: String!): String!
 }
 

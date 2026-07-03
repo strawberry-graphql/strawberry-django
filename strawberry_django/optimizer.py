@@ -95,7 +95,10 @@ __all__ = [
     "OptimizerConfig",
     "OptimizerStore",
     "PrefetchType",
+    "get_field_arguments",
+    "get_hint_value",
     "optimize",
+    "optimizer_hint_key",
 ]
 
 _M = TypeVar("_M", bound=models.Model)
@@ -722,6 +725,71 @@ def _get_field_arguments(node: FieldNode) -> tuple:
     )
 
 
+def optimizer_hint_key(info: Info) -> str:
+    """Return a unique attribute name for the current field selection.
+
+    Derived from the response key - the alias if the field is aliased,
+    otherwise the field's own name. Response keys are guaranteed to be unique
+    within a selection set, and this returns the same value during optimizer
+    hint collection and at resolve time.
+
+    Use it to name an annotation or a `Prefetch(to_attr=...)` inside an
+    optimizer hint callable, and `get_hint_value` to read the value back
+    inside the resolver.
+    """
+    return f"{ALIAS_PREFIX}{info.path.key}"
+
+
+def get_hint_value(
+    source: Any,
+    info: Info,
+    default_attr: str | None = None,
+    *,
+    default: Any = _sentinel,
+) -> Any:
+    """Read the value produced by an optimizer hint for the current selection.
+
+    Probe order:
+
+    1. the alias-scoped attribute (`optimizer_hint_key(info)`) - set when the
+       hint callable ran for this specific selection
+    2. `default_attr`, if given - e.g. the static annotation label used when
+       the field is not aliased
+    3. `default`, if given - useful to handle the optimizer being disabled
+    4. raise `AttributeError`
+    """
+    value = getattr(source, optimizer_hint_key(info), _sentinel)
+    if value is not _sentinel:
+        return value
+
+    if default_attr is not None:
+        value = getattr(source, default_attr, _sentinel)
+        if value is not _sentinel:
+            return value
+
+    if default is not _sentinel:
+        return default
+
+    raise AttributeError(
+        f"No optimizer hint value found for {info.path.key!r} on {source!r}. "
+        "Was the query executed without DjangoOptimizerExtension?"
+    )
+
+
+def get_field_arguments(info: Info) -> dict[str, Any]:
+    """Resolve the argument values of the current field selection.
+
+    Works both inside optimizer hint callables (during hint collection) and
+    inside resolvers, returning the arguments of the specific selection
+    (i.e. of the alias being processed, if the field is aliased).
+    """
+    raw_info = info._raw_info
+    field_node = raw_info.field_nodes[0]
+    parent_type = raw_info.parent_type
+    field_def = parent_type.fields[field_node.name.value]
+    return get_argument_values(field_def, field_node, raw_info.variable_values)
+
+
 def _generate_selection_resolve_info(
     info: GraphQLResolveInfo,
     field_nodes: list[FieldNode],
@@ -729,12 +797,16 @@ def _generate_selection_resolve_info(
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ):
     field_node = field_nodes[0]
+    # Use the response key (alias if present) as the path key so that it matches
+    # `info.path.key` at resolve time, keeping `optimizer_hint_key` consistent
+    # between hint collection and resolution.
+    response_key = field_node.alias.value if field_node.alias else field_node.name.value
     return GraphQLResolveInfo(
         field_name=field_node.name.value,
         field_nodes=field_nodes,
         return_type=return_type,
         parent_type=cast("GraphQLObjectType", parent_type),
-        path=info.path.add_key(0).add_key(field_node.name.value, parent_type.name),
+        path=info.path.add_key(0).add_key(response_key, parent_type.name),
         schema=info.schema,
         fragments=info.fragments,
         root_value=info.root_value,
@@ -742,6 +814,27 @@ def _generate_selection_resolve_info(
         variable_values=info.variable_values,
         context=info.context,
         is_awaitable=info.is_awaitable,
+    )
+
+
+def _find_strawberry_field(
+    object_definition: StrawberryObjectDefinition,
+    schema: Schema,
+    field_name: str,
+) -> StrawberryField | None:
+    for field in object_definition.fields:
+        if schema.config.name_converter.get_graphql_name(field) == field_name:
+            return field
+    return None
+
+
+def _field_has_callable_hints(field: StrawberryField) -> bool:
+    store = cast("OptimizerStore | None", getattr(field, "store", None))
+    if not store:
+        return False
+
+    return any(callable(p) for p in store.prefetch_related) or any(
+        callable(a) for a in store.annotate.values()
     )
 
 
@@ -755,10 +848,8 @@ def _get_field_data(
 ) -> tuple[StrawberryField, GraphQLObjectType, FieldNode, GraphQLResolveInfo] | None:
     selection = selections[0]
     field_name = selection.name.value
-    for field in object_definition.fields:
-        if schema.config.name_converter.get_graphql_name(field) == field_name:
-            break
-    else:
+    field = _find_strawberry_field(object_definition, schema, field_name)
+    if field is None:
         return None
 
     # Do not optimize the field if the user asked not to
@@ -784,6 +875,7 @@ def _get_hints_from_field(
     *,
     f_info: Info,
     prefix: str = "",
+    hint_key: str | None = None,
 ) -> OptimizerStore | None:
     if not (
         field_store := cast("OptimizerStore | None", getattr(field, "store", None))
@@ -801,6 +893,25 @@ def _get_hints_from_field(
         field_store.annotate = {
             field.name: field_store.annotate[_annotate_placeholder],
         }
+
+    if hint_key and field_store.annotate:
+        # The field is selected multiple times via aliases with its callables
+        # resolved once per alias, so each callable annotation gets an
+        # alias-scoped label to avoid clashing with the other aliases.
+        # Resolvers can read the value back with `get_hint_value`.
+        # Static expressions can't depend on the alias arguments, so they keep
+        # their shared label and are annotated only once.
+        annotate = {
+            (hint_key if k == field.name and callable(v) else k): v
+            for k, v in field_store.annotate.items()
+        }
+        if annotate.keys() != field_store.annotate.keys():
+            field_store = field_store.__class__(
+                only=field_store.only,
+                select_related=field_store.select_related,
+                prefetch_related=field_store.prefetch_related,
+                annotate=annotate,
+            )
 
     # with_prefix also resolves callables, so we only need one or the other
     return (
@@ -1367,23 +1478,37 @@ def _get_model_hints(
     # different args as separate entries by assigning distinct to_attr values.
     # list of (field_nodes, to_attr)
     merged_node_lists: list[tuple[list[FieldNode], str | None]] = []
-    for groups in field_name_groups.values():
+    for name, groups in field_name_groups.items():
         if len(groups) == 1:
             merged_node_lists.append((groups[0], None))
+            continue
+
+        s_field = _find_strawberry_field(object_definition, schema, name)
+        if s_field is not None and _field_has_callable_hints(s_field):
+            # Fields with callable optimizer hints are handled once per
+            # response key, even when the arguments are identical: each
+            # alias resolves its callables with its own scoped info, storing
+            # results under an alias-scoped name (see `optimizer_hint_key`),
+            # which resolvers read back with `get_hint_value`.
+            for group in groups:
+                alias = group[0].alias
+                key = alias.value if alias else name
+                merged_node_lists.append((group, f"{ALIAS_PREFIX}{key}"))
+            continue
+
+        first_args = _get_field_arguments(groups[0][0])
+        if all(_get_field_arguments(g[0]) == first_args for g in groups[1:]):
+            # Same args across all aliases - merge into single entry, no to_attr
+            merged_node_lists.append((
+                [node for group in groups for node in group],
+                None,
+            ))
         else:
-            first_args = _get_field_arguments(groups[0][0])
-            if all(_get_field_arguments(g[0]) == first_args for g in groups[1:]):
-                # Same args across all aliases - merge into single entry, no to_attr
-                merged_node_lists.append((
-                    [node for group in groups for node in group],
-                    None,
-                ))
-            else:
-                # Different args - each alias gets its own to_attr
-                for group in groups:
-                    alias = group[0].alias
-                    to_attr = f"{ALIAS_PREFIX}{alias.value}" if alias else None
-                    merged_node_lists.append((group, to_attr))
+            # Different args - each alias gets its own to_attr
+            for group in groups:
+                alias = group[0].alias
+                to_attr = f"{ALIAS_PREFIX}{alias.value}" if alias else None
+                merged_node_lists.append((group, to_attr))
 
     selections = [
         (*field_data, to_attr)
@@ -1405,7 +1530,7 @@ def _get_model_hints(
 
         # Add annotations from the field if they exist
         if field_store := _get_hints_from_field(
-            field, f_info=strawberry_info, prefix=prefix
+            field, f_info=strawberry_info, prefix=prefix, hint_key=to_attr
         ):
             store |= field_store
 
