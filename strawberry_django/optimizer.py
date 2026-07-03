@@ -27,6 +27,7 @@ from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from graphql import (
     FieldNode,
+    GraphQLError,
     GraphQLInterfaceType,
     GraphQLObjectType,
     GraphQLOutputType,
@@ -719,7 +720,23 @@ def _get_selections(
     return get_sub_field_selections(info, parent_type)
 
 
-def _get_field_arguments(node: FieldNode) -> tuple:
+def _get_field_arguments(
+    node: FieldNode,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    info: GraphQLResolveInfo,
+) -> Any:
+    """Return a comparable representation of the node's argument values.
+
+    Coerces the argument values (resolving variables and defaults) so that
+    selections carrying semantically equal arguments compare equal. Falls back
+    to comparing the printed argument ASTs for meta fields (e.g. `__type`)
+    which don't appear in the parent type's field map.
+    """
+    field_def = parent_type.fields.get(node.name.value)
+    if field_def is not None:
+        with contextlib.suppress(GraphQLError):
+            return get_argument_values(field_def, node, info.variable_values)
+
     return tuple(
         print_ast(a) for a in sorted(node.arguments or (), key=lambda a: a.name.value)
     )
@@ -1513,8 +1530,11 @@ def _get_model_hints(
                 merged_node_lists.append((group, f"{ALIAS_PREFIX}{key}"))
             continue
 
-        first_args = _get_field_arguments(groups[0][0])
-        if all(_get_field_arguments(g[0]) == first_args for g in groups[1:]):
+        first_args = _get_field_arguments(groups[0][0], parent_type, info)
+        if all(
+            _get_field_arguments(g[0], parent_type, info) == first_args
+            for g in groups[1:]
+        ):
             # Same args across all aliases - merge into single entry, no to_attr
             merged_node_lists.append((
                 [node for group in groups for node in group],

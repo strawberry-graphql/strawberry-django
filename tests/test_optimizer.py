@@ -1,5 +1,6 @@
 import datetime
 import operator
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -15,6 +16,7 @@ from django.db.models import (
 )
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
+from graphql.pyutils import Path
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
 from strawberry.types import ExecutionResult, Info, get_object_definition
@@ -22,6 +24,7 @@ from strawberry.types import ExecutionResult, Info, get_object_definition
 import strawberry_django
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
+    get_hint_value,
 )
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
@@ -1721,6 +1724,20 @@ def test_query_prefetch_aliases_with_different_pagination(
             ],
         },
     }
+
+
+def test_get_hint_value_raises_without_hint_or_default():
+    info = cast("Info", SimpleNamespace(path=Path(None, "issuesCountFiltered", None)))
+    source = SimpleNamespace()
+
+    with pytest.raises(AttributeError) as exc_info:
+        get_hint_value(source, info, "some_missing_attr")
+
+    assert "'issuesCountFiltered'" in str(exc_info.value)
+    assert "DjangoOptimizerExtension" in str(exc_info.value)
+
+    # With a default there is no error, even if the default is None
+    assert get_hint_value(source, info, "some_missing_attr", default=None) is None
 
 
 @pytest.mark.django_db(transaction=True)

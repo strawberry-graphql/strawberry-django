@@ -49,9 +49,9 @@ from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
 from strawberry_django.optimizer import (
-    ALIAS_PREFIX,
     OptimizerStore,
     is_optimized_by_prefetching,
+    optimizer_hint_key,
 )
 from strawberry_django.ordering import (
     ORDER_ARG,
@@ -239,8 +239,7 @@ class StrawberryDjangoField(
 
             # Check for to_attr-based prefetch from optimizer (aliased field with filters)
             if info is not None:
-                response_key = info._raw_info.path.key
-                alias_attr = f"{ALIAS_PREFIX}{response_key}"
+                alias_attr = optimizer_hint_key(info)
                 if hasattr(source, alias_attr):
                     return getattr(source, alias_attr)
 
