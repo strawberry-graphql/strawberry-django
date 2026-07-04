@@ -42,6 +42,7 @@ from strawberry.types.field import _RESOLVER_TYPE  # noqa: PLC2701
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import await_maybe
+from strawberry.utils.inspect import in_async_context
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument
@@ -289,9 +290,17 @@ class StrawberryDjangoField(
                     if "info" not in kwargs:
                         kwargs["info"] = info
 
-                    resolved = await sync_to_async(self.get_queryset_hook(**kwargs))(
-                        resolved
-                    )
+                    qs_hook = self.get_queryset_hook(**kwargs)
+                    if (
+                        resolved._result_cache is not None  # type: ignore
+                        and is_optimized_by_prefetching(resolved)
+                    ):
+                        # The prefetched results are already in memory and
+                        # get_queryset short-circuits for prefetch-optimized
+                        # querysets, so the hook does no database work.
+                        resolved = qs_hook(resolved)
+                    else:
+                        resolved = await sync_to_async(qs_hook)(resolved)
 
                 return resolved
 
@@ -304,10 +313,20 @@ class StrawberryDjangoField(
             if "info" not in kwargs:
                 kwargs["info"] = info
 
-            result = django_resolver(
-                self.get_queryset_hook(**kwargs),
-                qs_hook=lambda qs: qs,
-            )(result)
+            qs_hook = self.get_queryset_hook(**kwargs)
+            if (
+                result._result_cache is not None  # type: ignore
+                and is_optimized_by_prefetching(result)
+            ):
+                # The prefetched results are already in memory and get_queryset
+                # short-circuits for prefetch-optimized querysets, so the hook
+                # does no database work.
+                result = qs_hook(result)
+            else:
+                result = django_resolver(
+                    qs_hook,
+                    qs_hook=lambda qs: qs,
+                )(result)
 
         return result
 
@@ -450,7 +469,10 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
                 if root is not None:
                     # If this is a nested field, call get_result instead because we want
-                    # to retrieve the queryset from its RelatedManager
+                    # to retrieve the queryset from its RelatedManager. Accessing the
+                    # manager and calling `.all()` builds the queryset without
+                    # evaluating it (for prefetched relations it returns the cached
+                    # queryset), so this is safe to run on the event loop.
                     retval = cast(
                         "models.QuerySet",
                         getattr(root, field.django_name or field.python_name).all(),
@@ -464,15 +486,28 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                             " each of those",
                         )
 
-                    retval = resolve_model_nodes(
-                        django_type,
-                        info=info,
-                        required=True,
-                    )
+                    # resolve_model_nodes may run user-defined `get_queryset`,
+                    # which is allowed to touch the database - keep it out of
+                    # the event loop.
+                    if in_async_context():
+                        retval = sync_to_async(resolve_model_nodes)(
+                            django_type,
+                            info=info,
+                            required=True,
+                        )
+                    else:
+                        retval = resolve_model_nodes(
+                            django_type,
+                            info=info,
+                            required=True,
+                        )
 
                 return cast("Iterable[Any]", retval)
 
             default_resolver.can_optimize = True  # type: ignore
+            # The resolver never runs a query itself (see the comments above),
+            # so it doesn't need the sync_to_async wrapping in async contexts.
+            default_resolver.is_async_safe = True  # type: ignore
 
             field.base_resolver = StrawberryResolver(default_resolver)
 

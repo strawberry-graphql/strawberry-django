@@ -171,7 +171,11 @@ class StrawberryDjangoFieldBase(StrawberryField):
         resolver = self.base_resolver
         assert resolver
 
-        if not resolver.is_async:
+        # Library-internal resolvers marked `is_async_safe` never run a query
+        # themselves, so they can skip the sync_to_async thread hop entirely.
+        if not resolver.is_async and not getattr(
+            resolver.wrapped_func, "is_async_safe", False
+        ):
             resolver = django_resolver(resolver, qs_hook=None)
 
         return resolver
