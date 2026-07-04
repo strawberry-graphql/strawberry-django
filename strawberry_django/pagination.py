@@ -338,12 +338,36 @@ def get_total_count(queryset: QuerySet) -> int:
                     stacklevel=2,
                 )
 
+        elif results is not None and _is_non_empty_first_page_window(queryset):
+            # An empty first page (no offset, limit >= 1) can only come from an
+            # empty partition, so there is nothing to count. This avoids one
+            # COUNT query per parent without results in nested connections.
+            return 0
+
         # If we have no results, we can't get the total count from the cache.
         # In this case we will remove the pagination filter to be able to `.count()`
         # the whole queryset with its original filters.
         queryset = remove_window_pagination(queryset)
 
     return queryset.count()
+
+
+def _is_non_empty_first_page_window(queryset: QuerySet) -> bool:
+    """Whether the window pagination on ``queryset`` selects a first page that can hold at least one row.
+
+    True when there is no window offset filter (``row_number > offset``) and the
+    window limit filter (``row_number <= limit``), if any, admits at least one row.
+    For such a page, no results implies an empty partition.
+    """
+    for child in queryset.query.where.children:
+        if not isinstance(getattr(child, "lhs", None), _PaginationWindow):
+            continue
+        lookup_name = getattr(child, "lookup_name", None)
+        if lookup_name == "gt":
+            return False
+        if lookup_name == "lte" and not getattr(child, "rhs", None):
+            return False
+    return True
 
 
 class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
