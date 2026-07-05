@@ -365,7 +365,18 @@ def _is_non_empty_first_page_window(queryset: QuerySet) -> bool:
     Any other filter shape on a `_PaginationWindow` is not produced by
     `apply_window_pagination`; be conservative and report False for it so
     callers fall back to counting.
+
+    Note that no window *filters* at all is a valid first-page shape: an
+    offset of 0 with no limit fetches whole partitions, filterless. What must
+    be present are the `_PaginationWindow` *annotations*, proving the queryset
+    went through `apply_window_pagination` in the first place.
     """
+    if not any(
+        isinstance(annotation, _PaginationWindow)
+        for annotation in queryset.query.annotations.values()
+    ):
+        return False
+
     for child in queryset.query.where.children:
         if not isinstance(getattr(child, "lhs", None), _PaginationWindow):
             continue
