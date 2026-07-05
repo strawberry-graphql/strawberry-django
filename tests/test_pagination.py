@@ -13,7 +13,10 @@ from strawberry_django.pagination import (
     OffsetPaginationInput,
     apply,
     apply_window_pagination,
+    get_cached_total_count,
+    get_total_count,
 )
+from strawberry_django.queryset import get_queryset_config
 from tests import models, utils
 from tests.projects.faker import (
     IssueFactory,
@@ -152,6 +155,115 @@ def test_apply_window_pagination_with_no_limites(limit):
     assert first_fruit.name == "fruit2"
     assert first_fruit._strawberry_row_number == 3  # type: ignore
     assert first_fruit._strawberry_total_count == 10  # type: ignore
+
+
+def _prefetch_optimized_fruits_queryset():
+    """Build a queryset in the state the optimizer leaves prefetched relations in.
+
+    The optimizer applies window pagination to the prefetch queryset and marks
+    it as optimized-by-prefetching; Django then evaluates it, populating
+    `_result_cache` with rows carrying the window annotations.
+    """
+    queryset = apply_window_pagination(
+        models.Fruit.objects.all(),
+        related_field_id="color_id",
+        offset=0,
+        limit=10,
+    )
+    get_queryset_config(queryset).optimized_by_prefetching = True
+    return queryset
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_returns_none_for_non_optimized_queryset():
+    color = models.Color.objects.create(name="Red")
+    models.Fruit.objects.create(name="fruit", color=color)
+
+    queryset = models.Fruit.objects.all()
+    list(queryset)  # populate _result_cache
+
+    with utils.assert_num_queries(0):
+        assert get_cached_total_count(queryset) is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_returns_none_for_unevaluated_queryset():
+    color = models.Color.objects.create(name="Red")
+    models.Fruit.objects.create(name="fruit", color=color)
+
+    queryset = _prefetch_optimized_fruits_queryset()
+    assert queryset._result_cache is None  # type: ignore
+
+    with utils.assert_num_queries(0):
+        assert get_cached_total_count(queryset) is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_returns_none_for_empty_result_cache():
+    queryset = _prefetch_optimized_fruits_queryset()
+    assert list(queryset) == []
+
+    with utils.assert_num_queries(0):
+        assert get_cached_total_count(queryset) is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_reads_window_annotation_without_queries():
+    color = models.Color.objects.create(name="Red")
+    for i in range(3):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    queryset = _prefetch_optimized_fruits_queryset()
+    list(queryset)  # populate _result_cache with annotated rows
+
+    with utils.assert_num_queries(0):
+        assert get_cached_total_count(queryset) == 3
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_returns_none_for_distinct_queryset():
+    color = models.Color.objects.create(name="Red")
+    for i in range(3):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    queryset = _prefetch_optimized_fruits_queryset().distinct()
+    list(queryset)  # populate _result_cache with annotated rows
+
+    # Window functions are evaluated before DISTINCT in SQL, so the annotation
+    # can't be trusted and the cached count must not be used.
+    with utils.assert_num_queries(0):
+        assert get_cached_total_count(queryset) is None
+
+    # get_total_count must fall back to a real COUNT query instead.
+    with utils.assert_num_queries(1):
+        assert get_total_count(queryset) == 3
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_warns_when_annotations_are_missing():
+    color = models.Color.objects.create(name="Red")
+    for i in range(2):
+        models.Fruit.objects.create(name=f"fruit{i}", color=color)
+
+    # Optimized-by-prefetching queryset whose cached rows lack the window
+    # annotations (e.g. window pagination was never applied to it).
+    queryset = models.Fruit.objects.all()
+    get_queryset_config(queryset).optimized_by_prefetching = True
+    list(queryset)  # populate _result_cache with non-annotated rows
+
+    warning_match = "Pagination annotations not found"
+    with (
+        pytest.warns(RuntimeWarning, match=warning_match),
+        utils.assert_num_queries(0),
+    ):
+        assert get_cached_total_count(queryset) is None
+
+    # get_total_count must fall back to a real COUNT query instead.
+    with (
+        pytest.warns(RuntimeWarning, match=warning_match),
+        utils.assert_num_queries(1),
+    ):
+        assert get_total_count(queryset) == 2
 
 
 @pytest.mark.django_db(transaction=True)

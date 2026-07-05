@@ -96,6 +96,21 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 
+def _can_run_qs_hook_inline(queryset: models.QuerySet) -> bool:
+    """Whether the queryset hook can run without touching the database.
+
+    A queryset's `_result_cache` is either `None` or the fully evaluated row
+    list (Django populates it atomically in `_fetch_all`), so a non-None cache
+    means every row is already in memory. When such a queryset is also
+    prefetch-optimized, `get_queryset` short-circuits and the hook does no
+    database work, making it safe to run on the event loop.
+    """
+    return (
+        queryset._result_cache is not None  # type: ignore
+        and is_optimized_by_prefetching(queryset)
+    )
+
+
 class StrawberryDjangoField(
     StrawberryDjangoPagination,
     StrawberryDjangoFieldOrdering,
@@ -291,13 +306,7 @@ class StrawberryDjangoField(
                         kwargs["info"] = info
 
                     qs_hook = self.get_queryset_hook(**kwargs)
-                    if (
-                        resolved._result_cache is not None  # type: ignore
-                        and is_optimized_by_prefetching(resolved)
-                    ):
-                        # The prefetched results are already in memory and
-                        # get_queryset short-circuits for prefetch-optimized
-                        # querysets, so the hook does no database work.
+                    if _can_run_qs_hook_inline(resolved):
                         resolved = qs_hook(resolved)
                     else:
                         resolved = await sync_to_async(qs_hook)(resolved)
@@ -314,13 +323,7 @@ class StrawberryDjangoField(
                 kwargs["info"] = info
 
             qs_hook = self.get_queryset_hook(**kwargs)
-            if (
-                result._result_cache is not None  # type: ignore
-                and is_optimized_by_prefetching(result)
-            ):
-                # The prefetched results are already in memory and get_queryset
-                # short-circuits for prefetch-optimized querysets, so the hook
-                # does no database work.
+            if _can_run_qs_hook_inline(result):
                 result = qs_hook(result)
             else:
                 result = django_resolver(

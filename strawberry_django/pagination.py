@@ -340,6 +340,11 @@ def get_cached_total_count(queryset: QuerySet) -> int | None:
     if not is_optimized_by_prefetching(queryset):
         return None
 
+    # `_result_cache` is either None or the fully evaluated row list (Django
+    # populates it atomically in `_fetch_all`), so a truthy cache means every
+    # row of the windowed prefetch query is in memory. All rows carry the same
+    # window annotations, so the first row is representative; the
+    # AttributeError fallback below covers rows that lack them.
     results = queryset._result_cache  # type: ignore
     if not results:
         return None

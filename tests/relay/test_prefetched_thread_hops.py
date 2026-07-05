@@ -9,8 +9,13 @@ of hops on list-heavy responses.
 The absolute number of hops for the root field depends on the graphql-core
 version (graphql-core 3.3+ async-iterates the root queryset, moving the fetch
 into Django's own ``sync_to_async``), so the tests assert the actual contract:
-the hop count is constant, no matter how many parent nodes are resolved.
+the hops (count and call sites) are constant, no matter how many parent nodes
+are resolved. Without the optimizer the nested data is not in memory, and the
+complementary tests assert that each parent then pays thread hops for its
+database work instead of running it on the event loop.
 """
+
+from collections import Counter
 
 import pytest
 import strawberry
@@ -20,7 +25,7 @@ from strawberry.relay import GlobalID
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from strawberry_django.relay import DjangoListConnection
+from strawberry_django.relay import DjangoCursorConnection, DjangoListConnection
 from tests.projects.models import Milestone, Project
 
 from .test_cursor_pagination import MilestoneType
@@ -43,6 +48,85 @@ class ListConnectionQuery:
 list_connection_schema = strawberry.Schema(
     query=ListConnectionQuery, extensions=[DjangoOptimizerExtension()]
 )
+
+
+# Building a schema mutates its connection fields (the relay extension
+# installs the default resolver on them), so the no-optimizer schemas need
+# their own copies of the types instead of reusing the ones above.
+@strawberry_django.type(Project, name="ProjectNoOptimizerCursor")
+class CursorProjectNoOptimizerType(relay.Node):
+    name: str
+    milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
+
+    @classmethod
+    def get_queryset(cls, qs, info):
+        if not qs.ordered:
+            qs = qs.order_by("pk")
+        return qs
+
+
+@strawberry.type
+class CursorNoOptimizerQuery:
+    projects: DjangoCursorConnection[CursorProjectNoOptimizerType] = (
+        strawberry_django.connection()
+    )
+
+
+@strawberry_django.type(Project, name="ProjectWithListConnectionNoOptimizer")
+class ListProjectNoOptimizerType(relay.Node):
+    name: str
+    milestones: DjangoListConnection[MilestoneType] = strawberry_django.connection()
+
+
+@strawberry.type
+class ListConnectionNoOptimizerQuery:
+    projects_with_list_connection: list[ListProjectNoOptimizerType] = (
+        strawberry_django.field()
+    )
+
+
+# Without the optimizer nothing is prefetched, so nested connections must run
+# their queries in worker threads instead of on the event loop.
+cursor_schema_no_optimizer = strawberry.Schema(query=CursorNoOptimizerQuery)
+list_connection_schema_no_optimizer = strawberry.Schema(
+    query=ListConnectionNoOptimizerQuery
+)
+
+
+CURSOR_QUERY = """
+query TestQuery {
+    projects(order: { id: ASC }) {
+        edges {
+          node {
+            id
+            milestones { totalCount edges { node { id } } }
+          }
+        }
+    }
+}
+"""
+
+NO_OPTIMIZER_CURSOR_QUERY = """
+query TestQuery {
+    projects {
+        edges {
+          node {
+            id
+            milestones { totalCount edges { node { id } } }
+          }
+        }
+    }
+}
+"""
+
+LIST_QUERY = """
+query TestQuery {
+    projectsWithListConnection {
+        id
+        milestones { totalCount edges { node { id } } }
+    }
+}
+"""
 
 
 @pytest.fixture
@@ -68,12 +152,14 @@ def _create_projects_with_milestones(first_project_id: int, count: int) -> None:
         Milestone.objects.create(id=project_id * 10 + 1, project=project)
 
 
-async def _count_hops(schema, query: str, thread_hops: list[str]) -> int:
+async def _run_and_capture_hops(
+    schema, query: str, thread_hops: list[str]
+) -> list[str]:
     thread_hops.clear()
     result = await schema.execute(query)
     assert result.errors is None
     assert result.data is not None
-    return len(thread_hops)
+    return list(thread_hops)
 
 
 @pytest.mark.django_db(transaction=True)
@@ -82,21 +168,8 @@ async def test_nested_cursor_connection_resolves_prefetched_data_without_hops(
 ):
     await sync_to_async(_create_projects_with_milestones)(1, 2)
 
-    query = """
-    query TestQuery {
-        projects(order: { id: ASC }) {
-            edges {
-              node {
-                id
-                milestones { totalCount edges { node { id } } }
-              }
-            }
-        }
-    }
-    """
-
     thread_hops.clear()
-    result = await cursor_schema.execute(query)
+    result = await cursor_schema.execute(CURSOR_QUERY)
 
     assert result.errors is None
     assert result.data == {
@@ -127,15 +200,19 @@ async def test_nested_cursor_connection_resolves_prefetched_data_without_hops(
             ],
         }
     }
-    hops_for_two_parents = len(thread_hops)
+    hops_for_two_parents = list(thread_hops)
 
     # The nested milestones (nodes, page info, totalCount) are served from the
     # prefetch cache on the event loop, so only the root connection may touch
-    # the database: adding parents must not add thread hops.
+    # the database: adding parents must not add thread hops, and the hops must
+    # keep originating from the same (root-only) call sites rather than
+    # shifting into nested per-node resolvers.
     await sync_to_async(_create_projects_with_milestones)(3, 3)
-    hops_for_five_parents = await _count_hops(cursor_schema, query, thread_hops)
+    hops_for_five_parents = await _run_and_capture_hops(
+        cursor_schema, CURSOR_QUERY, thread_hops
+    )
 
-    assert hops_for_five_parents == hops_for_two_parents, thread_hops
+    assert sorted(hops_for_five_parents) == sorted(hops_for_two_parents)
 
 
 @pytest.mark.django_db(transaction=True)
@@ -144,17 +221,8 @@ async def test_nested_list_connection_resolves_prefetched_data_without_hops(
 ):
     await sync_to_async(_create_projects_with_milestones)(1, 2)
 
-    query = """
-    query TestQuery {
-        projectsWithListConnection {
-            id
-            milestones { totalCount edges { node { id } } }
-        }
-    }
-    """
-
     thread_hops.clear()
-    result = await list_connection_schema.execute(query)
+    result = await list_connection_schema.execute(LIST_QUERY)
 
     assert result.errors is None
     assert result.data == {
@@ -176,14 +244,55 @@ async def test_nested_list_connection_resolves_prefetched_data_without_hops(
             for project_id in (1, 2)
         ],
     }
-    hops_for_two_parents = len(thread_hops)
+    hops_for_two_parents = list(thread_hops)
 
     # The nested milestones are served from the prefetch cache on the event
     # loop, so only fetching the root list may touch the database: adding
-    # parents must not add thread hops.
+    # parents must not add thread hops, and the hops must keep originating
+    # from the same (root-only) call sites rather than shifting into nested
+    # per-node resolvers.
     await sync_to_async(_create_projects_with_milestones)(3, 3)
-    hops_for_five_parents = await _count_hops(
-        list_connection_schema, query, thread_hops
+    hops_for_five_parents = await _run_and_capture_hops(
+        list_connection_schema, LIST_QUERY, thread_hops
     )
 
-    assert hops_for_five_parents == hops_for_two_parents, thread_hops
+    assert sorted(hops_for_five_parents) == sorted(hops_for_two_parents)
+
+
+@pytest.mark.parametrize(
+    ("schema", "query"),
+    [
+        pytest.param(
+            cursor_schema_no_optimizer, NO_OPTIMIZER_CURSOR_QUERY, id="cursor"
+        ),
+        pytest.param(list_connection_schema_no_optimizer, LIST_QUERY, id="list"),
+    ],
+)
+@pytest.mark.django_db(transaction=True)
+async def test_nested_connection_without_prefetch_pays_thread_hops_per_parent(
+    schema, query, thread_hops
+):
+    await sync_to_async(_create_projects_with_milestones)(1, 2)
+    hops_for_two_parents = await _run_and_capture_hops(schema, query, thread_hops)
+
+    await sync_to_async(_create_projects_with_milestones)(3, 3)
+    hops_for_five_parents = await _run_and_capture_hops(schema, query, thread_hops)
+
+    # Without prefetch optimization the nested querysets are not in memory, so
+    # resolving each parent's nested connection (and its totalCount) must ship
+    # its database work to a worker thread instead of running it on the event
+    # loop: hops scale with the number of parents.
+    assert len(hops_for_five_parents) > len(hops_for_two_parents)
+
+    # The extra per-parent hops must be database work: this library's
+    # django_resolver wrapping (connection resolution, totalCount) and
+    # Django's own queryset-evaluation bridge — proving the work went through
+    # sync_to_async rather than being skipped as "async safe".
+    extra_call_sites = Counter(hops_for_five_parents) - Counter(hops_for_two_parents)
+    assert any(
+        site.startswith("strawberry_django.resolvers.") for site in extra_call_sites
+    )
+    assert all(
+        site.startswith(("strawberry_django.", "django.db.models.query."))
+        for site in extra_call_sites
+    )
