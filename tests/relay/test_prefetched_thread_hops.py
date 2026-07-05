@@ -24,6 +24,7 @@ from strawberry import relay
 from strawberry.relay import GlobalID
 
 import strawberry_django
+from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.relay import DjangoCursorConnection, DjangoListConnection
 from tests.projects.models import Milestone, Project
@@ -93,6 +94,38 @@ list_connection_schema_no_optimizer = strawberry.Schema(
 )
 
 
+class DbTouchingField(StrawberryDjangoField):
+    """Simulates a user field subclass whose get_queryset hits the database."""
+
+    def get_queryset(self, queryset, info, **kwargs):
+        queryset = super().get_queryset(queryset, info, **kwargs)
+        # Any ORM access here raises SynchronousOnlyOperation if the queryset
+        # hook is (incorrectly) run on the event loop instead of in a worker
+        # thread.
+        Project.objects.exists()
+        return queryset
+
+
+@strawberry_django.type(Project, name="ProjectWithDbTouchingConnection")
+class DbTouchingProjectType(relay.Node):
+    name: str
+    milestones: DjangoListConnection[MilestoneType] = strawberry_django.connection(
+        field_cls=DbTouchingField
+    )
+
+
+@strawberry.type
+class DbTouchingQuery:
+    projects_with_db_touching_connection: list[DbTouchingProjectType] = (
+        strawberry_django.field()
+    )
+
+
+db_touching_schema = strawberry.Schema(
+    query=DbTouchingQuery, extensions=[DjangoOptimizerExtension()]
+)
+
+
 CURSOR_QUERY = """
 query TestQuery {
     projects(order: { id: ASC }) {
@@ -122,6 +155,15 @@ query TestQuery {
 LIST_QUERY = """
 query TestQuery {
     projectsWithListConnection {
+        id
+        milestones { totalCount edges { node { id } } }
+    }
+}
+"""
+
+DB_TOUCHING_QUERY = """
+query TestQuery {
+    projectsWithDbTouchingConnection {
         id
         milestones { totalCount edges { node { id } } }
     }
@@ -296,3 +338,23 @@ async def test_nested_connection_without_prefetch_pays_thread_hops_per_parent(
         site.startswith(("strawberry_django.", "django.db.models.query."))
         for site in extra_call_sites
     )
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_user_get_queryset_override_keeps_its_thread_hop(thread_hops):
+    await sync_to_async(_create_projects_with_milestones)(1, 2)
+    hops_for_two_parents = await _run_and_capture_hops(
+        db_touching_schema, DB_TOUCHING_QUERY, thread_hops
+    )
+
+    await sync_to_async(_create_projects_with_milestones)(3, 3)
+    hops_for_five_parents = await _run_and_capture_hops(
+        db_touching_schema, DB_TOUCHING_QUERY, thread_hops
+    )
+
+    # A user-overridden get_queryset may hit the database (this one does), so
+    # even over prefetched data its queryset hook must not be treated as safe
+    # to run on the event loop. Resolving without errors proves it went
+    # through sync_to_async (Django raises SynchronousOnlyOperation for
+    # database access on the event loop), costing a thread hop per parent.
+    assert len(hops_for_five_parents) > len(hops_for_two_parents)

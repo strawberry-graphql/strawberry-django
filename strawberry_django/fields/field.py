@@ -96,21 +96,6 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 
-def _can_run_qs_hook_inline(queryset: models.QuerySet) -> bool:
-    """Whether the queryset hook can run without touching the database.
-
-    A queryset's `_result_cache` is either `None` or the fully evaluated row
-    list (Django populates it atomically in `_fetch_all`), so a non-None cache
-    means every row is already in memory. When such a queryset is also
-    prefetch-optimized, `get_queryset` short-circuits and the hook does no
-    database work, making it safe to run on the event loop.
-    """
-    return (
-        queryset._result_cache is not None  # type: ignore
-        and is_optimized_by_prefetching(queryset)
-    )
-
-
 class StrawberryDjangoField(
     StrawberryDjangoPagination,
     StrawberryDjangoFieldOrdering,
@@ -306,7 +291,7 @@ class StrawberryDjangoField(
                         kwargs["info"] = info
 
                     qs_hook = self.get_queryset_hook(**kwargs)
-                    if _can_run_qs_hook_inline(resolved):
+                    if self._can_run_qs_hook_inline(resolved):
                         resolved = qs_hook(resolved)
                     else:
                         resolved = await sync_to_async(qs_hook)(resolved)
@@ -323,7 +308,7 @@ class StrawberryDjangoField(
                 kwargs["info"] = info
 
             qs_hook = self.get_queryset_hook(**kwargs)
-            if _can_run_qs_hook_inline(result):
+            if self._can_run_qs_hook_inline(result):
                 result = qs_hook(result)
             else:
                 result = django_resolver(
@@ -400,6 +385,38 @@ class StrawberryDjangoField(
             queryset = ext.optimize(queryset, info=info)
 
         return queryset
+
+    def _can_run_qs_hook_inline(self, queryset: models.QuerySet) -> bool:
+        """Whether the queryset hook can run without touching the database.
+
+        Only hooks made purely of library code known to do in-memory work may
+        skip the sync_to_async thread hop and run on the event loop:
+
+        - Only the library's own `get_queryset` is guaranteed to short-circuit
+          for prefetch-optimized querysets before any user code (the type's
+          `get_queryset`, permissions, filters, ordering, pagination) runs. A
+          subclass override may hit the database, so it keeps its thread.
+        - The optional-object hook branch (see `get_queryset_hook`) resolves
+          via `QuerySet.first()`, which clones the queryset - dropping its
+          result cache - when it has no explicit ordering, and may therefore
+          still run a query.
+        - A queryset's `_result_cache` is either `None` or the fully evaluated
+          row list (Django populates it atomically in `_fetch_all`), so a
+          non-None cache on a prefetch-optimized queryset means every row is
+          already in memory.
+        """
+        if type(self).get_queryset is not StrawberryDjangoField.get_queryset:
+            return False
+
+        if self.is_optional and not (
+            self.is_connection or self.is_paginated or self.is_list
+        ):
+            return False
+
+        return (
+            queryset._result_cache is not None  # type: ignore
+            and is_optimized_by_prefetching(queryset)
+        )
 
 
 def _get_field_arguments_for_extensions(
