@@ -1451,6 +1451,52 @@ def test_nested_total_count_with_empty_partitions():
 
 
 @pytest.mark.django_db(transaction=True)
+def test_nested_total_count_with_first_zero():
+    p1 = Project.objects.create()
+    p2 = Project.objects.create()
+
+    for _ in range(3):
+        Milestone.objects.create(project=p1)
+
+    query = """
+    query TestQuery {
+        projects(first: 2, order: { id: ASC }) {
+            edges {
+              node {
+                id
+                milestones(first: 0) { totalCount edges { node { id } } }
+              }
+            }
+        }
+    }
+    """
+    # `first: 0` pages are always empty and must not be mistaken for empty
+    # partitions: the total count must still be resolved correctly. Cursor
+    # connections overfetch one row for `hasNextPage`, so the window keeps
+    # carrying the total count annotation and no COUNT queries are needed.
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+        assert result.data == {
+            "projects": {
+                "edges": [
+                    {
+                        "node": {
+                            "id": str(GlobalID("ProjectType", str(p1.pk))),
+                            "milestones": {"totalCount": 3, "edges": []},
+                        }
+                    },
+                    {
+                        "node": {
+                            "id": str(GlobalID("ProjectType", str(p2.pk))),
+                            "milestones": {"totalCount": 0, "edges": []},
+                        }
+                    },
+                ],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "cursor",
     [

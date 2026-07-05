@@ -803,6 +803,57 @@ def test_query_connection_nested_total_count_with_offset_past_end(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_connection_nested_total_count_with_first_zero(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        tagList {
+          id
+          name
+          issues (first: 0) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    t1 = TagFactory.create()
+    t2 = TagFactory.create()
+
+    t1_issues = IssueFactory.create_batch(3)
+    for issue in t1_issues:
+        t1.issues.add(issue)
+
+    # A zero-sized page is empty regardless of the partition size, so the
+    # total count cannot be derived from it and must still be queried,
+    # once per tag.
+    with assert_num_queries(4 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "tagList": [
+            {
+                "id": to_base64("TagType", t1.id),
+                "name": t1.name,
+                "issues": {"totalCount": 3, "edges": []},
+            },
+            {
+                "id": to_base64("TagType", t2.id),
+                "name": t2.name,
+                "issues": {"totalCount": 0, "edges": []},
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery {
