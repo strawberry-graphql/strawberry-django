@@ -385,9 +385,9 @@ def test_filter_type():
         for f in get_object_definition(FruitOrder, strict=True).fields
         if f.name not in {"NOT", "AND", "OR", "DISTINCT"}
     ] == [
-        ("id", StrawberryDjangoField, "BaseFilterLookup", None),
+        ("id", StrawberryDjangoField, "IDFilterLookup", None),
         ("name", StrawberryDjangoField, "StrFilterLookup", None),
-        ("sweetness", StrawberryDjangoField, "ComparisonFilterLookup", None),
+        ("sweetness", StrawberryDjangoField, "IntFilterLookup", None),
         (
             "custom_filter",
             FilterOrderField,
@@ -773,6 +773,91 @@ def test_datetime_filter_lookup_without_type_parameter():
 
     schema = strawberry.Schema(query=Query)
     assert "input DatetimeFilterLookup {" in schema.as_str()
+
+
+def test_bool_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        sweet: strawberry_django.BoolFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input BoolFilterLookup {" in schema.as_str()
+
+
+def test_id_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        id: strawberry_django.IDFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input IDFilterLookup {" in schema.as_str()
+
+
+def test_int_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        sweetness: strawberry_django.IntFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input IntFilterLookup {" in schema.as_str()
+
+
+def test_float_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        weight: strawberry_django.FloatFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input FloatFilterLookup {" in schema.as_str()
+
+
+def test_decimal_filter_lookup_without_type_parameter():
+    @strawberry_django.filters.filter_type(models.Fruit)
+    class FruitFilter:
+        price: strawberry_django.DecimalFilterLookup | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "input DecimalFilterLookup {" in schema.as_str()
 
 
 def test_process_filters_with_some_global_id_in_lookup():
