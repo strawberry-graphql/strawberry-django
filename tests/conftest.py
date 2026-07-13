@@ -198,7 +198,7 @@ def schema(request):
         tags: list[types.Tag] = strawberry_django.field()
 
     if request.param == "optimizer_enabled":
-        extensions = [DjangoOptimizerExtension()]
+        extensions = [DjangoOptimizerExtension]
     elif request.param == "optimizer_disabled":
         extensions = []
     else:

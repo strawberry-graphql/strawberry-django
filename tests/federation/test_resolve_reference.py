@@ -191,7 +191,7 @@ def test_resolve_reference_uses_optimizer_extension():
     schema = FederationSchema(
         query=Query,
         types=[FruitType],
-        extensions=[RecordingOptimizerExtension()],
+        extensions=[RecordingOptimizerExtension],
     )
 
     fruit = models.Fruit.objects.create(name="optimized-fruit")

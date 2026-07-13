@@ -109,7 +109,7 @@ async def test_with_async_permission_and_optimizer(db):
 
     schema = strawberry.Schema(
         query=Query,
-        extensions=[DjangoOptimizerExtension()],
+        extensions=[DjangoOptimizerExtension],
     )
     query = """
         query {
@@ -240,7 +240,7 @@ def test_with_sync_permission_and_optimizer(db):
 
     schema = strawberry.Schema(
         query=Query,
-        extensions=[DjangoOptimizerExtension()],
+        extensions=[DjangoOptimizerExtension],
     )
     query = """
         query {

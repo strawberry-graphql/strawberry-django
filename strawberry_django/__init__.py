@@ -2,6 +2,7 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 from . import auth, federation, filters, mutations, ordering, pagination, relay
+from .exception_handlers import DjangoExceptionHandler
 from .fields.field import connection, field, node, offset_paginated
 from .fields.filter_order import filter_field, order_field
 from .fields.filter_types import (
@@ -40,6 +41,7 @@ __all__ = [
     "ComparisonFilterLookup",
     "DateFilterLookup",
     "DatetimeFilterLookup",
+    "DjangoExceptionHandler",
     "DjangoFileType",
     "DjangoImageType",
     "DjangoModelType",

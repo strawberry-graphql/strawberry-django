@@ -37,7 +37,7 @@ def generate_query(query=None, mutation=None, enable_optimizer=False):
     extensions = []
 
     if enable_optimizer:
-        extensions = [DjangoOptimizerExtension()]
+        extensions = [DjangoOptimizerExtension]
     schema = strawberry.Schema(query=query, mutation=mutation, extensions=extensions)
 
     def process_result(result):
