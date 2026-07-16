@@ -275,6 +275,65 @@ class Mutation:
 
 See [Django Forms documentation](https://docs.djangoproject.com/en/stable/topics/forms/) for more on form validation.
 
+## Caching GraphQL Document Validation
+
+Strawberry validates each GraphQL document before execution. For repeated queries,
+`DjangoValidationCache` can cache the validation result in Django's cache backend
+instead of keeping a process-local in-memory cache.
+
+```python
+import strawberry
+from strawberry_django.extensions.django_validation_cache import DjangoValidationCache
+
+schema = strawberry.Schema(
+    query=Query,
+    extensions=[
+        DjangoValidationCache(),
+    ],
+)
+```
+
+By default, `DjangoValidationCache` uses Django's `"default"` cache and Django's
+default cache timeout. You can pass the same options supported by its base class,
+`DjangoCacheBase`:
+
+```python
+from strawberry_django.extensions.django_validation_cache import DjangoValidationCache
+
+schema = strawberry.Schema(
+    query=Query,
+    extensions=[
+        DjangoValidationCache(
+            cache_name="graphql_validation",
+            timeout=3600,
+        ),
+    ],
+)
+```
+
+`DjangoCacheBase` also accepts `hash_fn` for custom cache key generation. The
+default key generator matches `functools.lru_cache`, which may produce keys that
+are not valid for every backend. If you use a backend with strict key rules, such
+as memcached, provide a `hash_fn` that returns backend-safe string keys.
+
+Configure the named cache in Django's `CACHES` setting:
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    },
+    "graphql_validation": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+    },
+}
+```
+
+Use this extension when your application receives repeated persisted or client
+queries and you want validation cache entries to follow Django's cache backend and
+timeout configuration.
+
 ## Best Practices
 
 1. **Always use `handle_django_errors=True`** in mutations to enable automatic validation
