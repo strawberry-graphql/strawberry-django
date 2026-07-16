@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.86.5 - 2026-07-16
+-------------------
+
+Document the Django validation cache extension and its Django cache backend options.
+
+This release was contributed by [@w3lld1](https://github.com/w3lld1) in [#934](https://github.com/strawberry-graphql/strawberry-django/pull/934)
+
 0.86.4 - 2026-06-20
 -------------------
 
