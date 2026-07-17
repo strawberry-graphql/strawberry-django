@@ -147,7 +147,9 @@ def test_fragment_with_standard_connection_no_n1(enable_only_optimization: bool)
     standard_schema = strawberry.Schema(
         query=StandardQuery,
         extensions=[
-            DjangoOptimizerExtension(enable_only_optimization=enable_only_optimization)
+            lambda: DjangoOptimizerExtension(
+                enable_only_optimization=enable_only_optimization,
+            ),
         ],
     )
 
@@ -243,7 +245,9 @@ def test_fragment_with_custom_connection_no_n1(enable_only_optimization: bool):
     schema = strawberry.Schema(
         query=Query,
         extensions=[
-            DjangoOptimizerExtension(enable_only_optimization=enable_only_optimization)
+            lambda: DjangoOptimizerExtension(
+                enable_only_optimization=enable_only_optimization,
+            ),
         ],
     )
 

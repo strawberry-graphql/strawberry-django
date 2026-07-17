@@ -187,6 +187,34 @@ def some_mutation(self, data: str) -> Result:
     pass
 ```
 
+## Handling Errors Outside the Resolver
+
+`handle_django_errors=True` handles exceptions raised by the mutation resolver and
+adds `OperationInfo` to its return union. To handle the same Django exceptions from
+the rest of Strawberry's field execution pipeline, register
+`DjangoExceptionHandler` on the schema:
+
+```python title="schema.py"
+import strawberry
+import strawberry_django
+
+from .mutations import Mutation
+from .queries import Query
+
+
+schema = strawberry.Schema(
+    query=Query,
+    mutation=Mutation,
+    exception_handlers=[strawberry_django.DjangoExceptionHandler()],
+)
+```
+
+The schema-level handler also converts supported exceptions raised while building
+input objects or running field extensions, including async extensions. It is only
+selected for fields whose return union contains `OperationInfo`, so unrelated fields
+continue to return normal GraphQL errors. Using `handle_django_errors=True` adds that
+union member automatically.
+
 ## Custom Error Handling
 
 ### Custom Exception Classes
