@@ -1,4 +1,6 @@
-Release type: patch
+---
+release type: patch
+---
 
 Resolve prefetch-optimized nested connections on the event loop instead of
 paying a `sync_to_async` thread hop per parent node: the nested-connection
