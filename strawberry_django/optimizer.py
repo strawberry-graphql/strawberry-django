@@ -768,7 +768,7 @@ def get_hint_value(
 
     Probe order:
 
-    1. the alias-scoped label (`optimizer_hint_key(info)` + `default_attr`),
+    1. the alias-scoped label (`f"{optimizer_hint_key(info)}{LOOKUP_SEP}{default_attr}"`),
        if `default_attr` is given - set when a dict annotation callable with
        that label ran for this specific selection
     2. the alias-scoped attribute (`optimizer_hint_key(info)`) - set when a
