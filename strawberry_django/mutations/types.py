@@ -9,7 +9,7 @@ from django.db.models import Model
 from strawberry import UNSET
 from typing_extensions import TypedDict
 
-_T = TypeVar("_T")  # noqa: PYI018
+_T = TypeVar("_T")  # ruff:ignore[unused-private-type-var]
 _M = TypeVar("_M", bound=Model)
 InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
 

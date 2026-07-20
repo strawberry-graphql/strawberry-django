@@ -65,7 +65,7 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = _("Item")
         verbose_name_plural = _("Items")
-        unique_together = [  # noqa: RUF012
+        unique_together = [  # ruff:ignore[mutable-class-default]
             ("order", "product"),
         ]
 
@@ -180,7 +180,7 @@ class CartItem(models.Model):
     class Meta:
         verbose_name = _("Item")
         verbose_name_plural = _("Items")
-        unique_together = [  # noqa: RUF012
+        unique_together = [  # ruff:ignore[mutable-class-default]
             ("cart", "product"),
         ]
 

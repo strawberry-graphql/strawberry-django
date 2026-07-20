@@ -96,7 +96,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
                 annotation = ordering.Ordering
 
-            return StrawberryAnnotation(Optional[annotation])  # noqa: UP045
+            return StrawberryAnnotation(Optional[annotation])  # ruff:ignore[non-pep604-annotation-optional]
 
         return None
 

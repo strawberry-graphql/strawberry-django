@@ -196,7 +196,7 @@ class Issue(NamedModel):
 
 class Assignee(models.Model):
     class Meta:
-        unique_together = [  # noqa: RUF012
+        unique_together = [  # ruff:ignore[mutable-class-default]
             ("issue", "user"),
         ]
 

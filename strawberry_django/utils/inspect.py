@@ -160,7 +160,7 @@ def get_possible_type_definitions(
 try:
     # Can't import PolymorphicModel, because it requires Django Apps to be ready
     # Import polymorphic instead to check for its existence
-    import polymorphic  # noqa: F401
+    import polymorphic  # ruff:ignore[unused-import]
 
     def is_polymorphic_model(v: type) -> TypeIs[type[PolymorphicModel]]:
         return getattr(v, "polymorphic_model_marker", False) is True

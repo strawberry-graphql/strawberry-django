@@ -111,7 +111,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
             origin_list: list[type[WithStrawberryDjangoObjectDefinition]] = []
             for t in origin.types:
                 while isinstance(t, StrawberryContainer):
-                    t = t.of_type  # noqa: PLW2901
+                    t = t.of_type  # ruff:ignore[redefined-loop-name]
 
                 if has_django_definition(t):
                     origin_list.append(t)

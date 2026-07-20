@@ -171,7 +171,7 @@ def apply(
     queryset: _QS,
     info: Info | None = None,
 ) -> _QS:
-    if order in (None, strawberry.UNSET) or not has_object_definition(order):  # noqa: PLR6201
+    if order in (None, strawberry.UNSET) or not has_object_definition(order):  # ruff:ignore[literal-membership]
         return queryset
 
     sequence: dict[str, OrderSequence] = {}
@@ -396,9 +396,9 @@ def order_type(
     def wrapper(cls):
         for fname, type_ in get_annotations(cls).items():
             if is_auto(type_):
-                type_ = Ordering  # noqa: PLW2901
+                type_ = Ordering  # ruff:ignore[redefined-loop-name]
 
-            cls.__annotations__[fname] = Optional[type_]  # noqa: UP045
+            cls.__annotations__[fname] = Optional[type_]  # ruff:ignore[non-pep604-annotation-optional]
 
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):
@@ -436,9 +436,9 @@ def order(
     def wrapper(cls):
         for fname, type_ in get_annotations(cls).items():
             if is_auto(type_):
-                type_ = Ordering  # noqa: PLW2901
+                type_ = Ordering  # ruff:ignore[redefined-loop-name]
 
-            cls.__annotations__[fname] = Optional[type_]  # noqa: UP045
+            cls.__annotations__[fname] = Optional[type_]  # ruff:ignore[non-pep604-annotation-optional]
 
             field_ = cls.__dict__.get(fname)
             if not isinstance(field_, StrawberryField):

@@ -25,7 +25,7 @@ def normalize_sdl(sdl: str) -> str:
     """
     sdl = re.sub(r"\{ ", "{", sdl)
     sdl = re.sub(r" \}", "}", sdl)
-    return sdl  # noqa: RET504
+    return sdl  # ruff:ignore[unnecessary-assign]
 
 
 def skip_if_gql_32(
@@ -51,7 +51,7 @@ def _cleanup(request):
     def cleanup_function():
         shutil.rmtree(_ROOT_DIR / ".tmp_upload", ignore_errors=True)
 
-    request.addfinalizer(cleanup_function)  # noqa: PT021
+    request.addfinalizer(cleanup_function)  # ruff:ignore[pytest-fixture-finalizer-callback]
 
 
 @pytest.fixture(params=["sync", "async", "sync_no_optimizer", "async_no_optimizer"])

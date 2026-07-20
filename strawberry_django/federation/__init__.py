@@ -16,7 +16,7 @@ See docs/integrations/federation.md for full usage examples.
 from .field import field
 from .resolve import generate_resolve_reference, resolve_model_reference
 from .type import interface
-from .type import type as type  # noqa: A004
+from .type import type as type  # ruff:ignore[builtin-import-shadowing]
 
 __all__ = [
     "field",

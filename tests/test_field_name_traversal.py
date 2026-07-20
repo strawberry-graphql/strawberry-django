@@ -9,7 +9,9 @@ from django.db.models.constants import LOOKUP_SEP
 from strawberry.types import get_object_definition
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from strawberry_django.resolvers import _django_getattr  # noqa: PLC2701
+from strawberry_django.resolvers import (
+    _django_getattr,  # ruff:ignore[import-private-name]
+)
 from tests.projects.models import Role, UserAssignedRole
 from tests.utils import assert_num_queries
 

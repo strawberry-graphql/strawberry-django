@@ -23,7 +23,7 @@ from strawberry.types.enum import EnumValue, StrawberryEnumDefinition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
-from strawberry_django.type import _process_type  # noqa: PLC2701
+from strawberry_django.type import _process_type  # ruff:ignore[import-private-name]
 
 
 class FieldTypesModel(models.Model):
