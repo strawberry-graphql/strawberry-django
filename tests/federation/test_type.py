@@ -261,7 +261,7 @@ def test_federation_type_does_not_override_custom_resolve_reference():
         name: strawberry.auto
 
         @classmethod
-        def resolve_reference(cls, id: int):  # noqa: A002
+        def resolve_reference(cls, id: int):  # ruff: ignore[builtin-argument-shadowing]
             """Return the Fruit with given id."""
             return models.Fruit.objects.filter(id=id).first()
 

@@ -105,7 +105,7 @@ def _parse_data(
                 if v.pk in {None, UNSET}:
                     related_field = cast("Field", get_model_fields(model).get(k))
                     related_model = related_field.related_model
-                    v = create(  # noqa: PLW2901
+                    v = create(  # ruff: ignore[redefined-loop-name]
                         info,
                         cast("type[Model]", related_model),
                         v.data or {},
@@ -114,11 +114,11 @@ def _parse_data(
                         exclude_m2m=[related_field.name],
                     )
                 elif isinstance(v.pk, models.Model) and v.data:
-                    v = update(  # noqa: PLW2901
+                    v = update(  # ruff: ignore[redefined-loop-name]
                         info, v.pk, v.data, key_attr=key_attr, full_clean=full_clean
                     )
                 else:
-                    v = v.pk  # noqa: PLW2901
+                    v = v.pk  # ruff: ignore[redefined-loop-name]
 
             if k == "through_defaults" or not obj or getattr(obj, k) != v:
                 parsed_data[k] = v
@@ -290,7 +290,7 @@ def prepare_create_update(
                 # input, but `FileField.save_form_data` ignores None values. In that
                 # case we manually pass False which clears the file
                 # (but only if the instance is already saved and we are updating it)
-                value = False  # noqa: PLW2901
+                value = False  # ruff: ignore[redefined-loop-name]
         elif isinstance(field, (ManyToManyField, ForeignObjectRel)):
             if name in exclude_m2m:
                 continue
@@ -302,7 +302,7 @@ def prepare_create_update(
             # We are using str here because strawberry.ID can't be used for isinstance
             (ParsedObject, str),
         ):
-            value, value_data = _parse_data(  # noqa: PLW2901
+            value, value_data = _parse_data(  # ruff: ignore[redefined-loop-name]
                 info,
                 cast("type[Model]", field.related_model),
                 value,
@@ -310,11 +310,11 @@ def prepare_create_update(
                 full_clean=full_clean,
             )
             if value is None and not value_data:
-                value = None  # noqa: PLW2901
+                value = None  # ruff: ignore[redefined-loop-name]
 
             # If foreign object is not found, then create it
-            elif value in (None, UNSET):  # noqa: PLR6201
-                value = create(  # noqa: PLW2901
+            elif value in (None, UNSET):  # ruff: ignore[literal-membership]
+                value = create(  # ruff: ignore[redefined-loop-name]
                     info,
                     field.related_model,
                     value_data,
@@ -615,7 +615,7 @@ def update_m2m(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
 ):
-    if value in (None, UNSET):  # noqa: PLR6201
+    if value in (None, UNSET):  # ruff: ignore[literal-membership]
         return
 
     # FIXME / NOTE:  Should this be here?

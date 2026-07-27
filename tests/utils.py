@@ -99,7 +99,7 @@ class AsyncCaptureQueriesContext:
     @sync_to_async
     def wrapped_enter(self):
         self.wrapped = CaptureQueriesContext(connection=connections[self.using])
-        return self.wrapped.__enter__()  # noqa: PLC2801
+        return self.wrapped.__enter__()  # ruff: ignore[unnecessary-dunder-call]
 
     def __enter__(self):
         return asyncio.run(self.wrapped_enter())
