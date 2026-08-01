@@ -65,7 +65,7 @@ def _pk_lookup(model: type[Model], key_attr: str | None, value: Any) -> dict[str
     """
     pk = model._meta.pk
     assert pk is not None
-    if key_attr in (None, "pk", pk.name, pk.attname):  # noqa: PLR6201
+    if key_attr in (None, "pk", pk.name, pk.attname):  # ruff: ignore[literal-membership]
         return {"pk": value}
     return {key_attr: value}
 

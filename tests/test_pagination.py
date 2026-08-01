@@ -11,7 +11,7 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import (
     OffsetPaginationInput,
-    _is_non_empty_first_page_window,  # noqa: PLC2701
+    _is_non_empty_first_page_window,  # ruff: ignore[import-private-name]
     apply,
     apply_window_pagination,
 )
