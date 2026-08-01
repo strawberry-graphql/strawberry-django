@@ -31,10 +31,10 @@ from .mutations.mutations import input_mutation, mutation
 from .ordering import Ordering, order, order_type, process_order
 from .resolvers import django_resolver
 from .type import (
-    input,
+    input,  # ruff: ignore[builtin-import-shadowing]
     interface,
     partial,
-    type,
+    type,  # ruff: ignore[builtin-import-shadowing]
 )
 
 if TYPE_CHECKING:
