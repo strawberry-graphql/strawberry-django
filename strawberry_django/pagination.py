@@ -171,7 +171,7 @@ def apply(
           Useful for prefetches, as those cannot be sliced after being filtered
 
     """
-    if pagination in (None, strawberry.UNSET):  # noqa: PLR6201
+    if pagination in (None, strawberry.UNSET):  # ruff: ignore[literal-membership]
         return queryset
 
     if not isinstance(pagination, OffsetPaginationInput):

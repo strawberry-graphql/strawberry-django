@@ -63,7 +63,7 @@ _DjangoModelFilterInput: Any = None
 
 
 def get_django_model_filter_input_type():
-    global _DjangoModelFilterInput  # noqa: PLW0603
+    global _DjangoModelFilterInput  # ruff: ignore[global-statement]
 
     if _DjangoModelFilterInput is None:
         settings = strawberry_django_settings()
@@ -214,7 +214,7 @@ def process_filters(
         if field_name == "DISTINCT":
             if field_value:
                 queryset = queryset.distinct()
-        elif field_name in ("AND", "OR", "NOT"):  # noqa: PLR6201
+        elif field_name in ("AND", "OR", "NOT"):  # ruff: ignore[literal-membership]
             values = field_value if isinstance(field_value, list) else [field_value]
             all_q = [Q()]
             for value in values:
@@ -289,12 +289,12 @@ def apply(
     info: Info | None = None,
     pk: Any | None = None,
 ) -> _QS:
-    if pk not in (None, strawberry.UNSET):  # noqa: PLR6201
+    if pk not in (None, strawberry.UNSET):  # ruff: ignore[literal-membership]
         settings = strawberry_django_settings()
         pk_field_name = settings["DEFAULT_PK_FIELD_NAME"]
         queryset = queryset.filter(**{pk_field_name: pk})
 
-    if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # noqa: PLR6201
+    if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # ruff: ignore[literal-membership]
         return queryset
 
     queryset, q = process_filters(
@@ -417,7 +417,7 @@ def filter_type(
     directives: Sequence[object] | None = (),
     lookups: bool = False,
 ) -> Callable[[_T], _T]:
-    from .type import input  # noqa: A004
+    from .type import input  # ruff: ignore[builtin-import-shadowing]
 
     return input(
         model,
@@ -430,7 +430,7 @@ def filter_type(
 
 
 if TYPE_CHECKING:
-    filter = deprecated("`filter` is deprecated, use `filter_type` instead.")(  # noqa: A001
+    filter = deprecated("`filter` is deprecated, use `filter_type` instead.")(  # ruff: ignore[builtin-variable-shadowing]
         filter_type
     )
 

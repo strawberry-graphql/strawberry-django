@@ -27,7 +27,9 @@ from strawberry.types import get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.cast import get_strawberry_type_cast
 from strawberry.types.field import StrawberryField
-from strawberry.types.maybe import _annotation_is_maybe  # noqa: PLC2701
+from strawberry.types.maybe import (
+    _annotation_is_maybe,  # ruff: ignore[import-private-name]
+)
 from strawberry.types.private import is_private
 from strawberry.utils.deprecations import DeprecatedDescriptor
 from typing_extensions import Self, dataclass_transform, get_annotations
@@ -352,8 +354,8 @@ def _process_type(
                         GenericRel,
                     )
                 except (ImportError, RuntimeError):  # pragma: no cover
-                    GenericForeignKey = None  # noqa: N806
-                    GenericRel = None  # noqa: N806
+                    GenericForeignKey = None  # ruff: ignore[non-lowercase-variable-in-function]
+                    GenericRel = None  # ruff: ignore[non-lowercase-variable-in-function]
 
                 if (
                     GenericForeignKey is not None
@@ -375,7 +377,7 @@ def _process_type(
             f.type_annotation = type_annotation
             f.description = description
         elif isinstance(f, StrawberryDjangoField):
-            f = copy.copy(f)  # noqa: PLW2901
+            f = copy.copy(f)  # ruff: ignore[redefined-loop-name]
         elif not isinstance(f, StrawberryDjangoField) and (
             getattr(f, "base_resolver", None) is not None
             or f.metadata.get(SKIP_FILTER_META, False)
@@ -385,7 +387,7 @@ def _process_type(
             new_fields.append(f)
             continue
         else:
-            f = field_cls(  # noqa: PLW2901
+            f = field_cls(  # ruff: ignore[redefined-loop-name]
                 django_name=django_name,
                 description=description,
                 type_annotation=type_annotation,
@@ -453,7 +455,7 @@ class StrawberryDjangoDefinition(Generic[_O, _M]):
         _field,
     ),
 )
-def type(  # noqa: A001
+def type(  # ruff: ignore[builtin-variable-shadowing]
     model: type[Model],
     *,
     name: str | None = None,
@@ -570,7 +572,7 @@ def interface(
         _field,
     ),
 )
-def input(  # noqa: A001
+def input(  # ruff: ignore[builtin-variable-shadowing]
     model: builtins.type[Model],
     *,
     name: str | None = None,

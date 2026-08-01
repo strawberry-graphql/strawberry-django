@@ -80,7 +80,7 @@ class PermContext:
 
 perm_context: contextvars.ContextVar[PermContext] = contextvars.ContextVar(
     "perm-safe",
-    default=PermContext(),  # noqa: B039
+    default=PermContext(),  # ruff: ignore[mutable-contextvar-default]
 )
 
 
@@ -247,7 +247,7 @@ def _desc(desc):
     return f"{desc}\n\n{_return_condition.strip()}"
 
 
-class DjangoNoPermission(Exception):  # noqa: N818
+class DjangoNoPermission(Exception):  # ruff: ignore[error-suffix-on-exception-name]
     """Raise to identify that the user doesn't have perms for a given retval."""
 
 
@@ -313,7 +313,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
             user = get_user_or_anonymous(user)
 
         # make sure the user is loaded
-        user.is_authenticated  # noqa: B018
+        user.is_authenticated  # ruff: ignore[useless-expression]
 
         try:
             retval = self.resolve_for_user(
@@ -540,7 +540,7 @@ class PermDefinition:
     @classmethod
     def from_perm(cls, perm: str):
         parts = perm.split(".")
-        if len(parts) != 2:  # noqa: PLR2004
+        if len(parts) != 2:  # ruff: ignore[magic-value-comparison]
             raise TypeError(
                 "Permissions need to be defined as `app_label.perm`, `app_label.`"
                 " or `.perm`",

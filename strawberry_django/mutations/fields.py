@@ -144,7 +144,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
 
                 name = capitalize_first(to_camel_case(self.python_name))
                 resolved = Annotated[
-                    Union[types_],  # noqa: UP007
+                    Union[types_],  # ruff: ignore[non-pep604-annotation-union]
                     strawberry.union(f"{name}Payload"),
                 ]
                 self.type_annotation = StrawberryAnnotation(
@@ -169,7 +169,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
         # TODO: Any other exception types that we should capture here?
         try:
             resolved = self.resolver(source, info, args, kwargs)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff: ignore[blind-except]
             return _handle_exception(e)
 
         if inspect.isawaitable(resolved):
@@ -177,7 +177,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
             async def async_resolver():
                 try:
                     return await resolved
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:  # ruff: ignore[blind-except]
                     return _handle_exception(e)
 
             return async_resolver()
@@ -366,7 +366,7 @@ class DjangoUpdateMutation(DjangoMutationCUD, StrawberryDjangoFieldFilters):
         vdata = get_vdata(data)
         pk = get_pk(vdata, key_attr=self.key_attr)
 
-        if pk not in (None, UNSET):  # noqa: PLR6201
+        if pk not in (None, UNSET):  # ruff: ignore[literal-membership]
             instance = get_with_perms(
                 pk,
                 info,
@@ -426,7 +426,7 @@ class DjangoDeleteMutation(
         vdata = get_vdata(data)
 
         pk = get_pk(vdata, key_attr=self.key_attr)
-        if pk not in (None, UNSET):  # noqa: PLR6201
+        if pk not in (None, UNSET):  # ruff: ignore[literal-membership]
             instance = get_with_perms(
                 pk,
                 info,
