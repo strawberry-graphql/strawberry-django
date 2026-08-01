@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+0.86.6 - 2026-08-01
+-------------------
+
+Fix an N+1 on `totalCount` of nested connections optimized by prefetching:
+parents whose prefetched first-page partition came back empty issued one
+`COUNT(*)` query each, even though an empty first page already proves the
+total count is 0.
+
+This release was contributed by [@rcybulski1122012](https://github.com/rcybulski1122012) in [#931](https://github.com/strawberry-graphql/strawberry-django/pull/931)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
 0.86.5 - 2026-07-16
 -------------------
 
