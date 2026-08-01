@@ -1,6 +1,19 @@
 CHANGELOG
 =========
 
+0.86.7 - 2026-08-01
+-------------------
+
+Honor the `DEFAULT_PK_FIELD_NAME` setting (and per-field `key_attr`) when
+resolving existing instances in mutation inputs. Previously `_parse_pk` read the
+input value under `key_attr` but always looked the instance up by `pk=`, so
+relation inputs and bare-id updates that reference an object by a configured
+non-pk field raised `DoesNotExist` or matched the wrong row. Filters already
+honored the setting; mutations now do too. The default `pk`-based path is
+unchanged.
+
+This release was contributed by [@ayushin](https://github.com/ayushin) in [#928](https://github.com/strawberry-graphql/strawberry-django/pull/928)
+
 0.86.6 - 2026-08-01
 -------------------
 
