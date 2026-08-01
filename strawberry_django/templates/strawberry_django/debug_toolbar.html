@@ -17,7 +17,7 @@
         return data;
       }
 
-      Object.entries(data.debugToolbar.panels).map(([id, panel]) => {
+      Object.entries(data.debugToolbar.panels).forEach(([id, panel]) => {
         if (panel.title) {
           const content = djDebug.querySelector(`#${id}`);
           if (content) {
