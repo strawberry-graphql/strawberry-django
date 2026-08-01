@@ -11,6 +11,7 @@ import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.pagination import (
     OffsetPaginationInput,
+    _is_non_empty_first_page_window,  # noqa: PLC2701
     apply,
     apply_window_pagination,
 )
@@ -129,6 +130,40 @@ def test_apply_window_pagination():
     assert fruit.name == "fruit1"
     assert fruit._strawberry_row_number == 2  # type: ignore
     assert fruit._strawberry_total_count == 10  # type: ignore
+
+
+@pytest.mark.parametrize(
+    ("offset", "limit", "expected"),
+    [
+        # First pages with room for at least one row: an empty result cache
+        # can only come from an empty partition.
+        (0, 1, True),
+        (0, 10, True),
+        (0, -1, True),  # no limit: whole partitions are fetched, filterless
+        (0, sys.maxsize, True),  # relay's "no limit" sentinel
+        # Pages that can be empty for non-empty partitions.
+        (1, 10, False),  # offset: the page may simply be past the end
+        (0, 0, False),  # zero-sized page
+    ],
+)
+def test_is_non_empty_first_page_window(offset, limit, expected):
+    queryset = apply_window_pagination(
+        models.Fruit.objects.all(),
+        related_field_id="color_id",
+        offset=offset,
+        limit=limit,
+    )
+
+    assert _is_non_empty_first_page_window(queryset) is expected
+
+
+def test_is_non_empty_first_page_window_without_window_pagination():
+    # A queryset that never went through apply_window_pagination proves
+    # nothing about its partition, whatever its filters.
+    assert not _is_non_empty_first_page_window(models.Fruit.objects.all())
+    assert not _is_non_empty_first_page_window(
+        models.Fruit.objects.filter(name="strawberry")
+    )
 
 
 @pytest.mark.parametrize("limit", [-1, sys.maxsize])
