@@ -9,7 +9,7 @@ which broke under shadow DOM isolation — `querySelector` cannot pierce a shado
 boundary.
 
 Using a `getDebugElement()` helper that locates `#djDebug` via
-the shadow root of its host element (`#djDebugRoot`):
+the shadow root of its parent element (`#djDebugRoot`):
 
 ```js
 function getDebugElement() {
