@@ -49,7 +49,11 @@ from strawberry_django.arguments import argument
 from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
-from strawberry_django.optimizer import OptimizerStore, is_optimized_by_prefetching
+from strawberry_django.optimizer import (
+    OptimizerStore,
+    is_optimized_by_prefetching,
+    optimizer_hint_key,
+)
 from strawberry_django.ordering import (
     ORDER_ARG,
     ORDERING_ARG,
@@ -233,6 +237,13 @@ class StrawberryDjangoField(
             # sync_to_async context if the value is already cached, since it will not
             # hit the db anymore
             attname = self.django_name or self.python_name
+
+            # Check for to_attr-based prefetch from optimizer (aliased field with filters)
+            if info is not None:
+                alias_attr = optimizer_hint_key(info)
+                if hasattr(source, alias_attr):
+                    return getattr(source, alias_attr)
+
             attr = getattr(source.__class__, attname, None)
 
             def get_cached_result():
