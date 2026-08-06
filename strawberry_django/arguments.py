@@ -17,7 +17,7 @@ def argument(
     if is_list:
         argument_type = list[type_]
     if is_optional:
-        argument_type = Optional[type_]  # noqa: UP045
+        argument_type = Optional[type_]  # ruff: ignore[non-pep604-annotation-optional]
 
     return StrawberryArgument(
         default=default,

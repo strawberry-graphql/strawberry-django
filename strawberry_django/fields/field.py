@@ -38,7 +38,7 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.extensions.field_extension import FieldExtension
-from strawberry.types.field import _RESOLVER_TYPE  # noqa: PLC2701
+from strawberry.types.field import _RESOLVER_TYPE  # ruff: ignore[import-private-name]
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import await_maybe
@@ -437,24 +437,24 @@ def _get_field_arguments_for_extensions(
 
     if add_filters and FILTERS_ARG not in args:
         filters = field.get_filters()
-        if filters not in (None, UNSET):  # noqa: PLR6201
+        if filters not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[FILTERS_ARG] = argument(FILTERS_ARG, filters, is_optional=True)
 
     if add_order and ORDER_ARG not in args:
         order = field.get_order()
-        if order not in (None, UNSET):  # noqa: PLR6201
+        if order not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[ORDER_ARG] = argument(ORDER_ARG, order, is_optional=True)
 
     if add_order and ORDERING_ARG not in args:
         ordering = field.get_ordering()
-        if ordering not in (None, UNSET):  # noqa: PLR6201
+        if ordering not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[ORDERING_ARG] = argument(
                 ORDERING_ARG, ordering, is_list=True, default=[]
             )
 
     if add_pagination and PAGINATION_ARG not in args:
         pagination = field.get_pagination()
-        if pagination not in (None, UNSET):  # noqa: PLR6201
+        if pagination not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[PAGINATION_ARG] = argument(
                 PAGINATION_ARG,
                 pagination,

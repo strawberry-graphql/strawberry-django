@@ -129,7 +129,7 @@ def annotate_ordering_fields(
         # We cannot use QuerySet.order_by, because it validates the order expressions again,
         # but we're operating on the OrderBy expressions which have already been resolved by the compiler
         # In case the user has previously ordered by an aggregate like so:
-        # qs.annotate(_c=Count("foo")).order_by("_c")  # noqa: ERA001
+        # qs.annotate(_c=Count("foo")).order_by("_c")  # ruff: ignore[commented-out-code]
         # then the OrderBy we get here would trigger a ValidationError by QuerySet.order_by.
         # But we only want to append to the existing order (and the existing order must be valid already)
         # So this is safe.

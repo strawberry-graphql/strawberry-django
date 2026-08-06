@@ -1,4 +1,4 @@
-# ruff: noqa: TRY002, B904, BLE001, F811, PT012
+# ruff: file-ignore[raise-vanilla-class, raise-without-from-inside-except, blind-except, redefined-while-unused, pytest-raises-with-multiple-statements]
 import warnings
 from typing import Any, cast
 from unittest import mock

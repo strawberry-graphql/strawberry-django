@@ -111,7 +111,7 @@ def test_custom_resolve_reference_preserved():
         @classmethod
         def resolve_reference(
             cls,
-            id: int,  # noqa: A002
+            id: int,  # ruff: ignore[builtin-argument-shadowing]
             info: Info | None = None,
         ) -> models.Fruit:
             custom_called.append(id)

@@ -1,5 +1,5 @@
 ---
-release type: patch
+release type: minor
 ---
 
 Resolve prefetch-optimized nested connections on the event loop instead of

@@ -16,9 +16,14 @@ jobs:
       has_release: ${{ steps.check.outputs.has_release }}
 
     steps:
-      - uses: actions/checkout@v4
+      # allow-unsafe-pr-checkout is required so autopub can check fork PRs; the
+      # sparse-checkout below limits the PR working tree to RELEASE.md and
+      # pyproject.toml, which autopub `check` parses as data only.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: "refs/pull/${{ github.event.number }}/merge"
+          allow-unsafe-pr-checkout: true
+          persist-credentials: false
           sparse-checkout: |
             RELEASE.md
             pyproject.toml

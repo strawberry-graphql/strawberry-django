@@ -69,7 +69,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
         is_html = content_type in _HTML_TYPES
         is_graphiql = getattr(request, "_is_graphiql", False)
 
-        if is_html and is_graphiql and response.status_code == 200:  # noqa: PLR2004
+        if is_html and is_graphiql and response.status_code == 200:  # ruff: ignore[magic-value-comparison]
             template = render_to_string("strawberry_django/debug_toolbar.html")
             response.write(template)
             if "Content-Length" in response:  # type: ignore
@@ -80,7 +80,7 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
 
         try:
             operation_name = json.loads(request.body).get("operationName")
-        except Exception:  # noqa: BLE001
+        except Exception:  # ruff: ignore[blind-except]
             operation_name = None
 
         # Do not return the payload for introspection queries, otherwise IDEs such as

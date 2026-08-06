@@ -1,4 +1,4 @@
-# ruff: noqa: B904, BLE001, F811, PT012, A001
+# ruff: file-ignore[raise-without-from-inside-except, blind-except, redefined-while-unused, pytest-raises-with-multiple-statements, builtin-variable-shadowing]
 import uuid
 from enum import Enum
 from typing import Annotated, Any, cast

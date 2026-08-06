@@ -102,7 +102,7 @@ def _maybe_add_resolve_reference(
         _field,
     ),
 )
-def type(  # noqa: A001
+def type(  # ruff: ignore[builtin-variable-shadowing]
     model: builtins.type[Model],
     *,
     # Standard strawberry_django.type parameters
