@@ -1,13 +1,54 @@
 import dataclasses
 import textwrap
 
+import pytest
 import strawberry
 from django.db import models
+from strawberry.exceptions.duplicated_type_name import DuplicatedTypeName
 from strawberry.types import get_object_definition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.utils.typing import get_django_definition
+from tests import models as test_models
+
+
+def _supports_graphql_type_extension() -> bool:
+    """Whether the installed Strawberry core can emit same-name `extend` types.
+
+    The `extend=True` support on `strawberry_django.type`/`input`/`partial`
+    relies on Strawberry core emitting a separate `extend type X` block next to
+    the base `type X` in the same schema. Stock Strawberry instead rejects two
+    same-named definitions with `DuplicatedTypeName`. Probe once so the
+    dependent tests skip cleanly on releases without that support.
+    """
+
+    @strawberry.type(name="_ExtensionProbe")
+    class _ProbeBase:
+        base: str
+
+    @strawberry.type(name="_ExtensionProbe", extend=True)
+    class _ProbeExtension:
+        extra: str
+
+    @strawberry.type
+    class _ProbeQuery:
+        probe: _ProbeBase
+
+    try:
+        strawberry.Schema(query=_ProbeQuery, types=[_ProbeExtension])
+    except DuplicatedTypeName:
+        return False
+    return True
+
+
+requires_graphql_type_extension = pytest.mark.skipif(
+    not _supports_graphql_type_extension(),
+    reason=(
+        "requires Strawberry core support for same-name `extend` types "
+        "(not available in the pinned strawberry release)"
+    ),
+)
 
 
 def test_non_dataclass_annotations_are_ignored_on_type():
@@ -85,6 +126,95 @@ def test_non_dataclass_annotations_are_ignored_on_input():
     }
     """
     assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+
+@requires_graphql_type_extension
+def test_input_can_extend_existing_input_type():
+    @strawberry_django.input(test_models.User, name="UserInput", fields=["name"])
+    class UserInput: ...
+
+    @strawberry_django.input(test_models.User, name="UserInput", extend=True)
+    class UserInputExtension:
+        extra: str
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def some_field(self, my_input: UserInput) -> str:
+            return f"{my_input.name} {my_input.extra}"  # pyright: ignore[reportAttributeAccessIssue]
+
+    schema = strawberry.Schema(query=Query, types=[UserInputExtension])
+    expected = """\
+    type Query {
+      someField(myInput: UserInput!): String!
+    }
+
+    input UserInput {
+      name: String!
+    }
+
+    extend input UserInput {
+      extra: String!
+    }
+    """
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync(
+        '{ someField(myInput: { name: "Ada", extra: "Lovelace" }) }'
+    )
+
+    assert result.errors is None
+    assert result.data == {"someField": "Ada Lovelace"}
+
+
+def test_partial_can_extend_existing_input_type():
+    @strawberry_django.partial(test_models.User, name="UserInput", extend=True)
+    class UserInputExtension:
+        extra: str | None
+
+    type_def = get_object_definition(UserInputExtension, strict=True)
+    assert type_def.extend is True
+
+
+@requires_graphql_type_extension
+def test_type_can_extend_existing_type():
+    @strawberry_django.type(test_models.User, name="UserType", fields=["name"])
+    class UserType: ...
+
+    @strawberry_django.type(test_models.User, name="UserType", extend=True)
+    class UserTypeExtension:
+        @strawberry.field
+        def extra(self) -> str:
+            return self.extra  # pyright: ignore[reportReturnType]
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def user(self) -> UserType:
+            user = test_models.User(name="Ada")
+            user.extra = "Lovelace"  # pyright: ignore[reportAttributeAccessIssue]
+            return user  # pyright: ignore[reportReturnType]
+
+    schema = strawberry.Schema(query=Query, types=[UserTypeExtension])
+    expected = """\
+    type Query {
+      user: UserType!
+    }
+
+    type UserType {
+      name: String!
+    }
+
+    extend type UserType {
+      extra: String!
+    }
+    """
+    assert textwrap.dedent(str(schema)) == textwrap.dedent(expected).strip()
+
+    result = schema.execute_sync("{ user { name extra } }")
+
+    assert result.errors is None
+    assert result.data == {"user": {"name": "Ada", "extra": "Lovelace"}}
 
 
 def test_optimizer_hints_on_type():
