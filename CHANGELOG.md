@@ -1,6 +1,19 @@
 CHANGELOG
 =========
 
+0.87.0 - 2026-08-06
+-------------------
+
+Resolve prefetch-optimized nested connections on the event loop instead of
+paying a `sync_to_async` thread hop per parent node: the nested-connection
+default resolver, the queryset hook for prefetch-optimized querysets and
+`totalCount` served from the prefetched window annotation no longer touch
+the database, so they no longer need a worker thread.
+
+This release was contributed by [@rcybulski1122012](https://github.com/rcybulski1122012) in [#932](https://github.com/strawberry-graphql/strawberry-django/pull/932)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
 0.86.8 - 2026-08-01
 -------------------
 

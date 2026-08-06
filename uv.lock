@@ -748,7 +748,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.86.8"
+version = "0.87.0"
 source = { editable = "." }
 dependencies = [
     { name = "asgiref" },
