@@ -22,6 +22,8 @@ from strawberry.types import ExecutionResult, Info, get_object_definition
 import strawberry_django
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
+    OptimizerConfig,
+    OptimizerStore,
 )
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
@@ -1223,6 +1225,29 @@ def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
             "milestoneNameWithoutOnlyOptimization": milestone.name,
         },
     }
+
+
+def test_apply_select_related_requires_lookup_sep_boundary():
+    """A `select_related` path must only count as covered by a matching `only` entry.
+
+    The entry must be that path itself or a `__`-bounded descendant of it.
+    A raw prefix match wrongly treats "milestone_x" as covering "milestone",
+    which drops "milestone" from the recovered only() set and makes Django
+    raise "cannot be both deferred and traversed using select_related at
+    the same time" once the query runs.
+    """
+    store = OptimizerStore.with_hints(
+        only=["milestone_x"],
+        select_related=["milestone"],
+    )
+
+    _, extra_only_set = store._apply_select_related(
+        Issue.objects.all(),
+        info=None,
+        config=OptimizerConfig(),
+    )
+
+    assert extra_only_set == {"milestone"}
 
 
 @pytest.mark.django_db(transaction=True)
