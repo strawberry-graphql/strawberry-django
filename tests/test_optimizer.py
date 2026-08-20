@@ -1250,6 +1250,34 @@ def test_apply_select_related_requires_lookup_sep_boundary():
     assert extra_only_set == {"milestone"}
 
 
+@pytest.mark.parametrize(
+    "only",
+    [
+        pytest.param(["milestone"], id="exact_match"),
+        pytest.param(["milestone__project"], id="lookup_sep_bounded_descendant"),
+    ],
+)
+def test_apply_select_related_covered_by_only(only):
+    """A `select_related` path covered by a matching `only` entry adds nothing extra.
+
+    Covered means the `only` entry is the `select_related` path itself, or a
+    descendant of it bounded by `LOOKUP_SEP` (e.g. "milestone__project" covers
+    "milestone").
+    """
+    store = OptimizerStore.with_hints(
+        only=only,
+        select_related=["milestone"],
+    )
+
+    _, extra_only_set = store._apply_select_related(
+        Issue.objects.all(),
+        info=None,
+        config=OptimizerConfig(),
+    )
+
+    assert extra_only_set == set()
+
+
 @pytest.mark.django_db(transaction=True)
 def test_handles_existing_select_related(db, gql_client: GraphQLTestClient):
     """select_related should not cause errors, even if the field does not get queried."""
