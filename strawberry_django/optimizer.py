@@ -433,7 +433,7 @@ class OptimizerStore:
         self,
         qs: QuerySet[_M],
         *,
-        info: GraphQLResolveInfo,
+        info: GraphQLResolveInfo | None,
         config: OptimizerConfig,
     ) -> tuple[QuerySet[_M], set[str]]:
         only_set = set(self.only)
@@ -469,7 +469,9 @@ class OptimizerStore:
                 if select_related in only_set:
                     continue
 
-                if not any(only.startswith(select_related) for only in only_set):
+                if not any(
+                    _is_relation_path_covered(only, select_related) for only in only_set
+                ):
                     extra_only_set.add(select_related)
 
         return qs, extra_only_set
@@ -509,6 +511,15 @@ class OptimizerStore:
             to_annotate[k] = v
 
         return qs.annotate(**to_annotate)
+
+
+def _is_relation_path_covered(candidate: str, target: str) -> bool:
+    """Whether `candidate` is `target` itself or a `LOOKUP_SEP`-bounded descendant of it.
+
+    A plain `candidate.startswith(target)` is wrong: e.g. "empresa_comercial"
+    starts with "empresa" even though they're unrelated sibling fields.
+    """
+    return candidate == target or candidate.startswith(f"{target}{LOOKUP_SEP}")
 
 
 def _create_strawberry_info(raw_info: GraphQLResolveInfo) -> Info:
@@ -1078,11 +1089,10 @@ def _store_declares_select_related(
     if not field_store:
         return False
 
-    for sr in field_store.select_related:
-        if sr == relation_name or sr.startswith(f"{relation_name}{LOOKUP_SEP}"):
-            return True
-
-    return False
+    return any(
+        _is_relation_path_covered(sr, relation_name)
+        for sr in field_store.select_related
+    )
 
 
 def _get_hints_from_django_field(
@@ -1223,7 +1233,10 @@ def _get_hints_from_django_field(
         store = OptimizerStore.with_hints(only=[path])
         if relation_prefix:
             relation_path = f"{lookup_prefix}{relation_prefix}"
-            if not any(sr.startswith(relation_path) for sr in store.select_related):
+            if not any(
+                _is_relation_path_covered(sr, relation_path)
+                for sr in store.select_related
+            ):
                 store.select_related.append(relation_path)
 
     return store
