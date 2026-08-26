@@ -433,7 +433,7 @@ class OptimizerStore:
         self,
         qs: QuerySet[_M],
         *,
-        info: GraphQLResolveInfo,
+        info: GraphQLResolveInfo | None,
         config: OptimizerConfig,
     ) -> tuple[QuerySet[_M], set[str]]:
         only_set = set(self.only)
