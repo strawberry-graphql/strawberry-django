@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+0.88.0 - 2026-08-29
+-------------------
+
+Allow mutations with Django error handling to return interfaces by expanding them to their concrete implementations.
+
+This release was contributed by [@Guflly](https://github.com/Guflly) in [#939](https://github.com/strawberry-graphql/strawberry-django/pull/939)
+
+Additional contributors: [@bellini666](https://github.com/bellini666)
+
 0.87.1 - 2026-08-26
 -------------------
 
