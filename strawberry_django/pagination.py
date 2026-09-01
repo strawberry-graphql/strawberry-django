@@ -171,7 +171,7 @@ def apply(
           Useful for prefetches, as those cannot be sliced after being filtered
 
     """
-    if pagination in (None, strawberry.UNSET):  # noqa: PLR6201
+    if pagination in (None, strawberry.UNSET):  # ruff: ignore[literal-membership]
         return queryset
 
     if not isinstance(pagination, OffsetPaginationInput):
@@ -315,28 +315,18 @@ def get_total_count(queryset: QuerySet) -> int:
     """
     from strawberry_django.optimizer import is_optimized_by_prefetching
 
+    total_count = get_cached_total_count(queryset)
+    if total_count is not None:
+        return total_count
+
     if is_optimized_by_prefetching(queryset):
-        results = queryset._result_cache  # type: ignore
-
-        if results:
-            # If the queryset has DISTINCT enabled, the _strawberry_total_count
-            # annotation won't be accurate because window functions are evaluated
-            # before DISTINCT in SQL. Fall back to queryset.count() instead.
-            if queryset.query.distinct:
-                queryset = remove_window_pagination(queryset)
-                return queryset.count()
-
-            try:
-                return results[0]._strawberry_total_count
-            except AttributeError:
-                warnings.warn(
-                    (
-                        "Pagination annotations not found, falling back to QuerySet resolution. "
-                        "This might cause n+1 issues..."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        if queryset._result_cache == [] and _is_non_empty_first_page_window(  # type: ignore
+            queryset
+        ):
+            # An empty first page (no offset, limit >= 1) can only come from an
+            # empty partition, so there is nothing to count. This avoids one
+            # COUNT query per parent without results in nested connections.
+            return 0
 
         # If we have no results, we can't get the total count from the cache.
         # In this case we will remove the pagination filter to be able to `.count()`
@@ -344,6 +334,92 @@ def get_total_count(queryset: QuerySet) -> int:
         queryset = remove_window_pagination(queryset)
 
     return queryset.count()
+
+
+def get_cached_total_count(queryset: QuerySet) -> int | None:
+    """Get the total count from the prefetched window annotation, without running any query.
+
+    Returns None when the count cannot be determined without hitting the
+    database; callers should then fall back to `get_total_count`, deferring
+    it to a thread when running in an async context.
+    """
+    from strawberry_django.optimizer import is_optimized_by_prefetching
+
+    if not is_optimized_by_prefetching(queryset):
+        return None
+
+    # `_result_cache` is either None or the fully evaluated row list (Django
+    # populates it atomically in `_fetch_all`), so a truthy cache means every
+    # row of the windowed prefetch query is in memory. All rows carry the same
+    # window annotations, so the first row is representative; the
+    # AttributeError fallback below covers rows that lack them.
+    results = queryset._result_cache  # type: ignore
+    if not results:
+        return None
+
+    # If the queryset has DISTINCT enabled, the _strawberry_total_count
+    # annotation won't be accurate because window functions are evaluated
+    # before DISTINCT in SQL. Fall back to queryset.count() instead.
+    if queryset.query.distinct:
+        return None
+
+    try:
+        return results[0]._strawberry_total_count
+    except AttributeError:
+        warnings.warn(
+            (
+                "Pagination annotations not found, falling back to QuerySet resolution. "
+                "This might cause n+1 issues..."
+            ),
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return None
+
+
+def _is_non_empty_first_page_window(queryset: QuerySet) -> bool:
+    """Whether the window pagination on ``queryset`` selects a first page that can hold at least one row.
+
+    `apply_window_pagination` expresses pagination exclusively as `gt` (offset)
+    and `lte` (offset + limit) filters against its `_PaginationWindow` row
+    numbers. Those row numbers are computed over the queryset with all of its
+    other filters already applied, so a page with no offset and room for at
+    least one row (every `lte` bound is >= 1) coming back empty proves that
+    `remove_window_pagination(queryset).count()` would return 0.
+
+    Any other filter shape on a `_PaginationWindow` is not produced by
+    `apply_window_pagination`; be conservative and report False for it so
+    callers fall back to counting.
+
+    Note that no window *filters* at all is a valid first-page shape: an
+    offset of 0 with no limit fetches whole partitions, filterless. What must
+    be present are the `_PaginationWindow` *annotations*, proving the queryset
+    went through `apply_window_pagination` in the first place.
+    """
+    if not any(
+        isinstance(annotation, _PaginationWindow)
+        for annotation in queryset.query.annotations.values()
+    ):
+        return False
+
+    for child in queryset.query.where.children:
+        if not isinstance(getattr(child, "lhs", None), _PaginationWindow):
+            continue
+
+        if getattr(child, "lookup_name", None) != "lte":
+            # A `gt` filter means an offset was applied: an empty page past
+            # the end says nothing about the partition size. Anything else is
+            # an unrecognized shape we can't reason about.
+            return False
+
+        rhs = getattr(child, "rhs", None)
+        if not isinstance(rhs, int) or rhs < 1:
+            # A zero-sized page (limit 0) is empty even for non-empty
+            # partitions; a missing or non-integer bound is an unrecognized
+            # shape we can't reason about.
+            return False
+
+    return True
 
 
 class StrawberryDjangoPagination(StrawberryDjangoFieldBase):

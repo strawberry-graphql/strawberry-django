@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import pytest
 import strawberry
-from django.db import DEFAULT_DB_ALIAS, connections
+from django.db import DEFAULT_DB_ALIAS, connections, models
 from django.db.models import (
     CharField,
     Expression,
@@ -24,11 +24,14 @@ from strawberry.types import ExecutionResult, Info, get_object_definition
 import strawberry_django
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
+    OptimizerConfig,
+    OptimizerStore,
     get_hint_value,
 )
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
 from . import utils
+from .models import Fruit
 from .projects.faker import (
     IssueFactory,
     MilestoneFactory,
@@ -700,6 +703,163 @@ def test_query_connection_nested(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_connection_nested_total_count_with_empty_partitions(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        tagList {
+          id
+          name
+          issues (first: 2) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    t1 = TagFactory.create()
+    t2 = TagFactory.create()
+    t3 = TagFactory.create()
+
+    t1_issues = IssueFactory.create_batch(3)
+    for issue in t1_issues:
+        t1.issues.add(issue)
+
+    # Tags without issues have an empty prefetched first-page partition, which
+    # proves their total count is 0 - they must not fall back to a COUNT each.
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 7):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "tagList": [
+            {
+                "id": to_base64("TagType", t1.id),
+                "name": t1.name,
+                "issues": {
+                    "totalCount": 3,
+                    "edges": [
+                        {"node": {"id": to_base64("IssueType", t.id), "name": t.name}}
+                        for t in t1_issues[:2]
+                    ],
+                },
+            },
+            {
+                "id": to_base64("TagType", t2.id),
+                "name": t2.name,
+                "issues": {"totalCount": 0, "edges": []},
+            },
+            {
+                "id": to_base64("TagType", t3.id),
+                "name": t3.name,
+                "issues": {"totalCount": 0, "edges": []},
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_connection_nested_total_count_with_offset_past_end(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($after: String) {
+        tagList {
+          id
+          name
+          issues (first: 2, after: $after) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    t1 = TagFactory.create()
+
+    t1_issues = IssueFactory.create_batch(3)
+    for issue in t1_issues:
+        t1.issues.add(issue)
+
+    # A page past the end is empty even though the partition is not: the total
+    # count cannot be derived from the empty page and must still be queried.
+    with assert_num_queries(3):
+        res = gql_client.query(query, {"after": to_base64("arrayconnection", "9")})
+
+    assert res.data == {
+        "tagList": [
+            {
+                "id": to_base64("TagType", t1.id),
+                "name": t1.name,
+                "issues": {"totalCount": 3, "edges": []},
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_connection_nested_total_count_with_first_zero(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        tagList {
+          id
+          name
+          issues (first: 0) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    """
+
+    t1 = TagFactory.create()
+    t2 = TagFactory.create()
+
+    t1_issues = IssueFactory.create_batch(3)
+    for issue in t1_issues:
+        t1.issues.add(issue)
+
+    # A zero-sized page is empty regardless of the partition size, so the
+    # total count cannot be derived from it and must still be queried,
+    # once per tag.
+    with assert_num_queries(4 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "tagList": [
+            {
+                "id": to_base64("TagType", t1.id),
+                "name": t1.name,
+                "issues": {"totalCount": 3, "edges": []},
+            },
+            {
+                "id": to_base64("TagType", t2.id),
+                "name": t2.name,
+                "issues": {"totalCount": 0, "edges": []},
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_nested_fragments(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery {
@@ -1069,6 +1229,398 @@ def test_query_select_related_without_only(db, gql_client: GraphQLTestClient):
             "milestoneNameWithoutOnlyOptimization": milestone.name,
         },
     }
+
+
+def test_apply_select_related_requires_lookup_sep_boundary():
+    """A `select_related` path must only count as covered by a matching `only` entry.
+
+    The entry must be that path itself or a `__`-bounded descendant of it.
+    A raw prefix match wrongly treats "milestone_x" as covering "milestone",
+    which drops "milestone" from the recovered only() set and makes Django
+    raise "cannot be both deferred and traversed using select_related at
+    the same time" once the query runs.
+    """
+    store = OptimizerStore.with_hints(
+        only=["milestone_x"],
+        select_related=["milestone"],
+    )
+
+    _, extra_only_set = store._apply_select_related(
+        Issue.objects.all(),
+        info=None,
+        config=OptimizerConfig(),
+    )
+
+    assert extra_only_set == {"milestone"}
+
+
+@pytest.mark.parametrize(
+    "only",
+    [
+        pytest.param(["milestone"], id="exact_match"),
+        pytest.param(["milestone__project"], id="lookup_sep_bounded_descendant"),
+    ],
+)
+def test_apply_select_related_covered_by_only(only):
+    """A `select_related` path covered by a matching `only` entry adds nothing extra.
+
+    Covered means the `only` entry is the `select_related` path itself, or a
+    descendant of it bounded by `LOOKUP_SEP` (e.g. "milestone__project" covers
+    "milestone").
+    """
+    store = OptimizerStore.with_hints(
+        only=only,
+        select_related=["milestone"],
+    )
+
+    _, extra_only_set = store._apply_select_related(
+        Issue.objects.all(),
+        info=None,
+        config=OptimizerConfig(),
+    )
+
+    assert extra_only_set == set()
+
+
+def test_apply_select_related_fk_attname_still_covers_relation():
+    """A FK attname (`color_id`) in `only()` is no longer treated as covering `select_related("color")`.
+
+    Unlike "empresa"/"empresa_comercial", this is not a random prefix
+    collision: `color_id` is the FK column backing the `color` relation
+    itself. Post-fix, `color` gets redundantly re-added to `only()`; this
+    confirms that's harmless rather than a silent behavior change.
+    """
+    store = OptimizerStore.with_hints(
+        only=["color_id"],
+        select_related=["color"],
+    )
+
+    _, extra_only_set = store._apply_select_related(
+        Fruit.objects.all(),
+        info=None,
+        config=OptimizerConfig(),
+    )
+
+    assert extra_only_set == {"color"}
+
+
+# Throwaway models for the LOOKUP_SEP boundary flows below: no model in the
+# shared test schema has a field name that is a string-prefix of a sibling
+# field name, so a real end-to-end repro needs models built for the purpose.
+class QAEmpresa(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+
+
+class QAEmpresaComercial(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+
+
+class QAFactura(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    numero = CharField(max_length=50)
+    empresa = models.ForeignKey(
+        QAEmpresa, on_delete=models.CASCADE, related_name="facturas"
+    )
+    empresa_comercial = models.ForeignKey(
+        QAEmpresaComercial, on_delete=models.CASCADE, related_name="facturas"
+    )
+
+
+def _create_qa_factura():
+    empresa = QAEmpresa.objects.create(nombre="E")
+    comercial = QAEmpresaComercial.objects.create(nombre="C")
+    return QAFactura.objects.create(
+        numero="F1", empresa=empresa, empresa_comercial=comercial
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_select_related_field_hint_survives_prefix_colliding_sibling(db):
+    """A manual `select_related` field hint must survive a prefix-colliding sibling.
+
+    "empresa" and "empresa_comercial" are sibling FKs on the same model.
+    Without the LOOKUP_SEP boundary check, only()'s recovery logic treats
+    "empresa_comercial" as already covering "empresa" and never re-adds
+    it, so Django raises "cannot be both deferred and traversed using
+    select_related at the same time".
+    """
+
+    @strawberry_django.type(QAEmpresaComercial)
+    class EmpresaComercialType:
+        nombre: strawberry.auto
+
+    @strawberry_django.type(QAFactura)
+    class FacturaType:
+        numero: strawberry.auto
+        empresa_comercial: EmpresaComercialType
+
+        @strawberry_django.field(select_related="empresa")
+        def empresa_nombre(self) -> str:
+            return self.empresa.nombre  # type: ignore
+
+    @strawberry.type
+    class Query:
+        facturas: list[FacturaType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    _create_qa_factura()
+
+    query = "{ facturas { numero empresaNombre empresaComercial { nombre } } }"
+    result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "facturas": [
+            {"numero": "F1", "empresaNombre": "E", "empresaComercial": {"nombre": "C"}},
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_select_related_via_get_queryset_survives_prefix_colliding_sibling(db):
+    """The boundary check also applies when `select_related` is applied on the queryset directly.
+
+    Exercises the `qs.query.select_related` dict-based code path, distinct
+    from the field-hint route in the test above.
+    """
+
+    @strawberry_django.type(QAEmpresaComercial)
+    class EmpresaComercialType:
+        nombre: strawberry.auto
+
+    @strawberry_django.type(QAFactura)
+    class FacturaType:
+        numero: strawberry.auto
+        empresa_comercial: EmpresaComercialType
+
+        @classmethod
+        def get_queryset(cls, queryset, info, **kwargs):
+            return queryset.select_related("empresa")
+
+    @strawberry.type
+    class Query:
+        facturas: list[FacturaType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    _create_qa_factura()
+
+    query = "{ facturas { numero empresaComercial { nombre } } }"
+    result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "facturas": [{"numero": "F1", "empresaComercial": {"nombre": "C"}}],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_no_manual_select_related_on_prefix_colliding_sibling_is_unaffected(db):
+    """Without a manual `select_related` hint, a prefix-colliding sibling name changes nothing.
+
+    Isolates that the failures the tests above guard against come from the
+    boundary check specifically, not from the model shape on its own.
+    """
+
+    @strawberry_django.type(QAEmpresaComercial)
+    class EmpresaComercialType:
+        nombre: strawberry.auto
+
+    @strawberry_django.type(QAFactura)
+    class FacturaType:
+        numero: strawberry.auto
+        empresa_comercial: EmpresaComercialType
+
+    @strawberry.type
+    class Query:
+        facturas: list[FacturaType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    _create_qa_factura()
+
+    query = "{ facturas { numero empresaComercial { nombre } } }"
+    with assert_num_queries(1):
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+
+
+class QAPais(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+
+
+class QAPaisOrigen(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+
+
+class QAEmpresaN(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+    pais = models.ForeignKey(QAPais, on_delete=models.CASCADE, related_name="empresas")
+    pais_origen = models.ForeignKey(
+        QAPaisOrigen, on_delete=models.CASCADE, related_name="empresas"
+    )
+
+
+class QAFacturaN(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    numero = CharField(max_length=50)
+    empresa = models.ForeignKey(
+        QAEmpresaN, on_delete=models.CASCADE, related_name="facturas"
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_select_related_boundary_holds_at_nested_depth(db):
+    """The LOOKUP_SEP boundary check must hold below the top level too.
+
+    "empresa__pais" and "empresa__pais_origen" collide on their last
+    segment the same way "empresa"/"empresa_comercial" do at the top
+    level, one level deeper than the existing unit tests cover.
+    """
+
+    @strawberry_django.type(QAPaisOrigen)
+    class PaisOrigenType:
+        nombre: strawberry.auto
+
+    @strawberry_django.type(QAEmpresaN)
+    class EmpresaNType:
+        nombre: strawberry.auto
+        pais_origen: PaisOrigenType
+
+    @strawberry_django.type(QAFacturaN)
+    class FacturaNType:
+        numero: strawberry.auto
+        empresa: EmpresaNType
+
+        @strawberry_django.field(select_related="empresa__pais")
+        def pais_nombre(self) -> str:
+            return self.empresa.pais.nombre  # type: ignore
+
+    @strawberry.type
+    class Query:
+        facturas: list[FacturaNType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    pais = QAPais.objects.create(nombre="P")
+    pais_origen = QAPaisOrigen.objects.create(nombre="PO")
+    empresa = QAEmpresaN.objects.create(nombre="E", pais=pais, pais_origen=pais_origen)
+    QAFacturaN.objects.create(numero="F1", empresa=empresa)
+
+    query = (
+        "{ facturas { numero paisNombre empresa { nombre paisOrigen { nombre } } } }"
+    )
+    result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "facturas": [
+            {
+                "numero": "F1",
+                "paisNombre": "P",
+                "empresa": {"nombre": "E", "paisOrigen": {"nombre": "PO"}},
+            },
+        ],
+    }
+
+
+class QAEmpresaD(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+    lema = CharField(max_length=50, default="")
+
+
+class QAEmpresaComercialD(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    nombre = CharField(max_length=50)
+
+
+class QAFacturaD(models.Model):
+    class Meta:
+        app_label = "tests"
+
+    numero = CharField(max_length=50)
+    empresa = models.ForeignKey(
+        QAEmpresaD, on_delete=models.CASCADE, related_name="facturas"
+    )
+    empresa_comercial = models.ForeignKey(
+        QAEmpresaComercialD, on_delete=models.CASCADE, related_name="facturas"
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_store_declares_select_related_respects_boundary(db):
+    """A resolver's own `select_related` hint must not mask its field name's real relation.
+
+    The `empresa` method resolver declares select_related=["empresa_comercial"],
+    a sibling that merely starts with "empresa". `_store_declares_select_related`
+    must still treat "empresa" itself as undeclared and select_related it,
+    or the query falls back to N+1 lazy loads instead of one JOIN-backed
+    query. Pre-fix code was already boundary-correct at this call site, so
+    this is a regression guard for the refactor, not a bug repro.
+    """
+
+    @strawberry_django.type(QAEmpresaD)
+    class EmpresaDType:
+        nombre: strawberry.auto
+
+        @strawberry_django.field(only=["lema"])
+        def extra(self) -> str:
+            return self.lema  # type: ignore
+
+    @strawberry_django.type(QAFacturaD)
+    class FacturaDType:
+        numero: strawberry.auto
+
+        @strawberry_django.field(select_related=["empresa_comercial"])
+        def empresa(self) -> EmpresaDType | None:
+            return getattr(self, "empresa", None)
+
+    @strawberry.type
+    class Query:
+        facturas: list[FacturaDType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    empresa = QAEmpresaD.objects.create(nombre="E", lema="L")
+    comercial = QAEmpresaComercialD.objects.create(nombre="C")
+    QAFacturaD.objects.create(numero="F1", empresa=empresa, empresa_comercial=comercial)
+
+    query = "{ facturas { numero empresa { extra } } }"
+
+    with CaptureQueriesContext(connection=connections[DEFAULT_DB_ALIAS]) as ctx:
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "facturas": [{"numero": "F1", "empresa": {"extra": "L"}}],
+    }
+    assert len(ctx.captured_queries) == 3, ctx.captured_queries
 
 
 @pytest.mark.django_db(transaction=True)

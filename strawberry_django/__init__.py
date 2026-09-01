@@ -31,10 +31,17 @@ from .mutations.mutations import input_mutation, mutation
 from .optimizer import get_field_arguments, get_hint_value, optimizer_hint_key
 from .ordering import Ordering, order, order_type, process_order
 from .resolvers import django_resolver
-from .type import input, interface, partial, type  # noqa: A004
+from .type import (
+    input,  # ruff: ignore[builtin-import-shadowing]
+    interface,
+    partial,
+    type,  # ruff: ignore[builtin-import-shadowing]
+)
 
 if TYPE_CHECKING:
-    from strawberry_django.filters import filter  # noqa: A004, F401
+    from strawberry_django.filters import (
+        filter,  # ruff: ignore[builtin-import-shadowing, unused-import]
+    )
 
 __all__ = [
     "BaseFilterLookup",

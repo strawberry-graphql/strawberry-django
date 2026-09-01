@@ -1,5 +1,5 @@
 from collections.abc import Callable, Hashable
-from functools import _make_key  # noqa: PLC2701
+from functools import _make_key  # ruff: ignore[import-private-name]
 from typing import cast
 
 from django.core.cache import caches

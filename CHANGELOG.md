@@ -1,6 +1,102 @@
 CHANGELOG
 =========
 
+0.88.0 - 2026-08-29
+-------------------
+
+Allow mutations with Django error handling to return interfaces by expanding them to their concrete implementations.
+
+This release was contributed by [@Guflly](https://github.com/Guflly) in [#939](https://github.com/strawberry-graphql/strawberry-django/pull/939)
+
+Additional contributors: [@bellini666](https://github.com/bellini666)
+
+0.87.1 - 2026-08-26
+-------------------
+
+Fix the query optimizer dropping a manually applied `select_related` from the
+`only()` mask when another field on the same model shares its name as a
+prefix without a `__` boundary (e.g. `company` vs `company_branch`). This
+previously made Django raise `FieldError: cannot be both deferred and
+traversed using select_related at the same time` whenever only the longer
+sibling was selected in the query.
+
+This release was contributed by [@cjcontreras](https://github.com/cjcontreras) in [#945](https://github.com/strawberry-graphql/strawberry-django/pull/945)
+
+0.87.0 - 2026-08-06
+-------------------
+
+Resolve prefetch-optimized nested connections on the event loop instead of
+paying a `sync_to_async` thread hop per parent node: the nested-connection
+default resolver, the queryset hook for prefetch-optimized querysets and
+`totalCount` served from the prefetched window annotation no longer touch
+the database, so they no longer need a worker thread.
+
+This release was contributed by [@rcybulski1122012](https://github.com/rcybulski1122012) in [#932](https://github.com/strawberry-graphql/strawberry-django/pull/932)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
+0.86.8 - 2026-08-01
+-------------------
+
+The built-in toolbar script is now compatible with django-debug-toolbar 7.0.0,
+which renders the toolbar inside a shadow DOM by default.
+
+Previously, all DOM queries targeted `#djDebug` directly on the document,
+which broke under shadow DOM isolation — `querySelector` cannot pierce a shadow
+boundary.
+
+Using a `getDebugElement()` helper that locates `#djDebug` via
+the shadow root of its parent element (`#djDebugRoot`):
+
+```js
+function getDebugElement() {
+  const root = document.getElementById("djDebugRoot");
+  if (root) {
+    return (root.shadowRoot || root).querySelector("#djDebug");
+  }
+  return document.getElementById("djDebug");
+}
+```
+
+This also handles the `USE_SHADOW_DOM = False` fallback gracefully, keeping
+backward compatibility with older versions of the toolbar.
+
+This release was contributed by [@daudln](https://github.com/daudln) in [#926](https://github.com/strawberry-graphql/strawberry-django/pull/926)
+
+Additional contributors: [@bellini666](https://github.com/bellini666), [@pre-commit-ci[bot]](https://github.com/pre-commit-ci[bot]), [@Copilot](https://github.com/Copilot)
+
+0.86.7 - 2026-08-01
+-------------------
+
+Honor the `DEFAULT_PK_FIELD_NAME` setting (and per-field `key_attr`) when
+resolving existing instances in mutation inputs. Previously `_parse_pk` read the
+input value under `key_attr` but always looked the instance up by `pk=`, so
+relation inputs and bare-id updates that reference an object by a configured
+non-pk field raised `DoesNotExist` or matched the wrong row. Filters already
+honored the setting; mutations now do too. The default `pk`-based path is
+unchanged.
+
+This release was contributed by [@ayushin](https://github.com/ayushin) in [#928](https://github.com/strawberry-graphql/strawberry-django/pull/928)
+
+0.86.6 - 2026-08-01
+-------------------
+
+Fix an N+1 on `totalCount` of nested connections optimized by prefetching:
+parents whose prefetched first-page partition came back empty issued one
+`COUNT(*)` query each, even though an empty first page already proves the
+total count is 0.
+
+This release was contributed by [@rcybulski1122012](https://github.com/rcybulski1122012) in [#931](https://github.com/strawberry-graphql/strawberry-django/pull/931)
+
+Additional contributors: [@Copilot](https://github.com/Copilot)
+
+0.86.5 - 2026-07-16
+-------------------
+
+Document the Django validation cache extension and its Django cache backend options.
+
+This release was contributed by [@w3lld1](https://github.com/w3lld1) in [#934](https://github.com/strawberry-graphql/strawberry-django/pull/934)
+
 0.86.4 - 2026-06-20
 -------------------
 

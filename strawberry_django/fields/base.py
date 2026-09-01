@@ -111,7 +111,7 @@ class StrawberryDjangoFieldBase(StrawberryField):
             origin_list: list[type[WithStrawberryDjangoObjectDefinition]] = []
             for t in origin.types:
                 while isinstance(t, StrawberryContainer):
-                    t = t.of_type  # noqa: PLW2901
+                    t = t.of_type  # ruff: ignore[redefined-loop-name]
 
                 if has_django_definition(t):
                     origin_list.append(t)
@@ -171,7 +171,11 @@ class StrawberryDjangoFieldBase(StrawberryField):
         resolver = self.base_resolver
         assert resolver
 
-        if not resolver.is_async:
+        # Library-internal resolvers marked `is_async_safe` never run a query
+        # themselves, so they can skip the sync_to_async thread hop entirely.
+        if not resolver.is_async and not getattr(
+            resolver.wrapped_func, "is_async_safe", False
+        ):
             resolver = django_resolver(resolver, qs_hook=None)
 
         return resolver

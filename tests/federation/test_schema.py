@@ -632,7 +632,7 @@ def test_entities_resolver_with_custom_resolve_reference():
         name: strawberry.auto
 
         @classmethod
-        def resolve_reference(cls, id: int, **kwargs) -> models.Fruit:  # noqa: A002
+        def resolve_reference(cls, id: int, **kwargs) -> models.Fruit:  # ruff: ignore[builtin-argument-shadowing]
             custom_called.append(id)
             return models.Fruit.objects.get(id=id)
 

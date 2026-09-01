@@ -253,7 +253,7 @@ class OptimizerStore:
         for p in self.prefetch_related:
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
-                p = p(info)  # noqa: PLW2901
+                p = p(info)  # ruff: ignore[redefined-loop-name]
 
             if isinstance(p, str):
                 prefetch_related.append(f"{prefix}{LOOKUP_SEP}{p}")
@@ -269,7 +269,7 @@ class OptimizerStore:
         for k, v in self.annotate.items():
             if isinstance(v, Callable):
                 assert_type(v, AnnotateCallable)
-                v = v(info)  # noqa: PLW2901
+                v = v(info)  # ruff: ignore[redefined-loop-name]
             annotate[f"{prefix}{LOOKUP_SEP}{k}"] = v
 
         return self.__class__(
@@ -311,7 +311,7 @@ class OptimizerStore:
             config=config,
         )
 
-        return qs  # noqa: RET504
+        return qs  # ruff: ignore[unnecessary-assign]
 
     def _apply_prefetch_related(
         self,
@@ -342,7 +342,7 @@ class OptimizerStore:
 
             if isinstance(p, Callable):
                 assert_type(p, PrefetchCallable)
-                p = p(strawberry_info)  # noqa: PLW2901
+                p = p(strawberry_info)  # ruff: ignore[redefined-loop-name]
 
             path = p.prefetch_to
             existing = to_prefetch.get(path)
@@ -380,7 +380,7 @@ class OptimizerStore:
             try:
                 from django.contrib.contenttypes.fields import GenericRelation
             except (ImportError, RuntimeError):
-                GenericRelation = None  # noqa: N806
+                GenericRelation = None  # ruff: ignore[non-lowercase-variable-in-function]
 
             parent_model = qs.model
             for prefetch in to_prefetch.values():
@@ -440,7 +440,7 @@ class OptimizerStore:
         self,
         qs: QuerySet[_M],
         *,
-        info: GraphQLResolveInfo,
+        info: GraphQLResolveInfo | None,
         config: OptimizerConfig,
     ) -> tuple[QuerySet[_M], set[str]]:
         only_set = set(self.only)
@@ -476,7 +476,9 @@ class OptimizerStore:
                 if select_related in only_set:
                     continue
 
-                if not any(only.startswith(select_related) for only in only_set):
+                if not any(
+                    _is_relation_path_covered(only, select_related) for only in only_set
+                ):
                     extra_only_set.add(select_related)
 
         return qs, extra_only_set
@@ -512,10 +514,19 @@ class OptimizerStore:
         for k, v in self.annotate.items():
             if isinstance(v, Callable):
                 assert_type(v, AnnotateCallable)
-                v = v(strawberry_info)  # noqa: PLW2901
+                v = v(strawberry_info)  # ruff: ignore[redefined-loop-name]
             to_annotate[k] = v
 
         return qs.annotate(**to_annotate)
+
+
+def _is_relation_path_covered(candidate: str, target: str) -> bool:
+    """Whether `candidate` is `target` itself or a `LOOKUP_SEP`-bounded descendant of it.
+
+    A plain `candidate.startswith(target)` is wrong: e.g. "empresa_comercial"
+    starts with "empresa" even though they're unrelated sibling fields.
+    """
+    return candidate == target or candidate.startswith(f"{target}{LOOKUP_SEP}")
 
 
 def _create_strawberry_info(raw_info: GraphQLResolveInfo) -> Info:
@@ -915,9 +926,9 @@ def _get_hints_from_field(
         # because when field_store was created on __init__,
         # the field name wasn't available.
         # This allows for annotate expressions to be declared as:
-        #   total: int = gql.django.field(annotate=Sum("price"))  # noqa: ERA001
+        #   total: int = gql.django.field(annotate=Sum("price"))  # ruff: ignore[commented-out-code]
         # Instead of the more redundant:
-        #   total: int = gql.django.field(annotate={"total": Sum("price")})  # noqa: ERA001
+        #   total: int = gql.django.field(annotate={"total": Sum("price")})  # ruff: ignore[commented-out-code]
         field_store.annotate = {
             field.name: field_store.annotate[_annotate_placeholder],
         }
@@ -1108,7 +1119,7 @@ def _get_hints_from_django_relation(
     try:
         from django.contrib.contenttypes.fields import GenericRelation
     except (ImportError, RuntimeError):  # pragma: no cover
-        GenericRelation = None  # noqa: N806
+        GenericRelation = None  # ruff: ignore[non-lowercase-variable-in-function]
 
     store = OptimizerStore()
 
@@ -1237,11 +1248,10 @@ def _store_declares_select_related(
     if not field_store:
         return False
 
-    for sr in field_store.select_related:
-        if sr == relation_name or sr.startswith(f"{relation_name}{LOOKUP_SEP}"):
-            return True
-
-    return False
+    return any(
+        _is_relation_path_covered(sr, relation_name)
+        for sr in field_store.select_related
+    )
 
 
 def _get_hints_from_django_field(
@@ -1265,8 +1275,8 @@ def _get_hints_from_django_field(
             GenericRelation,
         )
     except (ImportError, RuntimeError):  # pragma: no cover
-        GenericForeignKey = None  # noqa: N806
-        GenericRelation = None  # noqa: N806
+        GenericForeignKey = None  # ruff: ignore[non-lowercase-variable-in-function]
+        GenericRelation = None  # ruff: ignore[non-lowercase-variable-in-function]
         relation_fields = (models.ManyToManyField, ManyToManyRel, ManyToOneRel)
     else:
         relation_fields = (
@@ -1384,7 +1394,10 @@ def _get_hints_from_django_field(
         store = OptimizerStore.with_hints(only=[path])
         if relation_prefix:
             relation_path = f"{lookup_prefix}{relation_prefix}"
-            if not any(sr.startswith(relation_path) for sr in store.select_related):
+            if not any(
+                _is_relation_path_covered(sr, relation_path)
+                for sr in store.select_related
+            ):
                 store.select_related.append(relation_path)
 
     return store

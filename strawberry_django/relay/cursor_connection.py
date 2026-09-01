@@ -22,7 +22,11 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
-from strawberry_django.pagination import apply_window_pagination, get_total_count
+from strawberry_django.pagination import (
+    apply_window_pagination,
+    get_cached_total_count,
+    get_total_count,
+)
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import django_resolver
 
@@ -125,7 +129,7 @@ def annotate_ordering_fields(
         # We cannot use QuerySet.order_by, because it validates the order expressions again,
         # but we're operating on the OrderBy expressions which have already been resolved by the compiler
         # In case the user has previously ordered by an aggregate like so:
-        # qs.annotate(_c=Count("foo")).order_by("_c")  # noqa: ERA001
+        # qs.annotate(_c=Count("foo")).order_by("_c")  # ruff: ignore[commented-out-code]
         # then the OrderBy we get here would trigger a ValidationError by QuerySet.order_by.
         # But we only want to append to the existing order (and the existing order must be valid already)
         # So this is safe.
@@ -342,11 +346,17 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
     )
 
     @strawberry.field(description="Total quantity of existing nodes.")
-    @django_resolver
     def total_count(self) -> int:
         assert self.total_count_qs is not None
 
-        return get_total_count(self.total_count_qs)
+        total_count = get_cached_total_count(self.total_count_qs)
+        if total_count is None:
+            # Getting the count requires a query; django_resolver defers it
+            # to a thread when running in an async context.
+            total_count = cast(
+                "int", django_resolver(get_total_count)(self.total_count_qs)
+            )
+        return total_count
 
     @classmethod
     def resolve_connection(

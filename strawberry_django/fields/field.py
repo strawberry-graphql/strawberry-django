@@ -38,10 +38,11 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.extensions.field_extension import FieldExtension
-from strawberry.types.field import _RESOLVER_TYPE  # noqa: PLC2701
+from strawberry.types.field import _RESOLVER_TYPE  # ruff: ignore[import-private-name]
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import await_maybe
+from strawberry.utils.inspect import in_async_context
 
 from strawberry_django import optimizer
 from strawberry_django.arguments import argument
@@ -300,9 +301,11 @@ class StrawberryDjangoField(
                     if "info" not in kwargs:
                         kwargs["info"] = info
 
-                    resolved = await sync_to_async(self.get_queryset_hook(**kwargs))(
-                        resolved
-                    )
+                    qs_hook = self.get_queryset_hook(**kwargs)
+                    if self._can_run_qs_hook_inline(resolved):
+                        resolved = qs_hook(resolved)
+                    else:
+                        resolved = await sync_to_async(qs_hook)(resolved)
 
                 return resolved
 
@@ -315,10 +318,14 @@ class StrawberryDjangoField(
             if "info" not in kwargs:
                 kwargs["info"] = info
 
-            result = django_resolver(
-                self.get_queryset_hook(**kwargs),
-                qs_hook=lambda qs: qs,
-            )(result)
+            qs_hook = self.get_queryset_hook(**kwargs)
+            if self._can_run_qs_hook_inline(result):
+                result = qs_hook(result)
+            else:
+                result = django_resolver(
+                    qs_hook,
+                    qs_hook=lambda qs: qs,
+                )(result)
 
         return result
 
@@ -390,6 +397,38 @@ class StrawberryDjangoField(
 
         return queryset
 
+    def _can_run_qs_hook_inline(self, queryset: models.QuerySet) -> bool:
+        """Whether the queryset hook can run without touching the database.
+
+        Only hooks made purely of library code known to do in-memory work may
+        skip the sync_to_async thread hop and run on the event loop:
+
+        - Only the library's own `get_queryset` is guaranteed to short-circuit
+          for prefetch-optimized querysets before any user code (the type's
+          `get_queryset`, permissions, filters, ordering, pagination) runs. A
+          subclass override may hit the database, so it keeps its thread.
+        - The optional-object hook branch (see `get_queryset_hook`) resolves
+          via `QuerySet.first()`, which clones the queryset - dropping its
+          result cache - when it has no explicit ordering, and may therefore
+          still run a query.
+        - A queryset's `_result_cache` is either `None` or the fully evaluated
+          row list (Django populates it atomically in `_fetch_all`), so a
+          non-None cache on a prefetch-optimized queryset means every row is
+          already in memory.
+        """
+        if type(self).get_queryset is not StrawberryDjangoField.get_queryset:
+            return False
+
+        if self.is_optional and not (
+            self.is_connection or self.is_paginated or self.is_list
+        ):
+            return False
+
+        return (
+            queryset._result_cache is not None  # type: ignore
+            and is_optimized_by_prefetching(queryset)
+        )
+
 
 def _get_field_arguments_for_extensions(
     field: StrawberryDjangoField,
@@ -409,24 +448,24 @@ def _get_field_arguments_for_extensions(
 
     if add_filters and FILTERS_ARG not in args:
         filters = field.get_filters()
-        if filters not in (None, UNSET):  # noqa: PLR6201
+        if filters not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[FILTERS_ARG] = argument(FILTERS_ARG, filters, is_optional=True)
 
     if add_order and ORDER_ARG not in args:
         order = field.get_order()
-        if order not in (None, UNSET):  # noqa: PLR6201
+        if order not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[ORDER_ARG] = argument(ORDER_ARG, order, is_optional=True)
 
     if add_order and ORDERING_ARG not in args:
         ordering = field.get_ordering()
-        if ordering not in (None, UNSET):  # noqa: PLR6201
+        if ordering not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[ORDERING_ARG] = argument(
                 ORDERING_ARG, ordering, is_list=True, default=[]
             )
 
     if add_pagination and PAGINATION_ARG not in args:
         pagination = field.get_pagination()
-        if pagination not in (None, UNSET):  # noqa: PLR6201
+        if pagination not in (None, UNSET):  # ruff: ignore[literal-membership]
             args[PAGINATION_ARG] = argument(
                 PAGINATION_ARG,
                 pagination,
@@ -461,7 +500,10 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
                 if root is not None:
                     # If this is a nested field, call get_result instead because we want
-                    # to retrieve the queryset from its RelatedManager
+                    # to retrieve the queryset from its RelatedManager. Accessing the
+                    # manager and calling `.all()` builds the queryset without
+                    # evaluating it (for prefetched relations it returns the cached
+                    # queryset), so this is safe to run on the event loop.
                     retval = cast(
                         "models.QuerySet",
                         getattr(root, field.django_name or field.python_name).all(),
@@ -475,15 +517,28 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                             " each of those",
                         )
 
-                    retval = resolve_model_nodes(
-                        django_type,
-                        info=info,
-                        required=True,
-                    )
+                    # resolve_model_nodes may run user-defined `get_queryset`,
+                    # which is allowed to touch the database - keep it out of
+                    # the event loop.
+                    if in_async_context():
+                        retval = sync_to_async(resolve_model_nodes)(
+                            django_type,
+                            info=info,
+                            required=True,
+                        )
+                    else:
+                        retval = resolve_model_nodes(
+                            django_type,
+                            info=info,
+                            required=True,
+                        )
 
                 return cast("Iterable[Any]", retval)
 
             default_resolver.can_optimize = True  # type: ignore
+            # The resolver never runs a query itself (see the comments above),
+            # so it doesn't need the sync_to_async wrapping in async contexts.
+            default_resolver.is_async_safe = True  # type: ignore
 
             field.base_resolver = StrawberryResolver(default_resolver)
 

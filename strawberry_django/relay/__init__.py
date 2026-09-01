@@ -17,7 +17,9 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from .list_connection import ListConnectionWithTotalCount  # noqa: F401
+    from .list_connection import (
+        ListConnectionWithTotalCount,  # ruff: ignore[unused-import]
+    )
 
 __all__ = [
     "DjangoCursorConnection",
