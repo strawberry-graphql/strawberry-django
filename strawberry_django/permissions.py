@@ -280,7 +280,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
     @functools.cached_property
     def schema_directive(self) -> object:
         key = "__strawberry_directive_type__"
-        directive_class = getattr(self.__class__, key, None)
+        directive_class = self.__class__.__dict__.get(key)
 
         if directive_class is None:
 
@@ -693,7 +693,7 @@ class HasPerm(DjangoPermissionExtension):
     @functools.cached_property
     def schema_directive(self) -> object:
         key = "__strawberry_directive_class__"
-        directive_class = getattr(self.__class__, key, None)
+        directive_class = self.__class__.__dict__.get(key)
 
         if directive_class is None:
 
@@ -714,6 +714,7 @@ class HasPerm(DjangoPermissionExtension):
                 )
 
             directive_class = AutoDirective
+            setattr(self.__class__, key, directive_class)
 
         return directive_class(
             permissions=list(self.perms),
