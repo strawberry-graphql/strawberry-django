@@ -1,25 +1,33 @@
 ---
 release type: patch
 ---
-The built-in toolbar script is now compatible with django-debug-toolbar 7.0.0,
-which renders the toolbar inside a shadow DOM by default.
 
-Previously, all DOM queries targeted `#djDebug` directly on the document,
-which broke under shadow DOM isolation — `querySelector` cannot pierce a shadow
-boundary.
+Permission extensions are now fully compatible with `strawberry-graphql >= 0.326.0`, which enforces strict type uniqueness for custom schema directives during schema construction.
 
-Using a `getDebugElement()` helper that locates `#djDebug` via
-the shadow root of its parent element (`#djDebugRoot`):
+Previously, `DjangoPermissionExtension.schema_directive` created a new anonymous `AutoDirective` class on every extension instantiation without caching it on the underlying class.
+When the same permission extension (e.g. `IsSuperuser()`, `IsAuthenticated()`, or custom subclasses) was attached to multiple fields, Strawberry raised a `ValueError` reporting duplicate directive definitions for the same directive name.
 
-```js
-function getDebugElement() {
-  const root = document.getElementById("djDebugRoot");
-  if (root) {
-    return (root.shadowRoot || root).querySelector("#djDebug");
-  }
-  return document.getElementById("djDebug");
-}
+The generated `AutoDirective` class is now cached on `self.__class__` via `__dict__.get()`:
+
+```python
+@functools.cached_property
+def schema_directive(self) -> object:
+    key = "__strawberry_directive_type__"
+    directive_class = self.__class__.__dict__.get(key)
+
+    if directive_class is None:
+        @schema_directive(
+            name=self.__class__.__name__,
+            locations=self.SCHEMA_DIRECTIVE_LOCATIONS,
+            description=self.SCHEMA_DIRECTIVE_DESCRIPTION,
+            repeatable=True,
+        )
+        class AutoDirective: ...
+
+        directive_class = AutoDirective
+        setattr(self.__class__, key, directive_class)
+
+    return directive_class()
 ```
 
-This also handles the `USE_SHADOW_DOM = False` fallback gracefully, keeping
-backward compatibility with older versions of the toolbar.
+This ensures a single, reusable schema directive type is created per extension class, eliminating duplicate directive collisions while preserving full isolation across subclasses and maintaining backward compatibility with older Strawberry versions.
