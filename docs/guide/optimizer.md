@@ -306,17 +306,14 @@ Each alias resolves the hint callables with its own `info`, scoped to that
 specific selection. Since every annotation and `Prefetch(to_attr=...)` needs a
 unique name, three helpers keep the hint and the resolver in sync:
 
-- `strawberry_django.optimizer_hint_key(info)`: returns a unique attribute name
-  for the current selection, derived from its response key (the alias if the
-  field is aliased). It returns the same value inside a hint callable and
-  inside the resolver.
-- `strawberry_django.get_hint_value(source, info, default_attr=None, *, default=...)`:
-  reads the value produced by a hint for the current selection. It checks the
-  alias-scoped attribute first, then `default_attr` (e.g. the plain annotation
-  label used when the field is not aliased), then returns `default` if given
-  (useful when the optimizer is turned off), and raises `AttributeError` otherwise.
-- `strawberry_django.get_field_arguments(info)`: resolves the argument values of
-  the current selection (keyed by their GraphQL names, with variables resolved).
+- `strawberry_django.optimizer_hint_key(info)` names the annotation or
+  `Prefetch(to_attr=...)` inside the hint callable.
+- `strawberry_django.get_hint_value(...)` reads that value back inside the
+  resolver.
+- `strawberry_django.get_field_arguments(info)` resolves the current
+  selection's arguments, in both the hint callable and the resolver.
+
+See each helper's docstring for the exact arguments and lookup order.
 
 For annotations, callable values are automatically stored under the
 alias-scoped name when the field is aliased, so the resolver only needs
@@ -391,6 +388,12 @@ class Order:
 > Static (non-callable) annotate expressions can't depend on the field's
 > arguments, so they keep their shared label and are annotated only once, no
 > matter how many aliases select the field.
+
+> [!WARNING]
+> A callable `prefetch_related` produces a separate `Prefetch` per alias, so
+> each alias of such a field costs one additional query - even when two aliases
+> are called with identical arguments, since prefetches are not deduplicated by
+> argument value.
 
 ## Optimization hints on model (ModelProperty)
 
