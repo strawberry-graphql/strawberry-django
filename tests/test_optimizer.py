@@ -2244,36 +2244,53 @@ def test_query_prefetch_aliases_with_different_pagination(
     db, gql_client: GraphQLTestClient
 ):
     query = """
-      query TestQuery ($node_id: ID!) {
-        project (id: $node_id) {
-          id
-          first: milestones(pagination: {limit: 2}) {
+      query TestQuery {
+        projectsPaginated{
+          results {
             id
-          }
-          second: milestones(pagination: {limit: 1}) {
-            id
+            first: milestones(pagination: {limit: 2}) {
+              id
+            }
+            second: milestones(pagination: {limit: 1}) {
+              id
+            }
           }
         }
       }
     """
 
-    project = ProjectFactory.create()
-    milestones = MilestoneFactory.create_batch(3, project=project)
-    node_id = to_base64("ProjectType", project.pk)
+    project_1 = ProjectFactory.create()
+    milestones_1 = MilestoneFactory.create_batch(3, project=project_1)
+    project_2 = ProjectFactory.create()
+    milestones_2 = MilestoneFactory.create_batch(3, project=project_2)
 
-    with assert_num_queries(3):
-        res = gql_client.query(query, {"node_id": node_id})
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
 
     assert res.data == {
-        "project": {
-            "id": node_id,
-            "first": [
-                {"id": to_base64("MilestoneType", milestones[0].id)},
-                {"id": to_base64("MilestoneType", milestones[1].id)},
-            ],
-            "second": [
-                {"id": to_base64("MilestoneType", milestones[0].id)},
-            ],
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "first": [
+                        {"id": to_base64("MilestoneType", milestones_1[0].id)},
+                        {"id": to_base64("MilestoneType", milestones_1[1].id)},
+                    ],
+                    "second": [
+                        {"id": to_base64("MilestoneType", milestones_1[0].id)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "first": [
+                        {"id": to_base64("MilestoneType", milestones_2[0].id)},
+                        {"id": to_base64("MilestoneType", milestones_2[1].id)},
+                    ],
+                    "second": [
+                        {"id": to_base64("MilestoneType", milestones_2[0].id)},
+                    ],
+                },
+            ]
         },
     }
 
