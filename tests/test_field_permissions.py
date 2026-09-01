@@ -7,7 +7,15 @@ from strawberry import BasePermission, Info
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.permissions import HasPerm, IsSuperuser
 from tests import models
+
+
+def test_permission_directive_classes_are_reused():
+    assert type(IsSuperuser().schema_directive) is type(IsSuperuser().schema_directive)
+    assert type(HasPerm("auth.view_user").schema_directive) is type(
+        HasPerm("auth.view_user").schema_directive
+    )
 
 
 @pytest.mark.django_db(transaction=True)
