@@ -2502,6 +2502,46 @@ def test_query_aliased_annotate_callable_with_same_arguments(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_aliased_dict_annotate_fixed_attr_resolver_same_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    """A dict-annotate field read via a fixed attribute survives aliasing.
+
+    ``myBugsCount`` reads ``root._my_bugs_count`` (not ``get_hint_value``). With
+    identical arguments the aliases merge, keeping the plain label, so the fixed
+    attribute stays in place.
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          a: myBugsCount
+          b: myBugsCount
+        }
+      }
+    """
+
+    user = UserFactory.create()
+    milestone = MilestoneFactory.create()
+    IssueFactory.create_batch(2, milestone=milestone, kind=Issue.Kind.FEATURE)
+    for issue in IssueFactory.create_batch(3, milestone=milestone, kind=Issue.Kind.BUG):
+        Assignee.objects.create(user=user, issue=issue)
+
+    with gql_client.login(user):
+        if DjangoOptimizerExtension.enabled.get():
+            res = gql_client.query(query)
+            assert res.data == {
+                "milestoneList": [
+                    {"id": to_base64("MilestoneType", milestone.pk), "a": 3, "b": 3},
+                ],
+            }
+        else:
+            # myBugsCount requires the optimizer to be turned on
+            res = gql_client.query(query, assert_no_errors=False)
+            assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_annotate_callable_alias_and_field_with_different_arguments(
     db, gql_client: GraphQLTestClient
 ):
