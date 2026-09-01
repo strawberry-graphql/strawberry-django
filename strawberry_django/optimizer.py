@@ -107,7 +107,7 @@ _M = TypeVar("_M", bound=models.Model)
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
 
-ALIAS_PREFIX = "_strawberry_alias_"
+_alias_prefix = "_strawberry_alias_"
 
 
 @dataclasses.dataclass
@@ -765,7 +765,7 @@ def optimizer_hint_key(info: Info) -> str:
     optimizer hint callable, and `get_hint_value` to read the value back
     inside the resolver.
     """
-    return f"{ALIAS_PREFIX}{info.path.key}"
+    return f"{_alias_prefix}{info.path.key}"
 
 
 def get_hint_value(
@@ -1540,7 +1540,7 @@ def _get_model_hints(
             for group in groups:
                 alias = group[0].alias
                 key = alias.value if alias else name
-                merged_node_lists.append((group, f"{ALIAS_PREFIX}{key}"))
+                merged_node_lists.append((group, f"{_alias_prefix}{key}"))
             continue
 
         first_args = _get_field_arguments(groups[0][0], parent_type, info)
@@ -1557,7 +1557,7 @@ def _get_model_hints(
             # Different args - each alias gets its own to_attr
             for group in groups:
                 alias = group[0].alias
-                to_attr = f"{ALIAS_PREFIX}{alias.value}" if alias else None
+                to_attr = f"{_alias_prefix}{alias.value}" if alias else None
                 merged_node_lists.append((group, to_attr))
 
     selections = [
