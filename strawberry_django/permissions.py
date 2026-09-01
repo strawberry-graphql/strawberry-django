@@ -293,6 +293,7 @@ class DjangoPermissionExtension(FieldExtension, abc.ABC):
             class AutoDirective: ...
 
             directive_class = AutoDirective
+            setattr(self.__class__, key, directive_class)
 
         return directive_class()
 
