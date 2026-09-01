@@ -1169,6 +1169,14 @@ def _get_hints_from_django_relation(
 
     store = OptimizerStore()
 
+    # A per-alias `to_attr` prefetches into a plain list attribute, which only a
+    # list field reads back. Connection/paginated resolvers expect
+    # `_prefetched_objects_cache` and an optional field expects a `.first()`
+    # scalar, so skip entirely - before the recursion, cache append or
+    # get_queryset hook, none of which should run for a dropped prefetch.
+    if to_attr and not getattr(field, "is_list", False):
+        return store
+
     f_types = list(get_possible_type_definitions(field.type))
     if len(f_types) > 1:
         # This might be a generic foreign key.
@@ -1264,14 +1272,6 @@ def _get_hints_from_django_relation(
     if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
-    # Don't use to_attr for connection/paginated fields - their resolvers
-    # expect data in _prefetched_objects_cache, not as a plain list attribute.
-    # If to_attr was requested but can't be used, skip optimization entirely
-    # to avoid merging conflicting prefetches for the same path.
-    if to_attr and (
-        getattr(field, "is_connection", False) or getattr(field, "is_paginated", False)
-    ):
-        return store
     field_prefetch = Prefetch(path, queryset=field_qs, to_attr=to_attr)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)
