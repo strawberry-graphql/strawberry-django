@@ -880,14 +880,47 @@ def _find_strawberry_field(
     return None
 
 
-def _field_has_callable_hints(field: StrawberryField) -> bool:
-    store = cast("OptimizerStore | None", getattr(field, "store", None))
-    if not store:
-        return False
+def _aliases_share_prefetch_target(
+    groups: list[list[FieldNode]],
+    object_definition: StrawberryObjectDefinition,
+    schema: Schema,
+    *,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    info: GraphQLResolveInfo,
+) -> bool:
+    """Whether all aliases resolve their prefetch hints to the same attribute.
 
-    return any(callable(p) for p in store.prefetch_related) or any(
-        callable(a) for a in store.annotate.values()
-    )
+    A callable ``prefetch_related`` may derive its ``to_attr`` from the response
+    key (``to_attr=optimizer_hint_key(info)``), giving each alias a distinct
+    target that must stay separate; a shared/static target can be merged. True
+    when there are no callable prefetch hints or every alias agrees.
+    """
+    field = _find_strawberry_field(object_definition, schema, groups[0][0].name.value)
+    store = cast("OptimizerStore | None", getattr(field, "store", None))
+    if not store or not any(callable(p) for p in store.prefetch_related):
+        return True
+
+    targets: set[frozenset[str]] = set()
+    for group in groups:
+        field_data = _get_field_data(
+            group, object_definition, schema, parent_type=parent_type, info=info
+        )
+        if field_data is None:
+            # Couldn't resolve one of the aliases - keep them separate to be safe.
+            return False
+
+        f_field, _, _, f_info = field_data
+        f_strawberry_info = schema.config.info_class(_raw_info=f_info, _field=f_field)
+        group_targets = {
+            (p(f_strawberry_info) if callable(p) else p) for p in store.prefetch_related
+        }
+        targets.add(
+            frozenset(p if isinstance(p, str) else p.prefetch_to for p in group_targets)
+        )
+        if len(targets) > 1:
+            return False
+
+    return True
 
 
 def _get_field_data(
@@ -1538,36 +1571,32 @@ def _get_model_hints(
     # different args as separate entries by assigning distinct to_attr values.
     # list of (field_nodes, to_attr)
     merged_node_lists: list[tuple[list[FieldNode], str | None]] = []
-    for name, groups in field_name_groups.items():
+    for groups in field_name_groups.values():
         if len(groups) == 1:
             merged_node_lists.append((groups[0], None))
             continue
 
-        s_field = _find_strawberry_field(object_definition, schema, name)
-        if s_field is not None and _field_has_callable_hints(s_field):
-            # Fields with callable optimizer hints are handled once per
-            # response key, even when the arguments are identical: each
-            # alias resolves its callables with its own scoped info, storing
-            # results under an alias-scoped name (see `optimizer_hint_key`),
-            # which resolvers read back with `get_hint_value`.
-            for group in groups:
-                alias = group[0].alias
-                key = alias.value if alias else name
-                merged_node_lists.append((group, _alias_attr(key)))
-            continue
-
+        # Aliases with equal arguments and a shared prefetch target produce the
+        # same result and can share one prefetch/annotation (also avoiding
+        # Django's "two prefetches to the same attribute" error). Otherwise -
+        # differing args, or a per-alias `to_attr=optimizer_hint_key(info)` - each
+        # alias is resolved with its own scoped info and stored under an
+        # alias-scoped name, read back with `get_hint_value`.
         first_args = _get_field_arguments(groups[0][0], parent_type, info)
-        if all(
+        same_args = all(
             _get_field_arguments(g[0], parent_type, info) == first_args
             for g in groups[1:]
+        )
+        if same_args and _aliases_share_prefetch_target(
+            groups, object_definition, schema, parent_type=parent_type, info=info
         ):
-            # Same args across all aliases - merge into single entry, no to_attr
+            # Same args and a shared prefetch target - merge into a single entry
             merged_node_lists.append((
                 [node for group in groups for node in group],
                 None,
             ))
         else:
-            # Different args - each alias gets its own to_attr
+            # Differing args or per-alias targets - each alias gets its own to_attr
             for group in groups:
                 alias = group[0].alias
                 to_attr = _alias_attr(alias.value) if alias else None

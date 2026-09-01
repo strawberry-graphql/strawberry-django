@@ -389,11 +389,19 @@ class Order:
 > arguments, so they keep their shared label and are annotated only once, no
 > matter how many aliases select the field.
 
-> [!WARNING]
-> A callable `prefetch_related` produces a separate `Prefetch` per alias, so
-> each alias of such a field costs one additional query - even when two aliases
-> are called with identical arguments, since prefetches are not deduplicated by
-> argument value.
+> [!NOTE]
+> Aliases of a callable-hint field are collapsed into a single annotation /
+> `Prefetch` when they are called with identical arguments **and** resolve to
+> the same target - a shared annotation label, or a `Prefetch` with a fixed
+> `to_attr` (or a plain relation string). Aliases with different arguments, or
+> whose `to_attr` is derived from `optimizer_hint_key(info)` (which is unique
+> per alias), each get their own annotation / prefetch.
+>
+> In particular, a `prefetch_related` that names its `to_attr` with
+> `optimizer_hint_key` targets a distinct attribute per alias, so every such
+> alias costs one additional query - even when the arguments are identical.
+> If you want identical-argument aliases to share a single prefetch, give the
+> `Prefetch` a fixed `to_attr` instead.
 
 ## Optimization hints on model (ModelProperty)
 

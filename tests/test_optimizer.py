@@ -513,6 +513,74 @@ def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_callable_with_same_arguments_aliased(
+    db, gql_client: GraphQLTestClient
+):
+    """Same-arg aliases of a shared-target callable prefetch merge into one.
+
+    Otherwise the optimizer emits two ``Prefetch`` objects with the same
+    ``prefetch_to``, which Django rejects.
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          a: myIssues { name }
+          b: myIssues { name }
+        }
+      }
+    """
+
+    user = UserFactory.create()
+    milestone = MilestoneFactory.create()
+    # Issues not assigned to the user must not appear in the results.
+    IssueFactory.create_batch(2, milestone=milestone)
+    expected_issues = []
+    for issue in IssueFactory.create_batch(2, milestone=milestone):
+        Assignee.objects.create(user=user, issue=issue)
+        expected_issues.append({"name": issue.name})
+
+    with gql_client.login(user):
+        if DjangoOptimizerExtension.enabled.get():
+            res = gql_client.query(query)
+            assert res.errors is None
+            assert res.data == {
+                "milestoneList": [
+                    {"a": expected_issues, "b": expected_issues},
+                ],
+            }
+        else:
+            # myIssues requires the optimizer to be turned on
+            res = gql_client.query(query, assert_no_errors=False)
+            assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_query_mixed_prefetch_annotated_with_same_arguments_aliased(
+    db, gql_client: GraphQLTestClient
+):
+    """Same as above for a field mixing static ``annotate`` + callable prefetch."""
+    query = """
+      query TestQuery {
+        milestoneList {
+          a: mixedPrefetchAnnotated
+          b: mixedPrefetchAnnotated
+        }
+      }
+    """
+
+    MilestoneFactory.create()
+
+    res = gql_client.query(query)
+    assert res.errors is None
+    assert res.data == {
+        "milestoneList": [
+            {"a": "dummy", "b": "dummy"},
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_prefetch_with_fragments(db, gql_client: GraphQLTestClient):
     query = """
       fragment issueFrag on IssueType {
@@ -2415,8 +2483,12 @@ def test_query_aliased_annotate_callable_with_same_arguments(
         res = gql_client.query(query)
 
     if optimized:
+        # The two aliases coerce to identical arguments, so the callable hint
+        # resolves to the same value and is annotated only once under its plain
+        # (field-name) label - no alias-scoped duplicate annotation.
         sql = ctx.captured_queries[0]["sql"]
-        assert sql.count("_strawberry_alias_") == 2
+        assert sql.count("_strawberry_alias_") == 0
+        assert sql.count("FILTER") == 1
 
     assert res.data == {
         "milestoneList": [
@@ -2625,6 +2697,58 @@ def test_query_aliased_prefetch_callable_with_different_arguments(
                 "id": to_base64("MilestoneType", milestone_2.pk),
                 "foo": [{"name": "foo2"}],
                 "bar": [],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_prefetch_callable_with_same_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    """Same-arg aliases of a per-response-key ``to_attr`` prefetch stay split.
+
+    ``issuesFiltered`` uses ``to_attr=optimizer_hint_key(info)``, so each alias
+    targets a distinct attribute; merging would leave the others to fall back to
+    a per-object query. Asserted via a flat query count (no n+1).
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          a: issuesFiltered(nameContains: "foo") {
+            name
+          }
+          b: issuesFiltered(nameContains: "foo") {
+            name
+          }
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="foo2")
+
+    # With the optimizer: one query for the milestones plus one prefetch per
+    # response key (flat regardless of the number of milestones). Without it:
+    # one query per resolver call (2 milestones x 2 aliases).
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "a": [{"name": "foo1"}],
+                "b": [{"name": "foo1"}],
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "a": [{"name": "foo2"}],
+                "b": [{"name": "foo2"}],
             },
         ],
     }
