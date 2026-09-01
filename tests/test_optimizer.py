@@ -2350,8 +2350,13 @@ def test_query_aliased_annotate_callable_with_same_arguments(
     IssueFactory.create(milestone=milestone, name="foo1")
     IssueFactory.create(milestone=milestone, name="bar1")
 
-    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 3):
+    optimized = DjangoOptimizerExtension.enabled.get()
+    with assert_num_queries(1 if optimized else 3) as ctx:
         res = gql_client.query(query)
+
+    if optimized:
+        sql = ctx.captured_queries[0]["sql"]
+        assert sql.count("_strawberry_alias_") == 2
 
     assert res.data == {
         "milestoneList": [
