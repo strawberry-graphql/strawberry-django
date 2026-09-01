@@ -1786,6 +1786,49 @@ def test_query_prefetch_with_aliases_same_field(db, gql_client: GraphQLTestClien
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_underscores(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            _a: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            b__x: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+
+    with assert_num_queries(3):
+        res = gql_client.query(query)
+
+    assert res.errors is None
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "_a": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                    "b__x": [
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_prefetch_aliases_with_different_filters(
     db, gql_client: GraphQLTestClient
 ):

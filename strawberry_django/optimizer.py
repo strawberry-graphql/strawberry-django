@@ -4,6 +4,7 @@ import contextlib
 import contextvars
 import copy
 import dataclasses
+import hashlib
 import itertools
 from collections.abc import Callable
 from typing import (
@@ -108,6 +109,18 @@ _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
 
 _alias_prefix = "_strawberry_alias_"
+
+
+def _alias_attr(key: str) -> str:
+    """Build a stable attribute name scoped to a response key (alias).
+
+    A response key may contain ``__`` or start with ``_``, which combined with
+    ``_alias_prefix`` would form a ``LOOKUP_SEP`` that Django's
+    ``Prefetch.to_attr`` splits into nested lookups. Hashing to a hex digest
+    avoids that while staying deterministic across collection and resolve time.
+    """
+    digest = hashlib.blake2b(key.encode(), digest_size=8).hexdigest()
+    return f"{_alias_prefix}{digest}"
 
 
 @dataclasses.dataclass
@@ -765,7 +778,7 @@ def optimizer_hint_key(info: Info) -> str:
     optimizer hint callable, and `get_hint_value` to read the value back
     inside the resolver.
     """
-    return f"{_alias_prefix}{info.path.key}"
+    return _alias_attr(str(info.path.key))
 
 
 def get_hint_value(
@@ -1540,7 +1553,7 @@ def _get_model_hints(
             for group in groups:
                 alias = group[0].alias
                 key = alias.value if alias else name
-                merged_node_lists.append((group, f"{_alias_prefix}{key}"))
+                merged_node_lists.append((group, _alias_attr(key)))
             continue
 
         first_args = _get_field_arguments(groups[0][0], parent_type, info)
@@ -1557,7 +1570,7 @@ def _get_model_hints(
             # Different args - each alias gets its own to_attr
             for group in groups:
                 alias = group[0].alias
-                to_attr = f"{_alias_prefix}{alias.value}" if alias else None
+                to_attr = _alias_attr(alias.value) if alias else None
                 merged_node_lists.append((group, to_attr))
 
     selections = [
