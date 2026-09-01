@@ -2493,6 +2493,58 @@ def test_query_aliased_dict_annotate_callables_with_different_arguments(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_without_resolver(db):
+    """A resolver-less callable-annotated scalar field must resolve when aliased.
+
+    The optimizer stores each alias' annotation under an alias-scoped name
+    (see `optimizer_hint_key`), so the field lands under `_strawberry_alias_*`
+    rather than its own name. With no resolver, `get_result` must still pick
+    that value up - a scalar field is not a list, so the lookup has to be
+    gated on the field's optimizer store, not only on `is_list`.
+    """
+
+    @strawberry_django.type(Milestone)
+    class MilestoneT:
+        id: int
+        issue_count: int = strawberry_django.field(
+            annotate={"issue_count": lambda info: models.Count("issue")},
+        )
+
+    @strawberry_django.type(Project)
+    class ProjectT:
+        id: int
+        milestones: list[MilestoneT]
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectT] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project)
+    IssueFactory.create(milestone=milestone)
+    IssueFactory.create(milestone=milestone)
+
+    query = """
+      query TestQuery {
+        projects {
+          milestones {
+            foo: issueCount
+            bar: issueCount
+          }
+        }
+      }
+    """
+    result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "projects": [{"milestones": [{"foo": 2, "bar": 2}]}],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_aliased_prefetch_callable_with_different_arguments(
     db, gql_client: GraphQLTestClient
 ):
