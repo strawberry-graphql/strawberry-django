@@ -13,6 +13,7 @@ from django.core.exceptions import (
 from django.db import models, transaction
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
+from strawberry.types import get_object_definition
 from strawberry.types.field import UNRESOLVED
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
@@ -47,6 +48,34 @@ if TYPE_CHECKING:
     from .types import FullCleanOptions
 
 _T = TypeVar("_T", bound="models.Model | list[models.Model]")
+
+
+def _get_interface_implementations(interface: type) -> Iterable[type]:
+    for subclass in interface.__subclasses__():
+        definition = get_object_definition(subclass)
+        if (
+            definition is not None
+            and definition.origin is subclass
+            and definition.is_object_type
+        ):
+            yield subclass
+
+        yield from _get_interface_implementations(subclass)
+
+
+def _get_mutation_types(gql_type: StrawberryType | type) -> Iterable[type]:
+    seen = set()
+    for possible_type in get_possible_types(gql_type):
+        definition = get_object_definition(possible_type)
+        types = (
+            _get_interface_implementations(possible_type)
+            if definition is not None and definition.is_interface
+            else (possible_type,)
+        )
+        for concrete_type in types:
+            if concrete_type not in seen:
+                seen.add(concrete_type)
+                yield concrete_type
 
 
 def _get_validaton_error_message(error: ValidationError):
@@ -138,7 +167,7 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
             return resolved
 
         if self.handle_errors and not self._resolved_return_type:
-            types_ = tuple(get_possible_types(resolved))
+            types_ = tuple(_get_mutation_types(resolved))
             if OperationInfo not in types_:
                 types_ = (*types_, OperationInfo)
 

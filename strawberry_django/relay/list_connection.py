@@ -14,7 +14,7 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self, deprecated
 
-from strawberry_django.pagination import get_total_count
+from strawberry_django.pagination import get_cached_total_count, get_total_count
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import unwrap_type
@@ -60,7 +60,6 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
     nodes: strawberry.Private[NodeIterableType[relay.NodeType] | None] = None
 
     @strawberry.field(description="Total quantity of existing nodes.")
-    @django_resolver
     def total_count(self) -> int | None:
         assert self.nodes is not None
 
@@ -70,7 +69,12 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
             pass
 
         if isinstance(self.nodes, models.QuerySet):
-            return get_total_count(self.nodes)
+            total_count = get_cached_total_count(self.nodes)
+            if total_count is None:
+                # Getting the count requires a query; django_resolver defers
+                # it to a thread when running in an async context.
+                total_count = cast("int", django_resolver(get_total_count)(self.nodes))
+            return total_count
 
         return len(self.nodes) if isinstance(self.nodes, Sized) else None
 

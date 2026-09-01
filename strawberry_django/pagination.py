@@ -315,30 +315,14 @@ def get_total_count(queryset: QuerySet) -> int:
     """
     from strawberry_django.optimizer import is_optimized_by_prefetching
 
+    total_count = get_cached_total_count(queryset)
+    if total_count is not None:
+        return total_count
+
     if is_optimized_by_prefetching(queryset):
-        results = queryset._result_cache  # type: ignore
-
-        if results:
-            # If the queryset has DISTINCT enabled, the _strawberry_total_count
-            # annotation won't be accurate because window functions are evaluated
-            # before DISTINCT in SQL. Fall back to queryset.count() instead.
-            if queryset.query.distinct:
-                queryset = remove_window_pagination(queryset)
-                return queryset.count()
-
-            try:
-                return results[0]._strawberry_total_count
-            except AttributeError:
-                warnings.warn(
-                    (
-                        "Pagination annotations not found, falling back to QuerySet resolution. "
-                        "This might cause n+1 issues..."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
-
-        elif results is not None and _is_non_empty_first_page_window(queryset):
+        if queryset._result_cache == [] and _is_non_empty_first_page_window(  # type: ignore
+            queryset
+        ):
             # An empty first page (no offset, limit >= 1) can only come from an
             # empty partition, so there is nothing to count. This avoids one
             # COUNT query per parent without results in nested connections.
@@ -350,6 +334,47 @@ def get_total_count(queryset: QuerySet) -> int:
         queryset = remove_window_pagination(queryset)
 
     return queryset.count()
+
+
+def get_cached_total_count(queryset: QuerySet) -> int | None:
+    """Get the total count from the prefetched window annotation, without running any query.
+
+    Returns None when the count cannot be determined without hitting the
+    database; callers should then fall back to `get_total_count`, deferring
+    it to a thread when running in an async context.
+    """
+    from strawberry_django.optimizer import is_optimized_by_prefetching
+
+    if not is_optimized_by_prefetching(queryset):
+        return None
+
+    # `_result_cache` is either None or the fully evaluated row list (Django
+    # populates it atomically in `_fetch_all`), so a truthy cache means every
+    # row of the windowed prefetch query is in memory. All rows carry the same
+    # window annotations, so the first row is representative; the
+    # AttributeError fallback below covers rows that lack them.
+    results = queryset._result_cache  # type: ignore
+    if not results:
+        return None
+
+    # If the queryset has DISTINCT enabled, the _strawberry_total_count
+    # annotation won't be accurate because window functions are evaluated
+    # before DISTINCT in SQL. Fall back to queryset.count() instead.
+    if queryset.query.distinct:
+        return None
+
+    try:
+        return results[0]._strawberry_total_count
+    except AttributeError:
+        warnings.warn(
+            (
+                "Pagination annotations not found, falling back to QuerySet resolution. "
+                "This might cause n+1 issues..."
+            ),
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return None
 
 
 def _is_non_empty_first_page_window(queryset: QuerySet) -> bool:
