@@ -2060,6 +2060,63 @@ def test_query_prefetch_aliases_with_same_filters(db, gql_client: GraphQLTestCli
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_partially_matching_filters(
+    db, gql_client: GraphQLTestClient
+):
+    # Three aliases where two share filters: the matching pair collapses onto a
+    # single default-attribute prefetch and only the differing alias needs its
+    # own, so the optimized query count is 3 (results + two prefetches) rather
+    # than 4.
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            a: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            aa: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            b: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 7):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "a": [{"id": to_base64("MilestoneType", milestone_1a.pk)}],
+                    "aa": [{"id": to_base64("MilestoneType", milestone_1a.pk)}],
+                    "b": [{"id": to_base64("MilestoneType", milestone_1b.pk)}],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "a": [{"id": to_base64("MilestoneType", milestone_2a.pk)}],
+                    "aa": [{"id": to_base64("MilestoneType", milestone_2a.pk)}],
+                    "b": [{"id": to_base64("MilestoneType", milestone_2b.pk)}],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_prefetch_aliases_with_ordering(db, gql_client: GraphQLTestClient):
     query = """
       query TestQuery {

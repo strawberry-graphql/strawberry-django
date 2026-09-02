@@ -914,6 +914,41 @@ def _aliases_share_prefetch_target(
     return True
 
 
+def _mergeable_alias_groups(
+    groups: list[list[FieldNode]],
+    object_definition: StrawberryObjectDefinition,
+    schema: Schema,
+    *,
+    parent_type: GraphQLObjectType | GraphQLInterfaceType,
+    info: GraphQLResolveInfo,
+) -> list[list[FieldNode]]:
+    """Return the largest set of aliases that can share one default prefetch.
+
+    Aliases can be read back from a single prefetch (via ``get_hint_value``'s
+    fallthrough) only when they agree on both arguments and prefetch target, so
+    this buckets them by coerced arguments and returns the largest bucket. The
+    rest keep a distinct ``to_attr``. Empty unless at least two aliases match,
+    matching the behaviour of a lone connection or paginated field.
+    """
+    if not _aliases_share_prefetch_target(
+        groups, object_definition, schema, parent_type=parent_type, info=info
+    ):
+        return []
+
+    buckets: list[tuple[Any, list[list[FieldNode]]]] = []
+    for group in groups:
+        args = _get_field_arguments(group[0], parent_type, info)
+        for bucket_args, bucket in buckets:
+            if bucket_args == args:
+                bucket.append(group)
+                break
+        else:
+            buckets.append((args, [group]))
+
+    largest = max(buckets, key=lambda bucket: len(bucket[1]))[1]
+    return largest if len(largest) > 1 else []
+
+
 def _get_field_data(
     selections: list[FieldNode],
     object_definition: StrawberryObjectDefinition,
@@ -1554,27 +1589,24 @@ def _get_model_hints(
             merged_node_lists.append((groups[0], None))
             continue
 
-        # Merging avoids Django's "two prefetches to the same attribute" error,
-        # so it only applies when args and prefetch target match; a per-alias
-        # `to_attr=optimizer_hint_key(info)` keeps aliases separate even when
-        # their arguments are identical, each read back with `get_hint_value`.
-        first_args = _get_field_arguments(groups[0][0], parent_type, info)
-        same_args = all(
-            _get_field_arguments(g[0], parent_type, info) == first_args
-            for g in groups[1:]
-        )
-        if same_args and _aliases_share_prefetch_target(
+        # Collapse the largest set of aliases sharing arguments and target onto
+        # one default-attribute prefetch; give every other alias its own to_attr.
+        default_groups = _mergeable_alias_groups(
             groups, object_definition, schema, parent_type=parent_type, info=info
-        ):
+        )
+        default_ids = {id(group) for group in default_groups}
+        for group in groups:
+            if id(group) in default_ids:
+                continue
+            alias = group[0].alias
+            to_attr = _alias_attr(alias.value) if alias else None
+            merged_node_lists.append((group, to_attr))
+
+        if default_groups:
             merged_node_lists.append((
-                [node for group in groups for node in group],
+                [node for group in default_groups for node in group],
                 None,
             ))
-        else:
-            for group in groups:
-                alias = group[0].alias
-                to_attr = _alias_attr(alias.value) if alias else None
-                merged_node_lists.append((group, to_attr))
 
     selections = [
         (*field_data, to_attr)
