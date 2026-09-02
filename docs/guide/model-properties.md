@@ -11,7 +11,7 @@ Model properties allow you to add computed fields directly to your Django models
 Strawberry Django provides two decorators for adding model properties:
 
 - `@model_property`: Similar to Python's `@property` but with optimization hints
-- `@cached_model_property`: Similar to Django's `@cached_property` but with optimization hints
+- `@model_cached_property`: Similar to Django's `@cached_property` but with optimization hints
 
 Both decorators accept the same optimization parameters as `strawberry_django.field()`, allowing the optimizer to properly prefetch or select related data.
 
@@ -51,17 +51,17 @@ The `only` parameter tells the optimizer to ensure `price` and `quantity` are fe
 
 ### Cached Model Property
 
-For expensive computations that should only be calculated once per instance, use `@cached_model_property`:
+For expensive computations that should only be calculated once per instance, use `@model_cached_property`:
 
 ```python title="models.py"
 from django.db import models
-from strawberry_django.descriptors import cached_model_property
+from strawberry_django.descriptors import model_cached_property
 
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
 
-    @cached_model_property(prefetch_related=["reviews"])
+    @model_cached_property(prefetch_related=["reviews"])
     def average_rating(self) -> float:
         """Calculate average rating from all reviews."""
         reviews = list(self.reviews.all())
@@ -84,7 +84,7 @@ Model properties integrate seamlessly with `strawberry.auto`:
 from decimal import Decimal
 from django.db import models
 from django.db.models import Sum
-from strawberry_django.descriptors import model_property, cached_model_property
+from strawberry_django.descriptors import model_property, model_cached_property
 
 
 class Order(models.Model):
@@ -99,7 +99,7 @@ class Order(models.Model):
         """Calculate total order amount."""
         return self._total or Decimal(0)  # type: ignore
 
-    @cached_model_property(select_related=["customer"])
+    @model_cached_property(select_related=["customer"])
     def customer_name(self) -> str:
         """Get the customer's full name."""
         return f"{self.customer.first_name} {self.customer.last_name}"
@@ -115,14 +115,14 @@ class Order:
     created_at: auto
     status: auto
     total_amount: auto  # Uses model_property optimization hints
-    customer_name: auto  # Uses cached_model_property hints
+    customer_name: auto  # Uses model_cached_property hints
 ```
 
 ## Best Practices
 
 1. **Always provide optimization hints**: If your property accesses model fields or relations, specify them in the decorator parameters.
 
-2. **Use cached_model_property for expensive operations**: If the calculation is expensive and doesn't depend on mutable data, use caching.
+2. **Use model_cached_property for expensive operations**: If the calculation is expensive and doesn't depend on mutable data, use caching.
 
 3. **Keep properties focused**: Complex business logic should be in separate service classes, not in model properties.
 
