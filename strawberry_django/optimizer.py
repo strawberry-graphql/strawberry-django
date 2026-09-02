@@ -987,13 +987,7 @@ def _get_hints_from_field(
             return f"{hint_key}{LOOKUP_SEP}{label}"
 
         annotate = {_scoped_label(k, v): v for k, v in field_store.annotate.items()}
-        if annotate.keys() != field_store.annotate.keys():
-            field_store = field_store.__class__(
-                only=field_store.only,
-                select_related=field_store.select_related,
-                prefetch_related=field_store.prefetch_related,
-                annotate=annotate,
-            )
+        field_store = dataclasses.replace(field_store, annotate=annotate)
 
     # with_prefix also resolves callables, so we only need one or the other
     return (
