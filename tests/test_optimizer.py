@@ -2648,6 +2648,51 @@ def test_query_aliased_dict_annotate_callables_with_different_arguments(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_dict_annotate_callables_single_selection(
+    db, gql_client: GraphQLTestClient
+):
+    """A single, unaliased dict-annotate selection exercises the bare-label path.
+
+    With only one selection the optimizer uses `hint_key=None`, so the dict
+    callables keep their plain labels (`_matching_count`, `_max_matching_name`)
+    instead of alias-scoped ones. At resolve time neither the alias-scoped label
+    nor the alias-scoped attribute exists, so `get_hint_value` falls through to
+    step 3 of its probe order - the bare `default_attr`.
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          issuesSummary(nameContains: "foo")
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="foo2")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "issuesSummary": "2: foo2",
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "issuesSummary": "0: None",
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_aliased_annotate_callable_without_resolver(db):
     """A resolver-less callable-annotated scalar field must resolve when aliased.
 
