@@ -16,6 +16,7 @@ def schema_directive(self) -> object:
     directive_class = self.__class__.__dict__.get(key)
 
     if directive_class is None:
+
         @schema_directive(
             name=self.__class__.__name__,
             locations=self.SCHEMA_DIRECTIVE_LOCATIONS,
