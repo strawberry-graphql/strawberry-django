@@ -821,9 +821,10 @@ def get_hint_value(
 def get_field_arguments(info: Info) -> dict[str, Any]:
     """Resolve the argument values of the current field selection.
 
-    Works both inside optimizer hint callables (during hint collection) and
-    inside resolvers, returning the arguments of the specific selection
-    (i.e. of the alias being processed, if the field is aliased).
+    Returns the coerced arguments (including variables and schema defaults) of
+    the specific selection - i.e. of the alias being processed, if the field is
+    aliased. Meant for use inside optimizer hint callables, where the arguments
+    aren't otherwise available (inside a resolver they already arrive as kwargs).
     """
     raw_info = info._raw_info
     field_node = raw_info.field_nodes[0]

@@ -311,7 +311,7 @@ unique name, three helpers keep the hint and the resolver in sync:
 - `strawberry_django.get_hint_value(...)` reads that value back inside the
   resolver.
 - `strawberry_django.get_field_arguments(info)` resolves the current
-  selection's arguments, in both the hint callable and the resolver.
+  selection's coerced arguments inside the hint callable.
 
 See each helper's docstring for the exact arguments and lookup order.
 

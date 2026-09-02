@@ -14,6 +14,7 @@ from django.db.models import (
     Prefetch,
     QuerySet,
 )
+from django.db.models.constants import LOOKUP_SEP
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from graphql.pyutils import Path
@@ -27,6 +28,7 @@ from strawberry_django.optimizer import (
     OptimizerConfig,
     OptimizerStore,
     get_hint_value,
+    optimizer_hint_key,
 )
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
@@ -2418,6 +2420,56 @@ def test_get_hint_value_raises_without_hint_or_default():
 
     # With a default there is no error, even if the default is None
     assert get_hint_value(source, info, "some_missing_attr", default=None) is None
+
+
+def test_get_hint_value_reads_alias_scoped_label():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    hint_key = optimizer_hint_key(info)
+    source = SimpleNamespace(**{f"{hint_key}{LOOKUP_SEP}my_attr": 42})
+
+    assert get_hint_value(source, info, "my_attr") == 42
+
+
+def test_get_hint_value_reads_alias_scoped_attribute():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    hint_key = optimizer_hint_key(info)
+    source = SimpleNamespace(**{hint_key: 42})
+
+    # Works both with and without a default_attr given
+    assert get_hint_value(source, info) == 42
+    assert get_hint_value(source, info, "my_attr") == 42
+
+
+def test_get_hint_value_falls_back_to_plain_label():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    source = SimpleNamespace(my_attr=42)
+
+    assert get_hint_value(source, info, "my_attr") == 42
+
+
+def test_get_hint_value_probe_order_precedence():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    hint_key = optimizer_hint_key(info)
+    source = SimpleNamespace(**{
+        f"{hint_key}{LOOKUP_SEP}my_attr": "scoped_label",
+        hint_key: "scoped_attr",
+        "my_attr": "plain_label",
+    })
+
+    # 1. alias-scoped label wins over everything
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "scoped_label"
+
+    # 2. alias-scoped attribute wins once the scoped label is gone
+    del source.__dict__[f"{hint_key}{LOOKUP_SEP}my_attr"]
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "scoped_attr"
+
+    # 3. plain label wins once the scoped attribute is gone
+    del source.__dict__[hint_key]
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "plain_label"
+
+    # 4. default is the last resort
+    del source.__dict__["my_attr"]
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "fallback"
 
 
 @pytest.mark.django_db(transaction=True)

@@ -8,4 +8,4 @@ Also add support for aliasing custom fields with `annotate`/`prefetch_related` o
 
 - `optimizer_hint_key(info)`: a unique, deterministic attribute name for the current field selection (based on the alias), stable between the hint callable and the resolver.
 - `get_hint_value(source, info, default_attr=None, *, default=...)`: reads the value produced by an optimizer hint for the current selection.
-- `get_field_arguments(info)`: resolves the argument values of the current field selection (including variables), usable in both hint callables and resolvers.
+- `get_field_arguments(info)`: resolves the coerced argument values (including variables and schema defaults) of the current field selection, for use inside hint callables.
