@@ -13,6 +13,7 @@ from django.db.models import (
     Count,
     Exists,
     ExpressionWrapper,
+    Max,
     OuterRef,
     Prefetch,
     Q,
@@ -32,7 +33,10 @@ from strawberry_django.fields.types import ListInput, NodeInput, NodeInputPartia
 from strawberry_django.mutations import resolvers
 from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
+    get_field_arguments,
+    get_hint_value,
     optimize,
+    optimizer_hint_key,
 )
 from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.permissions import (
@@ -270,6 +274,68 @@ class MilestoneType(relay.Node, Named):
     )
     def my_bugs_count(self, root: Milestone) -> int:
         return root._my_bugs_count  # type: ignore
+
+    @strawberry_django.field(
+        annotate=lambda info: Count(
+            "issue",
+            filter=Q(
+                issue__name__contains=get_field_arguments(info)["nameContains"],
+            ),
+        ),
+    )
+    def issues_count_filtered(
+        self, root: Milestone, info: Info, name_contains: str
+    ) -> int:
+        value = get_hint_value(root, info, "issues_count_filtered", default=None)
+        if value is None:
+            # The optimizer is disabled, compute the value directly
+            value = root.issues.filter(name__contains=name_contains).count()
+        return value
+
+    @strawberry_django.field(
+        annotate={
+            "_matching_count": lambda info: Count(
+                "issue",
+                filter=Q(
+                    issue__name__contains=get_field_arguments(info)["nameContains"],
+                ),
+            ),
+            "_max_matching_name": lambda info: Max(
+                "issue__name",
+                filter=Q(
+                    issue__name__contains=get_field_arguments(info)["nameContains"],
+                ),
+            ),
+        },
+    )
+    def issues_summary(self, root: Milestone, info: Info, name_contains: str) -> str:
+        count = get_hint_value(root, info, "_matching_count", default=None)
+        if count is None:
+            # The optimizer is turned off, compute the values directly
+            issues_qs = root.issues.filter(name__contains=name_contains)
+            count = issues_qs.count()
+            max_name = issues_qs.aggregate(max_name=Max("name"))["max_name"]
+        else:
+            max_name = get_hint_value(root, info, "_max_matching_name")
+        return f"{count}: {max_name}"
+
+    @strawberry_django.field(
+        prefetch_related=lambda info: Prefetch(
+            "issues",
+            queryset=Issue.objects.filter(
+                name__contains=get_field_arguments(info)["nameContains"],
+            ),
+            to_attr=optimizer_hint_key(info),
+        ),
+    )
+    def issues_filtered(
+        self, root: Milestone, info: Info, name_contains: str
+    ) -> list["IssueType"]:
+        value = get_hint_value(root, info, default=None)
+        if value is None:
+            # The optimizer is disabled, compute the value directly
+            value = list(root.issues.filter(name__contains=name_contains))
+        return cast("list[IssueType]", value)
 
     @strawberry_django.field
     async def async_field(self, value: str) -> str:
