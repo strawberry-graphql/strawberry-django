@@ -28,13 +28,11 @@ from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from graphql import (
     FieldNode,
-    GraphQLError,
     GraphQLInterfaceType,
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLWrappingType,
     get_argument_values,
-    print_ast,
 )
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
@@ -749,21 +747,13 @@ def _get_field_arguments(
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
     info: GraphQLResolveInfo,
 ) -> Any:
-    """Return a comparable representation of the node's argument values.
-
-    Coerces the argument values (resolving variables and defaults) so that
-    selections carrying semantically equal arguments compare equal. Falls back
-    to comparing the printed argument ASTs for meta fields (e.g. `__type`)
-    which don't appear in the parent type's field map.
-    """
+    """Return the selection's coerced argument values, for comparison."""
     field_def = parent_type.fields.get(node.name.value)
-    if field_def is not None:
-        with contextlib.suppress(GraphQLError):
-            return get_argument_values(field_def, node, info.variable_values)
+    if field_def is None:
+        # Meta field (e.g. `__typename`) - never reaches a store, dropped later.
+        return None
 
-    return tuple(
-        print_ast(a) for a in sorted(node.arguments or (), key=lambda a: a.name.value)
-    )
+    return get_argument_values(field_def, node, info.variable_values)
 
 
 def optimizer_hint_key(info: Info) -> str:
