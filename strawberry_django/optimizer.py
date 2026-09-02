@@ -971,12 +971,6 @@ def _get_hints_from_field(
         }
 
     if hint_key and field_store.annotate:
-        # The field is selected multiple times via aliases with its callables
-        # resolved once per alias, so each callable annotation gets an
-        # alias-scoped label to avoid clashing with the other aliases:
-        # the single-expression form (labeled with the field's name) becomes
-        # the hint key itself, while custom dict labels get prefixed by it.
-        # Resolvers can read the values back with `get_hint_value`.
         # Static expressions can't depend on the alias arguments, so they keep
         # their shared label and are annotated only once.
         def _scoped_label(label: str, value: AnnotateType) -> str:
@@ -1552,21 +1546,18 @@ def _get_model_hints(
         name = field_nodes[0].name.value
         field_name_groups.setdefault(name, []).append(field_nodes)
 
-    # Merge aliased selections with the same arguments; keep aliases with
-    # different args as separate entries by assigning distinct to_attr values.
-    # list of (field_nodes, to_attr)
+    # Merge aliased selections that share args and prefetch target; keep the
+    # rest as separate entries with distinct to_attr values.
     merged_node_lists: list[tuple[list[FieldNode], str | None]] = []
     for groups in field_name_groups.values():
         if len(groups) == 1:
             merged_node_lists.append((groups[0], None))
             continue
 
-        # Aliases with equal arguments and a shared prefetch target produce the
-        # same result and can share one prefetch/annotation (also avoiding
-        # Django's "two prefetches to the same attribute" error). Otherwise -
-        # differing args, or a per-alias `to_attr=optimizer_hint_key(info)` - each
-        # alias is resolved with its own scoped info and stored under an
-        # alias-scoped name, read back with `get_hint_value`.
+        # Merging avoids Django's "two prefetches to the same attribute" error,
+        # so it only applies when args and prefetch target match; a per-alias
+        # `to_attr=optimizer_hint_key(info)` keeps aliases separate even when
+        # their arguments are identical, each read back with `get_hint_value`.
         first_args = _get_field_arguments(groups[0][0], parent_type, info)
         same_args = all(
             _get_field_arguments(g[0], parent_type, info) == first_args
@@ -1575,13 +1566,11 @@ def _get_model_hints(
         if same_args and _aliases_share_prefetch_target(
             groups, object_definition, schema, parent_type=parent_type, info=info
         ):
-            # Same args and a shared prefetch target - merge into a single entry
             merged_node_lists.append((
                 [node for group in groups for node in group],
                 None,
             ))
         else:
-            # Differing args or per-alias targets - each alias gets its own to_attr
             for group in groups:
                 alias = group[0].alias
                 to_attr = _alias_attr(alias.value) if alias else None
