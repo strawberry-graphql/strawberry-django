@@ -1,10 +1,17 @@
+from importlib.metadata import version
+
 import pytest
+from packaging.version import Version
 from pytest_django import DjangoAssertNumQueries
 from strawberry.relay.utils import to_base64
 
 from .schema import FruitModel, schema
 
 pytestmark = pytest.mark.usefixtures("_fixtures")
+
+# Strawberry 0.322.2 corrected first+before to select from the start of the
+# bounded connection. Keep coverage for the older supported releases as well.
+FIRST_BEFORE_FIXED = Version(version("strawberry-graphql")) >= Version("0.322.2")
 
 
 @pytest.fixture
@@ -705,24 +712,26 @@ def test_query_connection_filtering_first_with_before(query_attr: str):
         fruits_query.format(query_attr),
         variable_values={"first": 1, "before": to_base64("arrayconnection", "3")},
     )
+    index = 0 if FIRST_BEFORE_FIXED else 2
+    name = "Banana" if FIRST_BEFORE_FIXED else "Pineapple"
     assert result.errors is None
     assert result.data == {
         query_attr: {
             "edges": [
                 {
-                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "cursor": to_base64("arrayconnection", str(index)),
                     "node": {
-                        "id": to_base64("Fruit", 3),
+                        "id": to_base64("Fruit", index + 1),
                         "color": "yellow",
-                        "name": "Pineapple",
+                        "name": name,
                     },
                 },
             ],
             "pageInfo": {
                 "hasNextPage": True,
-                "hasPreviousPage": True,
-                "startCursor": to_base64("arrayconnection", "2"),
-                "endCursor": to_base64("arrayconnection", "2"),
+                "hasPreviousPage": not FIRST_BEFORE_FIXED,
+                "startCursor": to_base64("arrayconnection", str(index)),
+                "endCursor": to_base64("arrayconnection", str(index)),
             },
         },
     }
@@ -734,24 +743,26 @@ async def test_query_connection_filtering_first_with_before_async(query_attr: st
         fruits_query.format(query_attr),
         variable_values={"first": 1, "before": to_base64("arrayconnection", "3")},
     )
+    index = 0 if FIRST_BEFORE_FIXED else 2
+    name = "Banana" if FIRST_BEFORE_FIXED else "Pineapple"
     assert result.errors is None
     assert result.data == {
         query_attr: {
             "edges": [
                 {
-                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "cursor": to_base64("arrayconnection", str(index)),
                     "node": {
-                        "id": to_base64("Fruit", 3),
+                        "id": to_base64("Fruit", index + 1),
                         "color": "yellow",
-                        "name": "Pineapple",
+                        "name": name,
                     },
                 },
             ],
             "pageInfo": {
                 "hasNextPage": True,
-                "hasPreviousPage": True,
-                "startCursor": to_base64("arrayconnection", "2"),
-                "endCursor": to_base64("arrayconnection", "2"),
+                "hasPreviousPage": not FIRST_BEFORE_FIXED,
+                "startCursor": to_base64("arrayconnection", str(index)),
+                "endCursor": to_base64("arrayconnection", str(index)),
             },
         },
     }

@@ -1,6 +1,7 @@
 import pathlib
 
 import strawberry
+from graphql import parse
 from pytest_snapshot.plugin import Snapshot
 
 import strawberry_django
@@ -13,9 +14,21 @@ from .schema import IssueInput, IssueType, MilestoneType, ProjectType, schema
 SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 
 
-def test_schema(snapshot: Snapshot):
-    snapshot.snapshot_dir = SNAPSHOTS_DIR
-    snapshot.assert_match(normalize_sdl(str(schema)), "schema.gql")
+def test_schema():
+    # Directive argument types moved into the sorted type map in Strawberry
+    # 0.326.0. Compare definitions without depending on their printed order;
+    # fields, arguments, descriptions and directive applications still match.
+    actual = parse(normalize_sdl(str(schema)), no_location=True)
+    expected = parse(
+        normalize_sdl((SNAPSHOTS_DIR / "schema.gql").read_text()), no_location=True
+    )
+
+    def definition_key(definition):
+        return definition.kind, getattr(getattr(definition, "name", None), "value", "")
+
+    assert sorted(actual.definitions, key=definition_key) == sorted(
+        expected.definitions, key=definition_key
+    )
 
 
 def test_schema_with_inheritance(snapshot: Snapshot):
