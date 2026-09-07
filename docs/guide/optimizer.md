@@ -287,6 +287,122 @@ The following options are accepted for optimizer hints:
   or a callable in the format of `Callable[[Info], BaseExpression]`
   (e.g. `annotate={"total": lambda info: Sum(...)}`)
 
+## Aliased fields with optimization hint callables
+
+A field whose hints are callables can produce argument-dependent optimizations,
+which means the same field can be selected multiple times via
+[aliases](https://graphql.org/learn/queries/#aliases) with different arguments:
+
+```graphql
+query {
+  orderItems {
+    cheap: totalFiltered(maxPrice: 10)
+    expensive: totalFiltered(maxPrice: 1000)
+  }
+}
+```
+
+Each alias resolves the hint callables with its own `info`, scoped to that
+specific selection. Since every annotation and `Prefetch(to_attr=...)` needs a
+unique name, three helpers keep the hint and the resolver in sync:
+
+- `strawberry_django.optimizer_hint_key(info)` names the annotation or
+  `Prefetch(to_attr=...)` inside the hint callable.
+- `strawberry_django.get_hint_value(...)` reads that value back inside the
+  resolver.
+- `strawberry_django.get_field_arguments(info)` resolves the current
+  selection's coerced arguments inside the hint callable.
+
+See each helper's docstring for the exact arguments and lookup order.
+
+For annotations, callable values are automatically stored under the
+alias-scoped name when the field is aliased, so the resolver only needs
+`get_hint_value`:
+
+```python title="types.py"
+@strawberry_django.type(models.Order)
+class Order:
+    @strawberry_django.field(
+        annotate=lambda info: Sum(
+            "items__price",
+            filter=Q(items__price__lte=get_field_arguments(info)["maxPrice"]),
+        ),
+    )
+    def total_filtered(self, root: models.Order, info: Info, max_price: int) -> int:
+        return get_hint_value(root, info, "total_filtered", default=0)
+```
+
+For prefetches, name the `to_attr` with `optimizer_hint_key` and read it back
+the same way:
+
+```python title="types.py"
+@strawberry_django.type(models.Order)
+class Order:
+    @strawberry_django.field(
+        prefetch_related=lambda info: Prefetch(
+            "items",
+            queryset=models.OrderItem.objects.filter(
+                price__lte=get_field_arguments(info)["maxPrice"],
+            ),
+            to_attr=optimizer_hint_key(info),
+        ),
+    )
+    def items_filtered(
+        self, root: models.Order, info: Info, max_price: int
+    ) -> list[OrderItem]:
+        value = get_hint_value(root, info, default=None)
+        if value is None:
+            # The optimizer is turned off, resolve the value directly
+            value = list(root.items.filter(price__lte=max_price))
+        return value
+```
+
+A field can also annotate multiple values and combine them in the resolver.
+Declare the annotations as a dict with custom labels and read each one back
+with `get_hint_value` passing the label as `default_attr` - when the field is
+aliased, callable annotations are stored under an alias-scoped variant of the
+label, and `get_hint_value` checks that variant first:
+
+```python title="types.py"
+@strawberry_django.type(models.Order)
+class Order:
+    @strawberry_django.field(
+        annotate={
+            "_matching_count": lambda info: Count(
+                "items",
+                filter=Q(items__price__lte=get_field_arguments(info)["maxPrice"]),
+            ),
+            "_matching_total": lambda info: Sum(
+                "items__price",
+                filter=Q(items__price__lte=get_field_arguments(info)["maxPrice"]),
+            ),
+        },
+    )
+    def items_summary(self, root: models.Order, info: Info, max_price: int) -> str:
+        count = get_hint_value(root, info, "_matching_count")
+        total = get_hint_value(root, info, "_matching_total")
+        return f"{count} items, {total} total"
+```
+
+> [!NOTE]
+> Static (non-callable) annotate expressions can't depend on the field's
+> arguments, so they keep their shared label and are annotated only once, no
+> matter how many aliases select the field.
+
+> [!NOTE]
+> Aliases of a callable-hint field are collapsed into a single annotation /
+> `Prefetch` when they are called with identical arguments **and** resolve to
+> the same target - a shared annotation label, or a `Prefetch` with a fixed
+> `to_attr` (or a plain relation string). Aliases with different arguments, or
+> whose `to_attr` is derived from `optimizer_hint_key(info)` (which is unique
+> per alias), each get their own annotation / prefetch.
+>
+> In particular, a `prefetch_related` that names its `to_attr` with
+> `optimizer_hint_key` targets a distinct attribute per alias, so every such
+> alias costs one additional query - even when the arguments are identical.
+> If you want identical-argument aliases to share a single prefetch, give the
+> `Prefetch` a fixed `to_attr` instead.
+
 ## Optimization hints on model (ModelProperty)
 
 It is also possible to include type hints directly in the models' `@property`

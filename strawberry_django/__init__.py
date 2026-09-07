@@ -28,6 +28,7 @@ from .fields.types import (
 )
 from .filters import filter_type, process_filters
 from .mutations.mutations import input_mutation, mutation
+from .optimizer import get_field_arguments, get_hint_value, optimizer_hint_key
 from .ordering import Ordering, order, order_type, process_order
 from .resolvers import django_resolver
 from .type import (
@@ -70,6 +71,8 @@ __all__ = [
     "filter_field",
     "filter_type",
     "filters",
+    "get_field_arguments",
+    "get_hint_value",
     "input",
     "input_mutation",
     "interface",
@@ -77,6 +80,7 @@ __all__ = [
     "mutations",
     "node",
     "offset_paginated",
+    "optimizer_hint_key",
     "order",
     "order_field",
     "order_type",

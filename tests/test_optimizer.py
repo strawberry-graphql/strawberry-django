@@ -1,5 +1,6 @@
 import datetime
 import operator
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -13,8 +14,10 @@ from django.db.models import (
     Prefetch,
     QuerySet,
 )
+from django.db.models.constants import LOOKUP_SEP
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
+from graphql.pyutils import Path
 from pytest_mock import MockerFixture
 from strawberry.relay import GlobalID, to_base64
 from strawberry.types import ExecutionResult, Info, get_object_definition
@@ -24,6 +27,8 @@ from strawberry_django.optimizer import (
     DjangoOptimizerExtension,
     OptimizerConfig,
     OptimizerStore,
+    get_hint_value,
+    optimizer_hint_key,
 )
 from tests.projects.schema import IssueType, MilestoneType, ProjectType, StaffType
 
@@ -507,6 +512,74 @@ def test_query_prefetch_with_callable(db, gql_client: GraphQLTestClient):
                     assert_no_errors=False,
                 )
                 assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_callable_with_same_arguments_aliased(
+    db, gql_client: GraphQLTestClient
+):
+    """Same-arg aliases of a shared-target callable prefetch merge into one.
+
+    Otherwise the optimizer emits two ``Prefetch`` objects with the same
+    ``prefetch_to``, which Django rejects.
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          a: myIssues { name }
+          b: myIssues { name }
+        }
+      }
+    """
+
+    user = UserFactory.create()
+    milestone = MilestoneFactory.create()
+    # Issues not assigned to the user must not appear in the results.
+    IssueFactory.create_batch(2, milestone=milestone)
+    expected_issues = []
+    for issue in IssueFactory.create_batch(2, milestone=milestone):
+        Assignee.objects.create(user=user, issue=issue)
+        expected_issues.append({"name": issue.name})
+
+    with gql_client.login(user):
+        if DjangoOptimizerExtension.enabled.get():
+            res = gql_client.query(query)
+            assert res.errors is None
+            assert res.data == {
+                "milestoneList": [
+                    {"a": expected_issues, "b": expected_issues},
+                ],
+            }
+        else:
+            # myIssues requires the optimizer to be turned on
+            res = gql_client.query(query, assert_no_errors=False)
+            assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("gql_client", ["async", "sync"], indirect=True)
+def test_query_mixed_prefetch_annotated_with_same_arguments_aliased(
+    db, gql_client: GraphQLTestClient
+):
+    """Same as above for a field mixing static ``annotate`` + callable prefetch."""
+    query = """
+      query TestQuery {
+        milestoneList {
+          a: mixedPrefetchAnnotated
+          b: mixedPrefetchAnnotated
+        }
+      }
+    """
+
+    MilestoneFactory.create()
+
+    res = gql_client.query(query)
+    assert res.errors is None
+    assert res.data == {
+        "milestoneList": [
+            {"a": "dummy", "b": "dummy"},
+        ],
+    }
 
 
 @pytest.mark.django_db(transaction=True)
@@ -1783,6 +1856,437 @@ def test_query_prefetch_with_aliases_same_field(db, gql_client: GraphQLTestClien
 
 
 @pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_underscores(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            _a: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            b__x: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+
+    with assert_num_queries(3):
+        res = gql_client.query(query)
+
+    assert res.errors is None
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "_a": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                    "b__x": [
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_different_filters(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            a: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            b: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "a": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                    "b": [
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "a": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                    ],
+                    "b": [
+                        {"id": to_base64("MilestoneType", milestone_2b.pk)},
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_alias_and_field_with_different_filters(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            b: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "milestones": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                    "b": [
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "milestones": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                    ],
+                    "b": [
+                        {"id": to_base64("MilestoneType", milestone_2b.pk)},
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_same_filters(db, gql_client: GraphQLTestClient):
+    # Even with two aliases using the same filters, the optimized query count is expected.
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            a: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            aa: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "a": [{"id": to_base64("MilestoneType", milestone_1a.pk)}],
+                    "aa": [{"id": to_base64("MilestoneType", milestone_1a.pk)}],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "a": [
+                        {
+                            "id": to_base64("MilestoneType", milestone_2a.pk),
+                        }
+                    ],
+                    "aa": [{"id": to_base64("MilestoneType", milestone_2a.pk)}],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_partially_matching_filters(
+    db, gql_client: GraphQLTestClient
+):
+    # Three aliases where two share filters: the matching pair collapses onto a
+    # single default-attribute prefetch and only the differing alias needs its
+    # own, so the optimized query count is 3 (results + two prefetches) rather
+    # than 4.
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            a: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            aa: milestones(filters: { name: {contains: "a"}}) {
+              id
+            }
+            b: milestones(filters: { name: {contains: "b"}}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 7):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "a": [{"id": to_base64("MilestoneType", milestone_1a.pk)}],
+                    "aa": [{"id": to_base64("MilestoneType", milestone_1a.pk)}],
+                    "b": [{"id": to_base64("MilestoneType", milestone_1b.pk)}],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "a": [{"id": to_base64("MilestoneType", milestone_2a.pk)}],
+                    "aa": [{"id": to_base64("MilestoneType", milestone_2a.pk)}],
+                    "b": [{"id": to_base64("MilestoneType", milestone_2b.pk)}],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_ordering(db, gql_client: GraphQLTestClient):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            asc: milestones(order: { name: ASC }) {
+              id
+            }
+            desc: milestones(order: { name: DESC}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "asc": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                    "desc": [
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "asc": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                        {"id": to_base64("MilestoneType", milestone_2b.pk)},
+                    ],
+                    "desc": [
+                        {"id": to_base64("MilestoneType", milestone_2b.pk)},
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_filters_and_ordering(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            aAsc: milestones(filters: { name: {contains: "a"}}, order: { name: ASC }) {
+              id
+            }
+            bDesc: milestones(filters: { name: {contains: "b"}}, order: { name: DESC }) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "aAsc": [{"id": to_base64("MilestoneType", milestone_1a.id)}],
+                    "bDesc": [{"id": to_base64("MilestoneType", milestone_1b.id)}],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "aAsc": [
+                        {
+                            "id": to_base64("MilestoneType", milestone_2a.id),
+                        }
+                    ],
+                    "bDesc": [
+                        {
+                            "id": to_base64("MilestoneType", milestone_2b.id),
+                        }
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_mixed_filtered_and_unfiltered_aliases(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        projectsPaginated {
+          results {
+            id
+            milestones {
+              id
+            }
+            a: milestones(filters: { name: { contains: "a" } }) {
+              id
+            }
+          }
+        }
+      }
+    """
+    project_1 = ProjectFactory.create()
+    milestone_1a = MilestoneFactory.create(project=project_1, name="a")
+    milestone_1b = MilestoneFactory.create(project=project_1, name="b")
+    project_2 = ProjectFactory.create()
+    milestone_2a = MilestoneFactory.create(project=project_2, name="a")
+    milestone_2b = MilestoneFactory.create(project=project_2, name="b")
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.pk),
+                    "milestones": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                        {"id": to_base64("MilestoneType", milestone_1b.pk)},
+                    ],
+                    "a": [
+                        {"id": to_base64("MilestoneType", milestone_1a.pk)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.pk),
+                    "milestones": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                        {"id": to_base64("MilestoneType", milestone_2b.pk)},
+                    ],
+                    "a": [
+                        {"id": to_base64("MilestoneType", milestone_2a.pk)},
+                    ],
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_query_prefetch_with_aliases_different_subselections(
     db, gql_client: GraphQLTestClient
 ):
@@ -1817,6 +2321,668 @@ def test_query_prefetch_with_aliases_different_subselections(
                 for m in milestones
             ],
         },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_nested_selections(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($node_id: ID!) {
+        project (id: $node_id) {
+          id
+          a: milestones {
+            id
+            issues {
+              id
+            }
+          }
+          b: milestones {
+            id
+            name
+            issues {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    project = ProjectFactory.create()
+    milestone_1 = MilestoneFactory.create(project=project)
+    milestone_2 = MilestoneFactory.create(project=project)
+    issue_1a = IssueFactory.create(milestone=milestone_1)
+    issue_1b = IssueFactory.create(milestone=milestone_1)
+    issue_2a = IssueFactory.create(milestone=milestone_2)
+    node_id = to_base64("ProjectType", project.pk)
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 7):
+        res = gql_client.query(query, {"node_id": node_id})
+
+    assert res.data == {
+        "project": {
+            "id": node_id,
+            "a": [
+                {
+                    "id": to_base64("MilestoneType", milestone_1.id),
+                    "issues": [
+                        {"id": to_base64("IssueType", issue_1a.id)},
+                        {"id": to_base64("IssueType", issue_1b.id)},
+                    ],
+                },
+                {
+                    "id": to_base64("MilestoneType", milestone_2.id),
+                    "issues": [
+                        {"id": to_base64("IssueType", issue_2a.id)},
+                    ],
+                },
+            ],
+            "b": [
+                {
+                    "id": to_base64("MilestoneType", milestone_1.id),
+                    "name": milestone_1.name,
+                    "issues": [
+                        {
+                            "id": to_base64("IssueType", issue_1a.id),
+                            "name": issue_1a.name,
+                        },
+                        {
+                            "id": to_base64("IssueType", issue_1b.id),
+                            "name": issue_1b.name,
+                        },
+                    ],
+                },
+                {
+                    "id": to_base64("MilestoneType", milestone_2.id),
+                    "name": milestone_2.name,
+                    "issues": [
+                        {
+                            "id": to_base64("IssueType", issue_2a.id),
+                            "name": issue_2a.name,
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_aliases_with_different_pagination(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        projectsPaginated{
+          results {
+            id
+            first: milestones(pagination: {limit: 2}) {
+              id
+            }
+            second: milestones(pagination: {limit: 1}) {
+              id
+            }
+          }
+        }
+      }
+    """
+
+    project_1 = ProjectFactory.create()
+    milestones_1 = MilestoneFactory.create_batch(3, project=project_1)
+    project_2 = ProjectFactory.create()
+    milestones_2 = MilestoneFactory.create_batch(3, project=project_2)
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "projectsPaginated": {
+            "results": [
+                {
+                    "id": to_base64("ProjectType", project_1.id),
+                    "first": [
+                        {"id": to_base64("MilestoneType", milestones_1[0].id)},
+                        {"id": to_base64("MilestoneType", milestones_1[1].id)},
+                    ],
+                    "second": [
+                        {"id": to_base64("MilestoneType", milestones_1[0].id)},
+                    ],
+                },
+                {
+                    "id": to_base64("ProjectType", project_2.id),
+                    "first": [
+                        {"id": to_base64("MilestoneType", milestones_2[0].id)},
+                        {"id": to_base64("MilestoneType", milestones_2[1].id)},
+                    ],
+                    "second": [
+                        {"id": to_base64("MilestoneType", milestones_2[0].id)},
+                    ],
+                },
+            ]
+        },
+    }
+
+
+def test_get_hint_value_raises_without_hint_or_default():
+    info = cast("Info", SimpleNamespace(path=Path(None, "issuesCountFiltered", None)))
+    source = SimpleNamespace()
+
+    with pytest.raises(AttributeError) as exc_info:
+        get_hint_value(source, info, "some_missing_attr")
+
+    assert "'issuesCountFiltered'" in str(exc_info.value)
+    assert "DjangoOptimizerExtension" in str(exc_info.value)
+
+    # With a default there is no error, even if the default is None
+    assert get_hint_value(source, info, "some_missing_attr", default=None) is None
+
+
+def test_get_hint_value_reads_alias_scoped_label():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    hint_key = optimizer_hint_key(info)
+    source = SimpleNamespace(**{f"{hint_key}{LOOKUP_SEP}my_attr": 42})
+
+    assert get_hint_value(source, info, "my_attr") == 42
+
+
+def test_get_hint_value_reads_alias_scoped_attribute():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    hint_key = optimizer_hint_key(info)
+    source = SimpleNamespace(**{hint_key: 42})
+
+    # Works both with and without a default_attr given
+    assert get_hint_value(source, info) == 42
+    assert get_hint_value(source, info, "my_attr") == 42
+
+
+def test_get_hint_value_falls_back_to_plain_label():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    source = SimpleNamespace(my_attr=42)
+
+    assert get_hint_value(source, info, "my_attr") == 42
+
+
+def test_get_hint_value_probe_order_precedence():
+    info = cast("Info", SimpleNamespace(path=Path(None, "foo", None)))
+    hint_key = optimizer_hint_key(info)
+    source = SimpleNamespace(**{
+        f"{hint_key}{LOOKUP_SEP}my_attr": "scoped_label",
+        hint_key: "scoped_attr",
+        "my_attr": "plain_label",
+    })
+
+    # 1. alias-scoped label wins over everything
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "scoped_label"
+
+    # 2. alias-scoped attribute wins once the scoped label is gone
+    del source.__dict__[f"{hint_key}{LOOKUP_SEP}my_attr"]
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "scoped_attr"
+
+    # 3. plain label wins once the scoped attribute is gone
+    del source.__dict__[hint_key]
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "plain_label"
+
+    # 4. default is the last resort
+    del source.__dict__["my_attr"]
+    assert get_hint_value(source, info, "my_attr", default="fallback") == "fallback"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          foo: issuesCountFiltered(nameContains: "foo")
+          bar: issuesCountFiltered(nameContains: "bar")
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="foo2")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "foo": 2,
+                "bar": 1,
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "foo": 0,
+                "bar": 1,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_with_same_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          a: issuesCountFiltered(nameContains: "foo")
+          b: issuesCountFiltered(nameContains: "foo")
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+
+    optimized = DjangoOptimizerExtension.enabled.get()
+    with assert_num_queries(1 if optimized else 3) as ctx:
+        res = gql_client.query(query)
+
+    if optimized:
+        # The two aliases coerce to identical arguments, so the callable hint
+        # resolves to the same value and is annotated only once under its plain
+        # (field-name) label - no alias-scoped duplicate annotation.
+        sql = ctx.captured_queries[0]["sql"]
+        assert sql.count("_strawberry_alias_") == 0
+        assert sql.count("FILTER") == 1
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "a": 1,
+                "b": 1,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_dict_annotate_fixed_attr_resolver_same_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    """A dict-annotate field read via a fixed attribute survives aliasing.
+
+    ``myBugsCount`` reads ``root._my_bugs_count`` (not ``get_hint_value``). With
+    identical arguments the aliases merge, keeping the plain label, so the fixed
+    attribute stays in place.
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          a: myBugsCount
+          b: myBugsCount
+        }
+      }
+    """
+
+    user = UserFactory.create()
+    milestone = MilestoneFactory.create()
+    IssueFactory.create_batch(2, milestone=milestone, kind=Issue.Kind.FEATURE)
+    for issue in IssueFactory.create_batch(3, milestone=milestone, kind=Issue.Kind.BUG):
+        Assignee.objects.create(user=user, issue=issue)
+
+    with gql_client.login(user):
+        if DjangoOptimizerExtension.enabled.get():
+            res = gql_client.query(query)
+            assert res.data == {
+                "milestoneList": [
+                    {"id": to_base64("MilestoneType", milestone.pk), "a": 3, "b": 3},
+                ],
+            }
+        else:
+            # myBugsCount requires the optimizer to be turned on
+            res = gql_client.query(query, assert_no_errors=False)
+            assert res.errors
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_annotate_callable_alias_and_field_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          issuesCountFiltered(nameContains: "foo")
+          bar: issuesCountFiltered(nameContains: "bar")
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+    IssueFactory.create(milestone=milestone, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "issuesCountFiltered": 1,
+                "bar": 2,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_with_variables(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery ($fooName: String!, $barName: String!) {
+        milestoneList {
+          id
+          foo: issuesCountFiltered(nameContains: $fooName)
+          bar: issuesCountFiltered(nameContains: $barName)
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+    IssueFactory.create(milestone=milestone, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 3):
+        res = gql_client.query(query, {"fooName": "foo", "barName": "bar"})
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "foo": 1,
+                "bar": 2,
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_dict_annotate_callables_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          foo: issuesSummary(nameContains: "foo")
+          bar: issuesSummary(nameContains: "bar")
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="foo2")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 9):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "foo": "2: foo2",
+                "bar": "1: bar1",
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "foo": "0: None",
+                "bar": "1: bar2",
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_dict_annotate_callables_single_selection(
+    db, gql_client: GraphQLTestClient
+):
+    """A single, unaliased dict-annotate selection exercises the bare-label path.
+
+    With only one selection the optimizer uses `hint_key=None`, so the dict
+    callables keep their plain labels (`_matching_count`, `_max_matching_name`)
+    instead of alias-scoped ones. At resolve time neither the alias-scoped label
+    nor the alias-scoped attribute exists, so `get_hint_value` falls through to
+    step 3 of its probe order - the bare `default_attr`.
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          issuesSummary(nameContains: "foo")
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="foo2")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="bar2")
+
+    with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "issuesSummary": "2: foo2",
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "issuesSummary": "0: None",
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_annotate_callable_without_resolver(db):
+    """A resolver-less callable-annotated scalar field must resolve when aliased.
+
+    The optimizer stores each alias' annotation under an alias-scoped name
+    (see `optimizer_hint_key`), so the field lands under `_strawberry_alias_*`
+    rather than its own name. With no resolver, `get_result` must still pick
+    that value up - a scalar field is not a list, so the lookup has to be
+    gated on the field's optimizer store, not only on `is_list`.
+    """
+
+    @strawberry_django.type(Milestone)
+    class MilestoneT:
+        id: int
+        issue_count: int = strawberry_django.field(
+            annotate={"issue_count": lambda info: models.Count("issue")},
+        )
+
+    @strawberry_django.type(Project)
+    class ProjectT:
+        id: int
+        milestones: list[MilestoneT]
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectT] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    project = ProjectFactory.create()
+    milestone = MilestoneFactory.create(project=project)
+    IssueFactory.create(milestone=milestone)
+    IssueFactory.create(milestone=milestone)
+
+    query = """
+      query TestQuery {
+        projects {
+          milestones {
+            foo: issueCount
+            bar: issueCount
+          }
+        }
+      }
+    """
+    result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "projects": [{"milestones": [{"foo": 2, "bar": 2}]}],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_prefetch_callable_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          foo: issuesFiltered(nameContains: "foo") {
+            name
+          }
+          bar: issuesFiltered(nameContains: "bar") {
+            name
+          }
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="foo2")
+
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "foo": [{"name": "foo1"}],
+                "bar": [{"name": "bar1"}],
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "foo": [{"name": "foo2"}],
+                "bar": [],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_aliased_prefetch_callable_with_same_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    """Same-arg aliases of a per-response-key ``to_attr`` prefetch stay split.
+
+    ``issuesFiltered`` uses ``to_attr=optimizer_hint_key(info)``, so each alias
+    targets a distinct attribute; merging would leave the others to fall back to
+    a per-object query. Asserted via a flat query count (no n+1).
+    """
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          a: issuesFiltered(nameContains: "foo") {
+            name
+          }
+          b: issuesFiltered(nameContains: "foo") {
+            name
+          }
+        }
+      }
+    """
+
+    milestone_1 = MilestoneFactory.create()
+    milestone_2 = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone_1, name="foo1")
+    IssueFactory.create(milestone=milestone_1, name="bar1")
+    IssueFactory.create(milestone=milestone_2, name="foo2")
+
+    # With the optimizer: one query for the milestones plus one prefetch per
+    # response key (flat regardless of the number of milestones). Without it:
+    # one query per resolver call (2 milestones x 2 aliases).
+    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone_1.pk),
+                "a": [{"name": "foo1"}],
+                "b": [{"name": "foo1"}],
+            },
+            {
+                "id": to_base64("MilestoneType", milestone_2.pk),
+                "a": [{"name": "foo2"}],
+                "b": [{"name": "foo2"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_query_prefetch_callable_alias_and_field_with_different_arguments(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+      query TestQuery {
+        milestoneList {
+          id
+          issuesFiltered(nameContains: "foo") {
+            name
+          }
+          bar: issuesFiltered(nameContains: "bar") {
+            name
+          }
+        }
+      }
+    """
+
+    milestone = MilestoneFactory.create()
+    IssueFactory.create(milestone=milestone, name="foo1")
+    IssueFactory.create(milestone=milestone, name="bar1")
+
+    # 3 queries in both cases: with the optimizer, one for the milestones and
+    # one prefetch per response key; without it, one query per resolver call.
+    with assert_num_queries(3):
+        res = gql_client.query(query)
+
+    assert res.data == {
+        "milestoneList": [
+            {
+                "id": to_base64("MilestoneType", milestone.pk),
+                "issuesFiltered": [{"name": "foo1"}],
+                "bar": [{"name": "bar1"}],
+            },
+        ],
     }
 
 

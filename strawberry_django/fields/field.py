@@ -49,7 +49,11 @@ from strawberry_django.arguments import argument
 from strawberry_django.descriptors import ModelProperty
 from strawberry_django.fields.base import StrawberryDjangoFieldBase
 from strawberry_django.filters import FILTERS_ARG, StrawberryDjangoFieldFilters
-from strawberry_django.optimizer import OptimizerStore, is_optimized_by_prefetching
+from strawberry_django.optimizer import (
+    OptimizerStore,
+    get_hint_value,
+    is_optimized_by_prefetching,
+)
 from strawberry_django.ordering import (
     ORDER_ARG,
     ORDERING_ARG,
@@ -94,6 +98,8 @@ if TYPE_CHECKING:
 
 
 _T = TypeVar("_T")
+
+_sentinel = object()
 
 
 class StrawberryDjangoField(
@@ -233,6 +239,12 @@ class StrawberryDjangoField(
             # sync_to_async context if the value is already cached, since it will not
             # hit the db anymore
             attname = self.django_name or self.python_name
+
+            if (self.is_list or self.store) and info is not None:
+                value = get_hint_value(source, info, default=_sentinel)
+                if value is not _sentinel:
+                    return value
+
             attr = getattr(source.__class__, attname, None)
 
             def get_cached_result():
