@@ -81,7 +81,7 @@ jobs:
           if [ "${{ matrix.gql-core }}" = "3.2" ]; then
             uv pip install "graphql-core>=3.2.0,<3.3.0"
           else
-            uv pip install "graphql-core==3.3.0a12"
+            uv pip install "graphql-core==3.3.0rc0"
           fi
       - name: Test with pytest
         run: uv run --no-sync pytest -n auto --showlocals -vvv --cov-report=xml

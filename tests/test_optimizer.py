@@ -293,11 +293,14 @@ def test_query_forward_with_interfaces(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
+@pytest.mark.parametrize("include_priority", [True, False])
+def test_query_forward_with_fragments(
+    db, gql_client: GraphQLTestClient, include_priority: bool
+):
     query = """
       fragment issueFrag on IssueType {
           nameWithKind
-          nameWithPriority
+          nameWithPriority @include(if: $includePriority)
       }
 
       fragment milestoneFrag on MilestoneType {
@@ -307,7 +310,7 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
         }
       }
 
-      query TestQuery {
+      query TestQuery($includePriority: Boolean!) {
         issueConn {
           totalCount
           edges {
@@ -351,8 +354,12 @@ def test_query_forward_with_fragments(db, gql_client: GraphQLTestClient):
                     },
                 )
 
+    if not include_priority:
+        for issue in expected:
+            del issue["nameWithPriority"]
+
     with assert_num_queries(1 if DjangoOptimizerExtension.enabled.get() else 56):
-        res = gql_client.query(query)
+        res = gql_client.query(query, {"includePriority": include_priority})
 
     assert res.data == {
         "issueConn": {

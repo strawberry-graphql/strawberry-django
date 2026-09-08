@@ -92,7 +92,7 @@ class Query:
         return cast("list[ProjectType]", Project.objects.all().order_by("-pk"))
 
 
-schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
+schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
 
 
 @pytest.fixture
@@ -1555,7 +1555,7 @@ def test_connection_distinct_with_m2m_filters():
         fruits: DjangoCursorConnection[FruitGQL] = strawberry_django.connection()
 
     fruit_schema = strawberry.Schema(
-        query=FruitQuery, extensions=[DjangoOptimizerExtension()]
+        query=FruitQuery, extensions=[DjangoOptimizerExtension]
     )
 
     ft1 = models.FruitType.objects.create(name="tropical")
@@ -1628,7 +1628,7 @@ def test_connection_distinct_with_pagination():
         fruits: DjangoCursorConnection[FruitGQL] = strawberry_django.connection()
 
     fruit_schema = strawberry.Schema(
-        query=FruitQuery, extensions=[DjangoOptimizerExtension()]
+        query=FruitQuery, extensions=[DjangoOptimizerExtension]
     )
 
     ft1 = models.FruitType.objects.create(name="tropical")

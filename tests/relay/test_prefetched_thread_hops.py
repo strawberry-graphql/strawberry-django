@@ -47,7 +47,7 @@ class ListConnectionQuery:
 
 
 list_connection_schema = strawberry.Schema(
-    query=ListConnectionQuery, extensions=[DjangoOptimizerExtension()]
+    query=ListConnectionQuery, extensions=[DjangoOptimizerExtension]
 )
 
 
@@ -122,7 +122,7 @@ class DbTouchingQuery:
 
 
 db_touching_schema = strawberry.Schema(
-    query=DbTouchingQuery, extensions=[DjangoOptimizerExtension()]
+    query=DbTouchingQuery, extensions=[DjangoOptimizerExtension]
 )
 
 
