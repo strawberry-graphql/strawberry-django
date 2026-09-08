@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+0.89.0 - 2026-09-08
+-------------------
+
+Require Strawberry GraphQL 0.322.2 or newer, which fixes Relay pagination when combining `first` with `before`. Update compatibility tests for the corrected pagination behavior and make schema comparisons independent of top-level definition order.
+
+Update GraphQL-core 3.3 compatibility for the 3.3.0rc0 execution API, preserving resolve-info context and adapting fragment and variable values used by the query optimizer.
+
+This release was contributed by [@patrick91](https://github.com/patrick91) in [#955](https://github.com/strawberry-graphql/strawberry-django/pull/955)
+
+Additional contributors: [@pre-commit-ci[bot]](https://github.com/pre-commit-ci[bot])
+
 0.88.1 - 2026-09-07
 -------------------
 
