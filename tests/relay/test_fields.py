@@ -710,19 +710,19 @@ def test_query_connection_filtering_first_with_before(query_attr: str):
         query_attr: {
             "edges": [
                 {
-                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "cursor": to_base64("arrayconnection", "0"),
                     "node": {
-                        "id": to_base64("Fruit", 3),
+                        "id": to_base64("Fruit", 1),
                         "color": "yellow",
-                        "name": "Pineapple",
+                        "name": "Banana",
                     },
                 },
             ],
             "pageInfo": {
                 "hasNextPage": True,
-                "hasPreviousPage": True,
-                "startCursor": to_base64("arrayconnection", "2"),
-                "endCursor": to_base64("arrayconnection", "2"),
+                "hasPreviousPage": False,
+                "startCursor": to_base64("arrayconnection", "0"),
+                "endCursor": to_base64("arrayconnection", "0"),
             },
         },
     }
@@ -739,19 +739,19 @@ async def test_query_connection_filtering_first_with_before_async(query_attr: st
         query_attr: {
             "edges": [
                 {
-                    "cursor": "YXJyYXljb25uZWN0aW9uOjI=",
+                    "cursor": to_base64("arrayconnection", "0"),
                     "node": {
-                        "id": to_base64("Fruit", 3),
+                        "id": to_base64("Fruit", 1),
                         "color": "yellow",
-                        "name": "Pineapple",
+                        "name": "Banana",
                     },
                 },
             ],
             "pageInfo": {
                 "hasNextPage": True,
-                "hasPreviousPage": True,
-                "startCursor": to_base64("arrayconnection", "2"),
-                "endCursor": to_base64("arrayconnection", "2"),
+                "hasPreviousPage": False,
+                "startCursor": to_base64("arrayconnection", "0"),
+                "endCursor": to_base64("arrayconnection", "0"),
             },
         },
     }

@@ -20,7 +20,7 @@ def test_validation_cache_extension(mock_validate):
         def ping(self) -> str:
             return "pong"
 
-    schema = strawberry.Schema(query=Query, extensions=[DjangoValidationCache()])
+    schema = strawberry.Schema(query=Query, extensions=[DjangoValidationCache])
 
     query = "query { hello }"
 

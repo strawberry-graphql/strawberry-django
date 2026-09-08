@@ -1364,7 +1364,7 @@ def test_offset_paginated_runs_perms_optimizer_and_type_hook_once(mocker):
     perms_spy = mocker.spy(field_mod, "filter_with_perms")
     optimize_spy = mocker.spy(DjangoOptimizerExtension, "optimize")
 
-    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension()])
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
     models.Fruit.objects.create(name="Apple")
 
     res = schema.execute_sync(

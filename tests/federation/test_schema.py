@@ -682,7 +682,7 @@ def test_entities_resolver_with_optimizer():
     schema = FederationSchema(
         query=Query,
         types=[FruitType],
-        extensions=[DjangoOptimizerExtension()],
+        extensions=[DjangoOptimizerExtension],
     )
 
     fruit = models.Fruit.objects.create(name="optimized")
@@ -732,7 +732,7 @@ def test_entities_resolver_with_optimizer_and_fk():
     schema = FederationSchema(
         query=Query,
         types=[FruitType, ColorType],
-        extensions=[DjangoOptimizerExtension()],
+        extensions=[DjangoOptimizerExtension],
     )
 
     color = models.Color.objects.create(name="yellow")

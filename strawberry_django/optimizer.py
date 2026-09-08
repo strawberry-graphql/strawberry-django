@@ -31,7 +31,6 @@ from graphql import (
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLWrappingType,
-    get_argument_values,
 )
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
@@ -53,7 +52,7 @@ from strawberry_django.relay.list_connection import DjangoListConnection
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
-from .utils.gql_compat import get_sub_field_selections
+from .utils.gql_compat import get_field_arguments, get_sub_field_selections
 from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
@@ -620,10 +619,10 @@ def _optimize_prefetch_queryset(
         field=field,
         source=None,
         info=field_info,
-        kwargs=get_argument_values(
+        kwargs=get_field_arguments(
+            info,
             parent_type.fields[field_name],
             field_node,
-            info.variable_values,
         ),
         config=strawberry_schema.config,
         scalar_registry=strawberry_schema.schema_converter.scalar_registry,
@@ -735,19 +734,12 @@ def _generate_selection_resolve_info(
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ):
     field_node = field_nodes[0]
-    return GraphQLResolveInfo(
+    return info._replace(
         field_name=field_node.name.value,
         field_nodes=field_nodes,
         return_type=return_type,
         parent_type=cast("GraphQLObjectType", parent_type),
         path=info.path.add_key(0).add_key(field_node.name.value, parent_type.name),
-        schema=info.schema,
-        fragments=info.fragments,
-        root_value=info.root_value,
-        operation=info.operation,
-        variable_values=info.variable_values,
-        context=info.context,
-        is_awaitable=info.is_awaitable,
     )
 
 

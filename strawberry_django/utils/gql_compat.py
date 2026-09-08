@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from graphql import (
     FieldNode,
+    GraphQLField,
     GraphQLInterfaceType,
     GraphQLObjectType,
+    get_argument_values,
 )
 from graphql.version import VersionInfo, version_info
 
@@ -16,6 +18,24 @@ if TYPE_CHECKING:
 
 IS_GQL_33 = version_info >= VersionInfo.from_str("3.3.0a0")
 IS_GQL_32 = not IS_GQL_33
+
+
+def _get_variable_values(info: GraphQLResolveInfo) -> Any:
+    if IS_GQL_32:
+        return info.variable_values
+
+    from graphql.execution.values import VariableValues  # type: ignore
+
+    # Strawberry exposes the coerced variables as a dict on resolve info.
+    return VariableValues(sources={}, coerced=info.variable_values)
+
+
+def get_field_arguments(
+    info: GraphQLResolveInfo,
+    field: GraphQLField,
+    node: FieldNode,
+) -> dict[str, Any]:
+    return get_argument_values(field, node, _get_variable_values(info))
 
 
 def get_sub_field_selections(
@@ -51,6 +71,7 @@ def _get_selections_gql33(
 ) -> dict[str, list[FieldNode]]:
     from graphql.execution.collect_fields import (
         FieldDetails,  # type: ignore
+        FragmentDetails,  # type: ignore
         collect_subfields,  # type: ignore
     )
 
@@ -60,8 +81,8 @@ def _get_selections_gql33(
 
     collected = collect_subfields(
         info.schema,
-        info.fragments,
-        info.variable_values,
+        {name: FragmentDetails(fragment) for name, fragment in info.fragments.items()},
+        _get_variable_values(info),
         info.operation,
         cast("GraphQLObjectType", parent_type),
         field_group,

@@ -16,6 +16,7 @@ from strawberry.types.base import WithStrawberryObjectDefinition
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.settings import StrawberryDjangoSettings
+from strawberry_django.utils import IS_GQL_32
 
 from . import models, utils
 
@@ -134,9 +135,11 @@ async def test_required_pk_single(query, users):
     assert bool(result.errors)
     assert len(result.errors) == 1
     assert isinstance(result.errors[0], GraphQLError)
-    assert (
-        result.errors[0].message == "Field 'user' argument 'pk' of type 'ID!' is "
-        "required, but it was not provided."
+    argument = (
+        "Field 'user' argument 'pk'" if IS_GQL_32 else "Argument 'Query.user(pk:)'"
+    )
+    assert result.errors[0].message == (
+        f"{argument} of type 'ID!' is required, but it was not provided."
     )
 
 
@@ -155,9 +158,11 @@ async def test_required_id_as_pk_single(query_id_as_pk, users):
     assert bool(result.errors)
     assert len(result.errors) == 1
     assert isinstance(result.errors[0], GraphQLError)
-    assert (
-        result.errors[0].message == "Field 'user' argument 'id' of type 'ID!' is "
-        "required, but it was not provided."
+    argument = (
+        "Field 'user' argument 'id'" if IS_GQL_32 else "Argument 'Query.user(id:)'"
+    )
+    assert result.errors[0].message == (
+        f"{argument} of type 'ID!' is required, but it was not provided."
     )
 
 
