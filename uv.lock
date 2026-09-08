@@ -156,14 +156,14 @@ toml = [
 
 [[package]]
 name = "cross-web"
-version = "0.4.0"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/93/4f/bdb62e969649ee76d4741ef8eee34384ec2bc21cc66eb7fd244e6ad62be8/cross_web-0.4.0.tar.gz", hash = "sha256:4ae65619ddfcd06d6803432c0366342d7e8aeba10194b4e144d73a662e75370c", size = 157111, upload-time = "2025-12-25T20:45:21.989Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4a/a0/bdb8370215987cc5bde497cb8b976b17ab14841566ecef2aab6ae3e6c7b0/cross_web-0.7.0.tar.gz", hash = "sha256:15fbc8b9a824a055db8127fd6e43e0773074f620fdecb6b2b587d3d0a2bdd459", size = 332407, upload-time = "2026-05-19T14:18:48.849Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/d6/6c6a036655e5091b26b9f350dcf43821895325aa4727396b14c67679a957/cross_web-0.4.0-py3-none-any.whl", hash = "sha256:0c675bd26e91428cab31e3e927929b42da94aa96da92974e57c78f9a732d0e9b", size = 14200, upload-time = "2025-12-25T20:45:23.075Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/4a/78b52ec2edcbd9b123638f4e0421fd8699ebe653ebf63ac5f82abd2665bc/cross_web-0.7.0-py3-none-any.whl", hash = "sha256:ddea9be3c68b48eaf16561847a5831a559786949c544b3701432e00a4e8d19d9", size = 25207, upload-time = "2026-05-19T14:18:47.614Z" },
 ]
 
 [[package]]
@@ -174,9 +174,9 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 dependencies = [
-    { name = "asgiref" },
-    { name = "sqlparse" },
-    { name = "tzdata", marker = "sys_platform == 'win32'" },
+    { name = "asgiref", marker = "python_full_version < '3.12'" },
+    { name = "sqlparse", marker = "python_full_version < '3.12'" },
+    { name = "tzdata", marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/eb/1c/188ce85ee380f714b704283013434976df8d3a2df8e735221a02605b6794/django-5.2.9.tar.gz", hash = "sha256:16b5ccfc5e8c27e6c0561af551d2ea32852d7352c67d452ae3e76b4f6b2ca495", size = 10848762, upload-time = "2025-12-02T14:01:08.418Z" }
 wheels = [
@@ -191,9 +191,9 @@ resolution-markers = [
     "python_full_version >= '3.12'",
 ]
 dependencies = [
-    { name = "asgiref" },
-    { name = "sqlparse" },
-    { name = "tzdata", marker = "sys_platform == 'win32'" },
+    { name = "asgiref", marker = "python_full_version >= '3.12'" },
+    { name = "sqlparse", marker = "python_full_version >= '3.12'" },
+    { name = "tzdata", marker = "python_full_version >= '3.12' and sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/15/75/19762bfc4ea556c303d9af8e36f0cd910ab17dff6c8774644314427a2120/django-6.0.tar.gz", hash = "sha256:7b0c1f50c0759bbe6331c6a39c89ae022a84672674aeda908784617ef47d8e26", size = 10932418, upload-time = "2025-12-03T16:26:21.878Z" }
 wheels = [
@@ -301,7 +301,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -732,7 +732,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.310.1"
+version = "0.322.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cross-web" },
@@ -741,9 +741,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/65/8fc31347cd1a2809ea72ec4c354fc6996c79f64f0cd84df9707117045d2e/strawberry_graphql-0.310.1.tar.gz", hash = "sha256:bd01edc3016d8caea543dc8a1d2394d5257a87a36e9fbe8c3aedeeda7c2c8ec1", size = 211966, upload-time = "2026-03-08T14:00:46.91Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/8e/268b99664efc125ebe7a7ee0bcdb479a5a931d3a8cf6c24aecfb434aca5c/strawberry_graphql-0.322.2.tar.gz", hash = "sha256:d0040b690777b0e8f375341794576ccb964fcaf90fdecdc3ca5e873bea554841", size = 233734, upload-time = "2026-07-20T20:47:01.509Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/f7/90f885565fb3fbc44c54bda17dd4c36a5c6d9b84ecfa7a6d49d30084cab3/strawberry_graphql-0.310.1-py3-none-any.whl", hash = "sha256:d6da1f16cab2b9cb4a9d5e0c196a33f98f76157d559e5afbb48e81348db163d0", size = 309316, upload-time = "2026-03-08T14:00:49.099Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/8c/548da181af07af86f4c61c2556de1254700f8101a13019e4fd2f8b8ce8ff/strawberry_graphql-0.322.2-py3-none-any.whl", hash = "sha256:37047d2f801b4b0d22465d31d3cb4ed48a0592bca5941aeeb3adba995bd668f0", size = 337228, upload-time = "2026-07-20T20:46:59.296Z" },
 ]
 
 [[package]]
@@ -801,7 +801,7 @@ requires-dist = [
     { name = "django-choices-field", marker = "extra == 'enum'", specifier = ">=2.2.2" },
     { name = "django-debug-toolbar", marker = "extra == 'debug-toolbar'", specifier = ">=6.0.0" },
     { name = "django-polymorphic", marker = "extra == 'polymorphic'", specifier = ">=4.0.0" },
-    { name = "strawberry-graphql", specifier = ">=0.310.1" },
+    { name = "strawberry-graphql", specifier = ">=0.322.2" },
 ]
 provides-extras = ["debug-toolbar", "enum", "polymorphic"]
 

@@ -15,9 +15,8 @@ SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 
 
 def test_schema():
-    # Directive argument types moved into the sorted type map in Strawberry
-    # 0.326.0. Compare definitions without depending on their printed order;
-    # fields, arguments, descriptions and directive applications still match.
+    # Ignore top-level definition order while preserving checks for fields,
+    # arguments, descriptions, and directive applications.
     actual = parse(normalize_sdl(str(schema)), no_location=True)
     expected = parse(
         normalize_sdl((SNAPSHOTS_DIR / "schema.gql").read_text()), no_location=True
