@@ -1,4 +1,6 @@
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from pytest_django import DjangoAssertNumQueries
 from strawberry.relay.utils import to_base64
 
@@ -1177,3 +1179,35 @@ def test_query_connection_total_count_sql_queries(
     assert result.data == {
         query_attr: {"totalCount": 5},
     }
+
+
+def test_nullable_connection_does_not_fetch_whole_table():
+    # Regression test: a nullable connection (e.g. wrapped in `StrawberryOptional`
+    # by a permission extension) used to fetch the entire table before the
+    # connection sliced the results, because the return type was not unwrapped
+    # and the queryset was evaluated eagerly instead of being deferred with a
+    # LIMIT applied by the connection.
+    with CaptureQueriesContext(connection) as ctx:
+        result = schema.execute_sync(
+            """
+            query {
+                fruitsOptional (first: 2) {
+                    edges {
+                        node { id name }
+                    }
+                }
+            }
+            """,
+        )
+
+    assert result.errors is None
+    assert result.data is not None
+    edges = result.data["fruitsOptional"]["edges"]
+    assert len(edges) == 2
+
+    # The query that fetches the fruit rows must use a LIMIT so it doesn't
+    # pull the entire table into memory.
+    fetch_queries = [
+        q["sql"] for q in ctx.captured_queries if "fruit" in q["sql"].lower()
+    ]
+    assert any("LIMIT 3" in sql for sql in fetch_queries), fetch_queries
