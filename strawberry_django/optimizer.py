@@ -597,6 +597,7 @@ def _optimize_prefetch_queryset(
         DjangoCursorConnection,
         apply_cursor_pagination,
     )
+    from strawberry_django.relay.utils import resolve_offset_to_after
 
     if (
         not config
@@ -665,12 +666,17 @@ def _optimize_prefetch_queryset(
                 field_ = unwrap_type(field_)
                 edge_class = cast("Edge", field_)
 
+                after = resolve_offset_to_after(
+                    field_kwargs.get("offset"),
+                    field_kwargs.get("after"),
+                    prefix=edge_class.CURSOR_PREFIX,
+                )
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
                     first=field_kwargs.get("first"),
                     last=field_kwargs.get("last"),
                     before=field_kwargs.get("before"),
-                    after=field_kwargs.get("after"),
+                    after=after,
                     max_results=connection_extension.max_results,
                     prefix=edge_class.CURSOR_PREFIX,
                 )
@@ -694,6 +700,7 @@ def _optimize_prefetch_queryset(
                     info=Info(_raw_info=info, _field=field),
                     first=field_kwargs.get("first"),
                     last=field_kwargs.get("last"),
+                    offset=field_kwargs.get("offset"),
                     before=field_kwargs.get("before"),
                     after=field_kwargs.get("after"),
                     max_results=connection_extension.max_results,

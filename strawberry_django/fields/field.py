@@ -38,6 +38,7 @@ from django.db.models.query_utils import DeferredAttribute
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.extensions.field_extension import FieldExtension
+from strawberry.types.arguments import StrawberryArgument
 from strawberry.types.field import _RESOLVER_TYPE  # ruff: ignore[import-private-name]
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.info import Info
@@ -77,9 +78,11 @@ if TYPE_CHECKING:
 
     from graphql.pyutils import AwaitableOrValue
     from strawberry import BasePermission
-    from strawberry.extensions.field_extension import SyncExtensionResolver
+    from strawberry.extensions.field_extension import (
+        AsyncExtensionResolver,
+        SyncExtensionResolver,
+    )
     from strawberry.relay.types import NodeIterableType
-    from strawberry.types.arguments import StrawberryArgument
     from strawberry.types.base import WithStrawberryObjectDefinition
     from strawberry.types.field import StrawberryField
     from strawberry.types.unset import UnsetType
@@ -544,7 +547,17 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
             )
 
         try:
-            return super().apply(field)
+            ret = super().apply(field)
+            field.arguments.append(
+                StrawberryArgument(
+                    python_name="offset",
+                    graphql_name=None,
+                    type_annotation=StrawberryAnnotation(int | None),
+                    description="Offset to start slicing the list from.",
+                    default=None,
+                )
+            )
+            return ret
         finally:
             if original_signature is UNSET:
                 resolver.__dict__.pop("signature", None)
@@ -561,6 +574,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
         after: str | None = None,
         first: int | None = None,
         last: int | None = None,
+        offset: int | None = None,
         **kwargs: Any,
     ) -> Any:
         assert self.connection_type is not None
@@ -578,6 +592,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                     after=after,
                     first=first,
                     last=last,
+                    offset=offset,
                     max_results=self.max_results,
                     **kwargs,
                 )
@@ -595,9 +610,44 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
             after=after,
             first=first,
             last=last,
+            offset=offset,
             max_results=self.max_results,
             **kwargs,
         )
+
+    async def resolve_async(
+        self,
+        next_: AsyncExtensionResolver,
+        source: Any,
+        info: Info,
+        *,
+        before: str | None = None,
+        after: str | None = None,
+        first: int | None = None,
+        last: int | None = None,
+        offset: int | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        assert self.connection_type is not None
+        nodes = next_(source, info, **kwargs)
+        if inspect.isawaitable(nodes):
+            nodes = await nodes
+
+        resolved = self.connection_type.resolve_connection(
+            cast("Iterable[relay.Node]", nodes),
+            info=info,
+            before=before,
+            after=after,
+            first=first,
+            last=last,
+            offset=offset,
+            max_results=self.max_results,
+            **kwargs,
+        )
+
+        if inspect.isawaitable(resolved):
+            resolved = await resolved
+        return resolved
 
 
 class StrawberryOffsetPaginatedExtension(FieldExtension):
