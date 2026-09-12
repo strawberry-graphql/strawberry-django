@@ -103,6 +103,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FruitConnection!
   fruitsLazy(
     """Returns the items in the list that come before the specified cursor."""
@@ -116,6 +119,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FruitConnection!
   fruitsWithFiltersAndOrder(
     filters: FruitFilter
@@ -132,6 +138,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FruitConnection!
   fruitsCustomResolver(
     """Returns the items in the list that come before the specified cursor."""
@@ -145,6 +154,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FruitConnection!
   fruitsCustomResolverWithFiltersAndOrder(
     filters: FruitFilter
@@ -161,6 +173,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FruitConnection!
 }
 

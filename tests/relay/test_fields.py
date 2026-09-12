@@ -1177,3 +1177,131 @@ def test_query_connection_total_count_sql_queries(
     assert result.data == {
         query_attr: {"totalCount": 5},
     }
+
+
+def test_query_connection_offset():
+    result = schema.execute_sync(
+        """
+        query TestQuery {
+            fruits (first: 2, offset: 2) {
+                pageInfo {
+                    hasNextPage
+                    hasPreviousPage
+                    startCursor
+                    endCursor
+                }
+                edges {
+                    node {
+                        name
+                    }
+                }
+            }
+        }
+        """
+    )
+    assert result.errors is None
+    assert result.data == {
+        "fruits": {
+            "pageInfo": {
+                "hasNextPage": True,
+                "hasPreviousPage": True,
+                "startCursor": to_base64("arrayconnection", "2"),
+                "endCursor": to_base64("arrayconnection", "3"),
+            },
+            "edges": [
+                {"node": {"name": "Pineapple"}},
+                {"node": {"name": "Grape"}},
+            ],
+        },
+    }
+
+
+def test_query_connection_offset_zero():
+    result = schema.execute_sync(
+        """
+        query TestQuery {
+            fruits (first: 2, offset: 0) {
+                pageInfo {
+                    hasNextPage
+                    hasPreviousPage
+                    startCursor
+                    endCursor
+                }
+                edges {
+                    node {
+                        name
+                    }
+                }
+            }
+        }
+        """
+    )
+    assert result.errors is None
+    assert result.data == {
+        "fruits": {
+            "pageInfo": {
+                "hasNextPage": True,
+                "hasPreviousPage": False,
+                "startCursor": to_base64("arrayconnection", "0"),
+                "endCursor": to_base64("arrayconnection", "1"),
+            },
+            "edges": [
+                {"node": {"name": "Banana"}},
+                {"node": {"name": "Apple"}},
+            ],
+        },
+    }
+
+
+def test_query_connection_offset_last_page():
+    result = schema.execute_sync(
+        """
+        query TestQuery {
+            fruits (first: 2, offset: 4) {
+                pageInfo {
+                    hasNextPage
+                    hasPreviousPage
+                    startCursor
+                    endCursor
+                }
+                edges {
+                    node {
+                        name
+                    }
+                }
+            }
+        }
+        """
+    )
+    assert result.errors is None
+    assert result.data == {
+        "fruits": {
+            "pageInfo": {
+                "hasNextPage": False,
+                "hasPreviousPage": True,
+                "startCursor": to_base64("arrayconnection", "4"),
+                "endCursor": to_base64("arrayconnection", "4"),
+            },
+            "edges": [
+                {"node": {"name": "Orange"}},
+            ],
+        },
+    }
+
+
+def test_query_connection_offset_negative():
+    result = schema.execute_sync(
+        """
+        query TestQuery {
+            fruits (first: 2, offset: -1) {
+                edges {
+                    node {
+                        name
+                    }
+                }
+            }
+        }
+        """
+    )
+    assert result.errors is not None
+    assert "Argument 'offset' must be a non-negative integer." in str(result.errors[0])

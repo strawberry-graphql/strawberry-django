@@ -306,6 +306,9 @@ type IssueType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FavoriteTypeConnection!
   milestoneName: String!
   milestoneNameWithoutOnlyOptimization: String!
@@ -407,6 +410,9 @@ type MilestoneType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection!
   myIssues: [IssueType!]!
   myBugsCount: Int!
@@ -605,6 +611,9 @@ type ProjectType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
   customMilestones: [MilestoneType!]!
@@ -699,6 +708,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FavoriteTypeConnection!
   issueConn(
     """Returns the items in the list that come before the specified cursor."""
@@ -712,6 +724,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection!
   milestoneConn(
     filters: MilestoneFilter
@@ -728,6 +743,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): MilestoneTypeConnection!
   projectConn(
     filters: ProjectFilter
@@ -743,6 +761,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): ProjectConnection!
   tagConn(
     """Returns the items in the list that come before the specified cursor."""
@@ -756,6 +777,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): TagTypeConnection!
   staffConn(
     """Returns the items in the list that come before the specified cursor."""
@@ -769,6 +793,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): StaffTypeConnection!
   quizList: [QuizType!]!
   issueLoginRequired(
@@ -817,6 +844,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   issueObjPermRequired(
     """The ID of the object."""
@@ -841,6 +871,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection! @hasRetvalPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   asyncUserResolve: Boolean! @hasPerm(permissions: [{app: "projects", permission: "view_issue"}], any: true)
   me: UserType
@@ -859,6 +892,9 @@ type Query {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): ProjectConnection!
 }
 
@@ -982,6 +1018,9 @@ type TagType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection!
   issuesWithSelectedRelatedMilestoneAndProject: [IssueType!]!
 }
