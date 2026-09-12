@@ -32,6 +32,7 @@ __all__ = [
     "resolve_model_id_attr",
     "resolve_model_node",
     "resolve_model_nodes",
+    "resolve_offset_to_after",
 ]
 
 
@@ -343,3 +344,30 @@ def resolve_model_id(
         return str(root.__dict__[id_attr])
     except KeyError:
         return django_getattr(root, id_attr)
+
+
+def resolve_offset_to_after(
+    offset: int | None,
+    after: str | None = None,
+    *,
+    prefix: str = relay.types.PREFIX,
+) -> str | None:
+    """Adjust or create an `after` cursor based on an `offset` integer argument."""
+    if offset is None:
+        return after
+
+    if offset < 0:
+        raise ValueError("Argument 'offset' must be a non-negative integer.")
+
+    if after:
+        after_type, after_parsed = relay.from_base64(after)
+        if after_type != prefix:
+            raise TypeError("Argument 'after' contains a non-existing value.")
+        start_offset = int(after_parsed) + 1 + offset
+    else:
+        start_offset = offset
+
+    if start_offset > 0:
+        return relay.to_base64(prefix, start_offset - 1)
+
+    return None

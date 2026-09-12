@@ -16,6 +16,7 @@ from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_cached_total_count, get_total_count
 from strawberry_django.queryset import get_queryset_config
+from strawberry_django.relay.utils import resolve_offset_to_after
 from strawberry_django.resolvers import django_resolver
 from strawberry_django.utils.typing import unwrap_type
 
@@ -88,8 +89,27 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         after: str | None = None,
         first: int | None = None,
         last: int | None = None,
+        offset: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
+        if offset is not None:
+            if offset < 0:
+                raise ValueError("Argument 'offset' must be a non-negative integer.")
+            type_def = get_object_definition(cls)
+            assert type_def
+            field_def = type_def.get_field("edges")
+            assert field_def
+            field = field_def.resolve_type(type_definition=type_def)
+            while isinstance(field, StrawberryContainer):
+                field = field.of_type
+            edge_class = cast("relay.Edge[relay.NodeType]", field)
+            after = resolve_offset_to_after(
+                offset,
+                after,
+                prefix=edge_class.CURSOR_PREFIX,
+            )
+            offset = None
+
         if isinstance(nodes, models.QuerySet) and (
             queryset_config := get_queryset_config(nodes)
         ):
@@ -127,6 +147,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                         after=after,
                         first=first,
                         last=last,
+                        offset=offset,
                         **kwargs,
                     )
 
@@ -225,6 +246,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         after: str | None = None,
         first: int | None = None,
         last: int | None = None,
+        offset: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
         """Resolve the connection being paginated only via `last`.
@@ -254,6 +276,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                     after=after,
                     first=first,
                     last=last,
+                    offset=None,
                     **kwargs,
                 )
                 return await conn if inspect.isawaitable(conn) else conn
@@ -269,6 +292,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
             after=after,
             first=first,
             last=last,
+            offset=offset,
             **kwargs,
         )
 

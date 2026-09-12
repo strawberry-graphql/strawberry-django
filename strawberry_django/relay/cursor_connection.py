@@ -204,11 +204,14 @@ def apply_cursor_pagination(
     after: str | None,
     first: int | None,
     last: int | None,
+    offset: int | None = None,
     max_results: int | None,
 ) -> tuple[QuerySet, list[OrderingDescriptor]]:
     max_results = (
         max_results if max_results is not None else info.schema.config.relay_max_results
     )
+    if offset is not None and offset < 0:
+        raise ValueError("Argument 'offset' must be a non-negative integer.")
 
     qs, ordering_descriptors, original_order_by = annotate_ordering_fields(qs)
     if after:
@@ -256,7 +259,8 @@ def apply_cursor_pagination(
             raise ValueError("Argument 'first' must be a non-negative integer.")
         if first > max_results:
             raise ValueError(f"Argument 'first' cannot be higher than {max_results}.")
-        slice_ = slice(first + 1)
+        start = offset or 0
+        slice_ = slice(start, start + first + 1)
     elif last is not None:
         # when using last, optimize by reversing the QuerySet ordering in the DB,
         # then slicing from the end (which is now the start in QuerySet ordering)
@@ -368,6 +372,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
         after: str | None = None,
         first: int | None = None,
         last: int | None = None,
+        offset: int | None = None,
         max_results: int | None = None,
         **kwargs: Any,
     ) -> AwaitableOrValue[Self]:
@@ -385,6 +390,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
                 after=after,
                 first=first,
                 last=last,
+                offset=offset,
                 max_results=max_results,
             )
         else:
@@ -417,7 +423,8 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
 
         def finish_resolving():
             nonlocal qs
-            has_previous_page = has_next_page = False
+            has_previous_page = bool(offset and offset > 0)
+            has_next_page = False
 
             results = list(qs)
 
