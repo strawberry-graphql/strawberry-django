@@ -296,7 +296,7 @@ to worry about its internal logic.
 For that this integration provides 2 decorators that can be used:
 
 - `strawberry_django.model_property`: similar to `@property` but accepts optimization hints
-- `strawberry_django.cached_model_property`: similar to `@cached_property` but accepts
+- `strawberry_django.model_cached_property`: similar to `@cached_property` but accepts
   optimization hints
 
 The example in the previous section could be written using `@model_property` like this:
