@@ -13,6 +13,7 @@ from asgiref.sync import sync_to_async
 from django.db import models
 from strawberry import relay
 from strawberry.relay.exceptions import NodeIDAnnotationError
+from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 
@@ -161,6 +162,9 @@ def resolve_model_nodes(
         # Connection will filter the results when its is being resolved.
         # We don't want to fetch everything before it does that
         return_type = info.return_type
+        # Unwrap containers (e.g. `StrawberryOptional` for a nullable connection)
+        while isinstance(return_type, StrawberryContainer):
+            return_type = return_type.of_type
         if isinstance(return_type, type) and issubclass(return_type, relay.Connection):
             extra_args["qs_hook"] = lambda qs: qs
 

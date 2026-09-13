@@ -58,6 +58,8 @@ class Query:
     node_optional: relay.Node | None = strawberry_django.node()
     nodes_optional: list[relay.Node | None] = strawberry_django.node()
     fruits: DjangoListConnection[Fruit] = strawberry_django.connection()
+    # Nullable connection (e.g. as produced by a permission extension)
+    fruits_optional: DjangoListConnection[Fruit] | None = strawberry_django.connection()
     fruits_lazy: DjangoListConnection[
         Annotated["Fruit", strawberry.lazy("tests.relay.schema")]
     ] = strawberry_django.connection()
