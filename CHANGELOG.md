@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.89.2 - 2026-09-13
+-------------------
+
+Fix nullable connections (e.g. when guarded by a permission extension) eagerly
+fetching the entire table before the connection applied its pagination. The
+return type is now unwrapped from `StrawberryOptional`/other containers so the
+queryset evaluation stays deferred and the connection can apply a `LIMIT`.
+
+This release was contributed by [@rcybulski1122012](https://github.com/rcybulski1122012) in [#953](https://github.com/strawberry-graphql/strawberry-django/pull/953)
+
 0.89.1 - 2026-09-13
 -------------------
 
