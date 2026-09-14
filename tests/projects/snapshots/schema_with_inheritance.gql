@@ -104,6 +104,9 @@ type IssueType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): FavoriteTypeConnection!
   milestoneName: String!
   milestoneNameWithoutOnlyOptimization: String!
@@ -195,6 +198,9 @@ type MilestoneType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection!
   myIssues: [IssueType!]!
   myBugsCount: Int!
@@ -259,6 +265,9 @@ type MilestoneTypeSubclass implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection!
   myIssues: [IssueType!]!
   myBugsCount: Int!
@@ -386,6 +395,9 @@ type ProjectType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
   customMilestones: [MilestoneType!]!
@@ -419,6 +431,9 @@ type ProjectTypeSubclass implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): MilestoneTypeConnection!
   milestonesPaginated(pagination: OffsetPaginationInput, filters: MilestoneFilter, order: MilestoneOrder): MilestoneTypeOffsetPaginated!
   customMilestones: [MilestoneType!]!
@@ -520,6 +535,9 @@ type TagType implements Node & Named {
 
     """Returns the items in the list that come after the specified cursor."""
     last: Int = null
+
+    """Offset to start slicing the list from."""
+    offset: Int = null
   ): IssueTypeConnection!
   issuesWithSelectedRelatedMilestoneAndProject: [IssueType!]!
 }
