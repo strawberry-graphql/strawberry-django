@@ -1339,4 +1339,3 @@ def test_query_connection_offset_negative():
     )
     assert result.errors is not None
     assert "Argument 'offset' must be a non-negative integer." in str(result.errors[0])
-
