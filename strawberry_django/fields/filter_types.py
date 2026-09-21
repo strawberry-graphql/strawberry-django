@@ -186,15 +186,50 @@ class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
         return cls
 
 
+@strawberry.input
+class BoolFilterLookup(BaseFilterLookup[bool]):
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
+
+
+@strawberry.input
+class IDFilterLookup(BaseFilterLookup[strawberry.ID]):
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
+
+
+@strawberry.input
+class IntFilterLookup(ComparisonFilterLookup[int]):
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
+
+
+@strawberry.input
+class FloatFilterLookup(ComparisonFilterLookup[float]):
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
+
+
+@strawberry.input
+class DecimalFilterLookup(ComparisonFilterLookup[decimal.Decimal]):
+    def __class_getitem__(cls, item: Any) -> type:
+        _warn_concrete_lookup(cls)
+        return cls
+
+
 type_filter_map = {
-    strawberry.ID: BaseFilterLookup,
-    bool: BaseFilterLookup,
+    strawberry.ID: IDFilterLookup,
+    bool: BoolFilterLookup,
     datetime.date: DateFilterLookup,
     datetime.datetime: DatetimeFilterLookup,
     datetime.time: TimeFilterLookup,
-    decimal.Decimal: ComparisonFilterLookup,
-    float: ComparisonFilterLookup,
-    int: ComparisonFilterLookup,
+    decimal.Decimal: DecimalFilterLookup,
+    float: FloatFilterLookup,
+    int: IntFilterLookup,
     str: StrFilterLookup,
     uuid.UUID: StrFilterLookup,
 }
