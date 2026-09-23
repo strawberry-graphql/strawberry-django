@@ -9,6 +9,7 @@ from typing import (
 )
 
 import strawberry
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 from strawberry import UNSET
 
@@ -186,7 +187,7 @@ class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
         return cls
 
 
-type_filter_map = {
+type_filter_map: dict[Any, type] = {
     strawberry.ID: BaseFilterLookup,
     bool: BaseFilterLookup,
     datetime.date: DateFilterLookup,
@@ -198,3 +199,55 @@ type_filter_map = {
     str: StrFilterLookup,
     uuid.UUID: StrFilterLookup,
 }
+
+try:
+    from django.contrib.gis import geos
+except ImproperlyConfigured:
+    # If gdal is not available, skip.
+    GeometryFilterLookup = None  # type: ignore[assignment]
+else:
+    # Not based on BaseFilterLookup since the `in` lookup is not a spatial lookup
+    # and would compare the raw geometry values instead.
+    @strawberry.input
+    class GeometryFilterLookup:
+        exact: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially equal to the given geometry. {_SKIP_MSG}"
+        )
+        is_null: bool | None = filter_field(description=f"Assignment test. {_SKIP_MSG}")
+        contains: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially contains the given geometry. {_SKIP_MSG}"
+        )
+        disjoint: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially disjoint from the given geometry. {_SKIP_MSG}"
+        )
+        equals: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially equal to the given geometry. {_SKIP_MSG}"
+        )
+        intersects: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially intersects the given geometry. {_SKIP_MSG}"
+        )
+        overlaps: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially overlaps the given geometry. {_SKIP_MSG}"
+        )
+        touches: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially touches the given geometry. {_SKIP_MSG}"
+        )
+        within: geos.GEOSGeometry | None = filter_field(
+            description=f"Spatially within the given geometry. {_SKIP_MSG}"
+        )
+
+    type_filter_map.update(
+        dict.fromkeys(
+            (
+                geos.Point,
+                geos.LineString,
+                geos.LinearRing,
+                geos.Polygon,
+                geos.MultiPoint,
+                geos.MultiLineString,
+                geos.MultiPolygon,
+                geos.GEOSGeometry,
+            ),
+            GeometryFilterLookup,
+        )
+    )
