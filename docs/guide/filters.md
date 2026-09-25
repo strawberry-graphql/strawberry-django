@@ -517,6 +517,7 @@ query {
 Geometries can be passed in any format accepted by
 [`GEOSGeometry`](https://docs.djangoproject.com/en/stable/ref/contrib/gis/geos/#django.contrib.gis.geos.GEOSGeometry),
 such as WKT, EWKT, HEXEWKB or GeoJSON strings.
+See the [GeoDjango integration](../integrations/geodjango.md) for more details.
 
 ## Legacy filtering
 
