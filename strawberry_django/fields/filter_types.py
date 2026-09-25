@@ -187,8 +187,8 @@ class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
         return cls
 
 
-type_filter_map: dict[Any, type] = {
-    strawberry.ID: BaseFilterLookup,
+type_filter_map: dict[type, type] = {
+    strawberry.ID: BaseFilterLookup,  # type: ignore[dict-item]
     bool: BaseFilterLookup,
     datetime.date: DateFilterLookup,
     datetime.datetime: DatetimeFilterLookup,
