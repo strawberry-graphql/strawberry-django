@@ -167,6 +167,46 @@ class Mutation:
     )
 ```
 
+### Customizing creation
+
+The create resolver (`strawberry_django.mutations.resolvers.create`) prepares,
+validates and persists one model instance. It applies input values, including file
+uploads and nested foreign keys, then calls
+`pre_save_hook(instance)` if supplied, followed by `instance.full_clean()` when
+validation is enabled. Changes made by the hook or by `Model.clean()` are therefore
+included in the saved row. Batched creates follow this sequence for each item.
+
+To run custom manager or queryset logic for every resolver insert, expose
+`insert(instance) -> instance` on the manager. This method receives the prepared,
+validated instance exactly once and must persist it and return the saved instance.
+For example, a custom queryset can expose the method through `as_manager()`:
+
+```python title="models.py"
+from django.db import models
+
+
+class FruitQuerySet(models.QuerySet):
+    def insert(self, instance):
+        # Apply custom insertion logic to the prepared instance here.
+        instance.save(force_insert=True, using=self.db)
+        return instance
+
+
+class Fruit(models.Model):
+    name = models.CharField(max_length=100)
+    objects = FruitQuerySet.as_manager()
+```
+
+When the manager has no callable `insert`, the resolver calls
+`instance.save(force_insert=True, using=manager.db)` to insert on the manager's
+database alias.
+It then applies many-to-many changes and refreshes the instance from the database
+when those changes are present, all within the same transaction.
+
+**Behavior change:** The create resolver no longer calls `Manager.create(**kwargs)`.
+Move any custom creation logic needed by these mutations into `insert(instance)`;
+overriding `create(**kwargs)` alone will no longer run that logic for the resolver.
+
 ## Partial updates with Maybe
 
 When using `partial` inputs for updates, all `auto` fields become optional. However, this makes it
