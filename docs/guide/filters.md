@@ -450,7 +450,7 @@ class Query:
 
 ## Generic Lookup reference
 
-There is 7 already defined Generic Lookup `strawberry.input` classes importable from `strawberry_django`
+There is 8 already defined Generic Lookup `strawberry.input` classes importable from `strawberry_django`
 
 #### `BaseFilterLookup`
 
@@ -490,6 +490,34 @@ There is 7 already defined Generic Lookup `strawberry.input` classes importable 
 
 - inherits `DateFilterLookup` & `TimeFilterLookup`
 - used for timedate based fields
+
+#### `GeometryFilterLookup`
+
+- only available when [GeoDjango](https://docs.djangoproject.com/en/stable/ref/contrib/gis/) is installed (`None` otherwise)
+- contains `exact`, `isNull` and the spatial lookups `contains`, `disjoint`, `equals`, `intersects`, `overlaps`, `touches` & `within`
+- only includes spatial lookups supported by every GeoDjango backend (PostGIS, SpatiaLite, MySQL/MariaDB & Oracle)
+- used for geometry fields (`PointField`, `PolygonField`, `GeometryField`, etc.)
+
+```python title="types.py"
+@strawberry_django.filter_type(models.Place, lookups=True)
+class PlaceFilter:
+    location: auto
+```
+
+```graphql
+query {
+  places(
+    filters: { location: { within: "POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))" } }
+  ) {
+    id
+  }
+}
+```
+
+Geometries can be passed in any format accepted by
+[`GEOSGeometry`](https://docs.djangoproject.com/en/stable/ref/contrib/gis/geos/#django.contrib.gis.geos.GEOSGeometry),
+such as WKT, EWKT, HEXEWKB or GeoJSON strings.
+See the [GeoDjango integration](../integrations/geodjango.md) for more details.
 
 ## Legacy filtering
 
