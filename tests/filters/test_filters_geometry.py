@@ -103,6 +103,17 @@ def test_geometry_filter_lookup_type():
         ({"point": {"touches": SQUARE}}, ["edge"]),
         ({"point": {"isNull": True}}, ["far"]),
         ({"geometry": {"within": SQUARE}}, ["inside", "far"]),
+        (
+            {
+                "point": {
+                    "within": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]],
+                    }
+                }
+            },
+            ["inside"],
+        ),
         ({"geometry": {"crosses": SQUARE}}, None),
         ({"point": {"inList": ["POINT(5 5)"]}}, None),
     ],
