@@ -149,7 +149,9 @@ def test_geos_scalar_input(schema, field, scalar, value, expected):
             "Expected a Polygon geometry",
         ),
         ("geometry", "Geometry", [1, 2], "Expected WKT, EWKT, HEXEWKB or GeoJSON"),
-        ("point", "Point", "not a geometry", "Expected type 'Point'"),
+        # Errors raised by GEOS/GDAL: only check the scalar name, since the
+        # surrounding message depends on the graphql-core version
+        ("point", "Point", "not a geometry", "'Point'"),
         (
             "geometry",
             "Geometry",
@@ -158,7 +160,7 @@ def test_geos_scalar_input(schema, field, scalar, value, expected):
                 "geometry": {"type": "Point", "coordinates": [1, 2]},
                 "properties": {},
             },
-            "Expected type 'Geometry'",
+            "'Geometry'",
         ),
     ],
 )
