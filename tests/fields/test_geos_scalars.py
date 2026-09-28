@@ -9,7 +9,7 @@ pytestmark = pytest.mark.skipif(
 if settings.GEOS_IMPORTED:
     from django.contrib.gis import geos
 
-    import strawberry_django  # noqa: F401  # registers the geos scalars
+    import strawberry_django  # ruff: ignore[unused-import]  # registers the geos scalars
 
     @strawberry.type
     class Query:
