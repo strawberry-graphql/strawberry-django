@@ -3402,6 +3402,84 @@ def test_prefetch_related_without_to_attr(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "prefetch",
+    [
+        pytest.param("milestones", id="string"),
+        pytest.param(
+            Prefetch(
+                "milestones",
+                queryset=Milestone.objects.filter(name__startswith="Test"),
+            ),
+            id="prefetch_object",
+        ),
+    ],
+)
+def test_prefetch_related_hint_returning_unordered_queryset(
+    db, prefetch: str | Prefetch
+):
+    """Test that returning a prefetched queryset from a resolver uses the cache.
+
+    Regression test for https://github.com/strawberry-graphql/strawberry-django/issues/772
+
+    When the resolver returns the related manager's queryset (not a list), and the
+    related model has no default ordering, the deterministic `order_by("pk")` must
+    not be applied, as doing so would discard the prefetched results.
+    """
+    assert Milestone._meta.ordering == []
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+
+        @strawberry_django.field(prefetch_related=[prefetch])
+        def milestones_hint(self) -> list[MilestoneTypeTest]:
+            return self.milestones.all()  # type: ignore
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    projects = ProjectFactory.create_batch(3)
+    for project in projects:
+        MilestoneFactory.create_batch(2, project=project, name="TestMilestone")
+
+    query = """\
+      query TestQuery {
+        projects {
+          name
+          milestonesHint {
+            name
+          }
+        }
+      }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    assert result.errors is None, result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "name": project.name,
+                "milestonesHint": [{"name": "TestMilestone"}] * 2,
+            }
+            for project in projects
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("gql_client", ["sync"], indirect=True)
 def test_merged_custom_prefetches(db, gql_client: GraphQLTestClient):
     """Test that duplicated prefetch_related hints are correctly merged."""

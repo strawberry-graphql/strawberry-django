@@ -493,8 +493,17 @@ class StrawberryDjangoPagination(StrawberryDjangoFieldBase):
         # If the queryset is not ordered, and this field is either going to return
         # multiple records, or call `.first()`, then order by the primary key to ensure
         # deterministic results.
-        if not queryset.ordered and (
-            self.is_list or self.is_paginated or self.is_connection or self.is_optional
+        # Skip this for already evaluated querysets (e.g. from a `prefetch_related`
+        # hint), since ordering them would discard their results and query again.
+        if (
+            not queryset.ordered
+            and queryset._result_cache is None  # type: ignore
+            and (
+                self.is_list
+                or self.is_paginated
+                or self.is_connection
+                or self.is_optional
+            )
         ):
             queryset = queryset.order_by("pk")
 
