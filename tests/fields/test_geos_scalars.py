@@ -93,6 +93,23 @@ POLYGON_WKT = "POLYGON ((0 0, 0 1, 1 1, 0 0))"
             "LINEARRING(0 0, 0 1, 1 1, 0 0)",
             "LINEARRING (0 0, 0 1, 1 1, 0 0)",
         ),
+        # GeoJSON and WKB represent rings as closed LineStrings
+        (
+            "linearRing",
+            "LinearRing",
+            {"type": "LineString", "coordinates": [[0, 0], [0, 1], [1, 1], [0, 0]]},
+            "SRID=4326;LINEARRING (0 0, 0 1, 1 1, 0 0)",
+        ),
+        (
+            "linearRing",
+            "LinearRing",
+            # LINESTRING(0 0, 0 1, 1 1, 0 0) as WKB
+            (
+                "01020000000400000000000000000000000000000000000000000000000000000000000000"
+                "0000F03F000000000000F03F000000000000F03F00000000000000000000000000000000"
+            ),
+            "LINEARRING (0 0, 0 1, 1 1, 0 0)",
+        ),
         (
             "polygon",
             "Polygon",
@@ -152,6 +169,12 @@ def test_geos_scalar_input(schema, field, scalar, value, expected):
         # Errors raised by GEOS/GDAL: only check the scalar name, since the
         # surrounding message depends on the graphql-core version
         ("point", "Point", "not a geometry", "'Point'"),
+        (
+            "linearRing",
+            "LinearRing",
+            {"type": "LineString", "coordinates": [[0, 0], [0, 1], [1, 1], [1, 0]]},
+            "'LinearRing'",
+        ),
         (
             "geometry",
             "Geometry",

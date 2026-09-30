@@ -299,6 +299,10 @@ else:
                 geom = geos.GEOSGeometry(
                     json_dumps(value) if isinstance(value, dict) else value
                 )
+                # GeoJSON and WKB have no LinearRing type and represent rings as
+                # closed LineStrings
+                if geom_class is geos.LinearRing and type(geom) is geos.LineString:
+                    geom = geos.LinearRing(geom.coords, srid=geom.srid)
                 if not isinstance(geom, geom_class):
                     raise TypeError(
                         f"Expected a {geom_class.__name__} geometry, "

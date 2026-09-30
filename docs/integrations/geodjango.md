@@ -20,6 +20,10 @@ automatically mapping them to GraphQL scalar types.
 | `MultiPolygonField`    | `MultiPolygon`    | Collection of Polygons             | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
 | `GeometryField`        | `Geometry`        | Any geometry type                  | WKT, EWKT, HEXEWKB or GeoJSON              | Coordinates   |
 
+There is also a `LinearRing` scalar with the same input and output formats. Django
+has no `LinearRingField`, so it's only used when annotating `geos.LinearRing`
+directly.
+
 See [GraphQL Data Format](#graphql-data-format) for details.
 
 ## Usage
@@ -96,7 +100,9 @@ other GeoJSON sources can be sent as they are:
 
 Only GeoJSON geometries are accepted, not `Feature` or `FeatureCollection` objects.
 The geometry type must match the scalar: for example, a `Point` field doesn't accept a
-`POLYGON(...)`. The `Geometry` scalar accepts any geometry type.
+`POLYGON(...)`. The `Geometry` scalar accepts any geometry type. Since GeoJSON
+and WKB have no LinearRing type, the `LinearRing` scalar also accepts a closed
+LineString in those formats.
 
 The geometry-specific scalars (`Point`, `LineString`, `LinearRing`, `Polygon`,
 `MultiPoint`, `MultiLineString` and `MultiPolygon`) also accept nested coordinate
