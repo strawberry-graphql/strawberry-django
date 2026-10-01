@@ -259,11 +259,7 @@ def prepare_create_update(
     key_attr: str | None = None,
     full_clean: bool | FullCleanOptions = True,
     exclude_m2m: list[str] | None = None,
-) -> tuple[
-    Model,
-    dict[str, object],
-    list[tuple[ManyToManyField | ForeignObjectRel, Any]],
-]:
+) -> tuple[Model, list[tuple[ManyToManyField | ForeignObjectRel, Any]]]:
     """Prepare data for updates and creates.
 
     This method is a helper function for the create and
@@ -279,7 +275,6 @@ def prepare_create_update(
         if isinstance(f, models.ForeignKey) and f.attname not in fields
     }
     m2m: list[tuple[ManyToManyField | ForeignObjectRel, Any]] = []
-    direct_field_values: dict[str, object] = {}
     exclude_m2m = exclude_m2m or []
 
     if dataclasses.is_dataclass(data):
@@ -292,7 +287,6 @@ def prepare_create_update(
             setattr(instance, name, value)
             if fk_field.is_cached(instance):
                 fk_field.delete_cached_value(instance)
-            direct_field_values[name] = value
             continue
 
         field = fields.get(name)
@@ -353,15 +347,11 @@ def prepare_create_update(
                 )
 
         if direct_field_value:
-            # We want to return the direct fields for processing
-            # sepperatly when we're creating objects.
-            # You can see this in the create() function
-            direct_field_values.update({name: value})
             # Make sure you dont pass Many2Many and FileFields
             # to your update_field function. This will not work.
             update_field(info, instance, field, value)  # type: ignore
 
-    return instance, direct_field_values, m2m
+    return instance, m2m
 
 
 @overload
@@ -400,6 +390,17 @@ def create(
     pre_save_hook: Callable[[_M], None] | None = None,
     exclude_m2m: list[str] | None = None,
 ) -> list[_M] | _M:
+    """Prepare, validate, and persist one instance per input item.
+
+    The same instance receives prepared fields, the optional ``pre_save_hook``,
+    and ``full_clean`` before persistence, preserving changes made by cleaning.
+    Custom managers or querysets that must run on every insert expose
+    ``insert(instance) -> instance``.
+    A callable ``insert`` on the manager persists and returns the prepared
+    instance; otherwise ``instance.save(force_insert=True, using=manager.db)``
+    inserts it on the manager's database. ``Manager.create`` overrides are not
+    called. Many-to-many relations are applied after persistence.
+    """
     return _create(
         info,
         model._default_manager,
@@ -414,7 +415,7 @@ def create(
 @transaction.atomic
 def _create(
     info: Info,
-    manager: BaseManager,
+    manager: BaseManager[_M],
     data: dict[str, Any] | list[dict[str, Any]],
     *,
     key_attr: str | None = None,
@@ -422,61 +423,54 @@ def _create(
     pre_save_hook: Callable[[_M], None] | None = None,
     exclude_m2m: list[str] | None = None,
 ) -> list[_M] | _M:
-    model = manager.model
     # Before creating your instance, verify this is not a bulk create
     # if so, add them one by one. Otherwise, get to work.
     if isinstance(data, list):
         return [
-            create(
-                info,
-                model,
-                d,
-                key_attr=key_attr,
-                full_clean=full_clean,
-                exclude_m2m=exclude_m2m,
+            cast(
+                "_M",
+                _create(
+                    info,
+                    manager,
+                    d,
+                    key_attr=key_attr,
+                    full_clean=full_clean,
+                    pre_save_hook=pre_save_hook,
+                    exclude_m2m=exclude_m2m,
+                ),
             )
             for d in data
         ]
 
-    # Also, the approach below will use the manager to create the instance
-    # rather than manually creating it.  If you have a pre_save_hook
-    # use the update method instead.
-    if pre_save_hook:
-        return update(
-            info,
-            model(),
-            data,
-            key_attr=key_attr,
-            full_clean=full_clean,
-            pre_save_hook=pre_save_hook,
-        )
-
-    # We will use a dummy-instance to trigger form validation
-    # However, this instance should not be saved as it will
-    # circumvent the manager create method.
-    dummy_instance = model()
-    _, create_kwargs, m2m = prepare_create_update(
+    instance = manager.model()
+    _, m2m = prepare_create_update(
         info=info,
-        instance=dummy_instance,
+        instance=instance,
         data=data,
         full_clean=full_clean,
         key_attr=key_attr,
         exclude_m2m=exclude_m2m,
     )
 
-    # Creating the instance directly via create() without full-clean will
-    # raise ugly error messages. To generate user-friendly ones, we want
-    # full-clean() to trigger form-validation style error messages.
-    full_clean_options = full_clean if isinstance(full_clean, dict) else {}
+    if pre_save_hook is not None:
+        pre_save_hook(instance)
+
+    full_clean_options: FullCleanOptions = (
+        full_clean if isinstance(full_clean, dict) else {}
+    )
     if full_clean:
-        dummy_instance.full_clean(**full_clean_options)
+        instance.full_clean(**full_clean_options)
 
-    # Create the instance using the manager create method to respect
-    # manager create overrides. This also ensures support for proxy-models.
-    instance = manager.create(**create_kwargs)
+    insert = getattr(manager, "insert", None)
+    if callable(insert):
+        instance = cast("_M", insert(instance))
+    else:
+        instance.save(force_insert=True, using=manager.db)
 
-    for field, value in m2m:
-        update_m2m(info, instance, field, value, key_attr)
+    if m2m:
+        for field, value in m2m:
+            update_m2m(info, instance, field, value, key_attr, full_clean)
+        instance.refresh_from_db()
 
     return instance
 
@@ -538,7 +532,7 @@ def update(
             for instance in instances
         ]
 
-    instance, _, m2m = prepare_create_update(
+    instance, m2m = prepare_create_update(
         info=info,
         instance=instance,
         data=data,
@@ -745,6 +739,9 @@ def update_m2m(
                     full_clean=full_clean,
                     exclude_m2m=exclude_m2m,
                 )
+                if hasattr(manager, "through"):
+                    # Prepared-instance insertion does not attach the M2M relation.
+                    to_add.append(obj)
                 existing.discard(obj)
 
         for remaining in existing:
@@ -776,7 +773,7 @@ def update_m2m(
                 # If we've reached here, the key_attr should be UNSET or missing. So
                 # let's remove it if it is there.
                 data.pop(key_attr, None)
-                _create(
+                obj = _create(
                     info,
                     manager,
                     data | ref_instance_data,
@@ -784,6 +781,8 @@ def update_m2m(
                     full_clean=full_clean,
                     exclude_m2m=exclude_m2m,
                 )
+                if hasattr(manager, "through"):
+                    to_add.append(obj)
             else:
                 raise AssertionError
 
