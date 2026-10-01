@@ -10,15 +10,19 @@ automatically mapping them to GraphQL scalar types.
 
 ## Supported Field Types
 
-| Django Field           | GraphQL Scalar    | Description                        | Input format                  | Output format |
-| ---------------------- | ----------------- | ---------------------------------- | ----------------------------- | ------------- |
-| `PointField`           | `Point`           | A point as `(x, y)` or `(x, y, z)` | Coordinates                   | Coordinates   |
-| `LineStringField`      | `LineString`      | Multiple points forming a line     | Coordinates                   | Coordinates   |
-| `PolygonField`         | `Polygon`         | One or more LinearRings            | Coordinates                   | Coordinates   |
-| `MultiPointField`      | `MultiPoint`      | Collection of Points               | Coordinates                   | Coordinates   |
-| `MultiLineStringField` | `MultiLineString` | Collection of LineStrings          | Coordinates                   | Coordinates   |
-| `MultiPolygonField`    | `MultiPolygon`    | Collection of Polygons             | Coordinates                   | Coordinates   |
-| `GeometryField`        | `Geometry`        | Any geometry type                  | WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| Django Field           | GraphQL Scalar    | Description                        | Input format                               | Output format |
+| ---------------------- | ----------------- | ---------------------------------- | ------------------------------------------ | ------------- |
+| `PointField`           | `Point`           | A point as `(x, y)` or `(x, y, z)` | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| `LineStringField`      | `LineString`      | Multiple points forming a line     | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| `PolygonField`         | `Polygon`         | One or more LinearRings            | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| `MultiPointField`      | `MultiPoint`      | Collection of Points               | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| `MultiLineStringField` | `MultiLineString` | Collection of LineStrings          | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| `MultiPolygonField`    | `MultiPolygon`    | Collection of Polygons             | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
+| `GeometryField`        | `Geometry`        | Any geometry type                  | WKT, EWKT, HEXEWKB or GeoJSON              | Coordinates   |
+
+There is also a `LinearRing` scalar with the same input and output formats. Django
+has no `LinearRingField`, so it's only used when annotating `geos.LinearRing`
+directly.
 
 See [GraphQL Data Format](#graphql-data-format) for details.
 
@@ -72,10 +76,37 @@ class LocationExplicit:
 
 ## GraphQL Data Format
 
-### Geometry-specific scalars
+### Input
 
-`Point`, `LineString`, `LinearRing`, `Polygon`, `MultiPoint`, `MultiLineString`
-and `MultiPolygon` are both read and written as nested coordinate arrays:
+All geometry scalars accept the standard formats supported by
+[`GEOSGeometry`](https://docs.djangoproject.com/en/stable/ref/contrib/gis/geos/#django.contrib.gis.geos.GEOSGeometry):
+WKT, EWKT, HEXEWKB and GeoJSON. GeoJSON can be given either as a string or as an
+object:
+
+```graphql
+point: "POINT(2.2945 48.8584)"                            # WKT
+point: "SRID=4326;POINT(2.2945 48.8584)"                  # EWKT
+point: "0101000000..."                                    # HEXEWKB
+point: "{\"type\": \"Point\", \"coordinates\": [2.2945, 48.8584]}"  # GeoJSON string
+point: { type: "Point", coordinates: [2.2945, 48.8584] }  # GeoJSON object
+```
+
+GeoJSON objects can also be passed through variables, so geometries coming from
+other GeoJSON sources can be sent as they are:
+
+```json
+{ "data": { "point": { "type": "Point", "coordinates": [2.2945, 48.8584] } } }
+```
+
+Only GeoJSON geometries are accepted, not `Feature` or `FeatureCollection` objects.
+The geometry type must match the scalar: for example, a `Point` field doesn't accept a
+`POLYGON(...)`. The `Geometry` scalar accepts any geometry type. Since GeoJSON
+and WKB have no LinearRing type, the `LinearRing` scalar also accepts a closed
+LineString in those formats.
+
+The geometry-specific scalars (`Point`, `LineString`, `LinearRing`, `Polygon`,
+`MultiPoint`, `MultiLineString` and `MultiPolygon`) also accept nested coordinate
+arrays:
 
 ```graphql
 # Point: [x, y] or [x, y, z]
@@ -92,26 +123,28 @@ multiPoint: [[0, 0], [1, 1]]
 multiPolygon: [[[[0, 0], [1, 0], [1, 1], [0, 0]]]]
 ```
 
-These scalars don't accept WKT or GeoJSON strings.
+The `Geometry` scalar doesn't accept coordinate arrays, since they don't say which
+kind of geometry they are.
 
-### `Geometry` scalar
+#### SRID
 
-The `Geometry` scalar accepts a string in any format supported by
-[`GEOSGeometry`](https://docs.djangoproject.com/en/stable/ref/contrib/gis/geos/#django.contrib.gis.geos.GEOSGeometry):
+- WKT, HEXEWKB and coordinate arrays have no SRID, so the SRID of the model field
+  is used.
+- GeoJSON is always in `EPSG:4326`.
+- EWKT uses the SRID it declares.
 
-```graphql
-geometry: "POINT(2.2945 48.8584)"                        # WKT
-geometry: "SRID=4326;POINT(2.2945 48.8584)"              # EWKT
-geometry: "{\"type\": \"Point\", \"coordinates\": [2.2945, 48.8584]}"  # GeoJSON
-```
+When the SRID of the input differs from the SRID of the model field, the geometry
+is transformed to the field's SRID when saved or used in a lookup.
 
-When no SRID is given, the SRID of the model field is used.
+### Output
+
+All geometry scalars are output as coordinate arrays, as shown above
+(e.g. `[2.2945, 48.8584]` for a point).
 
 > [!WARNING]
-> `Geometry` values are **output** as coordinate arrays, the same way as the
-> geometry-specific scalars (e.g. `[2.2945, 48.8584]`). So a queried value can't
-> be sent back as input as is, and the output doesn't say which kind of geometry
-> it is.
+> `Geometry` values are output as coordinate arrays as well, so the output doesn't
+> say which kind of geometry it is, and a queried `Geometry` value can't be sent
+> back as input as is.
 
 ## Spatial Queries
 
@@ -152,9 +185,10 @@ The available lookups are `exact`, `isNull`, `contains`, `disjoint`, `equals`,
 GeoDjango backend are included.
 
 > [!NOTE]
-> Lookup values always use the [`Geometry` scalar](#geometry-scalar) format
-> (WKT, EWKT, HEXEWKB or GeoJSON), whatever the type of the field. For example,
-> filter a `PointField` with `"POINT(1 2)"`, not `[1, 2]`.
+> Lookup values use the `Geometry` scalar whatever the type of the field, so they
+> accept any geometry type in WKT, EWKT, HEXEWKB or GeoJSON (see [Input](#input)),
+> but not coordinate arrays. For example, filter a `PointField` with
+> `"POINT(1 2)"`, not `[1, 2]`.
 
 ### Custom spatial queries
 

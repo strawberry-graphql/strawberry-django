@@ -4,6 +4,8 @@ import enum
 import inspect
 import re
 import uuid
+from collections.abc import Callable
+from json import dumps as json_dumps
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
@@ -286,71 +288,124 @@ else:
     MultiPolygon = geos.MultiPolygon
     Geometry = geos.GEOSGeometry
 
+    _GEOMETRY_INPUT_FORMATS = "WKT, EWKT, HEXEWKB or GeoJSON (string or object)"
+
+    def _parse_geometry(
+        geom_class: type[geos.GEOSGeometry],
+        from_coordinates: Callable[[Any], geos.GEOSGeometry] | None = None,
+    ) -> Callable[[Any], geos.GEOSGeometry]:
+        def parse(value: Any) -> geos.GEOSGeometry:
+            if isinstance(value, str | dict):
+                geom = geos.GEOSGeometry(
+                    json_dumps(value) if isinstance(value, dict) else value
+                )
+                # GeoJSON and WKB have no LinearRing type and represent rings as
+                # closed LineStrings
+                if geom_class is geos.LinearRing and type(geom) is geos.LineString:
+                    geom = geos.LinearRing(geom.coords, srid=geom.srid)
+                if not isinstance(geom, geom_class):
+                    raise TypeError(
+                        f"Expected a {geom_class.__name__} geometry, "
+                        f"got {geom.geom_type}"
+                    )
+                return geom
+
+            if from_coordinates is None:
+                raise TypeError(f"Expected {_GEOMETRY_INPUT_FORMATS}")
+
+            return from_coordinates(value)
+
+        return parse
+
     DEFAULT_SCALAR_REGISTRY.update({
         geos.Point: strawberry.scalar(
             name="Point",
             serialize=lambda v: v.tuple if isinstance(v, geos.Point) else v,
-            parse_value=geos.Point,
-            description="Represents a point as `(x, y, z)` or `(x, y)`.",
+            parse_value=_parse_geometry(geos.Point, geos.Point),
+            description=(
+                "Represents a point as `(x, y, z)` or `(x, y)`. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
+            ),
         ),
         geos.LineString: strawberry.scalar(
             name="LineString",
             serialize=lambda v: v.tuple if isinstance(v, geos.LineString) else v,
-            parse_value=geos.LineString,
+            parse_value=_parse_geometry(geos.LineString, geos.LineString),
             description=(
                 "A geographical line that gets multiple 'x, y' or 'x, y, z'"
-                " tuples to form a line."
+                " tuples to form a line. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
             ),
         ),
         geos.LinearRing: strawberry.scalar(
             name="LinearRing",
             serialize=lambda v: v.tuple if isinstance(v, geos.LinearRing) else v,
-            parse_value=geos.LinearRing,
+            parse_value=_parse_geometry(geos.LinearRing, geos.LinearRing),
             description=(
                 "A geographical line that gets multiple 'x, y' or 'x, y, z' "
                 "tuples to form a line. It must be a circle. "
-                "E.g. It maps back to itself."
+                "E.g. It maps back to itself. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
             ),
         ),
         geos.Polygon: strawberry.scalar(
             name="Polygon",
             serialize=lambda v: v.tuple if isinstance(v, geos.Polygon) else v,
-            parse_value=lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
+            parse_value=_parse_geometry(
+                geos.Polygon,
+                lambda v: geos.Polygon(*[geos.LinearRing(x) for x in v]),
+            ),
             description=(
                 "A geographical object that gets 1 or 2 LinearRing objects"
-                " as external and internal rings."
+                " as external and internal rings. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
             ),
         ),
         geos.MultiPoint: strawberry.scalar(
             name="MultiPoint",
             serialize=lambda v: v.tuple if isinstance(v, geos.MultiPoint) else v,
-            parse_value=lambda v: geos.MultiPoint(*[geos.Point(x) for x in v]),
-            description="A geographical object that contains multiple Points.",
+            parse_value=_parse_geometry(
+                geos.MultiPoint,
+                lambda v: geos.MultiPoint(*[geos.Point(x) for x in v]),
+            ),
+            description=(
+                "A geographical object that contains multiple Points. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
+            ),
         ),
         geos.MultiLineString: strawberry.scalar(
             name="MultiLineString",
             serialize=lambda v: v.tuple if isinstance(v, geos.MultiLineString) else v,
-            parse_value=lambda v: geos.MultiLineString(*[
-                geos.LineString(x) for x in v
-            ]),
-            description="A geographical object that contains multiple line strings.",
+            parse_value=_parse_geometry(
+                geos.MultiLineString,
+                lambda v: geos.MultiLineString(*[geos.LineString(x) for x in v]),
+            ),
+            description=(
+                "A geographical object that contains multiple line strings. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
+            ),
         ),
         geos.MultiPolygon: strawberry.scalar(
             name="MultiPolygon",
             serialize=lambda v: v.tuple if isinstance(v, geos.MultiPolygon) else v,
-            parse_value=lambda v: geos.MultiPolygon(
-                *[geos.Polygon(*list(x)) for x in v],
+            parse_value=_parse_geometry(
+                geos.MultiPolygon,
+                lambda v: geos.MultiPolygon(*[geos.Polygon(*list(x)) for x in v]),
             ),
-            description="A geographical object that contains multiple polygons.",
+            description=(
+                "A geographical object that contains multiple polygons. "
+                f"Input also accepts {_GEOMETRY_INPUT_FORMATS}."
+            ),
         ),
         geos.GEOSGeometry: strawberry.scalar(
             name="Geometry",
             serialize=lambda v: v.tuple if isinstance(v, geos.GEOSGeometry) else v,  # type: ignore[attr-defined]
-            parse_value=geos.GEOSGeometry,
+            parse_value=_parse_geometry(geos.GEOSGeometry),
             description=(
                 "An arbitrary geographical object. One of Point, "
                 "LineString, LinearRing, Polygon, MultiPoint, "
-                "MultiLineString, MultiPolygon."
+                "MultiLineString, MultiPolygon. "
+                f"Input accepts {_GEOMETRY_INPUT_FORMATS}."
             ),
         ),
     })

@@ -395,6 +395,63 @@ def test_create_geo(mutation):
     reason="Test requires GEOS to be imported and properly configured",
 )
 @pytest.mark.django_db(transaction=True)
+def test_create_geo_standard_formats(mutation):
+    from tests.models import GeosFieldsModel
+
+    result = mutation(
+        "mutation CreateGeo($data: GeoFieldInput!) {"
+        "  geofield: createGeoField(data: $data) { id }"
+        "}",
+        {
+            "data": {
+                "point": "POINT(1 2)",
+                "lineString": '{"type": "LineString", "coordinates": [[0, 0], [1, 1]]}',
+                "polygon": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [0, 1], [1, 1], [0, 0]]],
+                },
+            }
+        },
+    )
+    assert not result.errors
+
+    obj = GeosFieldsModel.objects.get(id=result.data["geofield"]["id"])
+    assert obj.point.tuple == (1.0, 2.0)
+    assert obj.line_string.tuple == ((0.0, 0.0), (1.0, 1.0))
+    assert obj.polygon.tuple == (((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (0.0, 0.0)),)
+
+
+@pytest.mark.skipif(
+    not settings.GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
+@pytest.mark.django_db(transaction=True)
+def test_create_geo_transforms_srid(mutation):
+    from tests.models import GeosFieldsModel
+
+    # POINT(10 10) in EPSG:4326, expressed in EPSG:3857
+    result = mutation(
+        """
+        {
+          geofield: createGeoField(
+            data: { point: "SRID=3857;POINT(1113194.9079327357 1118889.9748579597)" }
+          ) { id }
+        }
+        """,
+    )
+    assert not result.errors
+
+    point = GeosFieldsModel.objects.get(id=result.data["geofield"]["id"]).point
+    assert point.srid == 4326
+    assert point.x == pytest.approx(10)
+    assert point.y == pytest.approx(10)
+
+
+@pytest.mark.skipif(
+    not settings.GEOS_IMPORTED,
+    reason="Test requires GEOS to be imported and properly configured",
+)
+@pytest.mark.django_db(transaction=True)
 def test_update_geo(mutation):
     from tests.models import GeosFieldsModel
 
