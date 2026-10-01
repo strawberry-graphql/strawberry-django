@@ -343,11 +343,11 @@ wheels = [
 
 [[package]]
 name = "graphql-core"
-version = "3.2.7"
+version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ac/9b/037a640a2983b09aed4a823f9cf1729e6d780b0671f854efa4727a7affbe/graphql_core-3.2.7.tar.gz", hash = "sha256:27b6904bdd3b43f2a0556dad5d579bdfdeab1f38e8e8788e555bdcb586a6f62c", size = 513484, upload-time = "2025-11-01T22:30:40.436Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/90/dfade6d16a55abb45e41b215fcdc940e4f119a6ac7d87430d45d020b659f/graphql_core-3.3.0.tar.gz", hash = "sha256:fd3424e88af3f3211931c6ff96350f1cd9069cf0f1a31b9972899e35d39136b5", size = 726439, upload-time = "2026-09-27T14:50:14.57Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/14/933037032608787fb92e365883ad6a741c235e0ff992865ec5d904a38f1e/graphql_core-3.2.7-py3-none-any.whl", hash = "sha256:17fc8f3ca4a42913d8e24d9ac9f08deddf0a0b2483076575757f6c412ead2ec0", size = 207262, upload-time = "2025-11-01T22:30:38.912Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/13/03fb01b3581134cc30d7dd3fb8a9c429267574ace881a9e72c2f57896ee9/graphql_core-3.3.0-py3-none-any.whl", hash = "sha256:d37fac6ef4dfc3eaa5daa59dcb498d7cbb118439d240993c68fddc4cb1bade44", size = 347906, upload-time = "2026-09-27T14:50:12.905Z" },
 ]
 
 [[package]]
@@ -732,7 +732,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.322.2"
+version = "0.328.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cross-web" },
@@ -741,9 +741,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3d/8e/268b99664efc125ebe7a7ee0bcdb479a5a931d3a8cf6c24aecfb434aca5c/strawberry_graphql-0.322.2.tar.gz", hash = "sha256:d0040b690777b0e8f375341794576ccb964fcaf90fdecdc3ca5e873bea554841", size = 233734, upload-time = "2026-07-20T20:47:01.509Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/69/f34ee441303b4d6c50f3a1f3592934afd36b84482f976024c663c9bb9092/strawberry_graphql-0.328.0.tar.gz", hash = "sha256:d99e5160c2a86c5d38a7a996a6a3fa23ab050f9c4aaf4969bcc15f17d5b194a5", size = 243914, upload-time = "2026-09-30T17:31:29.566Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/8c/548da181af07af86f4c61c2556de1254700f8101a13019e4fd2f8b8ce8ff/strawberry_graphql-0.322.2-py3-none-any.whl", hash = "sha256:37047d2f801b4b0d22465d31d3cb4ed48a0592bca5941aeeb3adba995bd668f0", size = 337228, upload-time = "2026-07-20T20:46:59.296Z" },
+    { url = "https://files.pythonhosted.org/packages/39/e2/bfdcecff0dbe575565df48d288c02f96b142d84cef520f50a47382d060e0/strawberry_graphql-0.328.0-py3-none-any.whl", hash = "sha256:ec9f7cf9f9987f092e3e4a86ac2f8dc6ff7aacbc8f8dd7bb8ccbe8ba7d977899", size = 347741, upload-time = "2026-09-30T17:31:27.618Z" },
 ]
 
 [[package]]
@@ -801,7 +801,7 @@ requires-dist = [
     { name = "django-choices-field", marker = "extra == 'enum'", specifier = ">=2.2.2" },
     { name = "django-debug-toolbar", marker = "extra == 'debug-toolbar'", specifier = ">=6.0.0" },
     { name = "django-polymorphic", marker = "extra == 'polymorphic'", specifier = ">=4.0.0" },
-    { name = "strawberry-graphql", specifier = ">=0.322.2" },
+    { name = "strawberry-graphql", specifier = ">=0.328.0" },
 ]
 provides-extras = ["debug-toolbar", "enum", "polymorphic"]
 

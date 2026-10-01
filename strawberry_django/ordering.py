@@ -177,7 +177,7 @@ def apply(
     sequence: dict[str, OrderSequence] = {}
     if info is not None and info._raw_info.field_nodes:
         field_node = info._raw_info.field_nodes[0]
-        for arg in field_node.arguments:
+        for arg in field_node.arguments or ():
             if arg.name.value != ORDER_ARG or not isinstance(
                 arg.value, ObjectValueNode
             ):
