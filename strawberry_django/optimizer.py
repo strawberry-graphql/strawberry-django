@@ -31,7 +31,14 @@ from graphql import (
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLWrappingType,
+    get_argument_values,
 )
+from graphql.execution.collect_fields import (
+    FieldDetails,
+    FragmentDetails,
+    collect_subfields,
+)
+from graphql.execution.values import VariableValues
 from graphql.language.ast import OperationType
 from graphql.type.definition import GraphQLResolveInfo, get_named_type
 from strawberry import UNSET, relay
@@ -42,6 +49,7 @@ from strawberry.schema.schema_converter import get_arguments
 from strawberry.types import get_object_definition, has_object_definition
 from strawberry.types.base import StrawberryContainer
 from strawberry.types.info import Info
+from strawberry.types.nodes import get_variable_values
 from strawberry.types.object_type import StrawberryObjectDefinition
 from typing_extensions import assert_never, assert_type
 
@@ -52,7 +60,6 @@ from strawberry_django.relay.list_connection import DjangoListConnection
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
-from .utils.gql_compat import get_field_arguments, get_sub_field_selections
 from .utils.inspect import (
     PrefetchInspector,
     get_model_field,
@@ -619,10 +626,10 @@ def _optimize_prefetch_queryset(
         field=field,
         source=None,
         info=field_info,
-        kwargs=get_field_arguments(
-            info,
+        kwargs=get_argument_values(
             parent_type.fields[field_name],
             field_node,
+            VariableValues(sources={}, coerced=get_variable_values(info)),
         ),
         config=strawberry_schema.config,
         scalar_registry=strawberry_schema.schema_converter.scalar_registry,
@@ -720,7 +727,18 @@ def _get_selections(
     info: GraphQLResolveInfo,
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
 ) -> dict[str, list[FieldNode]]:
-    return get_sub_field_selections(info, parent_type)
+    collected = collect_subfields(
+        info.schema,
+        {name: FragmentDetails(fragment) for name, fragment in info.fragments.items()},
+        VariableValues(sources={}, coerced=get_variable_values(info)),
+        info.operation,
+        cast("GraphQLObjectType", parent_type),
+        [FieldDetails(node=fn, defer_usage=None) for fn in info.field_nodes],
+    )
+    return {
+        key: [fd.node for fd in field_details]
+        for key, field_details in collected.grouped_field_set.items()
+    }
 
 
 def _get_field_arguments(node: FieldNode) -> tuple:

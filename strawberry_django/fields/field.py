@@ -65,7 +65,6 @@ from strawberry_django.permissions import filter_with_perms
 from strawberry_django.queryset import run_type_get_queryset
 from strawberry_django.relay import resolve_model_nodes
 from strawberry_django.resolvers import (
-    default_qs_hook,
     django_getattr,
     django_resolver,
     resolve_base_manager,
@@ -139,8 +138,6 @@ class StrawberryDjangoField(
             prefetch_related=prefetch_related,
             annotate=annotate,
         )
-        # FIXME: Probably remove this when depending on graphql-core 3.3.0+
-        self.disable_fetch_list_results: bool = False
         self._cached_arguments: list[StrawberryArgument] | None = None
 
         super().__init__(*args, **kwargs)
@@ -327,10 +324,7 @@ class StrawberryDjangoField(
         elif self.is_list:
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
-                qs = self.get_queryset(qs, info, **kwargs)
-                if not self.disable_fetch_list_results:
-                    qs = default_qs_hook(qs)
-                return qs
+                return self.get_queryset(qs, info, **kwargs)
 
         elif self.is_optional:
 

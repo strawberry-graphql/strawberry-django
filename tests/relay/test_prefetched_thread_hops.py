@@ -6,13 +6,12 @@ windowed query, so resolving nodes, page info and ``totalCount`` is pure
 in-memory work — paying a thread hop per parent node multiplies into hundreds
 of hops on list-heavy responses.
 
-The absolute number of hops for the root field depends on the graphql-core
-version (graphql-core 3.3+ async-iterates the root queryset, moving the fetch
-into Django's own ``sync_to_async``), so the tests assert the actual contract:
-the hops (count and call sites) are constant, no matter how many parent nodes
-are resolved. Without the optimizer the nested data is not in memory, and the
-complementary tests assert that each parent then pays thread hops for its
-database work instead of running it on the event loop.
+graphql-core async-iterates the root queryset, moving its fetch into Django's
+own ``sync_to_async``, so the tests assert the actual contract: the hops (count
+and call sites) are constant, no matter how many parent nodes are resolved.
+Without the optimizer the nested data is not in memory, and the complementary
+tests assert that each parent then pays thread hops for its database work
+instead of running it on the event loop.
 """
 
 from collections import Counter

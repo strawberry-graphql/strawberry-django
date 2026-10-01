@@ -6,7 +6,6 @@ from pytest_snapshot.plugin import Snapshot
 
 import strawberry_django
 from strawberry_django import mutations
-from tests.conftest import normalize_sdl
 
 from .models import Issue, Milestone, Project
 from .schema import IssueInput, IssueType, MilestoneType, ProjectType, schema
@@ -17,10 +16,8 @@ SNAPSHOTS_DIR = pathlib.Path(__file__).parent / "snapshots"
 def test_schema():
     # Ignore top-level definition order while preserving checks for fields,
     # arguments, descriptions, and directive applications.
-    actual = parse(normalize_sdl(str(schema)), no_location=True)
-    expected = parse(
-        normalize_sdl((SNAPSHOTS_DIR / "schema.gql").read_text()), no_location=True
-    )
+    actual = parse(str(schema), no_location=True)
+    expected = parse((SNAPSHOTS_DIR / "schema.gql").read_text(), no_location=True)
 
     def definition_key(definition):
         return definition.kind, getattr(getattr(definition, "name", None), "value", "")
@@ -55,4 +52,4 @@ def test_schema_with_inheritance(snapshot: Snapshot):
 
     schema = strawberry.Schema(query=Query, mutation=Mutation)
     snapshot.snapshot_dir = SNAPSHOTS_DIR
-    snapshot.assert_match(normalize_sdl(str(schema)), "schema_with_inheritance.gql")
+    snapshot.assert_match(str(schema), "schema_with_inheritance.gql")
