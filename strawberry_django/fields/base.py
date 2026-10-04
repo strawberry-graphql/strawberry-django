@@ -9,7 +9,6 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import get_object_definition
 from strawberry.types.auto import StrawberryAuto
 from strawberry.types.base import (
-    StrawberryContainer,
     StrawberryList,
     StrawberryOptional,
     StrawberryType,
@@ -110,11 +109,9 @@ class StrawberryDjangoFieldBase(StrawberryField):
         if isinstance(origin, StrawberryUnion):
             origin_list: list[type[WithStrawberryDjangoObjectDefinition]] = []
             for t in origin.types:
-                while isinstance(t, StrawberryContainer):
-                    t = t.of_type  # ruff: ignore[redefined-loop-name]
-
-                if has_django_definition(t):
-                    origin_list.append(t)
+                unwrapped = unwrap_type(t)
+                if has_django_definition(unwrapped):
+                    origin_list.append(unwrapped)
 
             origin = origin_list[0] if len(origin_list) == 1 else None
 

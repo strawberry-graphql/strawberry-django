@@ -16,8 +16,6 @@ from strawberry import Info, relay
 from strawberry.relay import NodeType, PageInfo, from_base64
 from strawberry.relay.types import NodeIterableType
 from strawberry.relay.utils import should_resolve_list_connection_edges
-from strawberry.types import get_object_definition
-from strawberry.types.base import StrawberryContainer
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
@@ -28,6 +26,7 @@ from strawberry_django.pagination import (
     get_total_count,
 )
 from strawberry_django.queryset import get_queryset_config
+from strawberry_django.relay.utils import resolve_edge_class
 from strawberry_django.resolvers import django_resolver
 
 
@@ -392,16 +391,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             ordering_descriptors = get_queryset_config(qs).ordering_descriptors
             assert ordering_descriptors is not None
 
-        type_def = get_object_definition(cls)
-        assert type_def
-        field_def = type_def.get_field("edges")
-        assert field_def
-
-        field = field_def.resolve_type(type_definition=type_def)
-        while isinstance(field, StrawberryContainer):
-            field = field.of_type
-
-        edge_class = cast("DjangoCursorEdge[NodeType]", field)
+        edge_class = cast("DjangoCursorEdge[NodeType]", resolve_edge_class(cls))
 
         if not should_resolve_list_connection_edges(info):
             return cls(

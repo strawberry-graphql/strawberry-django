@@ -57,6 +57,7 @@ from strawberry_django.fields.types import resolve_model_field_name
 from strawberry_django.pagination import OffsetPaginated, apply_window_pagination
 from strawberry_django.queryset import get_queryset_config, run_type_get_queryset
 from strawberry_django.relay.list_connection import DjangoListConnection
+from strawberry_django.relay.utils import resolve_edge_class
 from strawberry_django.resolvers import django_fetch
 
 from .descriptors import ModelProperty
@@ -87,7 +88,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from django.contrib.contenttypes.fields import GenericRelation
-    from strawberry.relay import Edge
     from strawberry.types.execution import ExecutionContext
     from strawberry.types.field import StrawberryField
     from strawberry.utils.await_maybe import AwaitableOrValue
@@ -666,11 +666,7 @@ def _optimize_prefetch_queryset(
                 connection_type is relay.ListConnection
                 or connection_type is DjangoListConnection
             ):
-                field_def_ = connection_type_def.get_field("edges")
-                assert field_def_
-                field_ = field_def_.resolve_type(type_definition=connection_type_def)
-                field_ = unwrap_type(field_)
-                edge_class = cast("Edge", field_)
+                edge_class = resolve_edge_class(connection_extension.connection_type)
 
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
