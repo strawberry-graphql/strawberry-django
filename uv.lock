@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10, <4.0"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -748,7 +748,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.92.0"
+version = "0.92.1"
 source = { editable = "." }
 dependencies = [
     { name = "asgiref" },

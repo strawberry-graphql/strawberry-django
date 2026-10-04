@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.92.1 - 2026-10-04
+-------------------
+
+Reuse a single helper to resolve connection edge types and reduce duplication in relay connection handling logic.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#966](https://github.com/strawberry-graphql/strawberry-django/pull/966)
+
 0.92.0 - 2026-10-01
 -------------------
 
