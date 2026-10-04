@@ -7,8 +7,6 @@ import strawberry
 from django.db import models
 from strawberry import Info, relay
 from strawberry.relay.types import NodeIterableType
-from strawberry.types import get_object_definition
-from strawberry.types.base import StrawberryContainer
 from strawberry.types.nodes import InlineFragment, Selection
 from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
@@ -16,8 +14,8 @@ from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import get_cached_total_count, get_total_count
 from strawberry_django.queryset import get_queryset_config
+from strawberry_django.relay.utils import resolve_edge_class
 from strawberry_django.resolvers import django_resolver
-from strawberry_django.utils.typing import unwrap_type
 
 
 def _should_optimize_total_count(info: Info) -> bool:
@@ -180,16 +178,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         fallback to the queryset resolution.
         """
         result = nodes._result_cache  # type: ignore
-
-        type_def = get_object_definition(cls, strict=True)
-        field_def = type_def.get_field("edges")
-        assert field_def
-
-        field = field_def.resolve_type(type_definition=type_def)
-        while isinstance(field, StrawberryContainer):
-            field = field.of_type
-
-        edge_class = cast("relay.Edge[relay.NodeType]", field)
+        edge_class = resolve_edge_class(cls)
 
         edges: list[relay.Edge] = [
             edge_class.resolve_edge(
@@ -233,14 +222,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         amount is used instead of `before=None`.
         """
         assert isinstance(nodes, models.QuerySet)
-
-        type_def = get_object_definition(cls)
-        assert type_def
-        field_def = type_def.get_field("edges")
-        assert field_def
-        field = field_def.resolve_type(type_definition=type_def)
-        field = unwrap_type(field)
-        edge_class = cast("relay.Edge[relay.NodeType]", field)
+        edge_class = resolve_edge_class(cls)
 
         if in_async_context():
 

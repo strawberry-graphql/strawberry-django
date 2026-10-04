@@ -271,12 +271,8 @@ def _process_type(
             "type_annotation",
             None,
         )
-        # We need to reset the `__eval_cache__` to make sure inherited types
-        # will be forced to reevaluate the annotation on strawberry 0.192.2+
-        if type_annotation is not None and hasattr(
-            type_annotation,
-            "__resolve_cache__",
-        ):
+        # Inherited types must re-evaluate the annotation instead of using the cache
+        if type_annotation is not None:
             type_annotation.__resolve_cache__ = None
 
         if f.name in auto_fields:
