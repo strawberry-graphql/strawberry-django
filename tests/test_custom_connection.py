@@ -324,3 +324,74 @@ def test_fragment_with_custom_connection_no_n1(enable_only_optimization: bool):
             ]
         }
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("enable_only_optimization", [True, False])
+@pytest.mark.parametrize(
+    ("field_name", "edge_type_name"),
+    [("cursorUsers", "UserTypeCursorEdge"), ("listUsers", "UserTypeEdge")],
+)
+def test_fragment_on_edge_when_node_has_cursor_and_list_connections_no_n1(
+    enable_only_optimization: bool, field_name: str, edge_type_name: str
+):
+    """A node exposed through a cursor and a list connection has two edge types.
+
+    The optimizer must use the edge type of the connection being queried. Before,
+    it took whichever type was named `f"{node}Edge"`, so a fragment on the cursor
+    edge (`UserTypeCursorEdge`) was ignored and every user loaded its group lazily.
+    """
+    for i in range(3):
+        User.objects.create(
+            name=f"user{i}", group=Group.objects.create(name=f"group{i}")
+        )
+
+    @strawberry.type
+    class BothConnectionsQuery:
+        cursor_users: DjangoCursorConnection[UserType] = strawberry_django.connection()
+        list_users: DjangoListConnection[UserType] = strawberry_django.connection()
+
+    schema = strawberry.Schema(
+        query=BothConnectionsQuery,
+        extensions=[
+            partial(
+                DjangoOptimizerExtension,
+                enable_only_optimization=enable_only_optimization,
+            )
+        ],
+    )
+
+    query = f"""
+        query MyQuery {{
+          {field_name} {{
+            edges {{
+              ...UserFragment
+            }}
+          }}
+        }}
+
+        fragment UserFragment on {edge_type_name} {{
+          node {{
+            name
+            group {{
+              name
+            }}
+          }}
+        }}
+    """
+
+    with CaptureQueriesContext(connections["default"]) as captured:
+        result = schema.execute_sync(query)
+
+    assert len(captured) == 1, (
+        f"Expected 1 query (users joined with groups), but got {len(captured)}."
+    )
+    assert result.errors is None
+    assert result.data == {
+        field_name: {
+            "edges": [
+                {"node": {"name": f"user{i}", "group": {"name": f"group{i}"}}}
+                for i in range(3)
+            ]
+        }
+    }
