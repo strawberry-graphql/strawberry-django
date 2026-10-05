@@ -46,8 +46,7 @@ from strawberry.extensions import SchemaExtension
 from strawberry.relay.utils import SliceMetadata
 from strawberry.schema.schema import Schema
 from strawberry.schema.schema_converter import get_arguments
-from strawberry.types import get_object_definition, has_object_definition
-from strawberry.types.base import StrawberryContainer
+from strawberry.types import get_object_definition
 from strawberry.types.info import Info
 from strawberry.types.nodes import get_variable_values
 from strawberry.types.object_type import StrawberryObjectDefinition
@@ -1507,34 +1506,14 @@ def _get_model_hints_from_connection(
         if edge.name.value != "edges":
             continue
 
-        e_field = object_definition.get_field("edges")
+        # Read the edge type from the connection's own GraphQL type: a node can have
+        # several edge types (e.g. `NodeEdge` and `NodeCursorEdge`), so its name can't be guessed.
+        e_field = parent_type.fields.get("edges")
         if e_field is None:
             break
 
-        e_definition = e_field.type
-        while isinstance(e_definition, StrawberryContainer):
-            e_definition = e_definition.of_type
-        if has_object_definition(e_definition):
-            e_definition = get_object_definition(e_definition, strict=True)
-        assert isinstance(e_definition, StrawberryObjectDefinition)
-
-        # Get the GraphQL definition first, then look it up in the schema
-        # to ensure we get the properly specialized/registered type
-        e_gql_definition = _get_gql_definition(
-            schema,
-            e_definition,
-        )
+        e_gql_definition = get_named_type(e_field.type)
         assert isinstance(e_gql_definition, (GraphQLObjectType, GraphQLInterfaceType))
-
-        # For generic Edge types, we need to get the actual specialized type from the GraphQL schema
-        # Otherwise fragments defined on the concrete Edge type (e.g. UserTypeEdge) won't match
-        edge_type_name = f"{n_definition.name}Edge"
-        if edge_type_name in schema.schema_converter.type_map:
-            specialized_edge = schema.schema_converter.type_map[edge_type_name]
-            if hasattr(specialized_edge, "implementation"):
-                specialized_edge = specialized_edge.implementation
-            if isinstance(specialized_edge, (GraphQLObjectType, GraphQLInterfaceType)):
-                e_gql_definition = specialized_edge
 
         e_info = _generate_selection_resolve_info(
             info,
