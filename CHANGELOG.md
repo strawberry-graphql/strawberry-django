@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+0.92.2 - 2026-10-05
+-------------------
+
+Fix the optimizer ignoring fragments on connection edge types when a node is exposed through both a
+`DjangoCursorConnection` and a `DjangoListConnection` (N+1). The optimizer now takes the edge type from the
+connection's `edges` field instead of guessing it from the node name.
+
+This release was contributed by [@kermox](https://github.com/kermox) in [#968](https://github.com/strawberry-graphql/strawberry-django/pull/968)
+
 0.92.1 - 2026-10-04
 -------------------
 
