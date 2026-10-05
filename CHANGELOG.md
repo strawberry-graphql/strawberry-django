@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.92.3 - 2026-10-05
+-------------------
+
+Fix a regression from 0.92.0: in async execution, prefetched list fields went through Django's `QuerySet.__aiter__`, which hops to a thread even for cached results. This could split DataLoader batches of child resolvers into extra queries.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#969](https://github.com/strawberry-graphql/strawberry-django/pull/969)
+
 0.92.2 - 2026-10-05
 -------------------
 
