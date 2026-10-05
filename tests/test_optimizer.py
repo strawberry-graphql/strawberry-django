@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 import strawberry
+from asgiref.sync import sync_to_async
 from django.db import DEFAULT_DB_ALIAS, connections, models
 from django.db.models import (
     CharField,
@@ -3477,6 +3478,49 @@ def test_prefetch_related_hint_returning_unordered_queryset(
             for project in projects
         ]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_prefetched_list_is_not_iterated_async(mocker: MockerFixture):
+    """Prefetched lists must not go through `QuerySet.__aiter__`.
+
+    Django's `QuerySet.__aiter__` always hops to a thread, even when the results
+    are cached. That yields to the event loop mid list completion and splits
+    DataLoader batches of child resolvers.
+    """
+
+    @strawberry_django.type(Milestone)
+    class MilestoneTypeTest:
+        name: strawberry.auto
+
+    @strawberry_django.type(Project)
+    class ProjectTypeTest:
+        name: strawberry.auto
+        milestones: list[MilestoneTypeTest]
+
+    @strawberry.type
+    class Query:
+        projects: list[ProjectTypeTest] = strawberry_django.field()
+
+    schema = strawberry.Schema(
+        query=Query,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    @sync_to_async
+    def create_data():
+        for project in ProjectFactory.create_batch(3):
+            MilestoneFactory.create_batch(2, project=project)
+
+    await create_data()
+    aiter_spy = mocker.spy(models.QuerySet, "__aiter__")
+
+    result = await schema.execute("query { projects { name milestones { name } } }")
+
+    assert result.errors is None, result.errors
+    assert result.data is not None
+    assert [len(p["milestones"]) for p in result.data["projects"]] == [2, 2, 2]
+    assert [c.args[0].model for c in aiter_spy.call_args_list] == [Project]
 
 
 @pytest.mark.django_db(transaction=True)

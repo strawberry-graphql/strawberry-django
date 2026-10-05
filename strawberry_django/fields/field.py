@@ -324,7 +324,11 @@ class StrawberryDjangoField(
         elif self.is_list:
 
             def qs_hook(qs: models.QuerySet):  # type: ignore
-                return self.get_queryset(qs, info, **kwargs)
+                qs = self.get_queryset(qs, info, **kwargs)
+                # graphql-core iterates a QuerySet with `async for`, and
+                # `QuerySet.__aiter__` hops to a thread even when results are cached
+                result_cache = qs._result_cache  # type: ignore
+                return result_cache if result_cache is not None else qs
 
         elif self.is_optional:
 
