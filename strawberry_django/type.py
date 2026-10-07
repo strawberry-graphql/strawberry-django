@@ -21,12 +21,15 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import (
+    FieldWithResolverAndDefaultFactoryError,
+    FieldWithResolverAndDefaultValueError,
     MissingFieldAnnotationError,
 )
 from strawberry.types import get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.cast import get_strawberry_type_cast
 from strawberry.types.field import StrawberryField
+from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.maybe import (
     _annotation_is_maybe,  # ruff: ignore[import-private-name]
 )
@@ -70,6 +73,24 @@ __all__ = [
 _T = TypeVar("_T", bound=type)
 _O = TypeVar("_O", bound=type[WithStrawberryObjectDefinition])
 _M = TypeVar("_M", bound=Model)
+
+
+def _process_filter_order_method(
+    cls: type, field: StrawberryField, method: StrawberryResolver
+) -> None:
+    """Check the field of a filter or order method, and put the method back on `cls`.
+
+    Strawberry does both for fields with a resolver: they can't have a default,
+    and the dataclass removes the method from the class, which e.g. `super()`
+    calls of overriding methods need.
+    """
+    if field.default is not UNSET and field.default is not dataclasses.MISSING:
+        raise FieldWithResolverAndDefaultValueError(field.python_name, cls.__name__)
+
+    if field.default_factory is not dataclasses.MISSING:
+        raise FieldWithResolverAndDefaultFactoryError(field.python_name, cls.__name__)
+
+    setattr(cls, field.python_name, method.wrapped_func)
 
 
 def _process_type(
@@ -382,6 +403,9 @@ def _process_type(
             # If this is not a StrawberryDjangoField, but has a base_resolver, is a
             # filter or order method or is a skip_filter field, avoid forcing it to
             # be a StrawberryDjangoField
+            if (method := getattr(f, "filter_order_resolver", None)) is not None:
+                _process_filter_order_method(cls, f, method)
+
             new_fields.append(f)
             continue
         else:

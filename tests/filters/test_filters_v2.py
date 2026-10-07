@@ -1,4 +1,5 @@
 # ruff: file-ignore[raise-without-from-inside-except, blind-except, redefined-while-unused, pytest-raises-with-multiple-statements, builtin-variable-shadowing]
+import copy
 import uuid
 from enum import Enum
 from typing import Annotated, Any, cast
@@ -7,7 +8,10 @@ import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
 from strawberry import Info, Some, auto
-from strawberry.exceptions import MissingArgumentsAnnotationsError
+from strawberry.exceptions import (
+    FieldWithResolverAndDefaultValueError,
+    MissingArgumentsAnnotationsError,
+)
 from strawberry.relay import GlobalID
 from strawberry.types import ExecutionResult, get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition, get_object_definition
@@ -296,6 +300,72 @@ def test_filter_field_method():
     with pytest.warns(UserWarning, match="does not end with '__'"):
         q_object = process_filters(filter_, qs, fake_info, prefix="ROOT")[1]
     assert q_object, "Filter was not called"
+
+
+def test_filter_method_overriding_a_parent_method_can_call_super():
+    @strawberry_django.filter_type(models.Fruit)
+    class BaseFilter:
+        @strawberry_django.filter_field
+        def search(self, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}name__icontains": value})
+
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter(BaseFilter):
+        @strawberry_django.filter_field
+        def search(self, prefix: str, value: str) -> Q:
+            return super().search(prefix, value) | Q(**{f"{prefix}color__name": value})
+
+    filter_: Any = Filter(search="red")  # type: ignore
+    q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
+
+    assert q_object == Q(name__icontains="red") | Q(color__name="red")
+
+
+def test_filter_methods_can_be_class_and_static_methods():
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field
+        @classmethod
+        def by_name(cls, prefix: str, value: str) -> Q:
+            assert cls is Filter
+            return Q(**{f"{prefix}name": value})
+
+        @strawberry_django.filter_field
+        @staticmethod
+        def by_color(prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}color__name": value})
+
+    filter_: Any = Filter(by_name="apple", by_color="red")  # type: ignore
+    q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
+
+    assert q_object == Q(name="apple") & Q(color__name="red")
+
+
+def test_filter_methods_cannot_have_a_default():
+    with pytest.raises(FieldWithResolverAndDefaultValueError):
+
+        @strawberry_django.filter_type(models.Fruit)
+        class Filter:
+            @strawberry_django.filter_field(default="apple")
+            def search(self, prefix: str, value: str) -> Q:
+                return Q(**{f"{prefix}name": value})
+
+
+def test_filter_methods_are_kept_when_their_field_is_copied():
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field
+        def search(self, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}name": value})
+
+    field = next(
+        f
+        for f in get_object_definition(Filter, strict=True).fields
+        if f.name == "search"
+    )
+
+    assert isinstance(field, FilterOrderField)
+    assert copy.copy(field).filter_order_resolver is field.filter_order_resolver
 
 
 def test_filter_object_method():
