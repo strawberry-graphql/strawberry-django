@@ -268,7 +268,9 @@ def test_order_type():
             f.name,
             f.__class__,
             f.type,
-            f.base_resolver.__class__ if f.base_resolver else None,
+            f.filter_order_resolver.__class__
+            if getattr(f, "filter_order_resolver", None)
+            else None,
         )
         for f in get_object_definition(FruitOrder, strict=True).fields
     ] == [

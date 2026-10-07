@@ -376,10 +376,12 @@ def _process_type(
             f = copy.copy(f)  # ruff: ignore[redefined-loop-name]
         elif not isinstance(f, StrawberryDjangoField) and (
             getattr(f, "base_resolver", None) is not None
+            or getattr(f, "filter_order_resolver", None) is not None
             or f.metadata.get(SKIP_FILTER_META, False)
         ):
-            # If this is not a StrawberryDjangoField, but has a base_resolver or is
-            # a skip_filter field, avoid forcing it to be a StrawberryDjangoField
+            # If this is not a StrawberryDjangoField, but has a base_resolver, is a
+            # filter or order method or is a skip_filter field, avoid forcing it to
+            # be a StrawberryDjangoField
             new_fields.append(f)
             continue
         else:

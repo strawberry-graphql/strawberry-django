@@ -245,8 +245,8 @@ def process_filters(
                 q &= ~sub_q
             else:
                 assert_never(field_name)
-        elif isinstance(f, FilterOrderField) and f.base_resolver:
-            res = f.base_resolver(
+        elif isinstance(f, FilterOrderField) and f.filter_order_resolver:
+            res = f.filter_order_resolver(
                 filters,
                 info,
                 value=(resolve_value(field_value) if should_resolve else field_value),

@@ -135,7 +135,9 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
 
 class FilterOrderField(StrawberryField):
-    base_resolver: FilterOrderFieldResolver | None  # type: ignore
+    # The filter or order method, called when the filters or the ordering are
+    # applied. It isn't the field's resolver, as input fields aren't resolved.
+    filter_order_resolver: FilterOrderFieldResolver | None = None
 
     def __call__(self, resolver: _RESOLVER_TYPE) -> Self | FilterOrderFieldResolver:  # type: ignore
         if not isinstance(resolver, StrawberryResolver):
@@ -148,15 +150,17 @@ class FilterOrderField(StrawberryField):
                 f'found "{type(resolver)}"'
             )
 
-        super().__call__(resolver)
-        self._arguments = []
+        # like for resolvers, arguments without annotations are reported first
+        resolver.arguments  # noqa: B018
         resolver.validate_filter_arguments()
 
         if resolver.name in {OBJECT_FILTER_NAME, OBJECT_ORDER_NAME}:
             # For object filter we return resolver
             return resolver
 
-        self.init = self.compare = self.repr = True
+        self.filter_order_resolver = resolver
+        # The field's type is the type of the method's `value` argument
+        self.type_annotation = resolver.type_annotation
         return self
 
 
