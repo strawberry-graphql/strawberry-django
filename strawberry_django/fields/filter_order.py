@@ -151,7 +151,7 @@ class FilterOrderField(StrawberryField):
             )
 
         # like for resolvers, arguments without annotations are reported first
-        resolver.arguments  # noqa: B018
+        resolver.arguments  # ruff: ignore[useless-expression]
         resolver.validate_filter_arguments()
 
         if resolver.name in {OBJECT_FILTER_NAME, OBJECT_ORDER_NAME}:
