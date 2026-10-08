@@ -402,7 +402,7 @@ def test_order_type():
             f.__class__,
             f.type,
             f.filter_order_resolver.__class__
-            if getattr(f, "filter_order_resolver", None)
+            if isinstance(f, FilterOrderField) and f.filter_order_resolver
             else None,
         )
         for f in get_object_definition(FruitOrder, strict=True).fields

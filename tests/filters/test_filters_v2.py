@@ -313,7 +313,8 @@ def test_filter_method_overriding_a_parent_method_can_call_super():
     class Filter(BaseFilter):
         @strawberry_django.filter_field
         def search(self, prefix: str, value: str) -> Q:
-            return super().search(prefix, value) | Q(**{f"{prefix}color__name": value})
+            parent = super().search(prefix, value)  # type: ignore
+            return parent | Q(**{f"{prefix}color__name": value})
 
     filter_: Any = Filter(search="red")  # type: ignore
     q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
@@ -451,7 +452,7 @@ def test_filter_type():
             f.__class__,
             f.type.of_type.__name__,  # type: ignore
             f.filter_order_resolver.__class__
-            if getattr(f, "filter_order_resolver", None)
+            if isinstance(f, FilterOrderField) and f.filter_order_resolver
             else None,
         )
         for f in get_object_definition(FruitOrder, strict=True).fields
