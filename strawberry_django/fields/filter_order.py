@@ -131,14 +131,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
             assert sequence is not None
             kwargs[info_parameter.name] = sequence
 
-        func = self.wrapped_func
-        # Strawberry binds class and static methods used as resolvers to the type
-        # using them. These methods aren't resolvers, so they're bound here, to the
-        # type of the filter or order instance
-        if isinstance(func, (classmethod, staticmethod)):
-            func = func.__get__(source, type(source))
-
-        return func(*args, **kwargs)
+        return super().__call__(*args, **kwargs)
 
 
 class FilterOrderField(StrawberryField):

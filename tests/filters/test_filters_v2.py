@@ -2,7 +2,7 @@
 import copy
 import uuid
 from enum import Enum
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, ClassVar, cast
 
 import pytest
 import strawberry
@@ -328,18 +328,25 @@ def test_filter_methods_can_be_class_and_static_methods():
         @strawberry_django.filter_field
         @classmethod
         def by_name(cls, prefix: str, value: str) -> Q:
-            assert cls is Filter
-            return Q(**{f"{prefix}name": value})
+            return Q(**{f"{prefix}{cls.name_lookup}": value})
 
         @strawberry_django.filter_field
         @staticmethod
         def by_color(prefix: str, value: str) -> Q:
             return Q(**{f"{prefix}color__name": value})
 
-    filter_: Any = Filter(by_name="apple", by_color="red")  # type: ignore
-    q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
+        name_lookup: ClassVar[str] = "name"
 
-    assert q_object == Q(name="apple") & Q(color__name="red")
+    # an inherited class method gets the subclass as `cls`
+    @strawberry_django.filter_type(models.Fruit)
+    class ExactFilter(Filter):
+        name_lookup: ClassVar[str] = "name__exact"
+
+    for filter_type, lookup in ((Filter, "name"), (ExactFilter, "name__exact")):
+        filter_: Any = filter_type(by_name="apple", by_color="red")  # type: ignore
+        q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
+
+        assert q_object == Q(**{lookup: "apple"}) & Q(color__name="red")
 
 
 def test_filter_methods_cannot_have_a_default():

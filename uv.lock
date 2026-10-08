@@ -732,7 +732,7 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.328.0"
+version = "0.332.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cross-web" },
@@ -741,9 +741,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/69/f34ee441303b4d6c50f3a1f3592934afd36b84482f976024c663c9bb9092/strawberry_graphql-0.328.0.tar.gz", hash = "sha256:d99e5160c2a86c5d38a7a996a6a3fa23ab050f9c4aaf4969bcc15f17d5b194a5", size = 243914, upload-time = "2026-09-30T17:31:29.566Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/b4/61a2535754776d331a37752d9a2c7b6e0a5493c3d90cd5193fe10f223ea2/strawberry_graphql-0.332.0.tar.gz", hash = "sha256:73126346571b6338d8b6b0d04879002b63076f04eb735795ce9464aa6d304ef2", size = 252724, upload-time = "2026-10-06T18:29:49.921Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/e2/bfdcecff0dbe575565df48d288c02f96b142d84cef520f50a47382d060e0/strawberry_graphql-0.328.0-py3-none-any.whl", hash = "sha256:ec9f7cf9f9987f092e3e4a86ac2f8dc6ff7aacbc8f8dd7bb8ccbe8ba7d977899", size = 347741, upload-time = "2026-09-30T17:31:27.618Z" },
+    { url = "https://files.pythonhosted.org/packages/40/ef/57804c0ed51bbe1d5af0cbb6a4e34c161d671ac4f0c328f3afa402948d0f/strawberry_graphql-0.332.0-py3-none-any.whl", hash = "sha256:fd958cd5fdb13d59aab9ac04a0cf864eb81041629baaf92cf46c711d2405f74f", size = 358137, upload-time = "2026-10-06T18:29:48.167Z" },
 ]
 
 [[package]]
@@ -801,7 +801,7 @@ requires-dist = [
     { name = "django-choices-field", marker = "extra == 'enum'", specifier = ">=2.2.2" },
     { name = "django-debug-toolbar", marker = "extra == 'debug-toolbar'", specifier = ">=6.0.0" },
     { name = "django-polymorphic", marker = "extra == 'polymorphic'", specifier = ">=4.0.0" },
-    { name = "strawberry-graphql", specifier = ">=0.328.0" },
+    { name = "strawberry-graphql", specifier = ">=0.330.3" },
 ]
 provides-extras = ["debug-toolbar", "enum", "polymorphic"]
 
