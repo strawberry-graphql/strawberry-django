@@ -6,6 +6,7 @@ import re
 import uuid
 from collections.abc import Callable
 from json import dumps as json_dumps
+from json import loads as json_loads
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
@@ -64,6 +65,22 @@ class DjangoFileType:
 class DjangoImageType(DjangoFileType):
     width: int
     height: int
+
+
+@strawberry.type
+class DjangoGeometryType:
+    wkt: str
+    ewkt: str
+    srid: int | None
+    geom_type: str
+
+    @strawberry.field(
+        description="The geometry as a GeoJSON object, transformed to EPSG:4326."
+    )
+    def geojson(self, root: strawberry.Parent[Any]) -> JSON:
+        # GeoJSON (RFC 7946) is always in EPSG:4326
+        geom = root if root.srid in {None, 4326} else root.transform(4326, clone=True)
+        return json_loads(geom.json)
 
 
 @strawberry.type
@@ -277,6 +294,7 @@ except ImproperlyConfigured:
     MultilineString = None
     MultiPolygon = None
     Geometry = None
+    geos_field_type_map: dict[type[fields.Field], type] = {}
 else:
     # Alias the geos types for backwards compatibility
     Point = geos.Point
@@ -410,17 +428,21 @@ else:
         ),
     })
 
-    field_type_map.update(
-        {
-            geos_fields.PointField: Point,
-            geos_fields.LineStringField: LineString,
-            geos_fields.PolygonField: Polygon,
-            geos_fields.MultiPointField: MultiPoint,
-            geos_fields.MultiLineStringField: MultiLineString,
-            geos_fields.MultiPolygonField: MultiPolygon,
-            geos_fields.GeometryField: Geometry,
-        },
-    )
+    geos_field_type_map = {
+        geos_fields.PointField: Point,
+        geos_fields.LineStringField: LineString,
+        geos_fields.PolygonField: Polygon,
+        geos_fields.MultiPointField: MultiPoint,
+        geos_fields.MultiLineStringField: MultiLineString,
+        geos_fields.MultiPolygonField: MultiPolygon,
+        geos_fields.GeometryField: Geometry,
+    }
+    field_type_map.update({**geos_field_type_map})
+
+# Used for output instead of the geometry scalars, unless USE_GEOMETRY_SCALARS is set
+geometry_object_type_map: dict[type[fields.Field], type] = dict.fromkeys(
+    geos_field_type_map, DjangoGeometryType
+)
 
 
 input_field_type_map: dict[
@@ -437,6 +459,8 @@ input_field_type_map: dict[
     reverse_related.ManyToManyRel: ManyToManyInput,
     reverse_related.ManyToOneRel: ManyToOneInput,
     reverse_related.OneToOneRel: OneToOneInput,
+    # Inputs and filters always use the geometry scalars
+    **geos_field_type_map,
 }
 
 
@@ -591,6 +615,8 @@ def resolve_model_field_type(
             type_map = field_type_map
             if force_global_id:
                 type_map = {**type_map, **relay_field_type_map}
+            if not settings["USE_GEOMETRY_SCALARS"]:
+                type_map = {**type_map, **geometry_object_type_map}
 
             field_type = type_map.get(model_field_type, NotImplemented)
 
