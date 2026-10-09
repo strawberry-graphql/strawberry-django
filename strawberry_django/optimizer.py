@@ -28,6 +28,7 @@ from django.db.models.query import QuerySet
 from graphql import (
     FieldNode,
     GraphQLInterfaceType,
+    GraphQLNamedType,
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLWrappingType,
@@ -661,6 +662,16 @@ def _optimize_prefetch_queryset(
                 connection_type_def.concrete_of
                 and connection_type_def.concrete_of.origin
             )
+            first = field_kwargs.get("first")
+            last = field_kwargs.get("last")
+            before = field_kwargs.get("before")
+            after = field_kwargs.get("after")
+            if not _selects_connection_edges(
+                info, get_named_type(parent_type.fields[field_name].type)
+            ):
+                # Only `totalCount` is selected, which ignores pagination. Fetch the
+                # first row of each parent, as it carries the window total count.
+                first, last, before, after = 1, None, None, None
             if (
                 connection_type is relay.ListConnection
                 or connection_type is DjangoListConnection
@@ -669,10 +680,10 @@ def _optimize_prefetch_queryset(
 
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
-                    first=field_kwargs.get("first"),
-                    last=field_kwargs.get("last"),
-                    before=field_kwargs.get("before"),
-                    after=field_kwargs.get("after"),
+                    first=first,
+                    last=last,
+                    before=before,
+                    after=after,
                     max_results=connection_extension.max_results,
                     prefix=edge_class.CURSOR_PREFIX,
                 )
@@ -694,10 +705,10 @@ def _optimize_prefetch_queryset(
                     qs,
                     related_field_id=related_field_id,
                     info=Info(_raw_info=info, _field=field),
-                    first=field_kwargs.get("first"),
-                    last=field_kwargs.get("last"),
-                    before=field_kwargs.get("before"),
-                    after=field_kwargs.get("after"),
+                    first=first,
+                    last=last,
+                    before=before,
+                    after=after,
                     max_results=connection_extension.max_results,
                 )
             else:
@@ -716,6 +727,18 @@ def _optimize_prefetch_queryset(
         qs = mark_optimized_by_prefetching(qs)
 
     return qs
+
+
+def _selects_connection_edges(
+    info: GraphQLResolveInfo,
+    connection_type: GraphQLNamedType,
+) -> bool:
+    """Whether the connection resolves its edges, mirroring `should_resolve_list_connection_edges`."""
+    assert isinstance(connection_type, (GraphQLObjectType, GraphQLInterfaceType))
+    return any(
+        field_nodes[0].name.value in {"edges", "pageInfo"}
+        for field_nodes in _get_selections(info, connection_type).values()
+    )
 
 
 def _get_selections(
@@ -1501,6 +1524,7 @@ def _get_model_hints_from_connection(
     n_type = unwrap_type(n_type)
     n_definition = get_object_definition(n_type, strict=True)
 
+    selects_node = False
     for edges in _get_selections(info, parent_type).values():
         edge = edges[0]
         if edge.name.value != "edges":
@@ -1526,6 +1550,7 @@ def _get_model_hints_from_connection(
             if node.name.value != "node":
                 continue
 
+            selects_node = True
             for concrete_n_type in get_possible_concrete_types(
                 model, schema, n_definition
             ):
@@ -1554,6 +1579,14 @@ def _get_model_hints_from_connection(
                 )
                 if concrete_store is not None:
                     store = concrete_store if store is None else store | concrete_store
+
+    if not selects_node:
+        # Nothing is selected from the nodes (e.g. only `totalCount`). Prefetch the
+        # connection anyway, so that it is resolved from the prefetch cache instead
+        # of querying the database once per parent.
+        store = OptimizerStore()
+        if config is None or config.enable_only:
+            store.only.append("pk")
 
     return store
 
