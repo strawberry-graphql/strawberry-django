@@ -1497,6 +1497,47 @@ def test_nested_total_count_with_first_zero():
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("arguments", ["", "(first: 1)", "(last: 1)"])
+def test_nested_total_count_without_edges(arguments: str):
+    p1 = Project.objects.create()
+    p2 = Project.objects.create()
+    p3 = Project.objects.create()
+
+    for _ in range(3):
+        Milestone.objects.create(project=p1)
+    Milestone.objects.create(project=p2)
+
+    query = f"""
+    query TestQuery {{
+        projects(first: 3, order: {{ id: ASC }}) {{
+            edges {{
+              node {{
+                id
+                milestones{arguments} {{ totalCount }}
+              }}
+            }}
+        }}
+    }}
+    """
+    # Selecting only `totalCount` must not fall back to one COUNT per project.
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+        assert result.data == {
+            "projects": {
+                "edges": [
+                    {
+                        "node": {
+                            "id": str(GlobalID("ProjectType", str(project.pk))),
+                            "milestones": {"totalCount": total_count},
+                        }
+                    }
+                    for project, total_count in [(p1, 3), (p2, 1), (p3, 0)]
+                ],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "cursor",
     [
