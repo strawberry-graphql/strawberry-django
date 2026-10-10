@@ -131,8 +131,8 @@ def process_order(
         if f_value is UNSET or (f_value is None and not f.metadata.get(WITH_NONE_META)):
             continue
 
-        if isinstance(f, FilterOrderField) and f.base_resolver:
-            res = f.base_resolver(
+        if isinstance(f, FilterOrderField) and f.filter_order_resolver:
+            res = f.filter_order_resolver(
                 order,
                 info,
                 value=f_value,
@@ -215,8 +215,8 @@ def process_ordering_default(
         if f_value is UNSET or (f_value is None and not f.metadata.get(WITH_NONE_META)):
             continue
 
-        if isinstance(f, FilterOrderField) and f.base_resolver:
-            res = f.base_resolver(
+        if isinstance(f, FilterOrderField) and f.filter_order_resolver:
+            res = f.filter_order_resolver(
                 ordering,
                 info,
                 value=f_value,

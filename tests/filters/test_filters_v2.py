@@ -1,13 +1,17 @@
 # ruff: file-ignore[raise-without-from-inside-except, blind-except, redefined-while-unused, pytest-raises-with-multiple-statements, builtin-variable-shadowing]
+import copy
 import uuid
 from enum import Enum
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, ClassVar, cast
 
 import pytest
 import strawberry
 from django.db.models import Case, Count, Q, QuerySet, Value, When
 from strawberry import Info, Some, auto
-from strawberry.exceptions import MissingArgumentsAnnotationsError
+from strawberry.exceptions import (
+    FieldWithResolverAndDefaultValueError,
+    MissingArgumentsAnnotationsError,
+)
 from strawberry.relay import GlobalID
 from strawberry.types import ExecutionResult, get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition, get_object_definition
@@ -298,6 +302,80 @@ def test_filter_field_method():
     assert q_object, "Filter was not called"
 
 
+def test_filter_method_overriding_a_parent_method_can_call_super():
+    @strawberry_django.filter_type(models.Fruit)
+    class BaseFilter:
+        @strawberry_django.filter_field
+        def search(self, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}name__icontains": value})
+
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter(BaseFilter):
+        @strawberry_django.filter_field
+        def search(self, prefix: str, value: str) -> Q:
+            parent = super().search(prefix, value)  # type: ignore
+            return parent | Q(**{f"{prefix}color__name": value})
+
+    filter_: Any = Filter(search="red")  # type: ignore
+    q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
+
+    assert q_object == Q(name__icontains="red") | Q(color__name="red")
+
+
+def test_filter_methods_can_be_class_and_static_methods():
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field
+        @classmethod
+        def by_name(cls, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}{cls.name_lookup}": value})
+
+        @strawberry_django.filter_field
+        @staticmethod
+        def by_color(prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}color__name": value})
+
+        name_lookup: ClassVar[str] = "name"
+
+    # an inherited class method gets the subclass as `cls`
+    @strawberry_django.filter_type(models.Fruit)
+    class ExactFilter(Filter):
+        name_lookup: ClassVar[str] = "name__exact"
+
+    for filter_type, lookup in ((Filter, "name"), (ExactFilter, "name__exact")):
+        filter_: Any = filter_type(by_name="apple", by_color="red")  # type: ignore
+        q_object = process_filters(filter_, models.Fruit.objects.all(), None)[1]
+
+        assert q_object == Q(**{lookup: "apple"}) & Q(color__name="red")
+
+
+def test_filter_methods_cannot_have_a_default():
+    with pytest.raises(FieldWithResolverAndDefaultValueError):
+
+        @strawberry_django.filter_type(models.Fruit)
+        class Filter:
+            @strawberry_django.filter_field(default="apple")
+            def search(self, prefix: str, value: str) -> Q:
+                return Q(**{f"{prefix}name": value})
+
+
+def test_filter_methods_are_kept_when_their_field_is_copied():
+    @strawberry_django.filter_type(models.Fruit)
+    class Filter:
+        @strawberry_django.filter_field
+        def search(self, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}name": value})
+
+    field = next(
+        f
+        for f in get_object_definition(Filter, strict=True).fields
+        if f.name == "search"
+    )
+
+    assert isinstance(field, FilterOrderField)
+    assert copy.copy(field).filter_order_resolver is field.filter_order_resolver
+
+
 def test_filter_object_method():
     @strawberry_django.filters.filter_type(models.Fruit)
     class Filter:
@@ -380,7 +458,9 @@ def test_filter_type():
             f.name,
             f.__class__,
             f.type.of_type.__name__,  # type: ignore
-            f.base_resolver.__class__ if f.base_resolver else None,
+            f.filter_order_resolver.__class__
+            if isinstance(f, FilterOrderField) and f.filter_order_resolver
+            else None,
         )
         for f in get_object_definition(FruitOrder, strict=True).fields
         if f.name not in {"NOT", "AND", "OR", "DISTINCT"}

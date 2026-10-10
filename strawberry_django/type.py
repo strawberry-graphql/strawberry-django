@@ -21,12 +21,15 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.exceptions import (
+    FieldWithResolverAndDefaultFactoryError,
+    FieldWithResolverAndDefaultValueError,
     MissingFieldAnnotationError,
 )
 from strawberry.types import get_object_definition
 from strawberry.types.base import WithStrawberryObjectDefinition
 from strawberry.types.cast import get_strawberry_type_cast
 from strawberry.types.field import StrawberryField
+from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.maybe import (
     _annotation_is_maybe,  # ruff: ignore[import-private-name]
 )
@@ -55,7 +58,11 @@ from strawberry_django.utils.typing import (
 from .descriptors import ModelProperty
 from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
-from .fields.filter_order import SKIP_FILTER_META
+from .fields.filter_order import (
+    SKIP_FILTER_META,
+    FilterOrderField,
+    FilterOrderFieldResolver,
+)
 from .fields.types import get_model_field, resolve_model_field_name
 from .settings import strawberry_django_settings as django_settings
 
@@ -70,6 +77,39 @@ __all__ = [
 _T = TypeVar("_T", bound=type)
 _O = TypeVar("_O", bound=type[WithStrawberryObjectDefinition])
 _M = TypeVar("_M", bound=Model)
+
+
+def _process_filter_order_method(
+    cls: type, field: FilterOrderField, method: StrawberryResolver
+) -> FilterOrderField:
+    """Check the field of a filter or order method, bind the method to `cls` and put it back on it.
+
+    Strawberry does the same for fields with a resolver: they can't have a
+    default, class and static methods are bound to the type using them, and the
+    dataclass removes the method from the class, which e.g. `super()` calls of
+    overriding methods need. Returns the field, copied when the method had to be
+    bound again, like a class method inherited from a parent.
+    """
+    if field.default is not UNSET and field.default is not dataclasses.MISSING:
+        raise FieldWithResolverAndDefaultValueError(field.python_name, cls.__name__)
+
+    if field.default_factory is not dataclasses.MISSING:
+        raise FieldWithResolverAndDefaultFactoryError(field.python_name, cls.__name__)
+
+    # the method as it was defined, before `bind` replaces it with a bound one
+    defined_method = method.wrapped_func
+    bound_method = method.bind(cls)
+
+    if bound_method is not method:
+        field = copy.copy(field)
+        # `bind` returns a copy of the resolver, of the same class
+        field.filter_order_resolver = cast("FilterOrderFieldResolver", bound_method)
+
+    # an inherited method that was bound already is still on the parent class
+    if not isinstance(defined_method, types.MethodType):
+        setattr(cls, field.python_name, defined_method)
+
+    return field
 
 
 def _process_type(
@@ -376,10 +416,17 @@ def _process_type(
             f = copy.copy(f)  # ruff: ignore[redefined-loop-name]
         elif not isinstance(f, StrawberryDjangoField) and (
             getattr(f, "base_resolver", None) is not None
+            or (isinstance(f, FilterOrderField) and f.filter_order_resolver is not None)
             or f.metadata.get(SKIP_FILTER_META, False)
         ):
-            # If this is not a StrawberryDjangoField, but has a base_resolver or is
-            # a skip_filter field, avoid forcing it to be a StrawberryDjangoField
+            # If this is not a StrawberryDjangoField, but has a base_resolver, is a
+            # filter or order method or is a skip_filter field, avoid forcing it to
+            # be a StrawberryDjangoField
+            if isinstance(f, FilterOrderField) and f.filter_order_resolver is not None:
+                f = _process_filter_order_method(  # ruff: ignore[redefined-loop-name]
+                    cls, f, f.filter_order_resolver
+                )
+
             new_fields.append(f)
             continue
         else:
