@@ -1,6 +1,19 @@
 CHANGELOG
 =========
 
+0.93.0 - 2026-10-10
+-------------------
+
+Filter and order methods, declared with `@strawberry_django.filter_field` or `@strawberry_django.order_field`, no longer use Strawberry's field resolver. The method is now stored in the field's `filter_order_resolver` attribute instead of `base_resolver`, as input fields aren't resolved. This prepares for Strawberry raising an error for input types with fields that have resolvers (strawberry-graphql/strawberry#4682).
+
+Code that reads `base_resolver` on these fields should use `filter_order_resolver` instead.
+
+strawberry-graphql 0.330.3 or newer is now required, as class and static methods used as filter or order methods are bound with Strawberry's `StrawberryResolver.bind`, like Strawberry does for resolvers.
+
+This release was contributed by [@patrick91](https://github.com/patrick91) in [#972](https://github.com/strawberry-graphql/strawberry-django/pull/972)
+
+Additional contributors: [@pre-commit-ci[bot]](https://github.com/pre-commit-ci[bot])
+
 0.92.3 - 2026-10-05
 -------------------
 
