@@ -6,23 +6,23 @@ title: GeoDjango
 
 Strawberry Django provides built-in support for
 [GeoDjango](https://docs.djangoproject.com/en/stable/ref/contrib/gis/) fields,
-automatically mapping them to GraphQL scalar types.
+automatically mapping them to GraphQL types: geometries are output as a
+`DjangoGeometryType` object and are input as GraphQL scalars.
 
 ## Supported Field Types
 
-| Django Field           | GraphQL Scalar    | Description                        | Input format                               | Output format |
-| ---------------------- | ----------------- | ---------------------------------- | ------------------------------------------ | ------------- |
-| `PointField`           | `Point`           | A point as `(x, y)` or `(x, y, z)` | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
-| `LineStringField`      | `LineString`      | Multiple points forming a line     | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
-| `PolygonField`         | `Polygon`         | One or more LinearRings            | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
-| `MultiPointField`      | `MultiPoint`      | Collection of Points               | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
-| `MultiLineStringField` | `MultiLineString` | Collection of LineStrings          | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
-| `MultiPolygonField`    | `MultiPolygon`    | Collection of Polygons             | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | Coordinates   |
-| `GeometryField`        | `Geometry`        | Any geometry type                  | WKT, EWKT, HEXEWKB or GeoJSON              | Coordinates   |
+| Django Field           | Input Scalar      | Description                        | Input format                               | Output type          |
+| ---------------------- | ----------------- | ---------------------------------- | ------------------------------------------ | -------------------- |
+| `PointField`           | `Point`           | A point as `(x, y)` or `(x, y, z)` | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | `DjangoGeometryType` |
+| `LineStringField`      | `LineString`      | Multiple points forming a line     | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | `DjangoGeometryType` |
+| `PolygonField`         | `Polygon`         | One or more LinearRings            | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | `DjangoGeometryType` |
+| `MultiPointField`      | `MultiPoint`      | Collection of Points               | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | `DjangoGeometryType` |
+| `MultiLineStringField` | `MultiLineString` | Collection of LineStrings          | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | `DjangoGeometryType` |
+| `MultiPolygonField`    | `MultiPolygon`    | Collection of Polygons             | Coordinates, WKT, EWKT, HEXEWKB or GeoJSON | `DjangoGeometryType` |
+| `GeometryField`        | `Geometry`        | Any geometry type                  | WKT, EWKT, HEXEWKB or GeoJSON              | `DjangoGeometryType` |
 
-There is also a `LinearRing` scalar with the same input and output formats. Django
-has no `LinearRingField`, so it's only used when annotating `geos.LinearRing`
-directly.
+There is also a `LinearRing` scalar with the same input formats. Django has no
+`LinearRingField`, so it's only used when annotating `geos.LinearRing` directly.
 
 See [GraphQL Data Format](#graphql-data-format) for details.
 
@@ -54,18 +54,19 @@ from . import models
 class Location:
     id: auto
     name: auto
-    point: auto  # Automatically uses Point scalar
-    area: auto  # Automatically uses Polygon scalar
+    point: auto  # Output as DjangoGeometryType
+    area: auto  # Output as DjangoGeometryType
 
 
 @strawberry_django.input(models.Location)
 class LocationInput:
     name: auto
-    point: auto
-    area: auto
+    point: auto  # Input as the Point scalar
+    area: auto  # Input as the Polygon scalar
 
 
-# You can also use geos types directly in annotations
+# Annotating geos types directly uses the scalars, also for output
+# (see "Keeping the coordinate output" below)
 @strawberry_django.type(models.Location)
 class LocationExplicit:
     id: auto
@@ -138,13 +139,75 @@ is transformed to the field's SRID when saved or used in a lookup.
 
 ### Output
 
-All geometry scalars are output as coordinate arrays, as shown above
-(e.g. `[2.2945, 48.8584]` for a point).
+Geometries are output as a `DjangoGeometryType` object:
+
+| Field      | Type      | Description                                                  |
+| ---------- | --------- | ------------------------------------------------------------ |
+| `wkt`      | `String!` | WKT, in the SRID of the field                                |
+| `ewkt`     | `String!` | EWKT, in the SRID of the field (includes the SRID)           |
+| `srid`     | `Int`     | The SRID of the field                                        |
+| `geomType` | `String!` | The kind of geometry, e.g. `Point` or `Polygon`              |
+| `geojson`  | `JSON!`   | A GeoJSON geometry object, always in `EPSG:4326` (see below) |
+
+```graphql
+query {
+  locations {
+    point {
+      wkt
+      srid
+      geojson
+    }
+  }
+}
+```
+
+```json
+{
+  "point": {
+    "wkt": "POINT (2.2945 48.8584)",
+    "srid": 4326,
+    "geojson": { "type": "Point", "coordinates": [2.2945, 48.8584] }
+  }
+}
+```
+
+GeoJSON ([RFC 7946](https://datatracker.ietf.org/doc/html/rfc7946)) is always in
+`EPSG:4326` (`[longitude, latitude]`), so `geojson` is transformed to `EPSG:4326`
+when the field uses another SRID. A geometry without an SRID is output as is.
+`geojson` is a `JSON` scalar, so pick its parts, such as `coordinates`, on the
+client.
+
+### Keeping the coordinate output
+
+Before `DjangoGeometryType`, geometries were output as coordinate arrays through
+the input scalars (e.g. `[2.2945, 48.8584]` for a point). To keep that output:
+
+- for every geometry field, set the
+  [`USE_GEOMETRY_SCALARS`](../guide/settings.md#strawberry_django) setting to `True`:
+
+  ```python
+  STRAWBERRY_DJANGO = {"USE_GEOMETRY_SCALARS": True}
+  ```
+
+- for some fields only, annotate them with the geos type instead of `auto`. This lets
+  you migrate clients field by field:
+
+  ```python
+  from django.contrib.gis.geos import Polygon
+
+
+  @strawberry_django.type(models.Location)
+  class Location:
+      point: auto  # DjangoGeometryType
+      area: Polygon | None  # coordinate output
+  ```
+
+The same coordinates are available in the new type as `geojson.coordinates`, in
+`EPSG:4326`.
 
 > [!WARNING]
-> `Geometry` values are output as coordinate arrays as well, so the output doesn't
-> say which kind of geometry it is, and a queried `Geometry` value can't be sent
-> back as input as is.
+> With the coordinate output, `Geometry` values don't say which kind of geometry
+> they are, and a queried `Geometry` value can't be sent back as input as is.
 
 ## Spatial Queries
 

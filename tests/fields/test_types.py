@@ -11,6 +11,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import GeneratedField  # type: ignore
+from django.test import override_settings
 from strawberry import auto
 from strawberry.scalars import JSON
 from strawberry.types import get_object_definition
@@ -369,25 +370,32 @@ def test_related_input_fields():
     not settings.GEOS_IMPORTED,
     reason="Test requires GEOS to be imported and properly configured",
 )
-def test_geos_fields():
+@pytest.mark.parametrize("use_geometry_scalars", [False, True])
+def test_geos_fields(use_geometry_scalars):
     from strawberry_django.fields import types
     from tests.models import GeosFieldsModel
 
-    @strawberry_django.type(GeosFieldsModel)
-    class GeoFieldType:
-        point: auto
-        line_string: auto
-        polygon: auto
-        multi_point: auto
-        multi_line_string: auto
-        multi_polygon: auto
-        geometry: auto
+    with override_settings(
+        STRAWBERRY_DJANGO={"USE_GEOMETRY_SCALARS": use_geometry_scalars}
+    ):
 
-    object_definition = get_object_definition(GeoFieldType, strict=True)
-    assert [
-        (f.name, cast("StrawberryOptional", f.type).of_type)
-        for f in object_definition.fields
-    ] == [
+        @strawberry_django.type(GeosFieldsModel)
+        class GeoFieldType:
+            point: auto
+            line_string: auto
+            polygon: auto
+            multi_point: auto
+            multi_line_string: auto
+            multi_polygon: auto
+            geometry: auto
+
+        object_definition = get_object_definition(GeoFieldType, strict=True)
+        field_types = [
+            (f.name, cast("StrawberryOptional", f.type).of_type)
+            for f in object_definition.fields
+        ]
+
+    expected = [
         ("point", types.Point),
         ("line_string", types.LineString),
         ("polygon", types.Polygon),
@@ -396,6 +404,9 @@ def test_geos_fields():
         ("multi_polygon", types.MultiPolygon),
         ("geometry", types.Geometry),
     ]
+    if not use_geometry_scalars:
+        expected = [(name, types.DjangoGeometryType) for name, _ in expected]
+    assert field_types == expected
 
 
 def test_inherit_type():
