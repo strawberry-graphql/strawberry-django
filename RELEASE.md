@@ -35,3 +35,7 @@ prefetched rows, so they no longer run one `COUNT(*)` query per parent either.
 Nested `DjangoCursorConnection`s paginated with `after` or `before` now report the total
 count of the whole connection, as top-level ones do, instead of counting only the rows
 past the cursor (or `0` when the page was empty).
+
+The `totalCount` of a nested many-to-many connection or `OffsetPaginated` field with an
+empty page (e.g. an offset past its end) no longer counts each row once per related
+object.

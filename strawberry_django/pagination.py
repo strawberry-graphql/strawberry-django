@@ -18,6 +18,7 @@ from django.db.models import (
 )
 from django.db.models.functions import RowNumber
 from django.db.models.query import MAX_GET_RESULTS  # type: ignore
+from django.db.models.sql.query import Query
 from strawberry.types import Info
 from strawberry.types.arguments import StrawberryArgument
 from strawberry.types.unset import UNSET, UnsetType
@@ -354,19 +355,59 @@ def remove_window_pagination(queryset: _QS) -> _QS:
 
     """
     queryset = queryset._chain()  # type: ignore
-    queryset.query.where.children = [
-        child
-        for child in queryset.query.where.children
-        if not isinstance(
+    query = queryset.query
+    removed = []
+    where_children = []
+    for child in query.where.children:
+        if isinstance(
             getattr(child, "lhs", None), (_PaginationWindow, _PaginationFilter)
-        )
-    ]
-    queryset.query.annotations = {  # type: ignore
-        key: value
-        for key, value in queryset.query.annotations.items()
-        if not isinstance(value, (_PaginationWindow, _SubqueryTotalCount))
-    }
+        ):
+            removed.append(child)
+        else:
+            where_children.append(child)
+    query.where.children = where_children
+    annotations = {}
+    for key, value in query.annotations.items():
+        if isinstance(value, (_PaginationWindow, _SubqueryTotalCount)):
+            removed.append(value)
+        else:
+            annotations[key] = value
+    query.annotations = annotations  # type: ignore
+    _remove_unused_joins(query, removed)
     return queryset
+
+
+def _remove_unused_joins(query: Query, removed: list) -> None:
+    """Exclude the joins that only the removed expressions used from the query.
+
+    Django never removes joins, so e.g. the join to a many-to-many through table
+    added to partition by it would still repeat each row once per related
+    object. Joins without references aren't compiled.
+    """
+    # `_gen_cols` yields the columns of expressions, including the outer query
+    # columns that their subqueries reference
+    gen_cols = Query._gen_cols  # type: ignore
+    candidates = _with_parent_aliases(
+        query, {col.alias for col in gen_cols(removed, include_external=True)}
+    )
+    remaining = [query.where, *query.annotations.values(), *query.select]  # type: ignore
+    used = _with_parent_aliases(
+        query, {col.alias for col in gen_cols(remaining, include_external=True)}
+    )
+    for alias in candidates - used:
+        if alias != query.base_table:
+            query.alias_refcount[alias] = 0
+
+
+def _with_parent_aliases(query: Query, aliases: set[str]) -> set[str]:
+    """Add the aliases of the joins that the joins of `aliases` go through."""
+    result = set()
+    for alias in aliases:
+        current = alias
+        while current is not None and current not in result:
+            result.add(current)
+            current = getattr(query.alias_map.get(current), "parent_alias", None)
+    return result
 
 
 def get_total_count(queryset: QuerySet) -> int:

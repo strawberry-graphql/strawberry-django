@@ -5,9 +5,11 @@ import pytest
 import strawberry
 from strawberry.relay import Node, to_base64
 from strawberry.relay.types import PREFIX
+from strawberry.utils.str_converters import to_camel_case
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.pagination import OffsetPaginated
 from strawberry_django.relay import DjangoCursorConnection, DjangoListConnection
 from tests import models, utils
 from tests.projects.faker import (
@@ -538,3 +540,76 @@ def test_nested_total_count_without_edges_validates_pagination(
     assert [error.message for error in optimized.errors] == [
         error.message for error in unoptimized.errors
     ]
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("field", "arguments", "selection"),
+    [
+        (
+            "connection",
+            f'first: 1, after: "{to_base64(PREFIX, 9)}"',
+            "edges { cursor }",
+        ),
+        ("cursor_connection", "first: 1, after: $lastCursor", "edges { cursor }"),
+        ("offset_paginated", "pagination: { offset: 9 }", "results { name }"),
+    ],
+)
+def test_nested_many_to_many_total_count_with_empty_page(
+    field: str, arguments: str, selection: str
+):
+    @strawberry_django.type(models.Tag)
+    class TagType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Group)
+    class GroupType(Node):
+        connection: DjangoListConnection[TagType] = strawberry_django.connection(
+            field_name="tags"
+        )
+        cursor_connection: DjangoCursorConnection[TagType] = (
+            strawberry_django.connection(field_name="tags")
+        )
+        offset_paginated: OffsetPaginated[TagType] = strawberry_django.offset_paginated(
+            field_name="tags"
+        )
+
+    @strawberry.type
+    class Query:
+        groups: list[GroupType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    tags = [models.Tag.objects.create(name=f"tag{i}") for i in range(4)]
+    first_group = models.Group.objects.create(name="first")
+    second_group = models.Group.objects.create(name="second")
+    first_group.tags.add(*tags)
+    # These tags are in both groups
+    second_group.tags.add(tags[1], tags[3])
+
+    result = schema.execute_sync(
+        "query { groups { cursorConnection { edges { cursor } } } }"
+    )
+    assert result.data is not None
+    last_cursor = result.data["groups"][0]["cursorConnection"]["edges"][-1]["cursor"]
+
+    variables = "($lastCursor: String)" if "$lastCursor" in arguments else ""
+    query = f"""
+      query testNestedTotalCount{variables} {{
+        groups {{
+          {to_camel_case(field)}({arguments}) {{
+            totalCount
+            {selection}
+          }}
+        }}
+      }}
+    """
+    # Every page is empty, so each group's total is counted separately
+    with utils.assert_num_queries(4):
+        result = schema.execute_sync(query, {"lastCursor": last_cursor})
+
+    assert not result.errors
+    assert result.data is not None
+    assert [
+        group[to_camel_case(field)]["totalCount"] for group in result.data["groups"]
+    ] == [4, 2]

@@ -3,6 +3,7 @@ from typing import cast
 
 import pytest
 import strawberry
+from django.db.models import Prefetch, prefetch_related_objects
 from django.test import override_settings
 from strawberry import auto
 from strawberry.types import ExecutionResult
@@ -300,6 +301,33 @@ def test_get_cached_total_count_counts_distinct_rows_of_distinct_queryset():
     unpaginated = remove_window_pagination(queryset)
     assert "_strawberry_total_count" not in unpaginated.query.annotations
     assert unpaginated.count() == 3
+
+
+@pytest.mark.django_db(transaction=True)
+def test_remove_window_pagination_removes_many_to_many_partition_join():
+    tags = [models.Tag.objects.create(name=f"tag{i}") for i in range(4)]
+    first_group = models.Group.objects.create(name="first")
+    second_group = models.Group.objects.create(name="second")
+    first_group.tags.add(*tags)
+    # These tags are in both groups
+    second_group.tags.add(tags[1], tags[3])
+
+    # Partitioning by a many-to-many relation joins its through table
+    queryset = apply_window_pagination(
+        models.Tag.objects.order_by("pk"),
+        related_field_id="groups",
+        offset=10,
+        limit=1,
+    )
+    prefetch_related_objects(
+        [first_group, second_group], Prefetch("tags", queryset=queryset)
+    )
+
+    for group, total_count in [(first_group, 4), (second_group, 2)]:
+        group_tags = group.tags.all()
+        assert list(group_tags) == []
+        # The join must not repeat a tag for every group it is in
+        assert remove_window_pagination(group_tags).count() == total_count
 
 
 @pytest.mark.django_db(transaction=True)
