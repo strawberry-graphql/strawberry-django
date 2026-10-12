@@ -1497,6 +1497,76 @@ def test_nested_total_count_with_first_zero():
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("direction", "cursor_index", "num_queries"),
+    [
+        # A cursor in the middle of the first project's milestones, which all
+        # of the second project's milestones come after
+        ("first: 1, after", 1, 2),
+        # Empty pages carry no total, so it is counted separately for each one.
+        # Here the second project's page is empty.
+        ("last: 1, before", 1, 3),
+        # The first project's page is empty
+        ("first: 1, after", -1, 3),
+        # Both projects' pages are empty
+        ("last: 1, before", 0, 4),
+    ],
+)
+@pytest.mark.parametrize(
+    "selection",
+    [
+        "totalCount",
+        "totalCount edges { cursor }",
+        "totalCount edges { node { id } }",
+    ],
+)
+def test_nested_total_count_ignores_cursor(
+    direction: str, cursor_index: int, num_queries: int, selection: str
+):
+    p1 = Project.objects.create()
+    p2 = Project.objects.create()
+    p1m = [Milestone.objects.create(project=p1) for _ in range(3)]
+    p2m = [Milestone.objects.create(project=p2) for _ in range(2)]
+
+    result = schema.execute_sync(
+        """
+        query TestQuery {
+            projects(first: 1, order: { id: ASC }) {
+                edges { node { milestones { edges { cursor } } } }
+            }
+        }
+        """
+    )
+    assert result.data is not None
+    cursor = result.data["projects"]["edges"][0]["node"]["milestones"]["edges"][
+        cursor_index
+    ]["cursor"]
+
+    query = f"""
+    query TestQuery {{
+        projects(order: {{ id: ASC }}) {{
+            edges {{
+              node {{
+                milestones({direction}: "{cursor}") {{ {selection} }}
+              }}
+            }}
+        }}
+    }}
+    """
+    # Only `totalCount` ignores the cursor and fetches the first row of each project
+    with assert_num_queries(num_queries if "edges" in selection else 2):
+        result = schema.execute_sync(query)
+
+    # The total count must not depend on the cursor, as on top-level connections
+    assert not result.errors
+    assert result.data is not None
+    assert [
+        edge["node"]["milestones"]["totalCount"]
+        for edge in result.data["projects"]["edges"]
+    ] == [len(p1m), len(p2m)]
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("arguments", ["", "(first: 1)", "(last: 1)"])
 def test_nested_total_count_without_edges(arguments: str):
     p1 = Project.objects.create()

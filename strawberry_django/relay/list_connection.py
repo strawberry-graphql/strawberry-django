@@ -13,7 +13,7 @@ from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self, deprecated
 
 from strawberry_django.pagination import (
-    _DistinctTotalCount,
+    _SubqueryTotalCount,
     get_cached_total_count,
     get_total_count,
 )
@@ -136,7 +136,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
                     nodes = nodes.annotate(
                         # Window functions are evaluated before DISTINCT, so they
                         # would also count the rows duplicated by joins
-                        _strawberry_total_count=_DistinctTotalCount(nodes)
+                        _strawberry_total_count=_SubqueryTotalCount(nodes)
                         if nodes.query.distinct and not nodes.query.distinct_fields
                         else models.Window(
                             expression=models.Count(1), partition_by=None

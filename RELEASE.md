@@ -31,3 +31,7 @@ with `DISTINCT: true`) now count each row once in `totalCount`, using a
 duplicated by the join. This fixes inflated totals of nested connections and of top-level
 `DjangoListConnection`s selecting `edges`. Nested totals are also read from the
 prefetched rows, so they no longer run one `COUNT(*)` query per parent either.
+
+Nested `DjangoCursorConnection`s paginated with `after` or `before` now report the total
+count of the whole connection, as top-level ones do, instead of counting only the rows
+past the cursor (or `0` when the page was empty).

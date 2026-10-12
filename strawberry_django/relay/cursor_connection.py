@@ -21,6 +21,7 @@ from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
 from strawberry_django.pagination import (
+    _PaginationFilter,
     apply_window_pagination,
     get_cached_total_count,
     get_total_count,
@@ -210,17 +211,27 @@ def apply_cursor_pagination(
     )
 
     qs, ordering_descriptors, original_order_by = annotate_ordering_fields(qs)
+    # The cursors select a page, so the rows they exclude still count in the total
+    total_count_qs = qs
     if after:
         after_cursor = OrderedCollectionCursor.from_cursor(after, ordering_descriptors)
         qs = qs.filter(
-            build_tuple_compare(ordering_descriptors, after_cursor.field_values, False)
+            _PaginationFilter(
+                build_tuple_compare(
+                    ordering_descriptors, after_cursor.field_values, False
+                )
+            )
         )
     if before:
         before_cursor = OrderedCollectionCursor.from_cursor(
             before, ordering_descriptors
         )
         qs = qs.filter(
-            build_tuple_compare(ordering_descriptors, before_cursor.field_values, True)
+            _PaginationFilter(
+                build_tuple_compare(
+                    ordering_descriptors, before_cursor.field_values, True
+                )
+            )
         )
 
     slice_: slice | None = None
@@ -275,6 +286,7 @@ def apply_cursor_pagination(
             related_field_id=related_field_id,
             offset=offset,
             limit=slice_.stop - offset if slice_ is not None else None,
+            total_count_queryset=total_count_qs if after or before else None,
         )
     elif slice_ is not None:
         qs = qs[slice_]
