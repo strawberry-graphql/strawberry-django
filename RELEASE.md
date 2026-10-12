@@ -25,8 +25,9 @@ The optimizer now prefetches such connections too, fetching only the first row o
 parent, which carries the window total count. The query above now runs 2 queries instead
 of 1 + N.
 
-Nested connections over a `distinct()` queryset (e.g. filtered through a many-to-many
-relation with `DISTINCT: true`) now count each row once in `totalCount`, using a
-`COUNT(DISTINCT pk)` subquery per parent instead of a window count, which would include
-the rows duplicated by the join. This total is also read from the prefetched rows, so it
-no longer runs one `COUNT(*)` query per parent either.
+Connections over a `distinct()` queryset (e.g. filtered through a many-to-many relation
+with `DISTINCT: true`) now count each row once in `totalCount`, using a
+`COUNT(DISTINCT pk)` subquery instead of a window count, which would include the rows
+duplicated by the join. This fixes inflated totals of nested connections and of top-level
+`DjangoListConnection`s selecting `edges`. Nested totals are also read from the
+prefetched rows, so they no longer run one `COUNT(*)` query per parent either.

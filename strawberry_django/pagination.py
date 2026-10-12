@@ -4,7 +4,15 @@ from typing import Generic, TypeVar, cast
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS
-from django.db.models import Count, IntegerField, OuterRef, QuerySet, Subquery, Window
+from django.db.models import (
+    Count,
+    IntegerField,
+    OuterRef,
+    QuerySet,
+    Subquery,
+    Value,
+    Window,
+)
 from django.db.models.functions import RowNumber
 from django.db.models.query import MAX_GET_RESULTS  # type: ignore
 from strawberry.types import Info
@@ -211,18 +219,22 @@ class _DistinctTotalCount(Subquery):
 
     Window functions are evaluated before DISTINCT, so a `Count(1)` window
     would also count the rows duplicated by joins (e.g. filtering on a
-    many-to-many relation). This correlated subquery runs the same filters
-    and counts the distinct pks of the outer row's partition instead.
+    many-to-many relation). This subquery runs the same filters and counts the
+    distinct pks of the outer row's partition instead, or of the whole
+    queryset when there is no partition.
     """
 
-    def __init__(self, queryset: QuerySet, related_field_id: str):
+    def __init__(self, queryset: QuerySet, related_field_id: str | None = None):
+        queryset = queryset.order_by()
+        if related_field_id is None:
+            # A constant is not grouped by, so all rows are counted together
+            queryset = queryset.values(_strawberry_all_rows=Value(1))
+        else:
+            queryset = queryset.filter(**{
+                related_field_id: OuterRef(related_field_id)
+            }).values(related_field_id)
         super().__init__(
-            queryset
-            .order_by()
-            .filter(**{related_field_id: OuterRef(related_field_id)})
-            .values(related_field_id)
-            .annotate(count=Count("pk", distinct=True))
-            .values("count"),
+            queryset.annotate(count=Count("pk", distinct=True)).values("count"),
             output_field=IntegerField(),
         )
 
