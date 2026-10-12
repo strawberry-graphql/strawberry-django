@@ -1614,10 +1614,10 @@ def _get_model_hints_from_connection(
     if not selects_node:
         # Nothing is selected from the nodes (e.g. only `totalCount`). Prefetch the
         # connection anyway, so that it is resolved from the prefetch cache instead
-        # of querying the database once per parent.
+        # of querying the database once per parent. Its rows aren't restricted to
+        # their pk, as e.g. custom connection fields or polymorphic models may
+        # still read their fields.
         store = OptimizerStore()
-        if config is None or config.enable_only:
-            store.only.append("pk")
 
     return store
 
@@ -1679,8 +1679,6 @@ def _get_model_hints_from_paginated(
         # Only `totalCount` is selected. Prefetch it anyway, so that it is resolved
         # from the prefetch cache instead of querying the database once per parent.
         store = OptimizerStore()
-        if config is None or config.enable_only:
-            store.only.append("pk")
 
     return store
 

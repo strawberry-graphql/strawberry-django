@@ -4,6 +4,7 @@ import sys
 import pytest
 import strawberry
 from django.test import override_settings
+from strawberry import relay
 from strawberry.relay import Node, to_base64
 from strawberry.relay.types import PREFIX
 from strawberry.utils.str_converters import to_camel_case
@@ -770,5 +771,48 @@ def test_nested_offset_paginated_without_limit(arguments: str):
                 }
             }
             for color_fruits in fruits.values()
+        ]
+    }
+
+
+@strawberry.type(name="FruitNamesConnection")
+class FruitNamesConnection(DjangoListConnection[relay.NodeType]):
+    @strawberry.field
+    def names(self) -> list[str]:
+        assert self.nodes is not None
+        return [node.name for node in self.nodes]  # type: ignore
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_custom_connection_reading_nodes():
+    @strawberry_django.type(models.Fruit)
+    class FruitType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: FruitNamesConnection[FruitType] = strawberry_django.connection()
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b", "c")]
+    for color in colors:
+        for i in range(3):
+            models.Fruit.objects.create(name=f"{color.name}{i}", color=color)
+
+    # The custom field reads the nodes without selecting them, so the prefetched
+    # rows must not lack the fields it reads
+    with utils.assert_num_queries(2):
+        result = schema.execute_sync("query { colors { fruits { names } } }")
+
+    assert not result.errors
+    assert result.data == {
+        "colors": [
+            {"fruits": {"names": [f"{color.name}{i}" for i in range(3)]}}
+            for color in colors
         ]
     }
