@@ -1,6 +1,5 @@
 import datetime
 import json
-import time
 from typing import cast
 
 import pytest
@@ -1630,7 +1629,7 @@ def test_nested_total_count_with_cursor_and_aggregated_queryset():
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("distinct", [False, True])
-def test_nested_total_count_with_cursor_on_large_partition(distinct: bool):
+def test_nested_total_count_with_cursor_without_subquery(distinct: bool):
     @strawberry_django.type(models.Fruit)
     class FruitType(Node):
         name: strawberry.auto
@@ -1650,32 +1649,33 @@ def test_nested_total_count_with_cursor_on_large_partition(distinct: bool):
     fruit_schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
 
     color = models.Color.objects.create(name="red")
-    models.Fruit.objects.bulk_create([
-        models.Fruit(name="fruit", color=color) for _ in range(8000)
-    ])
+    for _ in range(3):
+        models.Fruit.objects.create(name="fruit", color=color)
     result = fruit_schema.execute_sync(
         "query { colors { fruits(first: 1) { edges { cursor } } } }"
     )
     assert result.data is not None
     cursor = result.data["colors"][0]["fruits"]["edges"][0]["cursor"]
 
-    # The total count must not be computed once per row of the partition,
-    # which takes seconds for this many rows
-    start = time.perf_counter()
-    result = fruit_schema.execute_sync(
-        """
-        query TestQuery($after: String) {
-            colors { fruits(first: 1, after: $after) { totalCount edges { cursor } } }
-        }
-        """,
-        {"after": cursor},
-    )
-    elapsed = time.perf_counter() - start
+    with assert_num_queries(2) as ctx:
+        result = fruit_schema.execute_sync(
+            """
+            query TestQuery($after: String) {
+                colors { fruits(first: 1, after: $after) { totalCount edges { cursor } } }
+            }
+            """,
+            {"after": cursor},
+        )
 
     assert not result.errors
     assert result.data is not None
-    assert result.data["colors"][0]["fruits"]["totalCount"] == 8000
-    assert elapsed < 0.5
+    assert result.data["colors"][0]["fruits"]["totalCount"] == 3
+
+    # The total count must be computed by window functions, not by a subquery,
+    # which the database may evaluate once per row: quadratic in the number of
+    # rows of each parent. The only nested SELECT is the one filtering the page.
+    prefetch_sql = ctx.captured_queries[1]["sql"]
+    assert prefetch_sql.upper().count("SELECT") == 2
 
 
 def test_nested_cursor_pagination_with_distinct_fields():
