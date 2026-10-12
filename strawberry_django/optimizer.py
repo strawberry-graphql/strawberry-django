@@ -669,8 +669,10 @@ def _optimize_prefetch_queryset(
             # When only `totalCount` is selected, which ignores pagination, fetch
             # the first row of each parent, as it carries the window total count.
             # The given arguments are still validated, as when resolving the edges.
-            total_count_only = not _selects_connection_edges(
-                info, get_named_type(parent_type.fields[field_name].type)
+            total_count_only = not _selects_fields(
+                info,
+                get_named_type(parent_type.fields[field_name].type),
+                {"edges", "pageInfo"},
             )
             if (
                 connection_type is relay.ListConnection
@@ -701,6 +703,7 @@ def _optimize_prefetch_queryset(
                     ),
                     max_results=connection_extension.max_results,
                     reverse=mark_reversed,
+                    keep_first_row=True,
                 )
             elif connection_type is DjangoCursorConnection:
                 if total_count_only:
@@ -731,11 +734,19 @@ def _optimize_prefetch_queryset(
 
         if isinstance(field.type, type) and issubclass(field.type, OffsetPaginated):
             pagination: OffsetPaginationInfo | None = field_kwargs.get("pagination")
+            offset = pagination.offset if pagination else 0
+            limit = pagination.limit if pagination else -1
+            if not _selects_fields(
+                info, get_named_type(parent_type.fields[field_name].type), {"results"}
+            ):
+                # Only `totalCount` is selected, which the first row carries
+                offset, limit = 0, 0
             qs = apply_window_pagination(
                 qs,
                 related_field_id=related_field_id,
-                offset=pagination.offset if pagination else 0,
-                limit=pagination.limit if pagination else -1,
+                offset=offset,
+                limit=limit,
+                keep_first_row=True,
             )
 
     if mark_optimized:
@@ -744,15 +755,16 @@ def _optimize_prefetch_queryset(
     return qs
 
 
-def _selects_connection_edges(
+def _selects_fields(
     info: GraphQLResolveInfo,
-    connection_type: GraphQLNamedType,
+    parent_type: GraphQLNamedType,
+    field_names: set[str],
 ) -> bool:
-    """Whether the connection resolves its edges, mirroring `should_resolve_list_connection_edges`."""
-    assert isinstance(connection_type, (GraphQLObjectType, GraphQLInterfaceType))
+    """Whether any of the fields is selected on the type."""
+    assert isinstance(parent_type, (GraphQLObjectType, GraphQLInterfaceType))
     return any(
-        field_nodes[0].name.value in {"edges", "pageInfo"}
-        for field_nodes in _get_selections(info, connection_type).values()
+        field_nodes[0].name.value in field_names
+        for field_nodes in _get_selections(info, parent_type).values()
     )
 
 
@@ -1658,6 +1670,13 @@ def _get_model_hints_from_paginated(
             )
             if concrete_store is not None:
                 store = concrete_store if store is None else store | concrete_store
+
+    if store is None and not _selects_fields(info, parent_type, {"results"}):
+        # Only `totalCount` is selected. Prefetch it anyway, so that it is resolved
+        # from the prefetch cache instead of querying the database once per parent.
+        store = OptimizerStore()
+        if config is None or config.enable_only:
+            store.only.append("pk")
 
     return store
 

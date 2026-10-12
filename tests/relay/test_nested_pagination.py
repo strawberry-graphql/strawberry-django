@@ -365,13 +365,6 @@ def test_nested_total_count_distinct(
     arguments: str,
     selection: str,
 ):
-    if (
-        connection_class is DjangoListConnection
-        and arguments == "first: 0"
-        and ("edges" in selection)
-    ):
-        pytest.skip("An empty page carries no total, so it is counted per parent")
-
     @strawberry_django.filter_type(models.FruitType, lookups=True)
     class FruitTypeFilter:
         name: strawberry.auto
@@ -604,8 +597,8 @@ def test_nested_many_to_many_total_count_with_empty_page(
         }}
       }}
     """
-    # Every page is empty, so each group's total is counted separately
-    with utils.assert_num_queries(4):
+    # Every page is empty, but the total count must not be queried per group
+    with utils.assert_num_queries(2):
         result = schema.execute_sync(query, {"lastCursor": last_cursor})
 
     assert not result.errors
@@ -613,3 +606,106 @@ def test_nested_many_to_many_total_count_with_empty_page(
     assert [
         group[to_camel_case(field)]["totalCount"] for group in result.data["groups"]
     ] == [4, 2]
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "connection_class", [DjangoListConnection, DjangoCursorConnection]
+)
+def test_nested_distinct_connection_edges(
+    connection_class: type[DjangoListConnection | DjangoCursorConnection],
+):
+    @strawberry_django.filter_type(models.FruitType, lookups=True)
+    class FruitTypeFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        types: FruitTypeFilter | None
+        DISTINCT: bool | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: connection_class[FruitType] = strawberry_django.connection()  # type: ignore
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    tropical = models.FruitType.objects.create(name="tropical")
+    citrus = models.FruitType.objects.create(name="citrus")
+    color = models.Color.objects.create(name="red")
+    fruits = [
+        models.Fruit.objects.create(name=f"fruit{i}", color=color) for i in range(3)
+    ]
+    for fruit in fruits:
+        # Both types match the filter, so each fruit is joined twice
+        fruit.types.add(tropical, citrus)
+
+    query = """
+      query testNestedDistinctConnection {
+        colors {
+          fruits(first: 2, filters: {
+            types: { name: { inList: ["tropical", "citrus"] } }
+            DISTINCT: true
+          }) {
+            totalCount
+            pageInfo { hasNextPage }
+            edges { node { name } }
+          }
+        }
+      }
+    """
+    with utils.assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    # Each fruit is returned once, so the page holds 2 different fruits
+    assert not result.errors
+    assert result.data == {
+        "colors": [
+            {
+                "fruits": {
+                    "totalCount": 3,
+                    "pageInfo": {"hasNextPage": True},
+                    "edges": [{"node": {"name": fruit.name}} for fruit in fruits[:2]],
+                }
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_offset_paginated_total_count_without_results():
+    @strawberry_django.type(models.Fruit)
+    class FruitType:
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType:
+        fruits: OffsetPaginated[FruitType] = strawberry_django.offset_paginated()
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b", "c")]
+    for color, fruit_count in zip(colors, [3, 1, 0], strict=True):
+        for _ in range(fruit_count):
+            models.Fruit.objects.create(color=color)
+
+    # Selecting only `totalCount` must not fall back to one COUNT per color
+    with utils.assert_num_queries(2):
+        result = schema.execute_sync("query { colors { fruits { totalCount } } }")
+
+    assert not result.errors
+    assert result.data == {
+        "colors": [{"fruits": {"totalCount": total_count}} for total_count in [3, 1, 0]]
+    }

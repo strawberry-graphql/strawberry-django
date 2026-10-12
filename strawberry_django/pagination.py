@@ -1,24 +1,23 @@
 import sys
 import warnings
-from typing import Generic, TypeVar, cast
+from collections.abc import Iterable
+from typing import Any, Generic, TypeVar, cast
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS
 from django.db.models import (
-    BooleanField,
+    Case,
     Count,
-    ExpressionWrapper,
-    IntegerField,
-    OuterRef,
+    Expression,
+    F,
     Q,
     QuerySet,
-    Subquery,
     Value,
+    When,
     Window,
 )
-from django.db.models.functions import RowNumber
+from django.db.models.functions import DenseRank, FirstValue, RowNumber
 from django.db.models.query import MAX_GET_RESULTS  # type: ignore
-from django.db.models.sql.query import Query
 from strawberry.types import Info
 from strawberry.types.arguments import StrawberryArgument
 from strawberry.types.unset import UNSET, UnsetType
@@ -32,6 +31,7 @@ from .settings import strawberry_django_settings
 
 NodeType = TypeVar("NodeType")
 _QS = TypeVar("_QS", bound=QuerySet)
+_T = TypeVar("_T")
 
 PAGINATION_ARG = "pagination"
 
@@ -114,7 +114,9 @@ class OffsetPaginated(Generic[NodeType]):
 
         return cast(
             "list[NodeType]",
-            paginated_queryset if paginated_queryset is not None else [],
+            get_page_results(paginated_queryset)
+            if paginated_queryset is not None
+            else [],
         )
 
     @classmethod
@@ -218,43 +220,16 @@ class _PaginationWindow(Window):
     """
 
 
-class _PaginationFilter(ExpressionWrapper):
-    """A filter selecting a page of a queryset, such as a cursor's `after`/`before`.
+class _PageCase(Case):
+    """A condition on the page of a row, used by or computed from windows.
 
-    Unlike the queryset's own filters, it must not reduce its total count, so
-    we need to identify it to remove it when counting.
+    Window functions are evaluated after GROUP BY, so it may reference the
+    aggregates of an aggregated queryset or windows, which it must not be
+    grouped by.
     """
 
-    def __init__(self, condition: Q):
-        super().__init__(condition, output_field=BooleanField())
-
-
-class _SubqueryTotalCount(Subquery):
-    """Total count of a queryset per partition, for when a window can't count it.
-
-    Window functions are evaluated after `WHERE` and before DISTINCT, so a
-    `Count(1)` window would skip the rows excluded by a `_PaginationFilter`,
-    and would count the rows a DISTINCT queryset duplicates by joins (e.g.
-    filtering on a many-to-many relation). This subquery counts the pks of the
-    given queryset in the outer row's partition instead, or of the whole
-    queryset when there is no partition.
-    """
-
-    def __init__(self, queryset: QuerySet, related_field_id: str | None = None):
-        queryset = queryset.order_by()
-        if related_field_id is None:
-            # A constant is not grouped by, so all rows are counted together
-            grouped = queryset.values(_strawberry_all_rows=Value(1))
-        else:
-            grouped = queryset.filter(**{
-                related_field_id: OuterRef(related_field_id)
-            }).values(related_field_id)
-        super().__init__(
-            grouped.annotate(
-                count=Count("pk", distinct=queryset.query.distinct)
-            ).values("count"),
-            output_field=IntegerField(),
-        )
+    def get_group_by_cols(self):
+        return []
 
 
 def apply_window_pagination(
@@ -265,7 +240,8 @@ def apply_window_pagination(
     limit: int | None = UNSET,
     max_results: int | None = None,
     reverse: bool = False,
-    total_count_queryset: QuerySet | None = None,
+    page_filter: Q | None = None,
+    keep_first_row: bool = False,
 ) -> _QS:
     """Apply pagination using window functions.
 
@@ -281,73 +257,119 @@ def apply_window_pagination(
         offset: The offset to start the pagination from.
         limit: The limit of items to return.
         reverse: The need to reverse queryset ordering for backwards relay pagination
-        total_count_queryset: The queryset to count the total of, when it has rows
-          that `queryset` excludes with a `_PaginationFilter`
+        page_filter: A filter of the rows to paginate, such as a cursor, which
+          doesn't exclude the other rows from the total count
+        keep_first_row: Also keep the first row of each partition, to carry its
+          total count when its page is empty. Use `get_page_results` to exclude it.
 
     """
     limit = _resolve_limit(limit, max_results=max_results)
 
-    order_by = [
+    # Window functions are evaluated before DISTINCT, so DENSE_RANK gives rows
+    # duplicated by joins the same numbers, for DISTINCT to remove them. The pk
+    # keeps different rows from getting the same number.
+    distinct = queryset.query.distinct and not queryset.query.distinct_fields
+    number = DenseRank if distinct else RowNumber
+    order_by = _get_order_by(queryset, pk=distinct)
+
+    page = Q()
+    page_partition_by: list[Any] = [related_field_id]
+    if page_filter is not None:
+        # Number the rows of the page filter apart from the others, and exclude
+        # the others with a window, so that they are still counted
+        in_page_filter = _PageCase(When(page_filter, then=Value(1)), default=Value(0))
+        page_partition_by.append(in_page_filter)
+        queryset = queryset.annotate(
+            _strawberry_page_filter=_PaginationWindow(
+                FirstValue(in_page_filter),
+                partition_by=[F(related_field_id), F("pk")],
+            ),
+        )
+        page &= Q(_strawberry_page_filter=1)
+
+    queryset = queryset.annotate(
+        _strawberry_row_number=_PaginationWindow(
+            number(),
+            partition_by=page_partition_by,
+            order_by=order_by,
+        ),
+        _strawberry_total_count=total_count_window(
+            queryset, partition_by=related_field_id
+        ),
+    )
+
+    if offset:
+        page &= Q(_strawberry_row_number__gt=offset)
+
+    if reverse:
+        queryset = queryset.annotate(
+            _strawberry_row_number_reversed=_PaginationWindow(
+                number(),
+                partition_by=page_partition_by,
+                order_by=_get_order_by(queryset.reverse(), pk=distinct),
+            ),
+        )
+        page &= Q(_strawberry_row_number_reversed__lte=limit)
+    # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
+    # from the end to as a way to mimic a "not limit" as well
+    elif limit is not None and limit >= 0 and limit != sys.maxsize:
+        page &= Q(_strawberry_row_number__lte=offset + limit)
+
+    if keep_first_row:
+        queryset = queryset.annotate(
+            _strawberry_first_row=_PaginationWindow(
+                number(), partition_by=related_field_id, order_by=order_by
+            ),
+            _strawberry_in_page=_PageCase(When(page, then=True), default=False),
+        )
+        page |= Q(_strawberry_first_row=1)
+
+    return queryset.filter(page)
+
+
+def total_count_window(
+    queryset: QuerySet, *, partition_by: str | None = None
+) -> Expression:
+    """Count the rows of the queryset (in the partition) with window functions."""
+    if not queryset.query.distinct or queryset.query.distinct_fields:
+        return _PaginationWindow(Count(1), partition_by=partition_by)
+
+    # Window functions are evaluated before DISTINCT, so count the distinct pks:
+    # their ascending and descending ranks add up to their count plus one.
+    return (
+        _PaginationWindow(
+            DenseRank(), partition_by=partition_by, order_by=F("pk").asc()
+        )
+        + _PaginationWindow(
+            DenseRank(), partition_by=partition_by, order_by=F("pk").desc()
+        )
+        - 1
+    )
+
+
+def get_page_results(results: Iterable[_T]) -> list[_T]:
+    """Exclude the rows kept by `apply_window_pagination` only for the total count."""
+    return [row for row in results if getattr(row, "_strawberry_in_page", True)]
+
+
+def _get_order_by(queryset: QuerySet, *, pk: bool) -> list[Any]:
+    order_by: list[Any] = [
         expr
         for expr, _ in queryset.query.get_compiler(
             using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
         ).get_order_by()
     ]
-
-    if total_count_queryset is None and (
-        queryset.query.distinct and not queryset.query.distinct_fields
-    ):
-        total_count_queryset = queryset
-    total_count = (
-        _SubqueryTotalCount(total_count_queryset, related_field_id)
-        if total_count_queryset is not None
-        else _PaginationWindow(Count(1), partition_by=related_field_id)
-    )
-    queryset = queryset.annotate(
-        _strawberry_row_number=_PaginationWindow(
-            RowNumber(),
-            partition_by=related_field_id,
-            order_by=order_by,
-        ),
-        _strawberry_total_count=total_count,
-    )
-
-    if offset:
-        queryset = queryset.filter(_strawberry_row_number__gt=offset)
-
-    if reverse:
-        order_by_reverse = [
-            expr
-            for expr, _ in queryset
-            .reverse()
-            .query.get_compiler(
-                using=queryset._db or DEFAULT_DB_ALIAS  # type: ignore
-            )
-            .get_order_by()
-        ]
-        queryset = queryset.annotate(
-            _strawberry_row_number_reversed=_PaginationWindow(
-                RowNumber(),
-                partition_by=related_field_id,
-                order_by=order_by_reverse,
-            ),
-        )
-        return queryset.filter(_strawberry_row_number_reversed__lte=limit)
-
-    # Limit == -1 means no limit. sys.maxsize is set by relay when paginating
-    # from the end to as a way to mimic a "not limit" as well
-    if limit is not None and limit >= 0 and limit != sys.maxsize:
-        queryset = queryset.filter(_strawberry_row_number__lte=offset + limit)
-
-    return queryset
+    if pk:
+        descending = bool(order_by) and getattr(order_by[-1], "descending", False)
+        order_by.append(F("pk").desc() if descending else F("pk").asc())
+    return order_by
 
 
 def remove_window_pagination(queryset: _QS) -> _QS:
     """Remove pagination window functions from a queryset.
 
     Utility function to remove the pagination `WHERE` clause and annotations
-    added by the `apply_window_pagination` function, and the `_PaginationFilter`
-    filters.
+    added by the `apply_window_pagination` function.
 
     Args:
     ----
@@ -355,59 +377,25 @@ def remove_window_pagination(queryset: _QS) -> _QS:
 
     """
     queryset = queryset._chain()  # type: ignore
-    query = queryset.query
-    removed = []
-    where_children = []
-    for child in query.where.children:
-        if isinstance(
-            getattr(child, "lhs", None), (_PaginationWindow, _PaginationFilter)
-        ):
-            removed.append(child)
-        else:
-            where_children.append(child)
-    query.where.children = where_children
-    annotations = {}
-    for key, value in query.annotations.items():
-        if isinstance(value, (_PaginationWindow, _SubqueryTotalCount)):
-            removed.append(value)
-        else:
-            annotations[key] = value
-    query.annotations = annotations  # type: ignore
-    _remove_unused_joins(query, removed)
+    queryset.query.where.children = [
+        child
+        for child in queryset.query.where.children
+        if not _contains_pagination_window(child)
+    ]
+    queryset.query.annotations = {  # type: ignore
+        key: value
+        for key, value in queryset.query.annotations.items()
+        if not _contains_pagination_window(value)
+    }
     return queryset
 
 
-def _remove_unused_joins(query: Query, removed: list) -> None:
-    """Exclude the joins that only the removed expressions used from the query.
-
-    Django never removes joins, so e.g. the join to a many-to-many through table
-    added to partition by it would still repeat each row once per related
-    object. Joins without references aren't compiled.
-    """
-    # `_gen_cols` yields the columns of expressions, including the outer query
-    # columns that their subqueries reference
-    gen_cols = Query._gen_cols  # type: ignore
-    candidates = _with_parent_aliases(
-        query, {col.alias for col in gen_cols(removed, include_external=True)}
+def _contains_pagination_window(expression) -> bool:
+    return isinstance(expression, _PaginationWindow) or any(
+        _contains_pagination_window(source)
+        for source in getattr(expression, "get_source_expressions", list)()
+        if source is not None
     )
-    remaining = [query.where, *query.annotations.values(), *query.select]  # type: ignore
-    used = _with_parent_aliases(
-        query, {col.alias for col in gen_cols(remaining, include_external=True)}
-    )
-    for alias in candidates - used:
-        if alias != query.base_table:
-            query.alias_refcount[alias] = 0
-
-
-def _with_parent_aliases(query: Query, aliases: set[str]) -> set[str]:
-    """Add the aliases of the joins that the joins of `aliases` go through."""
-    result = set()
-    for alias in aliases:
-        current = alias
-        while current is not None and current not in result:
-            result.add(current)
-            current = getattr(query.alias_map.get(current), "parent_alias", None)
-    return result
 
 
 def get_total_count(queryset: QuerySet) -> int:
@@ -423,8 +411,10 @@ def get_total_count(queryset: QuerySet) -> int:
         return total_count
 
     if is_optimized_by_prefetching(queryset):
-        if queryset._result_cache == [] and _is_non_empty_first_page_window(  # type: ignore
-            queryset
+        if queryset._result_cache == [] and (  # type: ignore
+            # The first row of each partition is kept, so the partition is empty
+            "_strawberry_first_row" in queryset.query.annotations
+            or _is_non_empty_first_page_window(queryset)
         ):
             # An empty first page (no offset, limit >= 1) can only come from an
             # empty partition, so there is nothing to count. This avoids one
@@ -460,12 +450,11 @@ def get_cached_total_count(queryset: QuerySet) -> int | None:
     if not results:
         return None
 
-    # If the queryset has DISTINCT enabled, a window _strawberry_total_count
+    # If DISTINCT was enabled after the window pagination, the `Count(1)`
     # annotation won't be accurate because window functions are evaluated
-    # before DISTINCT in SQL. Only `_SubqueryTotalCount` counts it correctly.
-    if queryset.query.distinct and not isinstance(
-        queryset.query.annotations.get("_strawberry_total_count"),
-        _SubqueryTotalCount,
+    # before DISTINCT in SQL. Fall back to queryset.count() instead.
+    if queryset.query.distinct and isinstance(
+        queryset.query.annotations.get("_strawberry_total_count"), _PaginationWindow
     ):
         return None
 
@@ -509,11 +498,6 @@ def _is_non_empty_first_page_window(queryset: QuerySet) -> bool:
         return False
 
     for child in queryset.query.where.children:
-        if isinstance(getattr(child, "lhs", None), _PaginationFilter):
-            # A cursor excluded some rows: an empty page doesn't mean that
-            # there are no rows to count.
-            return False
-
         if not isinstance(getattr(child, "lhs", None), _PaginationWindow):
             continue
 

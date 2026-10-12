@@ -797,9 +797,9 @@ def test_query_connection_nested_total_count_with_offset_past_end(
     for issue in t1_issues:
         t1.issues.add(issue)
 
-    # A page past the end is empty even though the partition is not: the total
-    # count cannot be derived from the empty page and must still be queried.
-    with assert_num_queries(3):
+    # A page past the end is empty even though the partition is not, but the
+    # first row of the partition is still fetched to carry the total count.
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 3):
         res = gql_client.query(query, {"after": to_base64("arrayconnection", "9")})
 
     assert res.data == {
@@ -842,10 +842,9 @@ def test_query_connection_nested_total_count_with_first_zero(
     for issue in t1_issues:
         t1.issues.add(issue)
 
-    # A zero-sized page is empty regardless of the partition size, so the
-    # total count cannot be derived from it and must still be queried,
-    # once per tag.
-    with assert_num_queries(4 if DjangoOptimizerExtension.enabled.get() else 5):
+    # A zero-sized page is empty regardless of the partition size, but the
+    # first row of the partition is still fetched to carry the total count.
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
         res = gql_client.query(query)
 
     assert res.data == {
@@ -2319,7 +2318,7 @@ def test_query_paginated_nested(db, gql_client: GraphQLTestClient):
         ]
     }
 
-    with assert_num_queries(3 if DjangoOptimizerExtension.enabled.get() else 5):
+    with assert_num_queries(2 if DjangoOptimizerExtension.enabled.get() else 5):
         res = gql_client.query(
             query, variables={"pagination": {"limit": 1, "offset": 2}}
         )

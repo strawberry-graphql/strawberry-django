@@ -1,8 +1,13 @@
 import datetime
+import time
 from typing import cast
 
 import pytest
 import strawberry
+from django.db import connection
+from django.db.backends.postgresql.base import (
+    DatabaseWrapper as PostgreSQLDatabaseWrapper,
+)
 from django.db.models import F, OrderBy, QuerySet, Value
 from django.db.models.aggregates import Count
 from pytest_mock import MockFixture
@@ -14,6 +19,8 @@ from strawberry_django.relay import (
     DjangoCursorConnection,
     DjangoCursorEdge,
 )
+from strawberry_django.relay.cursor_connection import apply_cursor_pagination
+from tests import models
 from tests.projects.models import Milestone, Project
 from tests.utils import assert_num_queries
 
@@ -1498,18 +1505,17 @@ def test_nested_total_count_with_first_zero():
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
-    ("direction", "cursor_index", "num_queries"),
+    ("direction", "cursor_index"),
     [
         # A cursor in the middle of the first project's milestones, which all
         # of the second project's milestones come after
-        ("first: 1, after", 1, 2),
-        # Empty pages carry no total, so it is counted separately for each one.
-        # Here the second project's page is empty.
-        ("last: 1, before", 1, 3),
+        ("first: 1, after", 1),
+        # The second project's page is empty
+        ("last: 1, before", 1),
         # The first project's page is empty
-        ("first: 1, after", -1, 3),
+        ("first: 1, after", -1),
         # Both projects' pages are empty
-        ("last: 1, before", 0, 4),
+        ("last: 1, before", 0),
     ],
 )
 @pytest.mark.parametrize(
@@ -1521,7 +1527,7 @@ def test_nested_total_count_with_first_zero():
     ],
 )
 def test_nested_total_count_ignores_cursor(
-    direction: str, cursor_index: int, num_queries: int, selection: str
+    direction: str, cursor_index: int, selection: str
 ):
     p1 = Project.objects.create()
     p2 = Project.objects.create()
@@ -1553,8 +1559,8 @@ def test_nested_total_count_ignores_cursor(
         }}
     }}
     """
-    # Only `totalCount` ignores the cursor and fetches the first row of each project
-    with assert_num_queries(num_queries if "edges" in selection else 2):
+    # Empty pages must not count their total separately either
+    with assert_num_queries(2):
         result = schema.execute_sync(query)
 
     # The total count must not depend on the cursor, as on top-level connections
@@ -1564,6 +1570,132 @@ def test_nested_total_count_ignores_cursor(
         edge["node"]["milestones"]["totalCount"]
         for edge in result.data["projects"]["edges"]
     ] == [len(p1m), len(p2m)]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_total_count_with_cursor_and_aggregated_queryset():
+    @strawberry_django.type(models.Fruit)
+    class FruitType(Node):
+        name: strawberry.auto
+
+        @classmethod
+        def get_queryset(cls, queryset, info, **kwargs):
+            # Grouped by fruit, over the rows joined with its types
+            return queryset.annotate(type_count=Count("types")).order_by(
+                "-type_count", "pk"
+            )
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: DjangoCursorConnection[FruitType] = strawberry_django.connection()
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    fruit_schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    tropical = models.FruitType.objects.create(name="tropical")
+    citrus = models.FruitType.objects.create(name="citrus")
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b", "c")]
+    for color, fruit_count in zip(colors, [3, 1, 0], strict=True):
+        for _ in range(fruit_count):
+            models.Fruit.objects.create(color=color).types.add(tropical, citrus)
+
+    result = fruit_schema.execute_sync(
+        "query { colors { fruits(first: 1) { edges { cursor } } } }"
+    )
+    assert result.data is not None
+    cursor = result.data["colors"][0]["fruits"]["edges"][0]["cursor"]
+
+    with assert_num_queries(2):
+        result = fruit_schema.execute_sync(
+            """
+            query TestQuery($after: String) {
+                colors { fruits(first: 1, after: $after) { totalCount edges { cursor } } }
+            }
+            """,
+            {"after": cursor},
+        )
+
+    assert not result.errors
+    assert result.data is not None
+    assert [color["fruits"]["totalCount"] for color in result.data["colors"]] == [
+        3,
+        1,
+        0,
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("distinct", [False, True])
+def test_nested_total_count_with_cursor_on_large_partition(distinct: bool):
+    @strawberry_django.type(models.Fruit)
+    class FruitType(Node):
+        name: strawberry.auto
+
+        @classmethod
+        def get_queryset(cls, queryset, info, **kwargs):
+            return queryset.distinct() if distinct else queryset
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: DjangoCursorConnection[FruitType] = strawberry_django.connection()
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    fruit_schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    color = models.Color.objects.create(name="red")
+    models.Fruit.objects.bulk_create([
+        models.Fruit(name="fruit", color=color) for _ in range(8000)
+    ])
+    result = fruit_schema.execute_sync(
+        "query { colors { fruits(first: 1) { edges { cursor } } } }"
+    )
+    assert result.data is not None
+    cursor = result.data["colors"][0]["fruits"]["edges"][0]["cursor"]
+
+    # The total count must not be computed once per row of the partition,
+    # which takes seconds for this many rows
+    start = time.perf_counter()
+    result = fruit_schema.execute_sync(
+        """
+        query TestQuery($after: String) {
+            colors { fruits(first: 1, after: $after) { totalCount edges { cursor } } }
+        }
+        """,
+        {"after": cursor},
+    )
+    elapsed = time.perf_counter() - start
+
+    assert not result.errors
+    assert result.data is not None
+    assert result.data["colors"][0]["fruits"]["totalCount"] == 8000
+    assert elapsed < 0.5
+
+
+def test_nested_cursor_pagination_with_distinct_fields():
+    queryset, _ = apply_cursor_pagination(
+        models.Fruit.objects.order_by("pk").distinct("pk"),
+        related_field_id="color_id",
+        info=None,  # type: ignore
+        before=None,
+        after=to_base64(DjangoCursorEdge.CURSOR_PREFIX, '["1"]'),
+        first=1,
+        last=None,
+        max_results=100,
+    )
+
+    # SQLite doesn't support `distinct(*fields)`, so compile it for PostgreSQL,
+    # without connecting. Django doesn't implement it with an aggregation.
+    postgresql = PostgreSQLDatabaseWrapper(
+        {**connection.settings_dict, "ENGINE": "django.db.backends.postgresql"},  # type: ignore
+        alias="postgresql",
+    )
+    queryset.query.get_compiler(connection=postgresql).as_sql()
 
 
 @pytest.mark.django_db(transaction=True)

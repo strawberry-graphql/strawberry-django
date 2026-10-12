@@ -21,9 +21,9 @@ from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self
 
 from strawberry_django.pagination import (
-    _PaginationFilter,
     apply_window_pagination,
     get_cached_total_count,
+    get_page_results,
     get_total_count,
 )
 from strawberry_django.queryset import get_queryset_config
@@ -211,28 +211,25 @@ def apply_cursor_pagination(
     )
 
     qs, ordering_descriptors, original_order_by = annotate_ordering_fields(qs)
-    # The cursors select a page, so the rows they exclude still count in the total
-    total_count_qs = qs
+    cursor_filter = Q()
     if after:
         after_cursor = OrderedCollectionCursor.from_cursor(after, ordering_descriptors)
-        qs = qs.filter(
-            _PaginationFilter(
-                build_tuple_compare(
-                    ordering_descriptors, after_cursor.field_values, False
-                )
-            )
+        cursor_filter &= build_tuple_compare(
+            ordering_descriptors, after_cursor.field_values, False
         )
     if before:
         before_cursor = OrderedCollectionCursor.from_cursor(
             before, ordering_descriptors
         )
-        qs = qs.filter(
-            _PaginationFilter(
-                build_tuple_compare(
-                    ordering_descriptors, before_cursor.field_values, True
-                )
-            )
+        cursor_filter &= build_tuple_compare(
+            ordering_descriptors, before_cursor.field_values, True
         )
+    # Nested connections apply the cursors with the window pagination, so that the
+    # rows they exclude still count in the total. Except when combining `first` and
+    # `last`, whose window below isn't partitioned.
+    window_cursor = related_field_id is not None and (first is None or last is None)
+    if not window_cursor:
+        qs = qs.filter(cursor_filter)
 
     slice_: slice | None = None
     if first is not None and last is not None:
@@ -286,7 +283,8 @@ def apply_cursor_pagination(
             related_field_id=related_field_id,
             offset=offset,
             limit=slice_.stop - offset if slice_ is not None else None,
-            total_count_queryset=total_count_qs if after or before else None,
+            page_filter=cursor_filter if window_cursor and cursor_filter else None,
+            keep_first_row=window_cursor,
         )
     elif slice_ is not None:
         qs = qs[slice_]
@@ -421,7 +419,7 @@ class DjangoCursorConnection(relay.Connection[relay.NodeType]):
             nonlocal qs
             has_previous_page = has_next_page = False
 
-            results = list(qs)
+            results = get_page_results(qs)
 
             if first is not None:
                 if last is None:
