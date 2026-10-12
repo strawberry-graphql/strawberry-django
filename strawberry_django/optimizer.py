@@ -28,6 +28,7 @@ from django.db.models.query import QuerySet
 from graphql import (
     FieldNode,
     GraphQLInterfaceType,
+    GraphQLNamedType,
     GraphQLObjectType,
     GraphQLOutputType,
     GraphQLWrappingType,
@@ -661,6 +662,18 @@ def _optimize_prefetch_queryset(
                 connection_type_def.concrete_of
                 and connection_type_def.concrete_of.origin
             )
+            first = field_kwargs.get("first")
+            last = field_kwargs.get("last")
+            before = field_kwargs.get("before")
+            after = field_kwargs.get("after")
+            # When only `totalCount` is selected, which ignores pagination, fetch
+            # the first row of each parent, as it carries the window total count.
+            # The given arguments are still validated, as when resolving the edges.
+            total_count_only = not _selects_fields(
+                info,
+                get_named_type(parent_type.fields[field_name].type),
+                {"edges", "pageInfo"},
+            )
             if (
                 connection_type is relay.ListConnection
                 or connection_type is DjangoListConnection
@@ -669,13 +682,15 @@ def _optimize_prefetch_queryset(
 
                 slice_metadata = SliceMetadata.from_arguments(
                     Info(_raw_info=info, _field=field),
-                    first=field_kwargs.get("first"),
-                    last=field_kwargs.get("last"),
-                    before=field_kwargs.get("before"),
-                    after=field_kwargs.get("after"),
+                    first=first,
+                    last=last,
+                    before=before,
+                    after=after,
                     max_results=connection_extension.max_results,
                     prefix=edge_class.CURSOR_PREFIX,
                 )
+                if total_count_only:
+                    slice_metadata = SliceMetadata(start=0, end=1, expected=1)
                 mark_reversed = slice_metadata.expected is None
                 qs = apply_window_pagination(
                     qs,
@@ -688,16 +703,30 @@ def _optimize_prefetch_queryset(
                     ),
                     max_results=connection_extension.max_results,
                     reverse=mark_reversed,
+                    keep_first_row=True,
                 )
             elif connection_type is DjangoCursorConnection:
+                if total_count_only:
+                    # Only raises for invalid arguments, the result is discarded
+                    apply_cursor_pagination(
+                        qs,
+                        related_field_id=related_field_id,
+                        info=Info(_raw_info=info, _field=field),
+                        first=first,
+                        last=last,
+                        before=before,
+                        after=after,
+                        max_results=connection_extension.max_results,
+                    )
+                    first, last, before, after = 1, None, None, None
                 qs, _ = apply_cursor_pagination(
                     qs,
                     related_field_id=related_field_id,
                     info=Info(_raw_info=info, _field=field),
-                    first=field_kwargs.get("first"),
-                    last=field_kwargs.get("last"),
-                    before=field_kwargs.get("before"),
-                    after=field_kwargs.get("after"),
+                    first=first,
+                    last=last,
+                    before=before,
+                    after=after,
                     max_results=connection_extension.max_results,
                 )
             else:
@@ -705,17 +734,51 @@ def _optimize_prefetch_queryset(
 
         if isinstance(field.type, type) and issubclass(field.type, OffsetPaginated):
             pagination: OffsetPaginationInfo | None = field_kwargs.get("pagination")
+            offset = pagination.offset if pagination else 0
+            limit = pagination.limit if pagination else -1
+            if not _selects_fields(
+                info, get_named_type(parent_type.fields[field_name].type), {"results"}
+            ):
+                # Only `totalCount` is selected, which the first row carries
+                offset, limit = 0, 0
             qs = apply_window_pagination(
                 qs,
                 related_field_id=related_field_id,
-                offset=pagination.offset if pagination else 0,
-                limit=pagination.limit if pagination else -1,
+                offset=offset,
+                limit=limit,
+                keep_first_row=True,
             )
 
     if mark_optimized:
         qs = mark_optimized_by_prefetching(qs)
 
     return qs
+
+
+def _selects_fields(
+    info: GraphQLResolveInfo,
+    parent_type: GraphQLNamedType,
+    field_names: set[str],
+) -> bool:
+    """Whether any of the fields is selected on the type."""
+    assert isinstance(parent_type, (GraphQLObjectType, GraphQLInterfaceType))
+    return any(
+        field_nodes[0].name.value in field_names
+        for field_nodes in _get_selections(info, parent_type).values()
+    )
+
+
+def _selects_other_fields(
+    info: GraphQLResolveInfo,
+    parent_type: GraphQLNamedType,
+    field_names: set[str],
+) -> bool:
+    """Whether any field other than the given ones is selected on the type."""
+    assert isinstance(parent_type, (GraphQLObjectType, GraphQLInterfaceType))
+    return any(
+        field_nodes[0].name.value not in field_names
+        for field_nodes in _get_selections(info, parent_type).values()
+    )
 
 
 def _get_selections(
@@ -1071,7 +1134,15 @@ def _get_hints_from_django_relation(
     )
     if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
+    from strawberry_django.relay.cursor_connection import load_ordering_fields
+
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
+    # The store may defer the fields that the cursors are built from
+    field_qs = load_ordering_fields(field_qs)
+    if is_inheritance_qs(field_qs):
+        # It only sets the annotations of its last `annotate()` call on the subclass
+        # instances, so make it set all of them, e.g. the pagination ones
+        field_qs._annotated = list(field_qs.query.annotation_select)  # type: ignore
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)
@@ -1501,6 +1572,7 @@ def _get_model_hints_from_connection(
     n_type = unwrap_type(n_type)
     n_definition = get_object_definition(n_type, strict=True)
 
+    selects_node = False
     for edges in _get_selections(info, parent_type).values():
         edge = edges[0]
         if edge.name.value != "edges":
@@ -1526,6 +1598,7 @@ def _get_model_hints_from_connection(
             if node.name.value != "node":
                 continue
 
+            selects_node = True
             for concrete_n_type in get_possible_concrete_types(
                 model, schema, n_definition
             ):
@@ -1554,6 +1627,14 @@ def _get_model_hints_from_connection(
                 )
                 if concrete_store is not None:
                     store = concrete_store if store is None else store | concrete_store
+
+    if not selects_node and _selects_other_fields(info, parent_type, {"__typename"}):
+        # Nothing is selected from the nodes (e.g. only `totalCount`). Prefetch the
+        # connection anyway, so that it is resolved from the prefetch cache instead
+        # of querying the database once per parent. Its rows aren't restricted to
+        # their pk, as e.g. custom connection fields or polymorphic models may
+        # still read their fields.
+        store = OptimizerStore()
 
     return store
 
@@ -1610,6 +1691,14 @@ def _get_model_hints_from_paginated(
             )
             if concrete_store is not None:
                 store = concrete_store if store is None else store | concrete_store
+
+    # `pageInfo` only returns the pagination arguments, so it needs no rows
+    if store is None and _selects_other_fields(
+        info, parent_type, {"__typename", "pageInfo", "results"}
+    ):
+        # Only `totalCount` is selected. Prefetch it anyway, so that it is resolved
+        # from the prefetch cache instead of querying the database once per parent.
+        store = OptimizerStore()
 
     return store
 

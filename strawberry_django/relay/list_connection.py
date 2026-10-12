@@ -12,7 +12,12 @@ from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry.utils.inspect import in_async_context
 from typing_extensions import Self, deprecated
 
-from strawberry_django.pagination import get_cached_total_count, get_total_count
+from strawberry_django.pagination import (
+    get_cached_total_count,
+    get_page_results,
+    get_total_count,
+    total_count_window,
+)
 from strawberry_django.queryset import get_queryset_config
 from strawberry_django.relay.utils import resolve_edge_class
 from strawberry_django.resolvers import django_resolver
@@ -130,9 +135,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
 
                 if _should_optimize_total_count(info):
                     nodes = nodes.annotate(
-                        _strawberry_total_count=models.Window(
-                            expression=models.Count(1), partition_by=None
-                        )
+                        _strawberry_total_count=total_count_window(nodes)
                     )
 
         conn = super().resolve_connection(
@@ -177,7 +180,7 @@ class DjangoListConnection(relay.ListConnection[relay.NodeType]):
         don't exist, `AttriuteError` will be raised, meaning that we should
         fallback to the queryset resolution.
         """
-        result = nodes._result_cache  # type: ignore
+        result = get_page_results(nodes._result_cache)  # type: ignore
         edge_class = resolve_edge_class(cls)
 
         edges: list[relay.Edge] = [
