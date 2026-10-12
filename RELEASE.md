@@ -21,21 +21,22 @@ query {
 }
 ```
 
-The optimizer now prefetches such connections too, fetching only the first row of each
-parent, which carries the window total count. The query above now runs 2 queries instead
-of 1 + N.
+The optimizer now prefetches such connections, and nested `OffsetPaginated` fields that
+select only `totalCount`, too, fetching only the first row of each parent, which carries
+the window total count. The query above now runs 2 queries instead of 1 + N.
 
-Connections over a `distinct()` queryset (e.g. filtered through a many-to-many relation
-with `DISTINCT: true`) now count each row once in `totalCount`, using a
-`COUNT(DISTINCT pk)` subquery instead of a window count, which would include the rows
-duplicated by the join. This fixes inflated totals of nested connections and of top-level
-`DjangoListConnection`s selecting `edges`. Nested totals are also read from the
-prefetched rows, so they no longer run one `COUNT(*)` query per parent either.
+Nested connections and `OffsetPaginated` fields also keep the first row of each parent
+when its page is empty (e.g. an offset or cursor past its end, or `first: 0`), so their
+`totalCount` no longer runs one `COUNT(*)` query per parent either.
 
-Nested `DjangoCursorConnection`s paginated with `after` or `before` now report the total
-count of the whole connection, as top-level ones do, instead of counting only the rows
-past the cursor (or `0` when the page was empty).
+This also fixes `totalCount` in these cases:
 
-The `totalCount` of a nested many-to-many connection or `OffsetPaginated` field with an
-empty page (e.g. an offset past its end) no longer counts each row once per related
-object.
+- Connections over a `distinct()` queryset (e.g. filtered through a many-to-many
+  relation with `DISTINCT: true`) count each row once, instead of also counting the rows
+  duplicated by the join. Nested ones no longer return duplicated edges either. This
+  fixes nested connections and top-level `DjangoListConnection`s selecting `edges`.
+- Nested `DjangoCursorConnection`s paginated with `after` or `before` report the total
+  count of the whole connection, as top-level ones do, instead of counting only the rows
+  past the cursor.
+- Nested many-to-many connections and `OffsetPaginated` fields with an empty page no
+  longer count each row once per related object.
