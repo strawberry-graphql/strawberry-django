@@ -114,9 +114,7 @@ class OffsetPaginated(Generic[NodeType]):
 
         return cast(
             "list[NodeType]",
-            get_page_results(paginated_queryset)
-            if paginated_queryset is not None
-            else [],
+            paginated_queryset if paginated_queryset is not None else [],
         )
 
     @classmethod
@@ -161,7 +159,7 @@ class OffsetPaginated(Generic[NodeType]):
             return None
 
         return (
-            self.queryset._result_cache  # type: ignore
+            get_page_results(self.queryset._result_cache)  # type: ignore
             if is_optimized_by_prefetching(self.queryset)
             else apply(self.pagination, self.queryset)
         )
@@ -315,7 +313,8 @@ def apply_window_pagination(
     elif limit is not None and limit >= 0 and limit != sys.maxsize:
         page &= Q(_strawberry_row_number__lte=offset + limit)
 
-    if keep_first_row:
+    # Without a page bound every row is in the page, so there is no row to keep
+    if keep_first_row and page:
         queryset = queryset.annotate(
             _strawberry_first_row=_PaginationWindow(
                 number(), partition_by=related_field_id, order_by=order_by

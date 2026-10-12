@@ -3,6 +3,7 @@ import sys
 
 import pytest
 import strawberry
+from django.test import override_settings
 from strawberry.relay import Node, to_base64
 from strawberry.relay.types import PREFIX
 from strawberry.utils.str_converters import to_camel_case
@@ -708,4 +709,66 @@ def test_nested_offset_paginated_total_count_without_results():
     assert not result.errors
     assert result.data == {
         "colors": [{"fruits": {"totalCount": total_count}} for total_count in [3, 1, 0]]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("arguments", ["", "(pagination: { limit: -1 })"])
+def test_nested_offset_paginated_without_limit(arguments: str):
+    @strawberry_django.type(models.Fruit)
+    class FruitType:
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType:
+        fruits: OffsetPaginated[FruitType] = strawberry_django.offset_paginated()
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b", "c")]
+    fruits = {
+        color: [
+            models.Fruit.objects.create(name=f"{color.name}{i}", color=color)
+            for i in range(fruit_count)
+        ]
+        for color, fruit_count in zip(colors, [3, 1, 0], strict=True)
+    }
+
+    query = f"""
+      query testNestedOffsetPaginated {{
+        colors {{
+          fruits{arguments} {{
+            totalCount
+            results {{ name }}
+          }}
+        }}
+      }}
+    """
+    # Without a limit, every row is in the page
+    with (
+        override_settings(
+            STRAWBERRY_DJANGO={
+                "PAGINATION_DEFAULT_LIMIT": None,
+                "PAGINATION_MAX_LIMIT": None,
+            }
+        ),
+        utils.assert_num_queries(2),
+    ):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert result.data == {
+        "colors": [
+            {
+                "fruits": {
+                    "totalCount": len(color_fruits),
+                    "results": [{"name": fruit.name} for fruit in color_fruits],
+                }
+            }
+            for color_fruits in fruits.values()
+        ]
     }
