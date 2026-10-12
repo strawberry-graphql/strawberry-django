@@ -2,12 +2,22 @@ import contextlib
 import sys
 
 import pytest
-from strawberry.relay import to_base64
+import strawberry
+from strawberry.relay import Node, to_base64
 from strawberry.relay.types import PREFIX
 
+import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
-from tests import utils
-from tests.projects.faker import IssueFactory, MilestoneFactory
+from strawberry_django.relay import DjangoCursorConnection, DjangoListConnection
+from tests import models, utils
+from tests.projects.faker import (
+    FavoriteFactory,
+    IssueFactory,
+    MilestoneFactory,
+    TagFactory,
+    UserFactory,
+)
+from tests.projects.models import Favorite, Issue, Tag
 
 
 @pytest.mark.django_db(transaction=True)
@@ -340,3 +350,141 @@ def _assert_num_queries_when_optimized(n: int):
     if DjangoOptimizerExtension.enabled.get():
         return utils.assert_num_queries(n)
     return contextlib.nullcontext()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "connection_class", [DjangoListConnection, DjangoCursorConnection]
+)
+@pytest.mark.parametrize("arguments", ["", "first: 1", "last: 1", "first: 0"])
+@pytest.mark.parametrize("selection", ["totalCount", "totalCount edges { cursor }"])
+def test_nested_total_count_distinct(
+    connection_class: type[DjangoListConnection | DjangoCursorConnection],
+    arguments: str,
+    selection: str,
+):
+    if (
+        connection_class is DjangoListConnection
+        and arguments == "first: 0"
+        and ("edges" in selection)
+    ):
+        pytest.skip("An empty page carries no total, so it is counted per parent")
+
+    @strawberry_django.filter_type(models.FruitType, lookups=True)
+    class FruitTypeFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class FruitFilter:
+        types: FruitTypeFilter | None
+        DISTINCT: bool | None
+
+    @strawberry_django.type(models.Fruit, filters=FruitFilter)
+    class FruitType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: connection_class[FruitType] = strawberry_django.connection()  # type: ignore
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    tropical = models.FruitType.objects.create(name="tropical")
+    citrus = models.FruitType.objects.create(name="citrus")
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b", "c")]
+    for color, fruit_count in zip(colors, [3, 1, 0], strict=True):
+        for _ in range(fruit_count):
+            fruit = models.Fruit.objects.create(color=color)
+            # Both types match the filter, so each fruit is joined twice
+            fruit.types.add(tropical, citrus)
+
+    query = f"""
+      query testNestedConnectionTotalCount {{
+        colors {{
+          fruits({arguments} filters: {{
+            types: {{ name: {{ inList: ["tropical", "citrus"] }} }}
+            DISTINCT: true
+          }}) {{
+            {selection}
+          }}
+        }}
+      }}
+    """
+    # Duplicated rows must not be counted, nor fall back to one COUNT per color
+    with utils.assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert [color["fruits"]["totalCount"] for color in result.data["colors"]] == [
+        3,
+        1,
+        0,
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "connection_class", [DjangoListConnection, DjangoCursorConnection]
+)
+def test_nested_many_to_many_total_count_without_edges_distinct(
+    connection_class: type[DjangoListConnection | DjangoCursorConnection],
+):
+    @strawberry_django.filter_type(Favorite, lookups=True)
+    class FavoriteFilter:
+        name: strawberry.auto
+
+    @strawberry_django.filter_type(Issue, lookups=True)
+    class IssueFilter:
+        favorite_set: FavoriteFilter | None
+        DISTINCT: bool | None
+
+    @strawberry_django.type(Issue, filters=IssueFilter)
+    class IssueType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(Tag)
+    class TagType(Node):
+        issues: connection_class[IssueType] = strawberry_django.connection()  # type: ignore
+
+    @strawberry.type
+    class Query:
+        tags: list[TagType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    tags = TagFactory.create_batch(3)
+    issues = IssueFactory.create_batch(4)
+    issues[0].tags.add(tags[0], tags[1])
+    issues[1].tags.add(tags[0], tags[1])
+    issues[2].tags.add(tags[0])
+    issues[3].tags.add(tags[2])
+    users = UserFactory.create_batch(2)
+    for issue in issues[:3]:
+        # Two matching favorites, so each issue is joined twice
+        for user in users:
+            FavoriteFactory.create(issue=issue, user=user, name="match")
+    FavoriteFactory.create(issue=issues[3], user=users[0], name="other")
+
+    query = """
+      query testNestedConnectionTotalCount {
+        tags {
+          issues(filters: {
+            favoriteSet: { name: { exact: "match" } }
+            DISTINCT: true
+          }) {
+            totalCount
+          }
+        }
+      }
+    """
+    with utils.assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert result.data == {
+        "tags": [{"issues": {"totalCount": total_count}} for total_count in [3, 2, 0]],
+    }

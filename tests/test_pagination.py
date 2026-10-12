@@ -16,6 +16,7 @@ from strawberry_django.pagination import (
     apply_window_pagination,
     get_cached_total_count,
     get_total_count,
+    remove_window_pagination,
 )
 from strawberry_django.queryset import get_queryset_config
 from tests import models, utils
@@ -272,6 +273,33 @@ def test_get_cached_total_count_returns_none_for_distinct_queryset():
     # get_total_count must fall back to a real COUNT query instead.
     with utils.assert_num_queries(1):
         assert get_total_count(queryset) == 3
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_cached_total_count_counts_distinct_rows_of_distinct_queryset():
+    color = models.Color.objects.create(name="Red")
+    tropical = models.FruitType.objects.create(name="tropical")
+    citrus = models.FruitType.objects.create(name="citrus")
+    for i in range(3):
+        fruit = models.Fruit.objects.create(name=f"fruit{i}", color=color)
+        # Both types match the filter, so each fruit is joined twice
+        fruit.types.add(tropical, citrus)
+
+    queryset = apply_window_pagination(
+        models.Fruit.objects.filter(types__name__in=["tropical", "citrus"]).distinct(),
+        related_field_id="color_id",
+        offset=0,
+        limit=1,
+    )
+    get_queryset_config(queryset).optimized_by_prefetching = True
+    assert len(list(queryset)) == 1
+
+    with utils.assert_num_queries(0):
+        assert get_cached_total_count(queryset) == 3
+
+    unpaginated = remove_window_pagination(queryset)
+    assert "_strawberry_total_count" not in unpaginated.query.annotations
+    assert unpaginated.count() == 3
 
 
 @pytest.mark.django_db(transaction=True)

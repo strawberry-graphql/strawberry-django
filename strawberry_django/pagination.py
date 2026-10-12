@@ -4,7 +4,7 @@ from typing import Generic, TypeVar, cast
 
 import strawberry
 from django.db import DEFAULT_DB_ALIAS
-from django.db.models import Count, QuerySet, Window
+from django.db.models import Count, IntegerField, OuterRef, QuerySet, Subquery, Window
 from django.db.models.functions import RowNumber
 from django.db.models.query import MAX_GET_RESULTS  # type: ignore
 from strawberry.types import Info
@@ -206,6 +206,27 @@ class _PaginationWindow(Window):
     """
 
 
+class _DistinctTotalCount(Subquery):
+    """Total count of a DISTINCT queryset, counting each row once per partition.
+
+    Window functions are evaluated before DISTINCT, so a `Count(1)` window
+    would also count the rows duplicated by joins (e.g. filtering on a
+    many-to-many relation). This correlated subquery runs the same filters
+    and counts the distinct pks of the outer row's partition instead.
+    """
+
+    def __init__(self, queryset: QuerySet, related_field_id: str):
+        super().__init__(
+            queryset
+            .order_by()
+            .filter(**{related_field_id: OuterRef(related_field_id)})
+            .values(related_field_id)
+            .annotate(count=Count("pk", distinct=True))
+            .values("count"),
+            output_field=IntegerField(),
+        )
+
+
 def apply_window_pagination(
     queryset: _QS,
     *,
@@ -240,16 +261,18 @@ def apply_window_pagination(
         ).get_order_by()
     ]
 
+    total_count = (
+        _DistinctTotalCount(queryset, related_field_id)
+        if queryset.query.distinct and not queryset.query.distinct_fields
+        else _PaginationWindow(Count(1), partition_by=related_field_id)
+    )
     queryset = queryset.annotate(
         _strawberry_row_number=_PaginationWindow(
             RowNumber(),
             partition_by=related_field_id,
             order_by=order_by,
         ),
-        _strawberry_total_count=_PaginationWindow(
-            Count(1),
-            partition_by=related_field_id,
-        ),
+        _strawberry_total_count=total_count,
     )
 
     if offset:
@@ -302,7 +325,7 @@ def remove_window_pagination(queryset: _QS) -> _QS:
     queryset.query.annotations = {  # type: ignore
         key: value
         for key, value in queryset.query.annotations.items()
-        if not isinstance(value, _PaginationWindow)
+        if not isinstance(value, (_PaginationWindow, _DistinctTotalCount))
     }
     return queryset
 
@@ -357,10 +380,13 @@ def get_cached_total_count(queryset: QuerySet) -> int | None:
     if not results:
         return None
 
-    # If the queryset has DISTINCT enabled, the _strawberry_total_count
+    # If the queryset has DISTINCT enabled, a window _strawberry_total_count
     # annotation won't be accurate because window functions are evaluated
-    # before DISTINCT in SQL. Fall back to queryset.count() instead.
-    if queryset.query.distinct:
+    # before DISTINCT in SQL. Only `_DistinctTotalCount` counts it correctly.
+    if queryset.query.distinct and not isinstance(
+        queryset.query.annotations.get("_strawberry_total_count"),
+        _DistinctTotalCount,
+    ):
         return None
 
     try:
