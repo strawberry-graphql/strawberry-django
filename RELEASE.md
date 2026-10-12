@@ -37,6 +37,6 @@ This also fixes `totalCount` in these cases:
   fixes nested connections and top-level `DjangoListConnection`s selecting `edges`.
 - Nested `DjangoCursorConnection`s paginated with `after` or `before` report the total
   count of the whole connection, as top-level ones do, instead of counting only the rows
-  past the cursor.
+  past the cursor. This doesn't apply yet when `first` and `last` are combined.
 - Nested many-to-many connections and `OffsetPaginated` fields with an empty page no
   longer count each row once per related object.
