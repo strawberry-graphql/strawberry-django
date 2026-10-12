@@ -1,4 +1,5 @@
 import datetime
+import json
 import time
 from typing import cast
 
@@ -11,7 +12,7 @@ from django.db.backends.postgresql.base import (
 from django.db.models import F, OrderBy, QuerySet, Value
 from django.db.models.aggregates import Count
 from pytest_mock import MockFixture
-from strawberry.relay import GlobalID, Node, to_base64
+from strawberry.relay import GlobalID, Node, from_base64, to_base64
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -1696,6 +1697,61 @@ def test_nested_cursor_pagination_with_distinct_fields():
         alias="postgresql",
     )
     queryset.query.get_compiler(connection=postgresql).as_sql()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("node", ["", "node { id }"])
+def test_nested_cursors_dont_refetch_ordering_fields(node: str):
+    @strawberry_django.type(models.Fruit)
+    class FruitType(Node):
+        name: strawberry.auto
+
+        @classmethod
+        def get_queryset(cls, queryset, info, **kwargs):
+            # The cursors are built from the name, which isn't otherwise selected
+            return queryset.order_by("name", "pk")
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: DjangoCursorConnection[FruitType] = strawberry_django.connection()
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    fruit_schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b", "c")]
+    for color in colors:
+        for name in ("banana", "apple"):
+            models.Fruit.objects.create(name=name, color=color)
+
+    with assert_num_queries(2):
+        result = fruit_schema.execute_sync(
+            f"query {{ colors {{ fruits(first: 2) {{ edges {{ cursor {node} }} }} }} }}"
+        )
+
+    assert not result.errors
+    assert result.data is not None
+    assert [
+        [
+            json.loads(from_base64(edge["cursor"])[1])
+            for edge in color["fruits"]["edges"]
+        ]
+        for color in result.data["colors"]
+    ] == [
+        [
+            ["apple", str(apple.pk)],
+            ["banana", str(banana.pk)],
+        ]
+        for apple, banana in (
+            (
+                models.Fruit.objects.get(color=color, name="apple"),
+                models.Fruit.objects.get(color=color, name="banana"),
+            )
+            for color in colors
+        )
+    ]
 
 
 @pytest.mark.django_db(transaction=True)

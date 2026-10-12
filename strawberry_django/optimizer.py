@@ -1121,7 +1121,11 @@ def _get_hints_from_django_relation(
     )
     if is_inheritance_qs(base_qs):
         base_qs = base_qs.select_subclasses(*subclasses)
+    from strawberry_django.relay.cursor_connection import load_ordering_fields
+
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
+    # The store may defer the fields that the cursors are built from
+    field_qs = load_ordering_fields(field_qs)
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)

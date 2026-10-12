@@ -75,13 +75,36 @@ class OrderingDescriptor:
         return Q((f"{self.attname}{LOOKUP_SEP}exact", value))
 
 
+def load_ordering_fields(
+    qs: QuerySet, descriptors: list[OrderingDescriptor] | None = None
+) -> QuerySet:
+    """Make sure the base table fields that the cursors are built from aren't deferred."""
+    if descriptors is None:
+        descriptors = get_queryset_config(qs).ordering_descriptors or []
+    field_names = {
+        descriptor.order_by.expression.field.name
+        for descriptor in descriptors
+        # the other descriptors are annotations
+        if isinstance(descriptor.order_by.expression, Col)
+        and descriptor.attname == descriptor.order_by.expression.field.attname
+    }
+    existing, defer = qs.query.deferred_loading
+    if defer and field_names & existing:
+        # Query is in "defer fields" mode and our fields are being deferred.
+        # defer is additive, so clear it first
+        return qs.defer(None).defer(*(existing - field_names))
+    if not defer and not field_names <= existing:
+        # Query is in "only these fields" mode and our fields are not in the set
+        # of fields. only overwrites
+        return qs.only(*existing, *field_names)
+    return qs
+
+
 def annotate_ordering_fields(
     qs: QuerySet,
 ) -> tuple[QuerySet, list[OrderingDescriptor], list[OrderBy]]:
     annotations = {}
     descriptors = []
-    new_defer = None
-    new_only = None
     order_bys = _get_order_by(qs)
     pk_in_order = False
     for index, order_by in enumerate(order_bys):
@@ -90,19 +113,6 @@ def annotate_ordering_fields(
             qs.query.alias_map[order_by.expression.alias],  # type: ignore
             BaseTable,
         ):
-            field_name = order_by.expression.field.name
-            # if it's a field in the base table, just make sure it is not deferred (e.g. by the optimizer)
-            existing, defer = qs.query.deferred_loading
-            if defer and field_name in existing:
-                # Query is in "defer fields" mode and our field is being deferred
-                if new_defer is None:
-                    new_defer = set(existing)
-                new_defer.discard(field_name)
-            elif not defer and field_name not in existing:
-                # Query is in "only these fields" mode and our field is not in the set of fields
-                if new_only is None:
-                    new_only = set(existing)
-                new_only.add(field_name)
             descriptors.append(
                 OrderingDescriptor(
                     order_by.expression.field.attname,
@@ -117,12 +127,8 @@ def annotate_ordering_fields(
             annotations[dynamic_field] = order_by.expression
             descriptors.append(OrderingDescriptor(dynamic_field, order_by))
 
-    if new_defer is not None:
-        # defer is additive, so clear it first
-        qs = qs.defer(None).defer(*new_defer)
-    elif new_only is not None:
-        # only overwrites
-        qs = qs.only(*new_only)
+    # if it's a field in the base table, just make sure it is not deferred (e.g. by the optimizer)
+    qs = load_ordering_fields(qs, descriptors)
 
     if not pk_in_order:
         # Ensure we always have a clearly defined order by ordering by pk if it isn't in the order already
