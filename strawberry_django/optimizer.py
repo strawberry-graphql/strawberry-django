@@ -768,6 +768,19 @@ def _selects_fields(
     )
 
 
+def _selects_other_fields(
+    info: GraphQLResolveInfo,
+    parent_type: GraphQLNamedType,
+    field_names: set[str],
+) -> bool:
+    """Whether any field other than the given ones is selected on the type."""
+    assert isinstance(parent_type, (GraphQLObjectType, GraphQLInterfaceType))
+    return any(
+        field_nodes[0].name.value not in field_names
+        for field_nodes in _get_selections(info, parent_type).values()
+    )
+
+
 def _get_selections(
     info: GraphQLResolveInfo,
     parent_type: GraphQLObjectType | GraphQLInterfaceType,
@@ -1615,7 +1628,7 @@ def _get_model_hints_from_connection(
                 if concrete_store is not None:
                     store = concrete_store if store is None else store | concrete_store
 
-    if not selects_node:
+    if not selects_node and _selects_other_fields(info, parent_type, {"__typename"}):
         # Nothing is selected from the nodes (e.g. only `totalCount`). Prefetch the
         # connection anyway, so that it is resolved from the prefetch cache instead
         # of querying the database once per parent. Its rows aren't restricted to
@@ -1679,7 +1692,10 @@ def _get_model_hints_from_paginated(
             if concrete_store is not None:
                 store = concrete_store if store is None else store | concrete_store
 
-    if store is None and not _selects_fields(info, parent_type, {"results"}):
+    # `pageInfo` only returns the pagination arguments, so it needs no rows
+    if store is None and _selects_other_fields(
+        info, parent_type, {"__typename", "pageInfo", "results"}
+    ):
         # Only `totalCount` is selected. Prefetch it anyway, so that it is resolved
         # from the prefetch cache instead of querying the database once per parent.
         store = OptimizerStore()

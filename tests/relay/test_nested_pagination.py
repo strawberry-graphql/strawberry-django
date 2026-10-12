@@ -816,3 +816,88 @@ def test_nested_custom_connection_reading_nodes():
             for color in colors
         ]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("field", "selection", "num_queries", "expected"),
+    [
+        # `hasNextPage` is computed from the prefetched rows
+        (
+            "listConnection(first: 2)",
+            "pageInfo { hasNextPage }",
+            2,
+            {"pageInfo": {"hasNextPage": True}},
+        ),
+        (
+            "cursorConnection(first: 2)",
+            "pageInfo { hasNextPage }",
+            2,
+            {"pageInfo": {"hasNextPage": True}},
+        ),
+        # These don't need any row
+        (
+            "paginated(pagination: { limit: 2 })",
+            "pageInfo { limit offset }",
+            1,
+            {"pageInfo": {"limit": 2, "offset": 0}},
+        ),
+        (
+            "listConnection(first: 2)",
+            "__typename",
+            1,
+            {"__typename": "FruitTypeConnection"},
+        ),
+        (
+            "cursorConnection(first: 2)",
+            "__typename",
+            1,
+            {"__typename": "FruitTypeCursorConnection"},
+        ),
+        (
+            "paginated(pagination: { limit: 2 })",
+            "__typename",
+            1,
+            {"__typename": "FruitTypeOffsetPaginated"},
+        ),
+    ],
+)
+def test_nested_pagination_without_rows(
+    field: str, selection: str, num_queries: int, expected: dict
+):
+    @strawberry_django.type(models.Fruit)
+    class FruitType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        list_connection: DjangoListConnection[FruitType] = strawberry_django.connection(
+            field_name="fruits"
+        )
+        cursor_connection: DjangoCursorConnection[FruitType] = (
+            strawberry_django.connection(field_name="fruits")
+        )
+        paginated: OffsetPaginated[FruitType] = strawberry_django.offset_paginated(
+            field_name="fruits"
+        )
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
+
+    colors = [models.Color.objects.create(name=name) for name in ("a", "b")]
+    for color in colors:
+        for i in range(3):
+            models.Fruit.objects.create(name=f"{color.name}{i}", color=color)
+
+    # Only prefetch the rows when the selection needs them
+    with utils.assert_num_queries(num_queries):
+        result = schema.execute_sync(
+            f"query {{ colors {{ {field} {{ {selection} }} }} }}"
+        )
+
+    assert not result.errors
+    response_key = field.partition("(")[0]
+    assert result.data == {"colors": [{response_key: expected} for _ in colors]}
