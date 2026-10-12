@@ -1,7 +1,16 @@
 import pytest
+import strawberry
 from django.db import DEFAULT_DB_ALIAS, connections
+from django.db.models.functions import Length
 from django.test.utils import CaptureQueriesContext
+from strawberry import relay
+from strawberry.relay import to_base64
+from strawberry.relay.types import PREFIX
 
+import strawberry_django
+from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.relay import DjangoListConnection
 from tests.utils import assert_num_queries
 
 from .models import (
@@ -10,6 +19,7 @@ from .models import (
     Company,
     EngineeringProject,
     IOSProject,
+    Project,
     ResearchProject,
     SoftwareProject,
 )
@@ -471,4 +481,90 @@ def test_optimizer_hints_polymorphic():
                 "topicUpper": rp.topic.upper(),
             },
         ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("field", ["projectsPaginated", "projectsConnection"])
+@pytest.mark.parametrize("annotated", [False, True])
+@pytest.mark.parametrize("empty_page", [False, True])
+def test_nested_pagination_of_subclasses(field: str, annotated: bool, empty_page: bool):
+    @strawberry_django.interface(Project)
+    class ProjectType(relay.Node):
+        topic: strawberry.auto
+
+        if annotated:
+            # Annotated after the pagination annotations
+            @strawberry_django.field(annotate={"_topic_length": Length("topic")})
+            def topic_length(self) -> int:
+                return self._topic_length  # type: ignore
+
+    @strawberry_django.type(ArtProject)
+    class ArtProjectType(ProjectType):
+        artist: strawberry.auto
+
+    @strawberry_django.type(ResearchProject)
+    class ResearchProjectType(ProjectType):
+        supervisor: strawberry.auto
+
+    @strawberry_django.type(Company)
+    class CompanyType(relay.Node):
+        name: strawberry.auto
+        projects_paginated: OffsetPaginated[ProjectType] = (
+            strawberry_django.offset_paginated(field_name="projects")
+        )
+        projects_connection: DjangoListConnection[ProjectType] = (
+            strawberry_django.connection(field_name="projects")
+        )
+
+    @strawberry.type
+    class Query:
+        companies: list[CompanyType] = strawberry_django.field()
+
+    for name in ("a", "b", "c"):
+        company = Company.objects.create(name=name)
+        ArtProject.objects.create(company=company, topic="art", artist="Artist")
+        ResearchProject.objects.create(
+            company=company, topic="research", supervisor="Supervisor"
+        )
+
+    selection = "topic topicLength" if annotated else "topic"
+    if field == "projectsPaginated":
+        offset = 5 if empty_page else 0
+        arguments = f"pagination: {{ offset: {offset}, limit: 1 }}"
+        page = f"results {{ {selection} }}"
+    else:
+        after = f', after: "{to_base64(PREFIX, 4)}"' if empty_page else ""
+        arguments = f"first: 1{after}"
+        page = f"edges {{ node {{ {selection} }} }}"
+
+    query = f"""
+      query {{
+        companies {{
+          {field}({arguments}) {{
+            totalCount
+            {page}
+          }}
+        }}
+      }}
+    """
+    schema = strawberry.Schema(
+        query=Query,
+        types=[ArtProjectType, ResearchProjectType],
+        extensions=[DjangoOptimizerExtension],
+    )
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+
+    assert not result.errors
+    assert result.data is not None
+    expected_item = (
+        {"topic": "art", "topicLength": 3} if annotated else {"topic": "art"}
+    )
+    if field == "projectsPaginated":
+        expected_page = {"results": [] if empty_page else [expected_item]}
+    else:
+        expected_page = {"edges": [] if empty_page else [{"node": expected_item}]}
+    assert result.data == {
+        "companies": [{field: {"totalCount": 2, **expected_page}} for _ in range(3)]
     }

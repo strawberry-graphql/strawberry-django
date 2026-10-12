@@ -1126,6 +1126,10 @@ def _get_hints_from_django_relation(
     field_qs = field_store.apply(base_qs, info=field_info, config=config)
     # The store may defer the fields that the cursors are built from
     field_qs = load_ordering_fields(field_qs)
+    if is_inheritance_qs(field_qs):
+        # It only sets the annotations of its last `annotate()` call on the subclass
+        # instances, so make it set all of them, e.g. the pagination ones
+        field_qs._annotated = list(field_qs.query.annotation_select)  # type: ignore
     field_prefetch = Prefetch(path, queryset=field_qs)
     field_prefetch._optimizer_sentinel = _sentinel  # type: ignore
     store.prefetch_related.append(field_prefetch)
