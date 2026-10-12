@@ -666,12 +666,12 @@ def _optimize_prefetch_queryset(
             last = field_kwargs.get("last")
             before = field_kwargs.get("before")
             after = field_kwargs.get("after")
-            if not _selects_connection_edges(
+            # When only `totalCount` is selected, which ignores pagination, fetch
+            # the first row of each parent, as it carries the window total count.
+            # The given arguments are still validated, as when resolving the edges.
+            total_count_only = not _selects_connection_edges(
                 info, get_named_type(parent_type.fields[field_name].type)
-            ):
-                # Only `totalCount` is selected, which ignores pagination. Fetch the
-                # first row of each parent, as it carries the window total count.
-                first, last, before, after = 1, None, None, None
+            )
             if (
                 connection_type is relay.ListConnection
                 or connection_type is DjangoListConnection
@@ -687,6 +687,8 @@ def _optimize_prefetch_queryset(
                     max_results=connection_extension.max_results,
                     prefix=edge_class.CURSOR_PREFIX,
                 )
+                if total_count_only:
+                    slice_metadata = SliceMetadata(start=0, end=1, expected=1)
                 mark_reversed = slice_metadata.expected is None
                 qs = apply_window_pagination(
                     qs,
@@ -701,6 +703,19 @@ def _optimize_prefetch_queryset(
                     reverse=mark_reversed,
                 )
             elif connection_type is DjangoCursorConnection:
+                if total_count_only:
+                    # Only raises for invalid arguments, the result is discarded
+                    apply_cursor_pagination(
+                        qs,
+                        related_field_id=related_field_id,
+                        info=Info(_raw_info=info, _field=field),
+                        first=first,
+                        last=last,
+                        before=before,
+                        after=after,
+                        max_results=connection_extension.max_results,
+                    )
+                    first, last, before, after = 1, None, None, None
                 qs, _ = apply_cursor_pagination(
                     qs,
                     related_field_id=related_field_id,

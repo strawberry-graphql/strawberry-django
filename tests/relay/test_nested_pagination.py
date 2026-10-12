@@ -419,6 +419,7 @@ def test_nested_total_count_distinct(
         result = schema.execute_sync(query)
 
     assert not result.errors
+    assert result.data is not None
     assert [color["fruits"]["totalCount"] for color in result.data["colors"]] == [
         3,
         1,
@@ -488,3 +489,52 @@ def test_nested_many_to_many_total_count_without_edges_distinct(
     assert result.data == {
         "tags": [{"issues": {"totalCount": total_count}} for total_count in [3, 2, 0]],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    "connection_class", [DjangoListConnection, DjangoCursorConnection]
+)
+@pytest.mark.parametrize(
+    "arguments",
+    ["first: -1", "last: -1", "first: 101", "last: 101", 'after: "invalid"'],
+)
+def test_nested_total_count_without_edges_validates_pagination(
+    connection_class: type[DjangoListConnection | DjangoCursorConnection],
+    arguments: str,
+):
+    @strawberry_django.type(models.Fruit)
+    class FruitType(Node):
+        name: strawberry.auto
+
+    @strawberry_django.type(models.Color)
+    class ColorType(Node):
+        fruits: connection_class[FruitType] = strawberry_django.connection()  # type: ignore
+
+    @strawberry.type
+    class Query:
+        colors: list[ColorType] = strawberry_django.field()
+
+    color = models.Color.objects.create(name="red")
+    models.Fruit.objects.create(color=color)
+
+    query = f"""
+      query testNestedConnectionTotalCount {{
+        colors {{
+          fruits({arguments}) {{
+            totalCount
+          }}
+        }}
+      }}
+    """
+    optimized = strawberry.Schema(
+        query=Query, extensions=[DjangoOptimizerExtension]
+    ).execute_sync(query)
+    unoptimized = strawberry.Schema(query=Query).execute_sync(query)
+
+    # The optimizer must reject the same arguments as the unoptimized resolver
+    assert unoptimized.errors
+    assert optimized.errors
+    assert [error.message for error in optimized.errors] == [
+        error.message for error in unoptimized.errors
+    ]
