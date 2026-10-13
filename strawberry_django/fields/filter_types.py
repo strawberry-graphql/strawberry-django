@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import decimal
 import uuid
 import warnings
@@ -140,7 +140,7 @@ class StrFilterLookup(BaseFilterLookup[str]):
 
 
 @strawberry.input
-class DateFilterLookup(ComparisonFilterLookup[datetime.date]):
+class DateFilterLookup(ComparisonFilterLookup[dt.date]):
     year: ComparisonFilterLookup[int] | None = UNSET
     month: ComparisonFilterLookup[int] | None = UNSET
     day: ComparisonFilterLookup[int] | None = UNSET
@@ -156,7 +156,7 @@ class DateFilterLookup(ComparisonFilterLookup[datetime.date]):
 
 
 @strawberry.input
-class TimeFilterLookup(ComparisonFilterLookup[datetime.time]):
+class TimeFilterLookup(ComparisonFilterLookup[dt.time]):
     hour: ComparisonFilterLookup[int] | None = UNSET
     minute: ComparisonFilterLookup[int] | None = UNSET
     second: ComparisonFilterLookup[int] | None = UNSET
@@ -167,7 +167,7 @@ class TimeFilterLookup(ComparisonFilterLookup[datetime.time]):
 
 
 @strawberry.input
-class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
+class DatetimeFilterLookup(ComparisonFilterLookup[dt.datetime]):
     year: ComparisonFilterLookup[int] | None = UNSET
     month: ComparisonFilterLookup[int] | None = UNSET
     day: ComparisonFilterLookup[int] | None = UNSET
@@ -179,8 +179,8 @@ class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
     hour: ComparisonFilterLookup[int] | None = UNSET
     minute: ComparisonFilterLookup[int] | None = UNSET
     second: ComparisonFilterLookup[int] | None = UNSET
-    date: ComparisonFilterLookup[datetime.date] | None = UNSET
-    time: ComparisonFilterLookup[datetime.time] | None = UNSET
+    date: ComparisonFilterLookup[dt.date] | None = UNSET
+    time: ComparisonFilterLookup[dt.time] | None = UNSET
 
     def __class_getitem__(cls, item: Any) -> type:
         _warn_concrete_lookup(cls)
@@ -190,9 +190,9 @@ class DatetimeFilterLookup(ComparisonFilterLookup[datetime.datetime]):
 type_filter_map: dict[type, type] = {
     strawberry.ID: BaseFilterLookup,  # type: ignore[dict-item]
     bool: BaseFilterLookup,
-    datetime.date: DateFilterLookup,
-    datetime.datetime: DatetimeFilterLookup,
-    datetime.time: TimeFilterLookup,
+    dt.date: DateFilterLookup,
+    dt.datetime: DatetimeFilterLookup,
+    dt.time: TimeFilterLookup,
     decimal.Decimal: ComparisonFilterLookup,
     float: ComparisonFilterLookup,
     int: ComparisonFilterLookup,

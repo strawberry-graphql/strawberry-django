@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import operator
 from typing import Any, cast
 
@@ -956,7 +956,7 @@ def test_query_annotate(db, gql_client: GraphQLTestClient):
         expected.append(p_res)
     for p in ProjectFactory.create_batch(
         2,
-        due_date=today - datetime.timedelta(days=1),
+        due_date=today - dt.timedelta(days=1),
     ):
         ms = MilestoneFactory.create_batch(2, project=p)
         assert p.due_date is not None
@@ -3761,7 +3761,7 @@ def test_method_resolver_propagates_child_only_hints(db):
     )
 
     project = ProjectFactory.create(name="P1")
-    due_date = datetime.date(2026, 1, 1)
+    due_date = dt.date(2026, 1, 1)
     milestone = MilestoneFactory.create(project=project, name="M1", due_date=due_date)
     IssueFactory.create(milestone=milestone, name="I1")
 

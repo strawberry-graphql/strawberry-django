@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from typing import cast
 
 import pytest
@@ -42,7 +42,7 @@ class MilestoneOrder:
         self, queryset: QuerySet, value: strawberry_django.Ordering, prefix: str
     ) -> "tuple[QuerySet, list[OrderBy]]":
         queryset = queryset.alias(
-            _days_left=Value(datetime.date(2025, 12, 31)) - F(f"{prefix}due_date")
+            _days_left=Value(dt.date(2025, 12, 31)) - F(f"{prefix}due_date")
         )
         return queryset, [value.resolve("_days_left")]
 
@@ -62,7 +62,7 @@ class MilestoneType(Node):
 @strawberry_django.type(Project, order=ProjectOrder)
 class ProjectType(Node):
     name: str
-    due_date: datetime.date
+    due_date: dt.date
     milestones: DjangoCursorConnection[MilestoneType] = strawberry_django.connection()
 
     @classmethod
@@ -104,10 +104,10 @@ def test_objects():
     Project.objects.create(id=6, name="Project D")
     Project.objects.create(id=4, name="Project E")
 
-    Milestone.objects.create(id=1, project=pb, due_date=datetime.date(2025, 6, 1))
-    Milestone.objects.create(id=2, project=pb, due_date=datetime.date(2025, 6, 2))
-    Milestone.objects.create(id=3, project=pc1, due_date=datetime.date(2025, 6, 1))
-    Milestone.objects.create(id=4, project=pa, due_date=datetime.date(2025, 6, 5))
+    Milestone.objects.create(id=1, project=pb, due_date=dt.date(2025, 6, 1))
+    Milestone.objects.create(id=2, project=pb, due_date=dt.date(2025, 6, 2))
+    Milestone.objects.create(id=3, project=pc1, due_date=dt.date(2025, 6, 1))
+    Milestone.objects.create(id=4, project=pa, due_date=dt.date(2025, 6, 5))
 
 
 @pytest.mark.django_db(transaction=True)
@@ -976,12 +976,8 @@ def test_cursor_pagination_order_field_deferred(test_objects):
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])
 def test_cursor_pagination_order_with_nulls(order, pks, offset):
     pa = Project.objects.create(id=1, name="Project A", due_date=None)
-    pc = Project.objects.create(
-        id=2, name="Project C", due_date=datetime.date(2025, 6, 2)
-    )
-    pb = Project.objects.create(
-        id=3, name="Project B", due_date=datetime.date(2025, 6, 5)
-    )
+    pc = Project.objects.create(id=2, name="Project C", due_date=dt.date(2025, 6, 2))
+    pb = Project.objects.create(id=3, name="Project B", due_date=dt.date(2025, 6, 5))
     pd = Project.objects.create(id=4, name="Project D", due_date=None)
     projects_lookup = {p.pk: p for p in (pa, pb, pc, pd)}
     projects = [projects_lookup[pk] for pk in pks]
@@ -1109,11 +1105,11 @@ def test_nested_cursor_pagination_in_single():
     pa = Project.objects.create(id=1, name="Project A")
     pb = Project.objects.create(id=2, name="Project B")
 
-    Milestone.objects.create(id=1, project=pb, due_date=datetime.date(2025, 6, 1))
-    Milestone.objects.create(id=2, project=pb, due_date=datetime.date(2025, 6, 2))
-    Milestone.objects.create(id=3, project=pb, due_date=datetime.date(2025, 6, 1))
-    Milestone.objects.create(id=4, project=pa, due_date=datetime.date(2025, 6, 5))
-    Milestone.objects.create(id=5, project=pa, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=1, project=pb, due_date=dt.date(2025, 6, 1))
+    Milestone.objects.create(id=2, project=pb, due_date=dt.date(2025, 6, 2))
+    Milestone.objects.create(id=3, project=pb, due_date=dt.date(2025, 6, 1))
+    Milestone.objects.create(id=4, project=pa, due_date=dt.date(2025, 6, 5))
+    Milestone.objects.create(id=5, project=pa, due_date=dt.date(2025, 6, 1))
 
     query = """
     query TestQuery($id: ID!) {
@@ -1166,11 +1162,11 @@ def test_nested_cursor_pagination():
     pa = Project.objects.create(id=1, name="Project A")
     pb = Project.objects.create(id=2, name="Project B")
 
-    Milestone.objects.create(id=1, project=pb, due_date=datetime.date(2025, 6, 1))
-    Milestone.objects.create(id=2, project=pb, due_date=datetime.date(2025, 6, 2))
-    Milestone.objects.create(id=3, project=pb, due_date=datetime.date(2025, 6, 1))
-    Milestone.objects.create(id=4, project=pa, due_date=datetime.date(2025, 6, 5))
-    Milestone.objects.create(id=5, project=pa, due_date=datetime.date(2025, 6, 1))
+    Milestone.objects.create(id=1, project=pb, due_date=dt.date(2025, 6, 1))
+    Milestone.objects.create(id=2, project=pb, due_date=dt.date(2025, 6, 2))
+    Milestone.objects.create(id=3, project=pb, due_date=dt.date(2025, 6, 1))
+    Milestone.objects.create(id=4, project=pa, due_date=dt.date(2025, 6, 5))
+    Milestone.objects.create(id=5, project=pa, due_date=dt.date(2025, 6, 1))
 
     query = """
     query TestQuery {
