@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import decimal
 import enum
 import inspect
@@ -234,8 +234,8 @@ field_type_map: dict[
     fields.BigIntegerField: int,
     fields.BooleanField: bool,
     fields.CharField: str,
-    fields.DateField: datetime.date,
-    fields.DateTimeField: datetime.datetime,
+    fields.DateField: dt.date,
+    fields.DateTimeField: dt.datetime,
     fields.DecimalField: decimal.Decimal,
     fields.EmailField: str,
     fields.FilePathField: str,
@@ -249,7 +249,7 @@ field_type_map: dict[
     fields.SmallAutoField: strawberry.ID,
     fields.SmallIntegerField: int,
     fields.TextField: str,
-    fields.TimeField: datetime.time,
+    fields.TimeField: dt.time,
     fields.URLField: str,
     fields.UUIDField: uuid.UUID,
     json.JSONField: JSON,

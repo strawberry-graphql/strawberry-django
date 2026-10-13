@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+import datetime as dt
 import decimal
 from collections.abc import Iterable
 from typing import Annotated, Optional, cast
@@ -644,7 +644,7 @@ class Mutation:
             decimal.Decimal,
             strawberry.argument(description="The project's cost"),
         ],
-        due_date: datetime.datetime | None = None,
+        due_date: dt.datetime | None = None,
     ) -> ProjectType:
         """Create project documentation."""
         if cost > 500:

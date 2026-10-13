@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import decimal
 import enum
 import uuid
@@ -116,8 +116,8 @@ def test_field_types():
         ("id", strawberry.ID),
         ("boolean", bool),
         ("char", str),
-        ("date", datetime.date),
-        ("date_time", datetime.datetime),
+        ("date", dt.date),
+        ("date_time", dt.datetime),
         ("decimal", decimal.Decimal),
         ("email", str),
         ("file", strawberry_django.DjangoFileType),
@@ -132,7 +132,7 @@ def test_field_types():
         ("slug", str),
         ("small_integer", int),
         ("text", str),
-        ("time", datetime.time),
+        ("time", dt.time),
         ("url", str),
         ("uuid", uuid.UUID),
         ("json", JSON),
