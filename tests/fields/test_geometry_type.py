@@ -245,3 +245,80 @@ def test_geometry_type_with_optimizer(geofields):
     sql = ctx.captured_queries[0]["sql"]
     assert '"point"' in sql
     assert '"polygon"' not in sql
+
+
+def _generated_and_array_geometry_model():
+    from django.contrib.gis.db import models as gis_models
+    from django.contrib.gis.db.models.functions import Centroid
+    from django.contrib.postgres.fields import ArrayField
+    from django.db.models import GeneratedField  # type: ignore
+
+    class GeneratedGeometryModel(gis_models.Model):
+        polygon = gis_models.PolygonField()
+        centroid = GeneratedField(
+            expression=Centroid("polygon"),
+            output_field=gis_models.PointField(),
+            db_persist=True,
+        )
+        points = ArrayField(gis_models.PointField())
+
+        class Meta:
+            app_label = "tests"
+
+    return GeneratedGeometryModel
+
+
+if settings.GEOS_IMPORTED:
+    GeneratedGeometryModel = _generated_and_array_geometry_model()
+
+
+def _field_types(cls):
+    object_definition = get_object_definition(cls, strict=True)
+    return {f.name: f.type for f in object_definition.fields}
+
+
+@use_geometry_type
+def test_generated_and_array_geometry_fields_output():
+    @strawberry_django.type(GeneratedGeometryModel)
+    class GeoType:
+        centroid: auto
+        points: auto
+
+    field_types = _field_types(GeoType)
+
+    assert field_types["centroid"] is strawberry_django.DjangoGeometryType
+    assert field_types["points"].of_type is strawberry_django.DjangoGeometryType  # type: ignore
+
+
+@override_settings(STRAWBERRY_DJANGO={"USE_GEOMETRY_SCALARS": True})
+def test_generated_and_array_geometry_fields_output_with_scalars():
+    from django.contrib.gis.geos import Point
+
+    @strawberry_django.type(GeneratedGeometryModel)
+    class GeoType:
+        centroid: auto
+        points: auto
+
+    field_types = _field_types(GeoType)
+
+    assert field_types["centroid"] is Point
+    assert field_types["points"].of_type is Point  # type: ignore
+
+
+@use_geometry_type
+def test_generated_and_array_geometry_fields_input_and_filter():
+    from django.contrib.gis.geos import Point
+
+    @strawberry_django.input(GeneratedGeometryModel)
+    class GeoInput:
+        points: auto
+
+    @strawberry_django.filter_type(GeneratedGeometryModel, lookups=True)
+    class GeoFilter:
+        centroid: auto
+
+    assert _field_types(GeoInput)["points"].of_type is Point  # type: ignore
+    assert (
+        _field_types(GeoFilter)["centroid"].of_type  # type: ignore
+        is strawberry_django.GeometryFilterLookup
+    )

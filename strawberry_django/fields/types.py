@@ -496,12 +496,15 @@ relay_input_field_type_map: dict[
 }
 
 
-def _resolve_array_field_type(model_field: Field):
+def _resolve_array_field_type(
+    model_field: Field,
+    type_map: dict[Any, Any] = field_type_map,
+):
     assert ArrayField is not None
     if isinstance(model_field, ArrayField):
-        return list[_resolve_array_field_type(model_field.base_field)]
+        return list[_resolve_array_field_type(model_field.base_field, type_map)]
 
-    base_field = field_type_map.get(type(model_field), NotImplemented)
+    base_field = type_map.get(type(model_field), NotImplemented)
     if base_field is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",
@@ -515,6 +518,10 @@ def resolve_model_field_type(
     django_type: "StrawberryDjangoDefinition",
 ):
     settings = django_settings()
+    # Inputs and filters always use the geometry scalars
+    use_geometry_type = (
+        not settings["USE_GEOMETRY_SCALARS"] and not django_type.is_input
+    )
 
     # Django choices field
     if (
@@ -590,8 +597,15 @@ def resolve_model_field_type(
     elif isinstance(model_field, GeneratedField):
         model_field_type = type(model_field.output_field)  # type: ignore
         field_type = field_type_map.get(model_field_type, NotImplemented)
+        if use_geometry_type:
+            field_type = geometry_object_type_map.get(model_field_type, field_type)
     elif ArrayField is not None and isinstance(model_field, ArrayField):
-        field_type = _resolve_array_field_type(model_field)
+        field_type = _resolve_array_field_type(
+            model_field,
+            {**field_type_map, **geometry_object_type_map}
+            if use_geometry_type
+            else field_type_map,
+        )
     # Every other Field possibility
     else:
         force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]
@@ -615,7 +629,7 @@ def resolve_model_field_type(
             type_map = field_type_map
             if force_global_id:
                 type_map = {**type_map, **relay_field_type_map}
-            if not settings["USE_GEOMETRY_SCALARS"]:
+            if use_geometry_type:
                 type_map = {**type_map, **geometry_object_type_map}
 
             field_type = type_map.get(model_field_type, NotImplemented)
