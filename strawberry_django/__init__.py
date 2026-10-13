@@ -17,6 +17,7 @@ from .fields.filter_types import (
 )
 from .fields.types import (
     DjangoFileType,
+    DjangoGeometryType,
     DjangoImageType,
     DjangoModelType,
     ListInput,
@@ -49,6 +50,7 @@ __all__ = [
     "DateFilterLookup",
     "DatetimeFilterLookup",
     "DjangoFileType",
+    "DjangoGeometryType",
     "DjangoImageType",
     "DjangoModelType",
     "FilterLookup",

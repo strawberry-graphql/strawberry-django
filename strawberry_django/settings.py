@@ -42,6 +42,10 @@ class StrawberryDjangoSettings(TypedDict):
     #: If True, deprecated way of using filters will be working
     USE_DEPRECATED_FILTERS: bool
 
+    #: If True, `auto` geometry fields are output as coordinate scalars
+    #: (`Point`, `Polygon`, ...) instead of `DjangoGeometryType`
+    USE_GEOMETRY_SCALARS: bool
+
     #: The default limit for pagination when not provided. Can be set to `None`
     #: to set it to unlimited.
     PAGINATION_DEFAULT_LIMIT: int | None
@@ -65,6 +69,7 @@ DEFAULT_DJANGO_SETTINGS = StrawberryDjangoSettings(
     MAP_AUTO_ID_AS_GLOBAL_ID=False,
     DEFAULT_PK_FIELD_NAME="pk",
     USE_DEPRECATED_FILTERS=False,
+    USE_GEOMETRY_SCALARS=False,
     PAGINATION_DEFAULT_LIMIT=100,
     PAGINATION_MAX_LIMIT=100,
     ALLOW_MUTATIONS_WITHOUT_FILTERS=False,
