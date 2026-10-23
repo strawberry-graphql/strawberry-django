@@ -62,6 +62,12 @@ A dictionary with the following optional keys:
 
       If True, [legacy filters](filters.md#legacy-filtering) are enabled. This is usefull for migrating from previous version.
 
+- **`USE_GEOMETRY_SCALARS`** (default: `False`)
+
+      If True, `auto` GeoDjango geometry fields are output as coordinate scalars
+      (`Point`, `Polygon`, ...) instead of [`DjangoGeometryType`](../integrations/geodjango.md#output).
+      This keeps the output of previous versions.
+
 - **`PAGINATION_DEFAULT_LIMIT`** (default: `100`)
 
       Default limit for [pagination](pagination.md) when one is not provided by the client. Can be set to `None` to set it to unlimited.
