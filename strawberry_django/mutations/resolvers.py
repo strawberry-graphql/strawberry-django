@@ -709,26 +709,34 @@ def update_m2m(
                 if hasattr(manager, "through"):
                     manager = cast("ManyToManyRelatedManager", manager)
                     intermediate_model = manager.through
-                    try:
-                        im = intermediate_model._default_manager.get(
-                            **{
-                                manager.source_field_name: instance,  # type: ignore
-                                manager.target_field_name: obj,  # type: ignore
-                            },
-                        )
-                    except intermediate_model.DoesNotExist:
-                        im = intermediate_model(
-                            **{
-                                manager.source_field_name: instance,  # type: ignore
-                                manager.target_field_name: obj,  # type: ignore
-                            },
-                        )
+                    im_kwargs = {
+                        manager.source_field_name: instance,  # type: ignore
+                        manager.target_field_name: obj,  # type: ignore
+                    }
+                    if obj in existing:
+                        # The relation already exists, only update its
+                        # intermediate row when new values were given for it
+                        if through_defaults:
+                            im = intermediate_model._default_manager.get(**im_kwargs)
+                            for k, inner_value in through_defaults.items():
+                                setattr(im, k, inner_value)
+                            if full_clean:
+                                im.full_clean(**full_clean_options)
+                            im.save()
+                    else:
+                        if full_clean:
+                            intermediate_model(
+                                **im_kwargs,
+                                **through_defaults,
+                            ).full_clean(**full_clean_options)
 
-                    for k, inner_value in through_defaults.items():
-                        setattr(im, k, inner_value)
-                    if full_clean:
-                        im.full_clean(**full_clean_options)
-                    im.save()
+                        # Add the relation through the manager instead of saving
+                        # the intermediate row directly, so that the m2m_changed
+                        # signal gets sent
+                        if through_defaults:
+                            manager.add(obj, through_defaults=through_defaults)
+                        else:
+                            to_add.append(obj)
                 elif obj not in existing:
                     to_add.append(obj)
 
