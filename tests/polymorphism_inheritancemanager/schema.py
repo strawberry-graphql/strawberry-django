@@ -1,17 +1,21 @@
+from typing import cast
+
 import strawberry
 
 import strawberry_django
-from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.optimizer import DjangoOptimizerExtension, optimize
 from strawberry_django.pagination import OffsetPaginated
 
 from .models import (
     AndroidProject,
     AppProject,
     ArtProject,
+    ArtProjectTag,
     Company,
     EngineeringProject,
     IOSProject,
     Project,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
     TechnicalProject,
@@ -21,6 +25,7 @@ from .models import (
 @strawberry_django.interface(Project)
 class ProjectType:
     topic: strawberry.auto
+    notes: list["ProjectNoteType"]
 
     @strawberry_django.field(only=("topic",))
     def topic_upper(self) -> str:
@@ -31,6 +36,7 @@ class ProjectType:
 class ArtProjectType(ProjectType):
     artist: strawberry.auto
     art_style_upper: strawberry.auto
+    tags: list["ArtProjectTagType"]
 
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
@@ -72,6 +78,16 @@ class IOSProjectType(AppProjectType):
     ios_version: strawberry.auto
 
 
+@strawberry_django.type(ProjectNote)
+class ProjectNoteType:
+    text: strawberry.auto
+
+
+@strawberry_django.type(ArtProjectTag)
+class ArtProjectTagType:
+    name: strawberry.auto
+
+
 @strawberry_django.type(Company)
 class CompanyType:
     name: strawberry.auto
@@ -83,6 +99,12 @@ class CompanyType:
 class Query:
     companies: list[CompanyType] = strawberry_django.field()
     projects: list[ProjectType] = strawberry_django.field()
+
+    @strawberry_django.field
+    def cloned_projects(self, info: strawberry.Info) -> list[ProjectType]:
+        queryset = optimize(Project.objects.all(), info=info)
+        return cast("list[ProjectType]", queryset.filter(topic="First"))
+
     projects_paginated: list[ProjectType] = strawberry_django.field(pagination=True)
     projects_offset_paginated: OffsetPaginated[ProjectType] = (
         strawberry_django.offset_paginated()

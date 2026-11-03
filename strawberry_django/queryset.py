@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from types import MethodType
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from django.db.models import Model
@@ -20,6 +21,7 @@ CONFIG_KEY = "_strawberry_django_config"
 class StrawberryDjangoQuerySetConfig:
     optimized: bool = False
     optimized_by_prefetching: bool = False
+    inheritance_prefetch: bool = False
     type_get_queryset_did_run: bool = False
     ordering_descriptors: list[OrderingDescriptor] | None = None
 
@@ -54,6 +56,11 @@ def _qs_clone(self):
     config = get_queryset_config(self)
     cloned = _original_clone(self)
     setattr(cloned, CONFIG_KEY, dataclasses.replace(config))
+    if config.inheritance_prefetch:
+        cloned._prefetch_related_objects = MethodType(
+            self._prefetch_related_objects.__func__,
+            cloned,
+        )
     return cloned
 
 
