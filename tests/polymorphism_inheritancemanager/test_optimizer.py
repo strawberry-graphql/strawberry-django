@@ -7,13 +7,88 @@ from tests.utils import assert_num_queries
 from .models import (
     AndroidProject,
     ArtProject,
+    ArtProjectTag,
     Company,
     EngineeringProject,
     IOSProject,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
 )
 from .schema import schema
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset():
+    first = ArtProject.objects.create(topic="First", artist="Artist")
+    second = ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=first, text="first note")
+    ProjectNote.objects.create(project=second, text="second note")
+    ArtProjectTag.objects.create(project=first, name="first tag")
+    ArtProjectTag.objects.create(project=second, name="second tag")
+
+    query = """
+    query {
+      projects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "first note"}],
+                "tags": [{"name": "first tag"}],
+            },
+            {
+                "topic": "Second",
+                "notes": [{"text": "second note"}],
+                "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_after_cloning_inherited_queryset():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=project, text="note")
+    ArtProjectTag.objects.create(project=project, name="tag")
+
+    query = """
+    query {
+      clonedProjects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "clonedProjects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "note"}],
+                "tags": [{"name": "tag"}],
+            }
+        ]
+    }
 
 
 @pytest.mark.django_db(transaction=True)
