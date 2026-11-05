@@ -274,6 +274,24 @@ class FruitFilter:
 > This also means that built in `exact` & `iExact` lookups cannot be used to filter for `None`
 > and `isNull` have to be used explicitly.
 >
+> #### required fields
+>
+> Custom filter methods are optional in the schema by default. Use
+> `strawberry_django.filter_field(required=True)` to make the field required, using the
+> type of the `value` parameter as is. A `value` annotated as optional (e.g. `str | None`)
+> stays optional.
+>
+> ```python
+> @strawberry_django.filter_type(models.Fruit)
+> class FruitFilter:
+>     @strawberry_django.filter_field(required=True)
+>     def search(self, value: str, prefix: str) -> Q:
+>         return Q(**{f"{prefix}name__icontains": value})
+> ```
+>
+> The field is then required wherever the filter type is used, including in its `AND`,
+> `OR` and `NOT` fields.
+>
 > #### value resolution
 >
 > - `value` parameter of type `relay.GlobalID` is resolved to its `node_id` attribute

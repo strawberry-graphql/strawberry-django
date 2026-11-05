@@ -949,3 +949,37 @@ def test_skip_filter_field():
     # Field-iteration path: min_similarity is skipped, only name produces a Q
     _, q = process_filters(filter_, qs, fake_info, skip_object_filter_method=True)
     assert Q(name="apple") == q
+
+
+def test_required_filter_field(db, fruits):
+    @strawberry_django.filter_type(models.Fruit, lookups=True)
+    class Filter:
+        name: auto
+
+        @strawberry_django.filter_field(required=True)
+        def search(self, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}name__icontains": value})
+
+        @strawberry_django.filter_field
+        def starts_with(self, prefix: str, value: str) -> Q:
+            return Q(**{f"{prefix}name__startswith": value})
+
+    @strawberry_django.type(models.Fruit, filters=Filter)
+    class FruitType:
+        name: auto
+
+    @strawberry.type
+    class Query:
+        fruits: list[FruitType] = strawberry_django.field()
+
+    schema = strawberry.Schema(query=Query)
+    assert "  search: String!\n" in schema.as_str()
+    assert "  startsWith: String\n" in schema.as_str()
+
+    result = schema.execute_sync('{ fruits(filters: { search: "berry" }) { name } }')
+    assert not result.errors
+    assert result.data == {"fruits": [{"name": "strawberry"}, {"name": "raspberry"}]}
+
+    result = schema.execute_sync('{ fruits(filters: { startsWith: "b" }) { name } }')
+    assert result.errors
+    assert "to include required field 'search'" in result.errors[0].message

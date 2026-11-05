@@ -36,6 +36,7 @@ OBJECT_ORDER_NAME: Final[str] = "order"
 WITH_NONE_META: Final[str] = "WITH_NONE_META"
 RESOLVE_VALUE_META: Final[str] = "RESOLVE_VALUE_META"
 SKIP_FILTER_META: Final[str] = "SKIP_QUERYSET_FILTER_META"
+REQUIRED_META: Final[str] = "REQUIRED_META"
 
 
 class FilterOrderFieldResolver(StrawberryResolver):
@@ -87,7 +88,7 @@ class FilterOrderFieldResolver(StrawberryResolver):
             raise ForbiddenFieldArgumentError(self, [p.name for p in exta_params])
 
     @cached_property
-    def type_annotation(self) -> StrawberryAnnotation | None:
+    def value_annotation(self) -> Any | None:
         param = self.reserved_parameters[VALUE_PARAM]
         if param and param is not inspect.Signature.empty:
             annotation = param.annotation
@@ -96,9 +97,17 @@ class FilterOrderFieldResolver(StrawberryResolver):
 
                 annotation = ordering.Ordering
 
-            return StrawberryAnnotation(Optional[annotation])  # ruff: ignore[non-pep604-annotation-optional]
+            return annotation
 
         return None
+
+    @cached_property
+    def type_annotation(self) -> StrawberryAnnotation | None:
+        annotation = self.value_annotation
+        if annotation is None:
+            return None
+
+        return StrawberryAnnotation(Optional[annotation])  # ruff: ignore[non-pep604-annotation-optional]
 
     def __call__(  # type: ignore
         self,
@@ -164,8 +173,12 @@ class FilterOrderField(StrawberryField):
             return resolver
 
         self.filter_order_resolver = resolver
-        # The field's type is the type of the method's `value` argument
-        self.type_annotation = resolver.type_annotation
+        # The field's type is the type of the method's `value` argument, made
+        # optional unless the field is required
+        if self.metadata.get(REQUIRED_META, False):
+            self.type_annotation = StrawberryAnnotation(resolver.value_annotation)
+        else:
+            self.type_annotation = resolver.type_annotation
         return self
 
 
@@ -186,6 +199,7 @@ def filter_field(
     filter_none: bool = False,
     resolve_value: bool = UNSET,
     skip_queryset_filter: bool = False,
+    required: bool = False,
 ) -> T: ...
 
 
@@ -205,6 +219,7 @@ def filter_field(
     filter_none: bool = False,
     resolve_value: bool = UNSET,
     skip_queryset_filter: bool = False,
+    required: bool = False,
 ) -> Any: ...
 
 
@@ -224,6 +239,7 @@ def filter_field(
     filter_none: bool = False,
     resolve_value: bool = UNSET,
     skip_queryset_filter: bool = False,
+    required: bool = False,
 ) -> StrawberryField: ...
 
 
@@ -242,6 +258,7 @@ def filter_field(
     filter_none: bool = False,
     resolve_value: bool = UNSET,
     skip_queryset_filter: bool = False,
+    required: bool = False,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -269,6 +286,7 @@ def filter_field(
     metadata[RESOLVE_VALUE_META] = resolve_value
     metadata[WITH_NONE_META] = filter_none
     metadata[SKIP_FILTER_META] = skip_queryset_filter
+    metadata[REQUIRED_META] = required
 
     field_ = FilterOrderField(
         python_name=None,
