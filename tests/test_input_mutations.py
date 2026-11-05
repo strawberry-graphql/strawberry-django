@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.db.models.signals import m2m_changed
 from strawberry.relay import from_base64, to_base64
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -1333,6 +1334,97 @@ def test_input_update_m2m_set_through_mutation(db, gql_client: GraphQLTestClient
     assert issue.priority == 5
     assert issue.kind == Issue.Kind.FEATURE
     assert issue.milestone == milestone
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_update_m2m_set_sends_m2m_changed(db, gql_client: GraphQLTestClient):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on IssueType {
+          id
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create(milestone=MilestoneFactory.create())
+    tag_1, tag_2, tag_3 = TagFactory.create_batch(3)
+    issue.tags.set([tag_1, tag_2])
+
+    user_1 = UserFactory.create()
+    user_2 = UserFactory.create()
+    user_3 = UserFactory.create()
+    user_4 = UserFactory.create()
+    issue.issue_assignees.create(user=user_3, owner=False)
+    issue.issue_assignees.create(user=user_4, owner=False)
+
+    received = []
+
+    def receiver(sender, instance, action, pk_set, **kwargs):
+        if action.startswith("post_"):
+            received.append((sender, action, pk_set))
+
+    m2m_changed.connect(receiver, sender=Issue.tags.through)
+    m2m_changed.connect(receiver, sender=Issue.assignees.through)
+    try:
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "id": to_base64("IssueType", issue.pk),
+                    "milestone": {
+                        "id": to_base64("MilestoneType", issue.milestone_id),
+                    },
+                    "tags": {
+                        "set": [
+                            {"id": to_base64("TagType", tag_1.pk)},
+                            {"id": to_base64("TagType", tag_3.pk)},
+                        ],
+                    },
+                    "assignees": {
+                        "set": [
+                            {"id": to_base64("UserType", user_1.username)},
+                            {
+                                "id": to_base64("UserType", user_2.username),
+                                "throughDefaults": {"owner": True},
+                            },
+                            {
+                                "id": to_base64("UserType", user_3.username),
+                                "throughDefaults": {"owner": True},
+                            },
+                        ],
+                    },
+                },
+            },
+        )
+    finally:
+        m2m_changed.disconnect(receiver, sender=Issue.tags.through)
+        m2m_changed.disconnect(receiver, sender=Issue.assignees.through)
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "IssueType",
+            "id": to_base64("IssueType", issue.pk),
+        },
+    }
+    assert sorted(received, key=repr) == sorted(
+        [
+            (Issue.tags.through, "post_add", {tag_3.pk}),
+            (Issue.tags.through, "post_remove", {tag_2.pk}),
+            (Issue.assignees.through, "post_add", {user_2.pk}),
+            (Issue.assignees.through, "post_add", {user_1.pk}),
+            (Issue.assignees.through, "post_remove", {user_4.pk}),
+        ],
+        key=repr,
+    )
+
+    assert set(issue.tags.all()) == {tag_1, tag_3}
+    assert {(a.user, a.owner) for a in issue.issue_assignees.all()} == {
+        (user_1, False),
+        (user_2, True),
+        (user_3, True),
+    }
 
 
 @pytest.mark.django_db(transaction=True)
