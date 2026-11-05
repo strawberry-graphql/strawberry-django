@@ -1,6 +1,29 @@
 CHANGELOG
 =========
 
+0.94.0 - 2026-11-05
+-------------------
+
+Add a `required` argument to `strawberry_django.filter_field`, to make custom filter methods required in the
+schema. By default they are optional, as before.
+
+```python
+@strawberry_django.filter_type(models.Fruit)
+class FruitFilter:
+    @strawberry_django.filter_field(required=True)
+    def search(self, value: str, prefix: str) -> Q:
+        return Q(**{f"{prefix}name__icontains": value})
+```
+
+```graphql
+input FruitFilter {
+  search: String!
+  ...
+}
+```
+
+This release was contributed by [@officialasishkumar](https://github.com/officialasishkumar) in [#980](https://github.com/strawberry-graphql/strawberry-django/pull/980)
+
 0.93.1 - 2026-11-05
 -------------------
 
