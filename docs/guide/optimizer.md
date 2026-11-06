@@ -525,6 +525,31 @@ class Query:
 > Make sure to add `get_queryset` to your interface type, to force the optimizer to use
 > `prefetch_related`, otherwise this technique will not work for relation fields.
 
+## Subscriptions
+
+Querysets resolved while executing a subscription event are optimized the same way as
+the ones in a mutation, which means that `QuerySet.only()` is not applied to them:
+
+```python
+@strawberry.type
+class IssuesChanged:
+    @strawberry_django.field
+    def issues(self) -> list[IssueType]:
+        return Issue.objects.all()  # optimized for each event
+
+
+@strawberry.type
+class Subscription:
+    @strawberry.subscription
+    async def issues_changed(self) -> AsyncGenerator[IssuesChanged, None]:
+        async for _ in listen_for_changes():
+            yield IssuesChanged()
+```
+
+Model instances yielded directly by the subscription were already fetched when they get
+to the optimizer, so their relations can't be optimized. Yield something that resolves
+to a queryset instead, like in the example above.
+
 ## Temporarily Turning Off the Optimizer
 
 You can temporarily turn off the optimizer using the `disabled()` context manager:
