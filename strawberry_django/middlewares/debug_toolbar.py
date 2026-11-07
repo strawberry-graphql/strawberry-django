@@ -2,6 +2,7 @@
 
 import collections
 import json
+from typing import Any
 
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
@@ -22,16 +23,16 @@ def _get_payload(
     request: HttpRequest,
     response: HttpResponse,
     toolbar: DebugToolbar,
-) -> dict | None:
+) -> dict | list | None:
     if not toolbar.request_id:
         return None
 
     content = force_str(response.content, encoding=response.charset)
     payload = json.loads(content, object_pairs_hook=collections.OrderedDict)
-    payload["debugToolbar"] = collections.OrderedDict(
+    debug_toolbar: dict[str, Any] = collections.OrderedDict(
         [("panels", collections.OrderedDict())],
     )
-    payload["debugToolbar"]["requestId"] = toolbar.request_id
+    debug_toolbar["requestId"] = toolbar.request_id
 
     for p in reversed(toolbar.enabled_panels):
         if p.panel_id == "TemplatesPanel":
@@ -40,10 +41,15 @@ def _get_payload(
         title = p.title if p.has_content else None
 
         sub = p.nav_subtitle
-        payload["debugToolbar"]["panels"][p.panel_id] = {
+        debug_toolbar["panels"][p.panel_id] = {
             "title": title() if callable(title) else title,
             "subtitle": sub() if callable(sub) else sub,
         }
+
+    # Batched responses are a JSON array of results
+    for result in payload if isinstance(payload, list) else [payload]:
+        if isinstance(result, dict):
+            result["debugToolbar"] = debug_toolbar
 
     return payload
 
