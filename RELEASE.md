@@ -1,5 +1,5 @@
 ---
-release type: patch
+release type: minor
 ---
 
 Fix `DjangoOptimizerExtension` not optimizing querysets when executing subscription events, which caused N+1
