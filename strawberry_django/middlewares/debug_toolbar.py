@@ -85,18 +85,20 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
             return response
 
         try:
-            operation_name = json.loads(request.body).get("operationName")
+            body = json.loads(request.body)
+            # A batched request body is a JSON array of operations
+            operations = body if isinstance(body, list) else [body]
+            operation_names = [op.get("operationName") for op in operations]
         except Exception:  # ruff: ignore[blind-except]
-            operation_name = None
+            operation_names = [None]
 
         # Do not return the payload for introspection queries, otherwise IDEs such as
         # apollo sandbox that query the introspection all the time will remove older
         # results from the history.
-        payload = (
-            _get_payload(request, response, toolbar)
-            if operation_name != "IntrospectionQuery"
-            else None
+        is_introspection = bool(operation_names) and all(
+            name == "IntrospectionQuery" for name in operation_names
         )
+        payload = None if is_introspection else _get_payload(request, response, toolbar)
         if payload is None:
             return response
 
