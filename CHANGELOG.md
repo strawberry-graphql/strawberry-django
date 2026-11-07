@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.96.1 - 2026-11-07
+-------------------
+
+Fix the auto-generated federation `resolve_reference` ignoring scalar mappings. When an entity is resolved through `_entities`, key fields typed with a custom scalar (including `StrawberryConfig.scalar_map` overrides) now go through that scalar's `parse_value`, and enum keys are converted to their value before the model lookup.
+
+This release was contributed by [@bellini666](https://github.com/bellini666) in [#984](https://github.com/strawberry-graphql/strawberry-django/pull/984)
+
 0.96.0 - 2026-11-07
 -------------------
 
