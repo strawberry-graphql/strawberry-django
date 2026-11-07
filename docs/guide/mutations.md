@@ -90,6 +90,12 @@ mutation {
 > default behaviour for `handle_django_errors` by setting
 > `MUTATIONS_DEFAULT_HANDLE_ERRORS=True` in your [strawberry django settings](./settings.md)
 
+> [!NOTE]
+> GraphQL unions can only contain object types, so a mutation handling django errors
+> needs to return an object type (or a union of object types). Returning a scalar or an
+> enum (e.g. `bool`) raises a `TypeError` when the schema is created. In that case, return
+> an object type wrapping the value instead, or set `handle_django_errors=False` in the mutation.
+
 ## Input mutations
 
 Those are defined using `@strawberry_django.input_mutation` and act the same way as
