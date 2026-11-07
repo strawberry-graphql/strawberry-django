@@ -1,16 +1,19 @@
 """Tests for auto-generated resolve_reference functionality."""
 
+import enum
 import inspect
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NewType, cast
 
 import pytest
 import strawberry
 from strawberry.federation import Schema as FederationSchema
+from strawberry.schema.config import StrawberryConfig
 from strawberry.types.info import Info
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from tests import models
+from tests.projects.models import Project
 
 if TYPE_CHECKING:
     from strawberry_django.utils.typing import WithStrawberryDjangoObjectDefinition
@@ -426,3 +429,133 @@ def test_resolve_reference_composite_key_via_entities():
     assert result.data is not None
     assert result.data["_entities"][0]["id"] == str(fruit.id)
     assert result.data["_entities"][0]["sweetness"] == 8
+
+
+def _resolve_entity(schema: FederationSchema, typename: str, key: str) -> Any:
+    return schema.execute_sync(
+        f"""
+        query {{
+            _entities(representations: [{{__typename: "{typename}", {key}}}]) {{
+                ... on {typename} {{
+                    name
+                }}
+            }}
+        }}
+        """
+    )
+
+
+@pytest.mark.django_db
+def test_resolve_reference_parses_scalar_map_key():
+    MappedFruitRef = NewType("MappedFruitRef", int)
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def hello(self) -> str:
+            return "world"
+
+    @strawberry_django.federation.type(models.Fruit, keys=["id"])
+    class FruitType:
+        id: MappedFruitRef
+        name: strawberry.auto
+
+    schema = FederationSchema(
+        query=Query,
+        types=[FruitType],
+        config=StrawberryConfig(
+            scalar_map={
+                MappedFruitRef: strawberry.scalar(
+                    name="MappedFruitRef",
+                    serialize=lambda v: f"fruit:{v}",
+                    parse_value=lambda v: int(v.removeprefix("fruit:")),
+                )
+            }
+        ),
+    )
+    fruit = models.Fruit.objects.create(name="strawberry")
+
+    result = _resolve_entity(schema, "FruitType", f'id: "fruit:{fruit.pk}"')
+    assert result.errors is None
+    assert result.data == {"_entities": [{"name": "strawberry"}]}
+
+
+@pytest.mark.django_db
+def test_resolve_reference_parses_enum_key():
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def hello(self) -> str:
+            return "world"
+
+    @strawberry_django.federation.type(Project, keys=["status"])
+    class ProjectType:
+        status: strawberry.auto
+        name: strawberry.auto
+
+    schema = FederationSchema(query=Query, types=[ProjectType])
+    Project.objects.create(name="active one", status=Project.Status.ACTIVE)
+    Project.objects.create(name="inactive one", status=Project.Status.INACTIVE)
+
+    result = _resolve_entity(schema, "ProjectType", 'status: "INACTIVE"')
+    assert result.errors is None
+    assert result.data == {"_entities": [{"name": "inactive one"}]}
+
+
+@pytest.mark.django_db
+def test_resolve_reference_parses_plain_enum_key():
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def hello(self) -> str:
+            return "world"
+
+    @strawberry.enum
+    class FruitName(enum.Enum):
+        STRAWBERRY = "strawberry"
+        APPLE = "apple"
+
+    @strawberry_django.federation.type(models.Fruit, keys=["name"])
+    class FruitType:
+        id: strawberry.auto
+        name: FruitName
+
+    schema = FederationSchema(query=Query, types=[FruitType])
+    fruit = models.Fruit.objects.create(name="strawberry")
+    models.Fruit.objects.create(name="apple")
+
+    result = schema.execute_sync(
+        """
+        query {
+            _entities(representations: [{__typename: "FruitType", name: "STRAWBERRY"}]) {
+                ... on FruitType {
+                    id
+                }
+            }
+        }
+        """
+    )
+    assert result.errors is None
+    assert result.data == {"_entities": [{"id": str(fruit.pk)}]}
+
+
+@pytest.mark.django_db
+def test_resolve_reference_key_not_a_graphql_field_name():
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def hello(self) -> str:
+            return "world"
+
+    @strawberry_django.federation.type(models.Fruit, keys=["color_id"])
+    class FruitType:
+        color_id: strawberry.auto
+        name: strawberry.auto
+
+    schema = FederationSchema(query=Query, types=[FruitType])
+    color = models.Color.objects.create(name="red")
+    models.Fruit.objects.create(name="strawberry", color=color)
+
+    result = _resolve_entity(schema, "FruitType", f"color_id: {color.pk}")
+    assert result.errors is None
+    assert result.data == {"_entities": [{"name": "strawberry"}]}

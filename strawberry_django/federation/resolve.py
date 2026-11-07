@@ -9,6 +9,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from django.db import models
+from graphql import (
+    GraphQLEnumType,
+    GraphQLObjectType,
+    GraphQLScalarType,
+    get_nullable_type,
+    is_specified_scalar_type,
+)
+from strawberry.types.base import get_object_definition
 from strawberry.types.info import Info
 from strawberry.utils.await_maybe import AwaitableOrValue
 
@@ -80,6 +88,30 @@ def generate_resolve_reference(key_fields: list[str]) -> classmethod:
                 f"Expected one of {key_fields}, got {list(kwargs.keys())}."
             )
             raise ValueError(msg)
+
+        # Representations arrive through the `_Any` scalar, so graphql-core
+        # never ran the key fields' own scalar parsing on them. Direct calls
+        # already pass Python values, and Django coerces the built-in scalars.
+        if info is not None and info.field_name == "_entities":
+            gql_type = cast(
+                "GraphQLObjectType",
+                info._raw_info.schema.get_type(
+                    get_object_definition(cls, strict=True).name
+                ),
+            )
+            for name, value in filtered_kwargs.items():
+                field = gql_type.fields.get(name)
+                if value is None or field is None:
+                    continue
+
+                field_type = get_nullable_type(field.type)
+                if isinstance(field_type, GraphQLEnumType):
+                    filtered_kwargs[name] = field_type.parse_value(value).value
+                elif isinstance(
+                    field_type, GraphQLScalarType
+                ) and not is_specified_scalar_type(field_type):
+                    filtered_kwargs[name] = field_type.parse_value(value)
+
         return resolve_model_reference(cls, info=info, **filtered_kwargs)
 
     return classmethod(resolve_reference)
