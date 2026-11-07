@@ -431,11 +431,6 @@ def test_resolve_reference_composite_key_via_entities():
     assert result.data["_entities"][0]["sweetness"] == 8
 
 
-# =============================================================================
-# Scalar parsing of key fields
-# =============================================================================
-
-
 def _resolve_entity(schema: FederationSchema, typename: str, key: str) -> Any:
     return schema.execute_sync(
         f"""
