@@ -6,6 +6,7 @@ import re
 import uuid
 from collections.abc import Callable
 from json import dumps as json_dumps
+from json import loads as json_loads
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
@@ -64,6 +65,22 @@ class DjangoFileType:
 class DjangoImageType(DjangoFileType):
     width: int
     height: int
+
+
+@strawberry.type
+class DjangoGeometryType:
+    wkt: str
+    ewkt: str
+    srid: int | None
+    geom_type: str
+
+    @strawberry.field(
+        description="The geometry as a GeoJSON object, transformed to EPSG:4326."
+    )
+    def geojson(self, root: strawberry.Parent[Any]) -> JSON:
+        # GeoJSON (RFC 7946) is always in EPSG:4326
+        geom = root if root.srid in {None, 4326} else root.transform(4326, clone=True)
+        return json_loads(geom.json)
 
 
 @strawberry.type
@@ -277,6 +294,7 @@ except ImproperlyConfigured:
     MultilineString = None
     MultiPolygon = None
     Geometry = None
+    geos_field_type_map: dict[type[fields.Field], type] = {}
 else:
     # Alias the geos types for backwards compatibility
     Point = geos.Point
@@ -410,17 +428,21 @@ else:
         ),
     })
 
-    field_type_map.update(
-        {
-            geos_fields.PointField: Point,
-            geos_fields.LineStringField: LineString,
-            geos_fields.PolygonField: Polygon,
-            geos_fields.MultiPointField: MultiPoint,
-            geos_fields.MultiLineStringField: MultiLineString,
-            geos_fields.MultiPolygonField: MultiPolygon,
-            geos_fields.GeometryField: Geometry,
-        },
-    )
+    geos_field_type_map = {
+        geos_fields.PointField: Point,
+        geos_fields.LineStringField: LineString,
+        geos_fields.PolygonField: Polygon,
+        geos_fields.MultiPointField: MultiPoint,
+        geos_fields.MultiLineStringField: MultiLineString,
+        geos_fields.MultiPolygonField: MultiPolygon,
+        geos_fields.GeometryField: Geometry,
+    }
+    field_type_map.update({**geos_field_type_map})
+
+# Used for output instead of the geometry scalars, unless USE_GEOMETRY_SCALARS is set
+geometry_object_type_map: dict[type[fields.Field], type] = dict.fromkeys(
+    geos_field_type_map, DjangoGeometryType
+)
 
 
 input_field_type_map: dict[
@@ -437,6 +459,8 @@ input_field_type_map: dict[
     reverse_related.ManyToManyRel: ManyToManyInput,
     reverse_related.ManyToOneRel: ManyToOneInput,
     reverse_related.OneToOneRel: OneToOneInput,
+    # Inputs and filters always use the geometry scalars
+    **geos_field_type_map,
 }
 
 
@@ -472,12 +496,15 @@ relay_input_field_type_map: dict[
 }
 
 
-def _resolve_array_field_type(model_field: Field):
+def _resolve_array_field_type(
+    model_field: Field,
+    type_map: dict[Any, Any] = field_type_map,
+):
     assert ArrayField is not None
     if isinstance(model_field, ArrayField):
-        return list[_resolve_array_field_type(model_field.base_field)]
+        return list[_resolve_array_field_type(model_field.base_field, type_map)]
 
-    base_field = field_type_map.get(type(model_field), NotImplemented)
+    base_field = type_map.get(type(model_field), NotImplemented)
     if base_field is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",
@@ -491,6 +518,10 @@ def resolve_model_field_type(
     django_type: "StrawberryDjangoDefinition",
 ):
     settings = django_settings()
+    # Inputs and filters always use the geometry scalars
+    use_geometry_type = (
+        not settings["USE_GEOMETRY_SCALARS"] and not django_type.is_input
+    )
 
     # Django choices field
     if (
@@ -566,8 +597,15 @@ def resolve_model_field_type(
     elif isinstance(model_field, GeneratedField):
         model_field_type = type(model_field.output_field)  # type: ignore
         field_type = field_type_map.get(model_field_type, NotImplemented)
+        if use_geometry_type:
+            field_type = geometry_object_type_map.get(model_field_type, field_type)
     elif ArrayField is not None and isinstance(model_field, ArrayField):
-        field_type = _resolve_array_field_type(model_field)
+        field_type = _resolve_array_field_type(
+            model_field,
+            {**field_type_map, **geometry_object_type_map}
+            if use_geometry_type
+            else field_type_map,
+        )
     # Every other Field possibility
     else:
         force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]
@@ -591,6 +629,8 @@ def resolve_model_field_type(
             type_map = field_type_map
             if force_global_id:
                 type_map = {**type_map, **relay_field_type_map}
+            if use_geometry_type:
+                type_map = {**type_map, **geometry_object_type_map}
 
             field_type = type_map.get(model_field_type, NotImplemented)
 
