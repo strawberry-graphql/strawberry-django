@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.95.0 - 2026-11-07
+-------------------
+
+Fix `DjangoOptimizerExtension` not optimizing querysets when executing subscription events, which caused N+1
+queries for the same types that were optimized in queries and mutations.
+
+This release was contributed by [@officialasishkumar](https://github.com/officialasishkumar) in [#983](https://github.com/strawberry-graphql/strawberry-django/pull/983)
+
+Additional contributors: [@bellini666](https://github.com/bellini666)
+
 0.94.0 - 2026-11-05
 -------------------
 
