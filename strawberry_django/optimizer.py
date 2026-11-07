@@ -310,7 +310,14 @@ class OptimizerStore:
             config=config,
         )
 
-        return qs  # ruff: ignore[unnecessary-assign]
+        if is_inheritance_qs(qs) and getattr(qs, "subclasses", None):
+            # model-utils copies only names in _annotated to downcast objects.
+            # Its annotate() replaces that list, dropping earlier annotations.
+            qs._annotated = list(  # pyright: ignore[reportAttributeAccessIssue]
+                qs.query.annotation_select  # pyright: ignore[reportAttributeAccessIssue]
+            )
+
+        return qs
 
     def _apply_prefetch_related(
         self,
