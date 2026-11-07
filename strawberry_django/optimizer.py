@@ -4,6 +4,7 @@ import contextlib
 import contextvars
 import copy
 import dataclasses
+import inspect
 import itertools
 from collections.abc import Callable
 from typing import (
@@ -1803,7 +1804,11 @@ class DjangoOptimizerExtension(SchemaExtension):
         *args,
         **kwargs,
     ) -> AwaitableOrValue[Any]:
-        ret = next_(root, info, *args, **kwargs)
+        if info.operation.operation == OperationType.SUBSCRIPTION:
+            ret = self._resolve_subscription_field(next_, root, info, *args, **kwargs)
+        else:
+            ret = next_(root, info, *args, **kwargs)
+
         if not self.enabled.get():
             return ret
 
@@ -1824,6 +1829,34 @@ class DjangoOptimizerExtension(SchemaExtension):
             ret = django_fetch(optimize(qs=ret, info=info, config=config))
 
         return ret
+
+    def _resolve_subscription_field(
+        self,
+        next_: Callable,
+        root: Any,
+        info: GraphQLResolveInfo,
+        *args,
+        **kwargs,
+    ) -> AwaitableOrValue[Any]:
+        # `on_execute` only wraps the setup of a subscription, not the execution of
+        # its events, so the optimizer needs to be made available for each field.
+        token = optimizer.set(self)
+        try:
+            ret = next_(root, info, *args, **kwargs)
+        finally:
+            optimizer.reset(token)
+
+        if not inspect.isawaitable(ret):
+            return ret
+
+        async def resolve_awaitable():
+            token = optimizer.set(self)
+            try:
+                return await ret
+            finally:
+                optimizer.reset(token)
+
+        return resolve_awaitable()
 
     @classmethod
     @contextlib.contextmanager
