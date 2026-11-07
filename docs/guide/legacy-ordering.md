@@ -150,6 +150,7 @@ class ColorOrder:
     this argument should be used in those cases
     [GraphQL Spec](https://spec.graphql.org/October2021/#sec-Language.Arguments)
   - usually for custom order field methods does not have to be used
+  - empty when the order is given through a variable, as the order of its fields is not kept
   - for advanced usage, look at `strawberry_django.process_order` function
 
 #### Resolver return
