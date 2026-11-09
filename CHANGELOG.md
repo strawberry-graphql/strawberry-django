@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.96.3 - 2026-11-09
+-------------------
+
+Preserve existing annotations on model-utils inheritance querysets when Strawberry Django adds optimizer annotations.
+
+This release was contributed by [@patrykgawinek](https://github.com/patrykgawinek) in [#987](https://github.com/strawberry-graphql/strawberry-django/pull/987)
+
 0.96.2 - 2026-11-09
 -------------------
 
