@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.96.2 - 2026-11-09
+-------------------
+
+Fix the debug toolbar middleware crashing with `TypeError: list indices must be integers or slices, not str` when batching is enabled. A batched response is a JSON array, and the middleware now adds the `debugToolbar` data to each result in it.
+
+This release was contributed by [@wolfgang-aura](https://github.com/wolfgang-aura) in [#971](https://github.com/strawberry-graphql/strawberry-django/pull/971)
+
 0.96.1 - 2026-11-07
 -------------------
 
