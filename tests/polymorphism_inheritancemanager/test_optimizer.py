@@ -17,6 +17,34 @@ from .schema import schema
 
 
 @pytest.mark.django_db(transaction=True)
+def test_existing_annotation_survives_optimizer_on_inherited_queryset():
+    ArtProject.objects.create(topic="First", artist="Artist")
+
+    query = """
+    query {
+      annotatedProjects {
+        topic
+        initialLabel
+        computedLabel
+      }
+    }
+    """
+
+    with assert_num_queries(1):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "annotatedProjects": [
+            {
+                "topic": "First",
+                "initialLabel": "initial",
+                "computedLabel": "optimized",
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db(transaction=True)
 def test_polymorphic_interface_query():
     ap = ArtProject.objects.create(topic="Art", artist="Artist")
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
