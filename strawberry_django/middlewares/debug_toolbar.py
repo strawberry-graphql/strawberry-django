@@ -2,6 +2,7 @@
 
 import collections
 import json
+from typing import Any
 
 from debug_toolbar.middleware import (
     DebugToolbarMiddleware as _DebugToolbarMiddleware,
@@ -22,16 +23,16 @@ def _get_payload(
     request: HttpRequest,
     response: HttpResponse,
     toolbar: DebugToolbar,
-) -> dict | None:
+) -> dict | list | None:
     if not toolbar.request_id:
         return None
 
     content = force_str(response.content, encoding=response.charset)
     payload = json.loads(content, object_pairs_hook=collections.OrderedDict)
-    payload["debugToolbar"] = collections.OrderedDict(
+    debug_toolbar: dict[str, Any] = collections.OrderedDict(
         [("panels", collections.OrderedDict())],
     )
-    payload["debugToolbar"]["requestId"] = toolbar.request_id
+    debug_toolbar["requestId"] = toolbar.request_id
 
     for p in reversed(toolbar.enabled_panels):
         if p.panel_id == "TemplatesPanel":
@@ -40,10 +41,15 @@ def _get_payload(
         title = p.title if p.has_content else None
 
         sub = p.nav_subtitle
-        payload["debugToolbar"]["panels"][p.panel_id] = {
+        debug_toolbar["panels"][p.panel_id] = {
             "title": title() if callable(title) else title,
             "subtitle": sub() if callable(sub) else sub,
         }
+
+    # Batched responses are a JSON array of results
+    for result in payload if isinstance(payload, list) else [payload]:
+        if isinstance(result, dict):
+            result["debugToolbar"] = debug_toolbar
 
     return payload
 
@@ -79,18 +85,20 @@ class DebugToolbarMiddleware(_DebugToolbarMiddleware):
             return response
 
         try:
-            operation_name = json.loads(request.body).get("operationName")
+            body = json.loads(request.body)
+            # A batched request body is a JSON array of operations
+            operations = body if isinstance(body, list) else [body]
+            operation_names = [op.get("operationName") for op in operations]
         except Exception:  # ruff: ignore[blind-except]
-            operation_name = None
+            operation_names = [None]
 
         # Do not return the payload for introspection queries, otherwise IDEs such as
         # apollo sandbox that query the introspection all the time will remove older
         # results from the history.
-        payload = (
-            _get_payload(request, response, toolbar)
-            if operation_name != "IntrospectionQuery"
-            else None
+        is_introspection = bool(operation_names) and all(
+            name == "IntrospectionQuery" for name in operation_names
         )
+        payload = None if is_introspection else _get_payload(request, response, toolbar)
         if payload is None:
             return response
 

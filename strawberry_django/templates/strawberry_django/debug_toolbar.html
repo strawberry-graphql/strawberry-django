@@ -9,7 +9,12 @@
     }
 
     function update(data) {
-      if (data === null || !data.hasOwnProperty("debugToolbar")) return data;
+      // Batched responses are an array of results that each carry the same data
+      if (Array.isArray(data)) {
+        data.forEach((item) => update(item));
+        return data;
+      }
+      if (data === null || typeof data !== "object" || !data.hasOwnProperty("debugToolbar")) return data;
 
       const djDebug = getDebugElement();
       if (!djDebug) {
