@@ -1635,6 +1635,282 @@ def test_input_delete_mutation_with_key_attr(db, gql_client: GraphQLTestClient):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_global_id_of_another_type(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+          name
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create(name="Old name")
+    milestone = issue.milestone
+    assert milestone
+
+    # The id references an existing milestone, which must not be retrieved.
+    # Only the mutation's transaction is started and rolled back.
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(
+            query,
+            {
+                "input": {
+                    "id": to_base64("MilestoneType", milestone.pk),
+                    "name": "New name",
+                    "milestone": {"id": to_base64("MilestoneType", milestone.pk)},
+                },
+            },
+        )
+
+    assert [q["sql"] for q in ctx.captured_queries] == ["BEGIN", "ROLLBACK"]
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "kind": "ERROR",
+                    "field": None,
+                    "message": "Issue matching query does not exist.",
+                },
+            ],
+        },
+    }
+
+    issue.refresh_from_db()
+    assert issue.name == "Old name"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_delete_mutation_with_global_id_of_another_type(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation DeleteIssue ($input: NodeInput!) {
+      deleteIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create()
+    milestone = issue.milestone
+    assert milestone
+
+    # The id references an existing milestone, which must not be retrieved.
+    # Only the mutation's transaction is started and rolled back.
+    with assert_num_queries(2) as ctx:
+        res = gql_client.query(
+            query,
+            {"input": {"id": to_base64("MilestoneType", milestone.pk)}},
+        )
+
+    assert [q["sql"] for q in ctx.captured_queries] == ["BEGIN", "ROLLBACK"]
+
+    assert res.data == {
+        "deleteIssue": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "kind": "ERROR",
+                    "field": None,
+                    "message": "Issue matching query does not exist.",
+                },
+            ],
+        },
+    }
+
+    assert Issue.objects.filter(pk=issue.pk).exists()
+    assert Milestone.objects.filter(pk=milestone.pk).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_foreign_key_global_id_of_another_type(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create()
+    milestone = issue.milestone
+    assert milestone
+    tag = TagFactory.create()
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("IssueType", issue.pk),
+                "milestone": {"id": to_base64("TagType", tag.pk)},
+            },
+        },
+    )
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "kind": "ERROR",
+                    "field": None,
+                    "message": "Milestone matching query does not exist.",
+                },
+            ],
+        },
+    }
+
+    issue.refresh_from_db()
+    assert issue.milestone == milestone
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_foreign_key_global_id_of_another_type_with_data(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create()
+    milestone = issue.milestone
+    assert milestone
+    tag = TagFactory.create()
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("IssueType", issue.pk),
+                "milestone": {
+                    "id": to_base64("TagType", tag.pk),
+                    "name": "New name",
+                },
+            },
+        },
+    )
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "kind": "ERROR",
+                    "field": None,
+                    "message": "Milestone matching query does not exist.",
+                },
+            ],
+        },
+    }
+
+    issue.refresh_from_db()
+    assert issue.milestone == milestone
+    tag.refresh_from_db()
+    assert tag.name != "New name"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_m2m_global_id_of_another_type(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create()
+    milestone = issue.milestone
+    assert milestone
+    tag = TagFactory.create()
+    issue.tags.set([tag])
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("IssueType", issue.pk),
+                "milestone": {"id": to_base64("MilestoneType", milestone.pk)},
+                "tags": {"set": [{"id": to_base64("MilestoneType", milestone.pk)}]},
+            },
+        },
+    )
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "kind": "ERROR",
+                    "field": None,
+                    "message": "Tag matching query does not exist.",
+                },
+            ],
+        },
+    }
+
+    assert list(issue.tags.all()) == [tag]
+
+
+@pytest.mark.django_db(transaction=True)
 def test_mutation_full_clean_without_kwargs(db, gql_client: GraphQLTestClient):
     query = """
     mutation CreateQuiz ($input: CreateQuizInput!) {

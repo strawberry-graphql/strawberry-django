@@ -10,6 +10,7 @@ from typing import (
 
 import strawberry
 from asgiref.sync import sync_to_async
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from strawberry import relay
 from strawberry.relay.exceptions import NodeIDAnnotationError
@@ -356,3 +357,110 @@ def resolve_model_id(
         return str(root.__dict__[id_attr])
     except KeyError:
         return django_getattr(root, id_attr)
+
+
+def _model_does_not_exist(model: type[models.Model]) -> ObjectDoesNotExist:
+    # The same message as the one Django uses in `QuerySet.get()`
+    return model.DoesNotExist(
+        f"{model._meta.object_name} matching query does not exist."
+    )
+
+
+def ensure_model_instance(obj: object, model: type[_M]) -> _M:
+    """Ensure that the given object is an instance of the given model.
+
+    Args:
+    ----
+        obj:
+            The object to check, usually a node resolved from a `GlobalID`
+        model:
+            The model the object is expected to be an instance of
+
+    Returns:
+    -------
+        The object itself
+
+    Raises:
+    ------
+        model.DoesNotExist:
+            If the object is not an instance of the model. This is the same error
+            raised for an object that doesn't exist, so the object that was
+            actually given is not exposed.
+
+    """
+    if not isinstance(obj, model):
+        raise _model_does_not_exist(model)
+
+    return obj
+
+
+@overload
+def resolve_model_global_id(
+    global_id: relay.GlobalID,
+    info: Info,
+    *,
+    model: type[_M],
+    required: Literal[True] = ...,
+) -> _M: ...
+
+
+@overload
+def resolve_model_global_id(
+    global_id: relay.GlobalID,
+    info: Info,
+    *,
+    model: type[_M],
+    required: bool,
+) -> _M | None: ...
+
+
+def resolve_model_global_id(
+    global_id: relay.GlobalID,
+    info: Info,
+    *,
+    model: type[_M],
+    required: bool = True,
+) -> _M | None:
+    """Resolve the instance of the given model referenced by a `GlobalID`.
+
+    The type referenced by the `GlobalID` is checked against the model first, so a
+    `GlobalID` for a type of an unrelated model is rejected without retrieving the
+    object it references.
+
+    Args:
+    ----
+        global_id:
+            The `GlobalID` to resolve
+        info:
+            The strawberry execution info
+        model:
+            The model the referenced object is expected to be an instance of
+        required:
+            If the object must exist. When `False`, `None` is returned for an
+            object that doesn't exist.
+
+    Returns:
+    -------
+        The resolved model instance
+
+    Raises:
+    ------
+        model.DoesNotExist:
+            If the object doesn't exist or the `GlobalID` references a type that
+            is not for the model.
+
+    """
+    django_definition = get_django_definition(global_id.resolve_type(info))
+    # A type for a parent model is allowed as well, as its node can be an instance
+    # of the model (e.g. with polymorphic managers). That is ensured after resolving.
+    if django_definition is not None and not (
+        issubclass(django_definition.model, model)
+        or issubclass(model, django_definition.model)
+    ):
+        raise _model_does_not_exist(model)
+
+    node = global_id.resolve_node_sync(info, required=required)
+    if node is None:
+        return None
+
+    return ensure_model_instance(node, model)
