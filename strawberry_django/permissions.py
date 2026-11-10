@@ -210,7 +210,7 @@ def get_with_perms(
 ):
     if isinstance(pk, relay.GlobalID):
         instance = (
-            resolve_model_global_id(pk, info, model=model)
+            resolve_model_global_id(pk, info, model=model, required=required)
             if model is not None
             else pk.resolve_node_sync(info, required=required)
         )

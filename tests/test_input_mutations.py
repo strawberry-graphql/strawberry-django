@@ -1799,6 +1799,64 @@ def test_input_update_mutation_with_foreign_key_global_id_of_another_type(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_input_update_mutation_with_foreign_key_global_id_of_another_type_with_data(
+    db, gql_client: GraphQLTestClient
+):
+    query = """
+    mutation UpdateIssue ($input: IssueInputPartial!) {
+      updateIssue (input: $input) {
+        __typename
+        ... on OperationInfo {
+          messages {
+            kind
+            field
+            message
+          }
+        }
+        ... on IssueType {
+          id
+        }
+      }
+    }
+    """
+    issue = IssueFactory.create()
+    milestone = issue.milestone
+    assert milestone
+    tag = TagFactory.create()
+
+    res = gql_client.query(
+        query,
+        {
+            "input": {
+                "id": to_base64("IssueType", issue.pk),
+                "milestone": {
+                    "id": to_base64("TagType", tag.pk),
+                    "name": "New name",
+                },
+            },
+        },
+    )
+
+    assert res.data == {
+        "updateIssue": {
+            "__typename": "OperationInfo",
+            "messages": [
+                {
+                    "kind": "ERROR",
+                    "field": None,
+                    "message": "Milestone matching query does not exist.",
+                },
+            ],
+        },
+    }
+
+    issue.refresh_from_db()
+    assert issue.milestone == milestone
+    tag.refresh_from_db()
+    assert tag.name != "New name"
+
+
+@pytest.mark.django_db(transaction=True)
 def test_input_update_mutation_with_m2m_global_id_of_another_type(
     db, gql_client: GraphQLTestClient
 ):

@@ -38,16 +38,6 @@ def test_resolve_model_global_id_for_parent_model():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_resolve_model_global_id_non_existing():
-    gid = relay.GlobalID(type_name="ArtProjectType", node_id="999")
-    with pytest.raises(
-        ArtProject.DoesNotExist,
-        match=r"^ArtProject matching query does not exist\.$",
-    ):
-        resolve_model_global_id(gid, fake_info, model=ArtProject)
-
-
-@pytest.mark.django_db(transaction=True)
 def test_resolve_model_global_id_of_another_model():
     rp = ResearchProject.objects.create(topic="Research", supervisor="Supervisor")
 

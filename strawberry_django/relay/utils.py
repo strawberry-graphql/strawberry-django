@@ -394,12 +394,33 @@ def ensure_model_instance(obj: object, model: type[_M]) -> _M:
     return obj
 
 
+@overload
 def resolve_model_global_id(
     global_id: relay.GlobalID,
     info: Info,
     *,
     model: type[_M],
-) -> _M:
+    required: Literal[True] = ...,
+) -> _M: ...
+
+
+@overload
+def resolve_model_global_id(
+    global_id: relay.GlobalID,
+    info: Info,
+    *,
+    model: type[_M],
+    required: bool,
+) -> _M | None: ...
+
+
+def resolve_model_global_id(
+    global_id: relay.GlobalID,
+    info: Info,
+    *,
+    model: type[_M],
+    required: bool = True,
+) -> _M | None:
     """Resolve the instance of the given model referenced by a `GlobalID`.
 
     The type referenced by the `GlobalID` is checked against the model first, so a
@@ -414,6 +435,9 @@ def resolve_model_global_id(
             The strawberry execution info
         model:
             The model the referenced object is expected to be an instance of
+        required:
+            If the object must exist. When `False`, `None` is returned for an
+            object that doesn't exist.
 
     Returns:
     -------
@@ -435,5 +459,8 @@ def resolve_model_global_id(
     ):
         raise _model_does_not_exist(model)
 
-    node = global_id.resolve_node_sync(info, required=True)
+    node = global_id.resolve_node_sync(info, required=required)
+    if node is None:
+        return None
+
     return ensure_model_instance(node, model)
