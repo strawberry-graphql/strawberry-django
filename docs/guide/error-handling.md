@@ -37,7 +37,7 @@ When `handle_django_errors=True`, the following Django exceptions are automatica
 
 1. **`ValidationError`**: Field validation errors
 2. **`PermissionDenied`**: Permission-related errors
-3. **`ObjectDoesNotExist`**: Object lookup errors
+3. **`ObjectDoesNotExist`**: Object lookup errors, including a `GlobalID` that references an object of another type
 
 ### Generated Schema
 

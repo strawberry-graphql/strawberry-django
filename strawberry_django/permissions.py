@@ -38,6 +38,7 @@ from typing_extensions import assert_never
 from strawberry_django.auth.utils import aget_current_user, get_current_user
 from strawberry_django.fields.types import OperationInfo, OperationMessage
 from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.relay.utils import resolve_model_global_id
 from strawberry_django.resolvers import django_resolver
 
 from .utils.query import filter_for_user
@@ -208,7 +209,11 @@ def get_with_perms(
     key_attr="pk",
 ):
     if isinstance(pk, relay.GlobalID):
-        instance = pk.resolve_node_sync(info, required=required, ensure_type=model)
+        instance = (
+            resolve_model_global_id(pk, info, model=model)
+            if model is not None
+            else pk.resolve_node_sync(info, required=required)
+        )
     else:
         assert model
         instance = model._default_manager.get(**{key_attr: pk})
