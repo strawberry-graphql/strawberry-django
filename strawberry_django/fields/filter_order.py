@@ -137,8 +137,9 @@ class FilterOrderFieldResolver(StrawberryResolver):
             kwargs[info_parameter.name] = queryset
 
         if info_parameter := self.reserved_parameters.get(SEQUENCE_PARAMSPEC):
-            assert sequence is not None
-            kwargs[info_parameter.name] = sequence
+            # The sequence is unknown when the order is given through a variable,
+            # or when using `ordering`, where the list itself defines the sequence
+            kwargs[info_parameter.name] = sequence if sequence is not None else {}
 
         return super().__call__(*args, **kwargs)
 
