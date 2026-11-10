@@ -92,9 +92,10 @@ mutation {
 
 > [!NOTE]
 > GraphQL unions can only contain object types, so a mutation handling django errors
-> needs to return an object type (or a union of object types). Returning a scalar or an
-> enum (e.g. `bool`) raises a `TypeError` when the schema is created. In that case, return
-> an object type wrapping the value instead, or set `handle_django_errors=False` in the mutation.
+> needs to return an object type, a union of object types, or an optional or a list of
+> those. Returning a scalar (e.g. `bool`), an enum or an input type raises a `TypeError`
+> when the schema is created. In that case, return an object type wrapping the value
+> instead, or set `handle_django_errors=False` in the mutation.
 
 ## Input mutations
 
