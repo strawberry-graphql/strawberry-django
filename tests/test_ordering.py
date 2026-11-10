@@ -493,13 +493,9 @@ def test_order_field_with_sequence(db, fruits):
 
     schema = strawberry.Schema(query=Query)
 
-    result = schema.execute_sync("{ fruits(ordering: [{ name: DESC }]) { name } }")
+    result = schema.execute_sync("{ fruits(ordering: [{ name: ASC }]) { name } }")
     assert not result.errors
     assert result.data == {
-        "fruits": [
-            {"name": "strawberry"},
-            {"name": "raspberry"},
-            {"name": "banana"},
-        ]
+        "fruits": [{"name": "banana"}, {"name": "raspberry"}, {"name": "strawberry"}]
     }
     assert received_sequences == [{}]
