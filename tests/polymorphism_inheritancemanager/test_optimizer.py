@@ -8,7 +8,9 @@ from django.contrib.contenttypes.prefetch import (  # pyright: ignore[reportMiss
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.utils import CaptureQueriesContext
 
-from strawberry_django.optimizer import _without_lookup_prefix  # ruff: ignore[import-private-name]
+from strawberry_django.optimizer import (
+    _without_lookup_prefix,  # ruff: ignore[import-private-name]
+)
 from tests.utils import assert_num_queries
 
 from .models import (
@@ -124,7 +126,37 @@ def test_prefetch_relations_on_inherited_queryset_iterator():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_prefetch_relations_on_inherited_queryset_aiterator():
+def test_inherited_queryset_iterator_without_chunk_size():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProjectTag.objects.create(project=project, name="tag")
+
+    query = """
+    query Test($chunkSize: Int) {
+      iteratedProjects(chunkSize: $chunkSize) {
+        topic
+        ... on ArtProjectType {
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query, variable_values={"chunkSize": None})
+    assert not result.errors
+    assert result.data == {
+        "iteratedProjects": [
+            {
+                "topic": "First",
+                "tags": [{"name": "tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.parametrize("chunk_size", [2, 3])
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset_aiterator(chunk_size: int):
     first = ArtProject.objects.create(topic="First", artist="Artist")
     second = ArtProject.objects.create(topic="Second", artist="Artist")
     ProjectNote.objects.create(project=first, text="first note")
@@ -133,8 +165,8 @@ def test_prefetch_relations_on_inherited_queryset_aiterator():
     ArtProjectTag.objects.create(project=second, name="second tag")
 
     query = """
-    query {
-      aiteratedProjects {
+    query Test($chunkSize: Int!) {
+      aiteratedProjects(chunkSize: $chunkSize) {
         topic
         ... on ArtProjectType {
           notes { text }
@@ -145,7 +177,10 @@ def test_prefetch_relations_on_inherited_queryset_aiterator():
     """
 
     with assert_num_queries(3):
-        result = async_to_sync(schema.execute)(query)
+        result = async_to_sync(schema.execute)(
+            query,
+            variable_values={"chunkSize": chunk_size},
+        )
     assert not result.errors
     assert result.data == {
         "aiteratedProjects": [
@@ -161,6 +196,25 @@ def test_prefetch_relations_on_inherited_queryset_aiterator():
             },
         ],
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inherited_queryset_aiterator_rejects_non_positive_chunk_size():
+    query = """
+    query {
+      aiteratedProjects(chunkSize: 0) {
+        ... on ArtProjectType {
+          tags { name }
+        }
+      }
+    }
+    """
+
+    result = async_to_sync(schema.execute)(query)
+
+    assert result.data is None
+    assert result.errors
+    assert result.errors[0].message == "Chunk size must be strictly positive."
 
 
 @pytest.mark.django_db(transaction=True)

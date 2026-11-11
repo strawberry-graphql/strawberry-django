@@ -128,18 +128,29 @@ class Query:
         return cast("list[ProjectType]", queryset.filter(topic="First"))
 
     @strawberry_django.field
-    def iterated_projects(self, info: strawberry.Info) -> list[ProjectType]:
+    def iterated_projects(
+        self,
+        info: strawberry.Info,
+        chunk_size: int | None = 2,
+    ) -> list[ProjectType]:
         queryset = optimize(Project.objects.all(), info=info)
         queryset = queryset.filter(topic__in=["First", "Second"])
-        return cast("list[ProjectType]", list(queryset.iterator(chunk_size=2)))
+        if chunk_size is None:
+            queryset = queryset.prefetch_related(None)
+            return cast("list[ProjectType]", list(queryset.iterator()))
+        return cast("list[ProjectType]", list(queryset.iterator(chunk_size=chunk_size)))
 
     @strawberry_django.field
-    async def aiterated_projects(self, info: strawberry.Info) -> list[ProjectType]:
+    async def aiterated_projects(
+        self,
+        info: strawberry.Info,
+        chunk_size: int = 2,
+    ) -> list[ProjectType]:
         queryset = optimize(Project.objects.all(), info=info)
         queryset = queryset.filter(topic__in=["First", "Second"])
         return cast(
             "list[ProjectType]",
-            [project async for project in queryset.aiterator(chunk_size=2)],
+            [project async for project in queryset.aiterator(chunk_size=chunk_size)],
         )
 
     @strawberry_django.field
