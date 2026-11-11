@@ -1,7 +1,7 @@
 from typing import cast
 
 import strawberry
-from django.db.models import Value
+from django.db.models import Prefetch, Value
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension, optimize
@@ -50,6 +50,19 @@ class ArtProjectType(ProjectType):
     @strawberry_django.field(only=("artist",))
     def artist_upper(self) -> str:
         return self.artist.upper()
+
+    @strawberry_django.field(
+        prefetch_related=[
+            Prefetch(
+                "tags",
+                queryset=ArtProjectTag.objects.filter(name="included"),
+                to_attr="_filtered_tags",
+            ),
+            "_filtered_tags__project",
+        ]
+    )
+    def filtered_tags_to_attr(self) -> list["ArtProjectTagType"]:
+        return self._filtered_tags  # pyright: ignore[reportAttributeAccessIssue]
 
 
 @strawberry_django.type(ResearchProject)
@@ -113,6 +126,47 @@ class Query:
     def cloned_projects(self, info: strawberry.Info) -> list[ProjectType]:
         queryset = optimize(Project.objects.all(), info=info)
         return cast("list[ProjectType]", queryset.filter(topic="First"))
+
+    @strawberry_django.field
+    def iterated_projects(self, info: strawberry.Info) -> list[ProjectType]:
+        queryset = optimize(Project.objects.all(), info=info)
+        queryset = queryset.filter(topic__in=["First", "Second"])
+        return cast("list[ProjectType]", list(queryset.iterator(chunk_size=2)))
+
+    @strawberry_django.field
+    async def aiterated_projects(self, info: strawberry.Info) -> list[ProjectType]:
+        queryset = optimize(Project.objects.all(), info=info)
+        queryset = queryset.filter(topic__in=["First", "Second"])
+        return cast(
+            "list[ProjectType]",
+            [project async for project in queryset.aiterator(chunk_size=2)],
+        )
+
+    @strawberry_django.field
+    def filtered_prefetched_projects(self, info: strawberry.Info) -> list[ProjectType]:
+        queryset = optimize(Project.objects.all(), info=info)
+        queryset = queryset.prefetch_related(None).prefetch_related(
+            "artproject__tags__project",
+            Prefetch(
+                "artproject__tags",
+                queryset=ArtProjectTag.objects.filter(name="included"),
+            ),
+        )
+        return cast("list[ProjectType]", list(queryset))
+
+    @strawberry_django.field
+    def filtered_prefetched_multilevel_projects(
+        self, info: strawberry.Info
+    ) -> list[ProjectType]:
+        queryset = optimize(Project.objects.all(), info=info)
+        queryset = queryset.prefetch_related(None).prefetch_related(
+            "appproject__notes",
+            Prefetch(
+                "appproject__androidproject__notes",
+                queryset=ProjectNote.objects.filter(text="included"),
+            ),
+        )
+        return cast("list[ProjectType]", list(queryset))
 
     @strawberry_django.field
     def annotated_projects(self) -> list[ProjectType]:

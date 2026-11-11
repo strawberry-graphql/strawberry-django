@@ -57,10 +57,9 @@ def _qs_clone(self):
     cloned = _original_clone(self)
     setattr(cloned, CONFIG_KEY, dataclasses.replace(config))
     if config.inheritance_prefetch:
-        cloned._prefetch_related_objects = MethodType(
-            self._prefetch_related_objects.__func__,
-            cloned,
-        )
+        for method_name in ("_prefetch_related_objects", "_iterator", "aiterator"):
+            method = getattr(self, method_name)
+            setattr(cloned, method_name, MethodType(method.__func__, cloned))
     return cloned
 
 

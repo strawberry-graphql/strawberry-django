@@ -1,7 +1,14 @@
+from typing import Any
+
 import pytest
+from asgiref.sync import async_to_sync
+from django.contrib.contenttypes.prefetch import (  # pyright: ignore[reportMissingImports]
+    GenericPrefetch,
+)
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.utils import CaptureQueriesContext
 
+from strawberry_django.optimizer import _without_lookup_prefix  # noqa: PLC2701
 from tests.utils import assert_num_queries
 
 from .models import (
@@ -16,6 +23,24 @@ from .models import (
     SoftwareProject,
 )
 from .schema import schema
+
+
+def test_rewritten_inheritance_prefetch_preserves_prefetch_subclass():
+    queryset = ArtProjectTag.objects.filter(name="included")
+    prefetch = GenericPrefetch(
+        "artproject__content_object",
+        [queryset],
+        to_attr="target",
+    )
+
+    rewritten: Any = _without_lookup_prefix(prefetch, "artproject")
+
+    assert isinstance(rewritten, GenericPrefetch)
+    assert rewritten.prefetch_through == "content_object"
+    assert rewritten.prefetch_to == "target"
+    assert len(rewritten.querysets) == 1
+    assert rewritten.querysets[0].model is ArtProjectTag
+    assert str(rewritten.querysets[0].query) == str(queryset.query)
 
 
 @pytest.mark.django_db(transaction=True)
@@ -53,6 +78,191 @@ def test_prefetch_relations_on_inherited_queryset():
                 "topic": "Second",
                 "notes": [{"text": "second note"}],
                 "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset_iterator():
+    first = ArtProject.objects.create(topic="First", artist="Artist")
+    second = ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=first, text="first note")
+    ProjectNote.objects.create(project=second, text="second note")
+    ArtProjectTag.objects.create(project=first, name="first tag")
+    ArtProjectTag.objects.create(project=second, name="second tag")
+
+    query = """
+    query {
+      iteratedProjects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "iteratedProjects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "first note"}],
+                "tags": [{"name": "first tag"}],
+            },
+            {
+                "topic": "Second",
+                "notes": [{"text": "second note"}],
+                "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset_aiterator():
+    first = ArtProject.objects.create(topic="First", artist="Artist")
+    second = ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=first, text="first note")
+    ProjectNote.objects.create(project=second, text="second note")
+    ArtProjectTag.objects.create(project=first, name="first tag")
+    ArtProjectTag.objects.create(project=second, name="second tag")
+
+    query = """
+    query {
+      aiteratedProjects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = async_to_sync(schema.execute)(query)
+    assert not result.errors
+    assert result.data == {
+        "aiteratedProjects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "first note"}],
+                "tags": [{"name": "first tag"}],
+            },
+            {
+                "topic": "Second",
+                "notes": [{"text": "second note"}],
+                "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_filtered_prefetch_on_inherited_queryset_is_not_ignored():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProjectTag.objects.create(project=project, name="included")
+    ArtProjectTag.objects.create(project=project, name="excluded")
+
+    query = """
+    query {
+      filteredPrefetchedProjects {
+        topic
+        ... on ArtProjectType {
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "filteredPrefetchedProjects": [
+            {
+                "topic": "First",
+                "tags": [{"name": "included"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_filtered_prefetch_is_not_ignored_across_inheritance_levels():
+    android_project = AndroidProject.objects.create(
+        topic="Android",
+        timeline="3 months",
+        repository="https://example.com/android",
+        android_version="14",
+    )
+    ios_project = IOSProject.objects.create(
+        topic="iOS",
+        timeline="3 months",
+        repository="https://example.com/ios",
+        ios_version="16",
+    )
+    ProjectNote.objects.create(project=android_project, text="included")
+    ProjectNote.objects.create(project=android_project, text="excluded")
+    ProjectNote.objects.create(project=ios_project, text="iOS first")
+    ProjectNote.objects.create(project=ios_project, text="iOS second")
+
+    query = """
+    query {
+      filteredPrefetchedMultilevelProjects {
+        ... on AndroidProjectType {
+          notes { text }
+        }
+        ... on IOSProjectType {
+          notes { text }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "filteredPrefetchedMultilevelProjects": [
+            {
+                "notes": [{"text": "included"}],
+            },
+            {
+                "notes": [{"text": "iOS first"}, {"text": "iOS second"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inheritance_prefetch_supports_dependent_to_attr_lookup():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProjectTag.objects.create(project=project, name="included")
+    ArtProjectTag.objects.create(project=project, name="excluded")
+
+    query = """
+    query {
+      projects {
+        ... on ArtProjectType {
+          filteredTagsToAttr { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "filteredTagsToAttr": [{"name": "included"}],
             },
         ],
     }
