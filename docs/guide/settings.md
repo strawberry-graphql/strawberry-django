@@ -56,7 +56,8 @@ A dictionary with the following optional keys:
 - **`DEFAULT_PK_FIELD_NAME`** (default: `"pk"`)
 
       Change the [CRUD mutations'](mutations.md#cud-mutations) default
-      primary key field.
+      primary key field, and the name of the primary key argument of
+      [single object queries](queries.md#basic-queries).
 
 - **`USE_DEPRECATED_FILTERS`** (default: `False`)
 
