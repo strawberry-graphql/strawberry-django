@@ -3,6 +3,7 @@ import decimal
 import enum
 import uuid
 from typing import Any, cast
+from unittest import mock
 
 import pytest
 import strawberry
@@ -13,6 +14,7 @@ from django.db import models
 from django.db.models import GeneratedField  # type: ignore
 from django.test import override_settings
 from strawberry import auto
+from strawberry.file_uploads import Upload
 from strawberry.scalars import JSON
 from strawberry.types import get_object_definition
 from strawberry.types.base import (
@@ -24,6 +26,7 @@ from strawberry.types.enum import EnumValue, StrawberryEnumDefinition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.fields.types import field_type_map
 from strawberry_django.type import _process_type  # ruff: ignore[import-private-name]
 
 
@@ -507,3 +510,129 @@ def test_notimplemented():
 
     with pytest.raises(TypeError, match=r"UnknownModel\.field"):
         strawberry.Schema(query=Query)
+
+
+class SubclassedBigAutoField(models.BigAutoField):
+    pass
+
+
+class SubclassedCharField(models.CharField):
+    pass
+
+
+class SubclassedFileField(models.FileField):
+    pass
+
+
+class SubclassedForeignKey(models.ForeignKey):
+    pass
+
+
+class SubclassedFieldTypesModel(models.Model):
+    id = SubclassedBigAutoField(primary_key=True)
+    char = SubclassedCharField(max_length=50)
+    file = SubclassedFileField()
+    foreign_key = SubclassedForeignKey(
+        "SubclassedFieldTypesModel",
+        blank=True,
+        null=True,
+        related_name="related_foreign_key",
+        on_delete=models.CASCADE,
+    )
+    generated_char = (
+        GeneratedField(
+            expression=models.F("char"),
+            db_persist=True,
+            output_field=SubclassedCharField(max_length=50),
+        )
+        if GeneratedField is not None
+        else None
+    )
+
+
+def test_field_types_for_subclassed_fields():
+    @strawberry_django.type(SubclassedFieldTypesModel)
+    class Type:
+        id: auto
+        char: auto
+        file: auto
+        foreign_key: auto
+        generated_char: auto
+
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
+        ("id", strawberry.ID),
+        ("char", str),
+        ("file", strawberry_django.DjangoFileType),
+        ("foreign_key", StrawberryOptional(strawberry_django.DjangoModelType)),
+        ("generated_char", str),
+    ]
+
+
+def test_field_types_for_array_fields_of_subclassed_fields():
+    class ModelWithSubclassedArrays(models.Model):
+        char_array = ArrayField(SubclassedCharField(max_length=50))
+        char_matrix = ArrayField(ArrayField(SubclassedCharField(max_length=50)))
+
+    @strawberry_django.type(ModelWithSubclassedArrays)
+    class Type:
+        char_array: auto
+        char_matrix: auto
+
+    object_definition = get_object_definition(Type, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
+        ("char_array", StrawberryList(str)),
+        ("char_matrix", StrawberryList(StrawberryList(str))),
+    ]
+
+
+def test_input_field_types_for_subclassed_fields():
+    @strawberry_django.input(SubclassedFieldTypesModel)
+    class Input:
+        id: auto
+        char: auto
+        file: auto
+        foreign_key: auto
+
+    object_definition = get_object_definition(Input, strict=True)
+    assert [(f.name, f.type) for f in object_definition.fields] == [
+        ("id", StrawberryOptional(cast("type", strawberry.ID))),
+        ("char", str),
+        ("file", Upload),
+        ("foreign_key", StrawberryOptional(strawberry_django.OneToManyInput)),
+    ]
+
+
+def test_field_types_for_subclassed_fields_prefer_most_specific_mapping():
+    class SubclassedCharFieldChild(SubclassedCharField):
+        pass
+
+    class ModelWithMappedSubclassedFields(models.Model):
+        char = SubclassedCharFieldChild(max_length=50)
+        char_array = ArrayField(SubclassedCharFieldChild(max_length=50))
+        generated_char = (
+            GeneratedField(
+                expression=models.F("char"),
+                db_persist=True,
+                output_field=SubclassedCharFieldChild(max_length=50),
+            )
+            if GeneratedField is not None
+            else None
+        )
+
+    # SubclassedCharFieldChild -> SubclassedCharField -> CharField: the
+    # entry for the closest base class is used instead of the one for CharField
+    with mock.patch.dict(field_type_map, {SubclassedCharField: int}):
+
+        @strawberry_django.type(ModelWithMappedSubclassedFields)
+        class Type:
+            char: auto
+            char_array: auto
+            generated_char: auto
+
+        object_definition = get_object_definition(Type, strict=True)
+        assert [(f.name, f.type) for f in object_definition.fields] == [
+            ("char", int),
+            ("char_array", StrawberryList(int)),
+            ("generated_char", int),
+        ]
