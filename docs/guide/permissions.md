@@ -132,14 +132,15 @@ def create_something(self) -> Model: ...
 
 **Parameters:**
 
-| Parameter        | Type               | Default                          | Description                                                   |
-| ---------------- | ------------------ | -------------------------------- | ------------------------------------------------------------- |
-| `perms`          | `str \| list[str]` | required                         | Permission(s) to check (e.g., `"app.permission"`)             |
-| `any_perm`       | `bool`             | `True`                           | If `True`, user needs ANY of the perms; if `False`, needs ALL |
-| `with_anonymous` | `bool`             | `True`                           | If `True`, anonymous users automatically fail (optimization)  |
-| `with_superuser` | `bool`             | `False`                          | If `True`, superusers bypass permission checks                |
-| `message`        | `str`              | `"You don't have permission..."` | Custom error message                                          |
-| `fail_silently`  | `bool`             | `True`                           | If `True`, return `None`/empty instead of raising error       |
+| Parameter             | Type               | Default                          | Description                                                   |
+| --------------------- | ------------------ | -------------------------------- | ------------------------------------------------------------- |
+| `perms`               | `str \| list[str]` | required                         | Permission(s) to check (e.g., `"app.permission"`)             |
+| `any_perm`            | `bool`             | `True`                           | If `True`, user needs ANY of the perms; if `False`, needs ALL |
+| `with_anonymous`      | `bool`             | `True`                           | If `True`, anonymous users automatically fail (optimization)  |
+| `with_superuser`      | `bool`             | `False`                          | If `True`, superusers bypass permission checks                |
+| `accept_global_perms` | `bool`             | `True`                           | If `False`, only object-level permissions are considered      |
+| `message`             | `str`              | `"You don't have permission..."` | Custom error message                                          |
+| `fail_silently`       | `bool`             | `True`                           | If `True`, return `None`/empty instead of raising error       |
 
 **Examples:**
 
@@ -223,6 +224,28 @@ class Query:
 `HasSourcePerm` and `HasRetvalPerm` require an authentication backend that supports object permissions. This library works out of the box with [django-guardian](https://django-guardian.readthedocs.io/en/stable/).
 
 See the [django-guardian integration](../integrations/guardian.md) for setup instructions.
+
+### Ignoring Global Permissions
+
+By default, `HasSourcePerm` and `HasRetvalPerm` accept global (model-level) permissions as well: a user who has the `documents.view_document` permission globally can access every document, not only the ones they have been given the permission for at the object level.
+
+Pass `accept_global_perms=False` to only consider the permissions assigned for the objects themselves, just like the `accept_global_perms` option of django-guardian's `get_objects_for_user`:
+
+```python
+@strawberry.type
+class Query:
+    # Only returns documents the user has been given access to,
+    # even if they have the "documents.view_document" global permission
+    @strawberry_django.field(
+        extensions=[
+            HasRetvalPerm("documents.view_document", accept_global_perms=False),
+        ]
+    )
+    def documents(self) -> list[DocumentType]:
+        return models.Document.objects.all()
+```
+
+This option is only available for object-level checks. Passing `accept_global_perms=False` to `HasPerm` raises a `ValueError`.
 
 ## No Permission Handling
 
