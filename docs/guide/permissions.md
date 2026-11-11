@@ -132,15 +132,14 @@ def create_something(self) -> Model: ...
 
 **Parameters:**
 
-| Parameter             | Type               | Default                          | Description                                                   |
-| --------------------- | ------------------ | -------------------------------- | ------------------------------------------------------------- |
-| `perms`               | `str \| list[str]` | required                         | Permission(s) to check (e.g., `"app.permission"`)             |
-| `any_perm`            | `bool`             | `True`                           | If `True`, user needs ANY of the perms; if `False`, needs ALL |
-| `with_anonymous`      | `bool`             | `True`                           | If `True`, anonymous users automatically fail (optimization)  |
-| `with_superuser`      | `bool`             | `False`                          | If `True`, superusers bypass permission checks                |
-| `accept_global_perms` | `bool`             | `True`                           | If `False`, only object-level permissions are considered      |
-| `message`             | `str`              | `"You don't have permission..."` | Custom error message                                          |
-| `fail_silently`       | `bool`             | `True`                           | If `True`, return `None`/empty instead of raising error       |
+| Parameter        | Type               | Default                          | Description                                                   |
+| ---------------- | ------------------ | -------------------------------- | ------------------------------------------------------------- |
+| `perms`          | `str \| list[str]` | required                         | Permission(s) to check (e.g., `"app.permission"`)             |
+| `any_perm`       | `bool`             | `True`                           | If `True`, user needs ANY of the perms; if `False`, needs ALL |
+| `with_anonymous` | `bool`             | `True`                           | If `True`, anonymous users automatically fail (optimization)  |
+| `with_superuser` | `bool`             | `False`                          | If `True`, superusers bypass permission checks                |
+| `message`        | `str`              | `"You don't have permission..."` | Custom error message                                          |
+| `fail_silently`  | `bool`             | `True`                           | If `True`, return `None`/empty instead of raising error       |
 
 **Examples:**
 
