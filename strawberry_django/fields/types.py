@@ -713,9 +713,14 @@ def resolve_model_field_lookup_type(model: type[Model], field_name: str) -> Any:
     model_field = (
         model._meta.pk if field_name == "pk" else get_model_field(model, field_name)
     )
-    # Reverse relations, many-to-many fields and generic foreign keys
-    # are not concrete
-    if model_field is None or not getattr(model_field, "concrete", False):
+    # Reverse relations, many-to-many fields and generic foreign keys can't
+    # identify a single object. Many-to-many fields are checked explicitly,
+    # as Django < 6.0 reports them as concrete.
+    if (
+        model_field is None
+        or not getattr(model_field, "concrete", False)
+        or getattr(model_field, "many_to_many", False)
+    ):
         raise TypeError(
             f"Cannot look up {model._meta.object_name} by '{field_name}': "
             "only concrete model fields can be used as a lookup key"
