@@ -186,6 +186,46 @@ field_type_map.update({
 })
 ```
 
+Subclasses of a mapped field don't need to be added to the map: they resolve to the type of their
+closest mapped base class. For example, a custom `CharField` subclass resolves to `str`, a custom
+`BigAutoField` subclass to `ID` and a custom `ForeignKey` subclass is handled like a `ForeignKey`,
+in types, inputs and filters alike. An entry for the subclass itself always takes precedence:
+
+```python
+from typing import NewType
+
+from django.db import models
+import strawberry
+from strawberry_django.fields.types import field_type_map
+
+
+class LowercaseCharField(models.CharField):
+    def get_prep_value(self, value):
+        value = super().get_prep_value(value)
+        return value.lower() if value is not None else value
+
+
+class PhoneNumberField(models.CharField): ...
+
+
+PhoneNumber = strawberry.scalar(
+    NewType("PhoneNumber", str),
+    serialize=str,
+    parse_value=lambda v: v,
+)
+
+# LowercaseCharField resolves to `str` without any extra configuration,
+# while PhoneNumberField resolves to the `PhoneNumber` scalar
+field_type_map.update({
+    PhoneNumberField: PhoneNumber,
+})
+```
+
+> [!NOTE]
+> Resolving to the base class's type assumes that the subclass stores values compatible with it.
+> If a subclass returns other Python objects (e.g. a `PhoneNumber` instance instead of a `str`),
+> map it to a type or scalar that can serialize them, like in the example above.
+
 ## Including / excluding Django model fields by name
 
 > [!WARNING]
