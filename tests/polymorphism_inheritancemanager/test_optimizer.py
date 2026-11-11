@@ -8,7 +8,7 @@ from django.contrib.contenttypes.prefetch import (  # pyright: ignore[reportMiss
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.utils import CaptureQueriesContext
 
-from strawberry_django.optimizer import _without_lookup_prefix  # noqa: PLC2701
+from strawberry_django.optimizer import _without_lookup_prefix  # ruff: ignore[import-private-name]
 from tests.utils import assert_num_queries
 
 from .models import (
