@@ -177,6 +177,37 @@ when the field uses another SRID. A geometry without an SRID is output as is.
 `geojson` is a `JSON` scalar, so pick its parts, such as `coordinates`, on the
 client.
 
+### Simplifying geometries
+
+Complex geometries, such as administrative boundaries or satellite image
+footprints, can have tens of thousands of vertices, which makes the response
+large. Geometry fields output as `DjangoGeometryType` accept a `simplify`
+argument that reduces the number of vertices before the geometry is output:
+
+```graphql
+query {
+  regions {
+    boundary(simplify: { tolerance: 0.001 }) {
+      geojson
+    }
+  }
+}
+```
+
+- `tolerance` is the maximum distance between the original and the simplified
+  geometry, **in the units of the field's SRID**: degrees for `EPSG:4326`
+  (`0.001` is about 100 m), meters for projected SRIDs such as `EPSG:3857`.
+- `preserveTopology` (default `true`) keeps the geometry valid. Setting it to
+  `false` is faster, but polygons can self-intersect or collapse into an empty
+  geometry.
+- The geometry is simplified once, so `wkt`, `ewkt` and `geojson` describe the
+  same simplified geometry.
+
+The geometry is simplified in Python with GEOS, so the result is the same on
+every database backend, but the full geometry is still fetched from the
+database. For very large geometries, consider storing a precomputed simplified
+version in a separate column instead.
+
 ### Keeping the coordinate output
 
 Before `DjangoGeometryType`, geometries were output as coordinate arrays through

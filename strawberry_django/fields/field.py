@@ -70,6 +70,7 @@ from strawberry_django.resolvers import (
     resolve_base_manager,
 )
 from strawberry_django.utils.inspect import callable_returns_queryset
+from strawberry_django.utils.typing import unwrap_type
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -93,6 +94,8 @@ if TYPE_CHECKING:
 
 
 _T = TypeVar("_T")
+
+SIMPLIFY_ARG = "simplify"
 
 
 class StrawberryDjangoField(
@@ -145,7 +148,15 @@ class StrawberryDjangoField(
     @property
     def arguments(self) -> list[StrawberryArgument]:
         if self._cached_arguments is None:
-            self._cached_arguments = super().arguments
+            arguments = super().arguments
+            if self._is_geometry_object_field():
+                from .types import GeometrySimplifyInput
+
+                arguments = [
+                    *arguments,
+                    argument(SIMPLIFY_ARG, GeometrySimplifyInput, is_optional=True),
+                ]
+            self._cached_arguments = arguments
         return self._cached_arguments
 
     @arguments.setter
@@ -181,6 +192,15 @@ class StrawberryDjangoField(
             for p in self.base_resolver.signature.parameters.values()
         )
 
+    def _is_geometry_object_field(self) -> bool:
+        from .types import DjangoGeometryType
+
+        return (
+            self.base_resolver is None
+            and not self.is_list
+            and unwrap_type(self.type) is DjangoGeometryType
+        )
+
     @cached_property
     def _need_remove_filters_argument(self) -> bool:
         return self._need_remove_argument(FILTERS_ARG)
@@ -198,6 +218,29 @@ class StrawberryDjangoField(
         return self._need_remove_argument(PAGINATION_ARG, requires_pagination=True)
 
     def get_result(
+        self,
+        source: models.Model | None,
+        info: Info | None,
+        args: list[Any],
+        kwargs: dict[str, Any],
+    ) -> AwaitableOrValue[Any]:
+        # Only geometry fields output as DjangoGeometryType have this argument
+        simplify = kwargs.pop(SIMPLIFY_ARG, None)
+        result = self._get_result(source, info, args, kwargs)
+        if simplify is None or simplify is UNSET:
+            return result
+
+        if inspect.isawaitable(result):
+
+            async def async_simplify():
+                resolved = await result
+                return simplify.simplify(resolved) if resolved is not None else None
+
+            return async_simplify()
+
+        return simplify.simplify(result) if result is not None else None
+
+    def _get_result(
         self,
         source: models.Model | None,
         info: Info | None,

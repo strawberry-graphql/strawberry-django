@@ -83,6 +83,32 @@ class DjangoGeometryType:
         return json_loads(geom.json)
 
 
+@strawberry.input(
+    description="Simplify a geometry before it is output, to reduce its size."
+)
+class GeometrySimplifyInput:
+    tolerance: float = strawberry.field(
+        description=(
+            "The maximum distance between the original and the simplified "
+            "geometry, in the units of the field's SRID (degrees for EPSG:4326)."
+        )
+    )
+    preserve_topology: bool = strawberry.field(
+        default=True,
+        description=(
+            "Keep the geometry valid (e.g. polygons don't self-intersect or "
+            "collapse). Disabling it is faster but can return invalid or empty "
+            "geometries."
+        ),
+    )
+
+    def simplify(self, geom: Any) -> Any:
+        if self.tolerance < 0:
+            raise ValueError("`tolerance` must be greater than or equal to 0")
+
+        return geom.simplify(self.tolerance, preserve_topology=self.preserve_topology)
+
+
 @strawberry.type
 class DjangoModelType:
     pk: strawberry.ID
