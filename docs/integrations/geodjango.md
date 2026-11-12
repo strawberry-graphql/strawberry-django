@@ -208,6 +208,14 @@ every database backend, but the full geometry is still fetched from the
 database. For very large geometries, consider storing a precomputed simplified
 version in a separate column instead.
 
+Like any expensive field, a geometry can be requested many times in one query
+through aliases. If your API is public, limit the cost of queries, for example
+with Strawberry's
+[`MaxAliasesLimiter`](https://strawberry.rocks/docs/extensions/max-aliases-limiter)
+and
+[`QueryDepthLimiter`](https://strawberry.rocks/docs/extensions/query-depth-limiter)
+extensions.
+
 ### Keeping the coordinate output
 
 Before `DjangoGeometryType`, geometries were output as coordinate arrays through

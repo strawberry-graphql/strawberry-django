@@ -160,8 +160,10 @@ def test_simplify_null_geometry():
 
 @pytest.mark.django_db
 @use_geometry_type
-def test_simplify_negative_tolerance():
-    models.GeosFieldsModel.objects.create(polygon=_circle())
+@pytest.mark.parametrize("polygon", [_circle, lambda: None])
+def test_simplify_negative_tolerance(polygon):
+    # Also rejected when the geometry is null
+    models.GeosFieldsModel.objects.create(polygon=polygon())
 
     result = _schema().execute_sync(
         "{ geos { polygon(simplify: { tolerance: -1 }) { wkt } } }"
@@ -174,19 +176,44 @@ def test_simplify_negative_tolerance():
 @pytest.mark.django_db
 @use_geometry_type
 def test_simplify_with_optimizer():
-    models.GeosFieldsModel.objects.create(polygon=_circle(), point="POINT(1 2)")
+    polygon = _circle()
+    models.GeosFieldsModel.objects.create(polygon=polygon, point="POINT(1 2)")
+    expected = polygon.simplify(0.001, preserve_topology=True)
 
     with utils.assert_num_queries(1) as ctx:
         result = _schema(optimizer=True).execute_sync(
-            "{ geos { polygon(simplify: { tolerance: 0.001 }) { geomType } } }"
+            "{ geos { polygon(simplify: { tolerance: 0.001 }) { wkt } } }"
         )
 
     assert not result.errors
-    assert result.data == {"geos": [{"polygon": {"geomType": "Polygon"}}]}
+    assert result.data == {"geos": [{"polygon": {"wkt": expected.wkt}}]}
     # Only the selected geometry column is fetched
     sql = ctx.captured_queries[0]["sql"]
     assert '"polygon"' in sql
     assert '"point"' not in sql
+
+
+@pytest.mark.django_db
+@use_geometry_type
+def test_custom_resolver_keeps_its_simplify_argument():
+    @strawberry_django.type(models.GeosFieldsModel)
+    class GeoType:
+        @strawberry_django.field
+        def label(self, simplify: bool = False) -> str:
+            return "simplified" if simplify else "full"
+
+    @strawberry.type
+    class Query:
+        geos: list[GeoType] = strawberry_django.field()
+
+    models.GeosFieldsModel.objects.create()
+
+    result = strawberry.Schema(query=Query).execute_sync(
+        "{ geos { label(simplify: true) } }"
+    )
+
+    assert not result.errors
+    assert result.data == {"geos": [{"label": "simplified"}]}
 
 
 @pytest.mark.django_db(transaction=True)

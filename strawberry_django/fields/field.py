@@ -149,7 +149,7 @@ class StrawberryDjangoField(
     def arguments(self) -> list[StrawberryArgument]:
         if self._cached_arguments is None:
             arguments = super().arguments
-            if self._is_geometry_object_field():
+            if self._has_simplify_argument:
                 from .types import GeometrySimplifyInput
 
                 arguments = [
@@ -192,7 +192,8 @@ class StrawberryDjangoField(
             for p in self.base_resolver.signature.parameters.values()
         )
 
-    def _is_geometry_object_field(self) -> bool:
+    @cached_property
+    def _has_simplify_argument(self) -> bool:
         from .types import DjangoGeometryType
 
         return (
@@ -224,21 +225,26 @@ class StrawberryDjangoField(
         args: list[Any],
         kwargs: dict[str, Any],
     ) -> AwaitableOrValue[Any]:
-        # Only geometry fields output as DjangoGeometryType have this argument
-        simplify = kwargs.pop(SIMPLIFY_ARG, None)
-        result = self._get_result(source, info, args, kwargs)
+        # Only pop the argument this field added itself, so that a custom resolver
+        # can still declare its own `simplify` argument
+        simplify = (
+            kwargs.pop(SIMPLIFY_ARG, None) if self._has_simplify_argument else None
+        )
         if simplify is None or simplify is UNSET:
-            return result
+            return self._get_result(source, info, args, kwargs)
+
+        # Validate before fetching, so that invalid input fails even on null values
+        simplify.validate()
+        result = self._get_result(source, info, args, kwargs)
 
         if inspect.isawaitable(result):
 
             async def async_simplify():
-                resolved = await result
-                return simplify.simplify(resolved) if resolved is not None else None
+                return simplify.simplify(await result)
 
             return async_simplify()
 
-        return simplify.simplify(result) if result is not None else None
+        return simplify.simplify(result)
 
     def _get_result(
         self,

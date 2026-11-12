@@ -102,9 +102,13 @@ class GeometrySimplifyInput:
         ),
     )
 
-    def simplify(self, geom: Any) -> Any:
+    def validate(self) -> None:
         if self.tolerance < 0:
             raise ValueError("`tolerance` must be greater than or equal to 0")
+
+    def simplify(self, geom: Any) -> Any:
+        if geom is None:
+            return None
 
         return geom.simplify(self.tolerance, preserve_topology=self.preserve_topology)
 
