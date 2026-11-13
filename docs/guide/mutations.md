@@ -237,6 +237,47 @@ class Mutation:
 schema = strawberry.Schema(mutation=Mutation)
 ```
 
+## Namespacing mutations
+
+Mutations can be grouped in plain Strawberry types, which can be returned without giving any values to their mutation fields:
+
+```python title="schema.py"
+import strawberry
+import strawberry_django
+from strawberry_django import mutations
+
+
+@strawberry.type
+class FruitMutation:
+    create_fruit: Fruit = mutations.create(FruitInput)
+    update_fruit: Fruit = mutations.update(FruitPartialInput)
+    delete_fruit: Fruit = mutations.delete(strawberry_django.NodeInput)
+
+
+@strawberry.type
+class Mutation:
+    @strawberry.field
+    def fruits(self) -> FruitMutation:
+        return FruitMutation()
+
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)
+```
+
+```graphql
+mutation {
+  fruits {
+    createFruit(data: { name: "apple" }) {
+      id
+      name
+    }
+  }
+}
+```
+
+> [!TIP]
+> With [Django errors handling](#django-errors-handling), the name of the payload union is based on the name of the mutation field (`CreateFruitPayload` for `create_fruit`). Give mutation fields in different namespaces distinct names (e.g. `create_fruit` and `create_color` instead of `create` in both) to avoid name clashes.
+
 ## Batching
 
 If you need to make multiple creates, updates, or deletes as part of one atomic mutation you can use batching. Batching has a similar syntax except that the mutations take and return a list.
