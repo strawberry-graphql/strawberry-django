@@ -129,6 +129,7 @@ def filter_with_perms(qs: QuerySet[_M], info: Info) -> QuerySet[_M]:
             [p.perm for p in check.perms],
             any_perm=check.any_perm,
             with_superuser=check.with_superuser,
+            accept_global_perms=check.accept_global_perms,
         )
 
     set_perm_safe(True)
@@ -595,6 +596,13 @@ def _default_obj_perm_checker(info: Info, user: UserType):
     return perm_checker
 
 
+def _default_obj_only_perm_checker(info: Info, user: UserType):
+    def perm_checker(perm: PermDefinition, obj: Any) -> bool:
+        return user.has_perm(perm.perm, obj=obj)  # type: ignore
+
+    return perm_checker
+
+
 class HasPerm(DjangoPermissionExtension):
     """Defines permissions required to access the given object/field.
 
@@ -619,6 +627,12 @@ class HasPerm(DjangoPermissionExtension):
             as having permissions foe everything. This is false by default to avoid
             returning unexpected results. Setting this to true will avoid triggering
             has_perm checks.
+        accept_global_perms:
+            If global (model-level) permissions should grant access when checking
+            permissions for objects. This is true by default. Setting this to false
+            will only consider the permissions assigned for the objects themselves
+            (e.g. through django-guardian), and can only be used with object level
+            checks (i.e. `HasSourcePerm` and `HasRetvalPerm`).
 
     Examples
     --------
@@ -658,6 +672,7 @@ class HasPerm(DjangoPermissionExtension):
         | None = None,
         with_anonymous: bool = True,
         with_superuser: bool = False,
+        accept_global_perms: bool = True,
     ):
         super().__init__(
             message=message,
@@ -677,18 +692,28 @@ class HasPerm(DjangoPermissionExtension):
 
         assert all(isinstance(p, PermDefinition) for p in self.perms)
         self.target = target if target is not None else self.DEFAULT_TARGET
+        if not accept_global_perms and self.target == PermTarget.GLOBAL:
+            raise ValueError(
+                f"{self.__class__.__name__} checks global permissions, so "
+                "`accept_global_perms=False` can only be used with object level "
+                "checks (i.e. `HasSourcePerm` and `HasRetvalPerm`)"
+            )
+
         self.permissions = perms
         self.any_perm = any_perm
         self.perm_checker = (
             perm_checker if perm_checker is not None else _default_perm_checker
         )
-        self.obj_perm_checker = (
-            obj_perm_checker
-            if obj_perm_checker is not None
-            else _default_obj_perm_checker
-        )
+        if obj_perm_checker is None:
+            obj_perm_checker = (
+                _default_obj_perm_checker
+                if accept_global_perms
+                else _default_obj_only_perm_checker
+            )
+        self.obj_perm_checker = obj_perm_checker
         self.with_anonymous = with_anonymous
         self.with_superuser = with_superuser
+        self.accept_global_perms = accept_global_perms
 
     @functools.cached_property
     def schema_directive(self) -> object:
@@ -828,7 +853,7 @@ class HasPerm(DjangoPermissionExtension):
             return list(self._resolve_iterable_obj(source, user, obj, info=info))
 
         cache = self._get_cache(info, user)
-        cache_key = (self.perms, self.any_perm, obj)
+        cache_key = (self.perms, self.any_perm, self.accept_global_perms, obj)
         has_perm = cache.get(cache_key)
 
         if has_perm is None:
@@ -859,7 +884,7 @@ class HasPerm(DjangoPermissionExtension):
         checker = self.obj_perm_checker(info, user)
 
         for obj in objs:
-            cache_key = (self.perms, self.any_perm, obj)
+            cache_key = (self.perms, self.any_perm, self.accept_global_perms, obj)
             has_perm = cache.get(cache_key)
 
             if has_perm is None:

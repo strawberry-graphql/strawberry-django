@@ -64,6 +64,7 @@ def filter_for_user_q(
     any_perm: bool = True,
     with_groups: bool = True,
     with_superuser: bool = False,
+    accept_global_perms: bool = True,
 ):
     if with_superuser and user.is_active and getattr(user, "is_superuser", False):
         return qs
@@ -126,13 +127,13 @@ def filter_for_user_q(
 
     # Small optimization if the user's permissions are cached
     perm_cache: set[str] | None = getattr(user, "_perm_cache", None)
-    if perm_cache is not None:
+    if accept_global_perms and perm_cache is not None:
         f = any if any_perm else all
         if f(p in perm_cache for p in perms_list):
             return qs
 
     q = Q()
-    if hasattr(user, "user_permissions"):
+    if accept_global_perms and hasattr(user, "user_permissions"):
         q |= Q(
             Exists(
                 _filter(
@@ -143,7 +144,7 @@ def filter_for_user_q(
                 ),
             ),
         )
-    if with_groups:
+    if accept_global_perms and with_groups:
         q |= Q(
             Exists(
                 _filter(
@@ -208,6 +209,11 @@ def filter_for_user_q(
 
         q |= Q(pk__in=obj_qs)
 
+    if not accept_global_perms and not q:
+        # Only object permissions are accepted, but there's no object
+        # permissions backend to check them against
+        return Q(pk__in=[])
+
     return q
 
 
@@ -219,6 +225,7 @@ def filter_for_user(
     any_perm: bool = True,
     with_groups: bool = True,
     with_superuser: bool = False,
+    accept_global_perms: bool = True,
 ):
     return qs & qs.filter(
         filter_for_user_q(
@@ -228,5 +235,6 @@ def filter_for_user(
             any_perm=any_perm,
             with_groups=with_groups,
             with_superuser=with_superuser,
+            accept_global_perms=accept_global_perms,
         ),
     )

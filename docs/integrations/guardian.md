@@ -106,9 +106,12 @@ HasRetvalPerm(
     any_perm=True,  # If True, user needs ANY of the perms; if False, needs ALL
     with_anonymous=True,  # If True, skip permission check for anonymous users (faster)
     with_superuser=False,  # If True, superusers bypass permission checks
+    accept_global_perms=True,  # If False, only object permissions are considered
     fail_silently=True,  # If True, return None/empty instead of raising error
 )
 ```
+
+`accept_global_perms` only applies to `HasSourcePerm` and `HasRetvalPerm`.
 
 ### Example: Multiple Permissions
 
@@ -138,6 +141,23 @@ def sensitive_document(self, id: strawberry.ID) -> DocumentType:
 )
 def document(self, id: strawberry.ID) -> DocumentType:
     return models.Document.objects.get(pk=id)
+```
+
+### Example: Object Permissions Only
+
+By default, a user with a global permission (e.g. assigned with `user.user_permissions.add(...)` or through a group) has that permission for every object. Use `accept_global_perms=False` to only consider the permissions assigned for each object with django-guardian:
+
+```python
+@strawberry_django.field(
+    extensions=[
+        HasRetvalPerm(
+            "documents.view_document",
+            accept_global_perms=False,  # Global permissions don't grant access
+        )
+    ]
+)
+def documents(self) -> list[DocumentType]:
+    return models.Document.objects.all()
 ```
 
 ## Assigning Object Permissions
