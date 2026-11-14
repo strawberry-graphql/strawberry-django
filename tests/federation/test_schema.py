@@ -906,3 +906,29 @@ def test_sdl_field_provides_renders_fieldset():
     sdl = str(schema)
 
     assert '@provides(fields: "name")' in sdl
+
+
+@pytest.mark.django_db
+def test_field_with_queryset():
+    """Test that a federated field retrieves its objects from its queryset."""
+
+    @strawberry_django.federation.type(models.Fruit, keys=["id"])
+    class FruitType:
+        id: strawberry.auto
+        name: strawberry.auto
+
+    @strawberry.type
+    class Query:
+        berries: list[FruitType] = strawberry_django.federation.field(
+            queryset=models.Fruit.objects.filter(name__endswith="berry"),
+        )
+
+    schema = FederationSchema(query=Query)
+
+    models.Fruit.objects.create(name="strawberry")
+    models.Fruit.objects.create(name="banana")
+
+    result = schema.execute_sync("query { berries { name } }")
+
+    assert result.errors is None
+    assert result.data == {"berries": [{"name": "strawberry"}]}

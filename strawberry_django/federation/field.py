@@ -29,6 +29,7 @@ from strawberry_django.fields.field import StrawberryDjangoField
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
+    from django.db.models import QuerySet
     from strawberry import BasePermission
     from strawberry.types.unset import UnsetType
 
@@ -68,6 +69,7 @@ def field(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: QuerySet | None = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -118,6 +120,7 @@ def field(
         prefetch_related=prefetch_related,
         annotate=annotate,
         disable_optimization=disable_optimization,
+        queryset=queryset,
     )
 
     if resolver:
