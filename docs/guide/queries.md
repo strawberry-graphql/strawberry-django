@@ -47,6 +47,56 @@ query {
 }
 ```
 
+## Queries with a Custom Queryset
+
+By default, queries retrieve objects from the model's default manager. Pass a `queryset`
+to `strawberry_django.field()`, `strawberry_django.connection()` or
+`strawberry_django.offset_paginated()` to retrieve them from it instead:
+
+```python title="schema.py"
+import strawberry
+import strawberry_django
+from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.relay import DjangoListConnection
+
+from . import models
+from .types import Fruit
+
+
+@strawberry.type
+class Query:
+    available_fruit: Fruit = strawberry_django.field(
+        queryset=models.Fruit.objects.filter(available=True),
+    )
+    available_fruits: list[Fruit] = strawberry_django.field(
+        queryset=models.Fruit.objects.filter(available=True),
+    )
+    available_fruits_paginated: OffsetPaginated[Fruit] = (
+        strawberry_django.offset_paginated(
+            queryset=models.Fruit.objects.filter(available=True),
+        )
+    )
+    available_fruits_connection: DjangoListConnection[Fruit] = (
+        strawberry_django.connection(
+            queryset=models.Fruit.objects.filter(available=True),
+        )
+    )
+```
+
+Everything else works as with the default manager: the type's `get_queryset`, permissions,
+filters, ordering, pagination and the [Query Optimizer](./optimizer.md) are applied on top
+of the queryset. For single queries, like `available_fruit` above, only objects from the
+queryset can be retrieved by their primary key.
+
+A copy of the queryset is used for each request, so its results are never reused between
+requests.
+
+> [!NOTE]
+> The `queryset` is only used by fields that are resolved without a parent model instance,
+> like the ones in your `Query` type. Fields of model types are resolved from the instance, so
+> defining a `queryset` on them raises an error. Fields with a resolver also can't define a
+> `queryset`: return it from the resolver instead, as shown in [Custom Resolvers](#custom-resolvers).
+
 ## Queries with Filters
 
 Add filters to your queries to enable flexible data filtering. Filters are defined in your types and automatically applied to queries.
