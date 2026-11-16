@@ -496,6 +496,22 @@ relay_input_field_type_map: dict[
 }
 
 
+def _get_mapped_type(model_field_type: type, *type_maps: dict[Any, Any]) -> Any:
+    """Get the type mapped to a model field class, or to its closest mapped base class.
+
+    This allows subclasses of mapped fields (e.g. a custom `CharField` subclass)
+    to be resolved without registering them. The classes in the field's MRO are
+    looked up in order, so the most specific mapping always wins. When more than
+    one map is given, the earlier ones take precedence for the same class.
+    """
+    for cls in model_field_type.__mro__:
+        for type_map in type_maps:
+            if cls in type_map:
+                return type_map[cls]
+
+    return NotImplemented
+
+
 def _resolve_array_field_type(
     model_field: Field,
     type_map: dict[Any, Any] = field_type_map,
@@ -504,7 +520,7 @@ def _resolve_array_field_type(
     if isinstance(model_field, ArrayField):
         return list[_resolve_array_field_type(model_field.base_field, type_map)]
 
-    base_field = type_map.get(type(model_field), NotImplemented)
+    base_field = _get_mapped_type(type(model_field), type_map)
     if base_field is NotImplemented:
         raise NotImplementedError(
             f"GraphQL type for model field '{model_field}' has not been implemented",
@@ -595,10 +611,12 @@ def resolve_model_field_type(
             model_field._strawberry_enum = field_type  # type: ignore
     # Generated fields
     elif isinstance(model_field, GeneratedField):
-        model_field_type = type(model_field.output_field)  # type: ignore
-        field_type = field_type_map.get(model_field_type, NotImplemented)
-        if use_geometry_type:
-            field_type = geometry_object_type_map.get(model_field_type, field_type)
+        field_type = _get_mapped_type(
+            type(model_field.output_field),  # type: ignore
+            {**field_type_map, **geometry_object_type_map}
+            if use_geometry_type
+            else field_type_map,
+        )
     elif ArrayField is not None and isinstance(model_field, ArrayField):
         field_type = _resolve_array_field_type(
             model_field,
@@ -609,8 +627,7 @@ def resolve_model_field_type(
     # Every other Field possibility
     else:
         force_global_id = settings["MAP_AUTO_ID_AS_GLOBAL_ID"]
-        model_field_type = type(model_field)
-        field_type: Any = None
+        field_type: Any
 
         if django_type.is_filter and model_field.is_relation:
             field_type = (
@@ -618,21 +635,22 @@ def resolve_model_field_type(
                 if force_global_id
                 else filters.get_django_model_filter_input_type()
             )
-        elif django_type.is_input:
-            input_type_map = input_field_type_map
-            if force_global_id:
-                input_type_map = {**input_type_map, **relay_input_field_type_map}
+        else:
+            type_maps: list[dict[Any, Any]] = []
+            if django_type.is_input:
+                input_type_map = input_field_type_map
+                if force_global_id:
+                    input_type_map = {**input_type_map, **relay_input_field_type_map}
+                type_maps.append(input_type_map)
 
-            field_type = input_type_map.get(model_field_type)
-
-        if field_type is None:
             type_map = field_type_map
             if force_global_id:
                 type_map = {**type_map, **relay_field_type_map}
             if use_geometry_type:
                 type_map = {**type_map, **geometry_object_type_map}
+            type_maps.append(type_map)
 
-            field_type = type_map.get(model_field_type, NotImplemented)
+            field_type = _get_mapped_type(type(model_field), *type_maps)
 
     if field_type is NotImplemented:
         raise NotImplementedError(
