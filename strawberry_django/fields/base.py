@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 import functools
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from django.db.models import ForeignKey, GeneratedField  # type: ignore
-from strawberry import relay
+from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import get_object_definition
 from strawberry.types.auto import StrawberryAuto
@@ -51,6 +52,18 @@ class StrawberryDjangoFieldBase(StrawberryField):
         self.is_relation = False
         self.django_name = django_name
         self.origin_django_type: StrawberryDjangoDefinition[Any, Any] | None = None
+
+        # Default to UNSET, so that plain types using these fields (e.g. to
+        # namespace queries and mutations) can be instantiated without passing
+        # a value for them. They get resolved by the field itself in that case.
+        if (
+            kwargs.get("base_resolver") is None
+            and kwargs.get("default", dataclasses.MISSING) is dataclasses.MISSING
+            and kwargs.get("default_factory", dataclasses.MISSING)
+            is dataclasses.MISSING
+        ):
+            kwargs["default"] = UNSET
+
         super().__init__(graphql_name=graphql_name, python_name=python_name, **kwargs)
 
     def __copy__(self) -> Self:

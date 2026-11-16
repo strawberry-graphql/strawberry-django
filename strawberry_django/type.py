@@ -56,6 +56,7 @@ from strawberry_django.utils.typing import (
 )
 
 from .descriptors import ModelProperty
+from .fields.base import StrawberryDjangoFieldBase
 from .fields.field import StrawberryDjangoField
 from .fields.field import field as _field
 from .fields.filter_order import (
@@ -110,6 +111,26 @@ def _process_filter_order_method(
         setattr(cls, field.python_name, defined_method)
 
     return field
+
+
+def _is_django_field_unset_default(
+    cls: type, base_field: dataclasses.Field | None
+) -> bool:
+    """Check if a class attribute is only the UNSET default of an inherited Django field.
+
+    Django fields default to UNSET and dataclasses set defaults as class attributes,
+    but that doesn't mean a value was given to the field. Only input types set the
+    default of their fields on purpose.
+    """
+    if not isinstance(base_field, StrawberryDjangoFieldBase):
+        return False
+
+    origin_django_type = base_field.origin_django_type
+    return (
+        getattr(cls, base_field.name, dataclasses.MISSING) is UNSET
+        and base_field.default is UNSET
+        and not (origin_django_type is not None and origin_django_type.is_input)
+    )
 
 
 def _process_type(
@@ -215,12 +236,17 @@ def _process_type(
             default_value = None if is_maybe else UNSET
 
             # First check if the field is defined in the class. If it is,
-            # then we just need to set its default value in case it is MISSING
+            # then we just need to set its default value in case it is MISSING.
+            # Django fields default to UNSET, which also needs to be replaced
+            # for Maybe types.
             if field_name in cls.__dict__:
                 field = cls.__dict__[field_name]
-                if (
-                    isinstance(field, dataclasses.Field)
-                    and field.default is dataclasses.MISSING
+                if isinstance(field, dataclasses.Field) and (
+                    field.default is dataclasses.MISSING
+                    or (
+                        isinstance(field, StrawberryDjangoFieldBase)
+                        and field.default is UNSET
+                    )
                 ):
                     field.default = default_value
                     if isinstance(field, StrawberryField):
@@ -228,8 +254,10 @@ def _process_type(
 
                 continue
 
-            if not hasattr(cls, field_name):
-                base_field = getattr(cls, "__dataclass_fields__", {}).get(field_name)
+            base_field = getattr(cls, "__dataclass_fields__", {}).get(field_name)
+            if not hasattr(cls, field_name) or _is_django_field_unset_default(
+                cls, base_field
+            ):
                 if base_field is not None and isinstance(base_field, StrawberryField):
                     new_field = copy.copy(base_field)
                 else:

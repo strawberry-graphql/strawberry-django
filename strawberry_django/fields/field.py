@@ -197,6 +197,19 @@ class StrawberryDjangoField(
     def _need_remove_pagination_argument(self) -> bool:
         return self._need_remove_argument(PAGINATION_ARG, requires_pagination=True)
 
+    def _is_unset_in_source(self, source: Any) -> bool:
+        """Check if the source is a plain object that has no value for this field.
+
+        That is the case for plain types used to namespace queries, when they are
+        returned without a value for the field. Like root fields, it gets resolved
+        from the model's default manager then.
+        """
+        return (
+            self.django_model is not None
+            and not isinstance(source, models.Model)
+            and getattr(source, self.django_name or self.python_name, UNSET) is UNSET
+        )
+
     def get_result(
         self,
         source: models.Model | None,
@@ -221,7 +234,7 @@ class StrawberryDjangoField(
             assert info
             result = self.resolver(source, info, args, resolver_kwargs)
             is_awaitable = inspect.isawaitable(result)
-        elif source is None:
+        elif source is None or self._is_unset_in_source(source):
             model = self.django_model
             assert model is not None
             result = model._default_manager.all()
@@ -485,7 +498,7 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
                 django_type = field.django_type
 
-                if root is not None:
+                if root is not None and not field._is_unset_in_source(root):
                     # If this is a nested field, call get_result instead because we want
                     # to retrieve the queryset from its RelatedManager. Accessing the
                     # manager and calling `.all()` builds the queryset without
