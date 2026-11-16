@@ -47,6 +47,38 @@ query {
 }
 ```
 
+### Looking Up Single Objects by Another Field
+
+The primary key argument is named after the
+[`DEFAULT_PK_FIELD_NAME`](settings.md) setting and is typed as `ID`. To look up
+the object by another field, pass its name as `lookup_key`. The argument is
+named after that field, and its type is resolved from the model field:
+
+```python title="schema.py"
+@strawberry.type
+class Query:
+    # fruit(pk: ID!): Fruit!
+    fruit: Fruit = strawberry_django.field()
+    # fruitBySlug(slug: String!): Fruit
+    fruit_by_slug: Fruit | None = strawberry_django.field(lookup_key="slug")
+    # Typed as the model's primary key, e.g. order(pk: UUID!): Order!
+    order: Order = strawberry_django.field(lookup_key="pk")
+```
+
+```graphql
+query {
+  fruitBySlug(slug: "strawberry") {
+    id
+    name
+  }
+}
+```
+
+`lookup_key` must be `pk` or the name of a concrete model field, and it should
+identify a single object. Relations (e.g. a `ForeignKey` or a `OneToOneField`)
+are typed as the field they point to, usually the related model's primary key.
+Fields that don't map to a scalar are typed as `ID`.
+
 ## Queries with Filters
 
 Add filters to your queries to enable flexible data filtering. Filters are defined in your types and automatically applied to queries.

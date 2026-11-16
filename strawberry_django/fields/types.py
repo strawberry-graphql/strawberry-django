@@ -24,6 +24,7 @@ from strawberry import UNSET, relay
 from strawberry.file_uploads.scalars import Upload
 from strawberry.scalars import JSON
 from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
+from strawberry.types import has_object_definition
 from strawberry.types.enum import EnumValueDefinition
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
@@ -699,6 +700,44 @@ def get_model_field(model: type[Model], field_name: str):
             ),
         )
         raise
+
+
+def resolve_model_field_lookup_type(model: type[Model], field_name: str) -> Any:
+    """Resolve the GraphQL type of an argument that looks up a model instance.
+
+    `field_name` is either `pk` or the name of a concrete field of `model`.
+    Relations resolve to the type of the field they point to (e.g. the pk of the
+    related model). Fields that aren't mapped to a scalar in `field_type_map`
+    resolve to `strawberry.ID`.
+    """
+    model_field = (
+        model._meta.pk if field_name == "pk" else get_model_field(model, field_name)
+    )
+    # Reverse relations, many-to-many fields and generic foreign keys can't
+    # identify a single object. Many-to-many fields are checked explicitly,
+    # as Django < 6.0 reports them as concrete.
+    if (
+        model_field is None
+        or not getattr(model_field, "concrete", False)
+        or getattr(model_field, "many_to_many", False)
+    ):
+        raise TypeError(
+            f"Cannot look up {model._meta.object_name} by '{field_name}': "
+            "only concrete model fields can be used as a lookup key"
+        )
+
+    field = cast("Field", model_field)
+    while field.is_relation:
+        field = cast("Field", field.target_field)
+
+    if isinstance(field, GeneratedField):
+        field = cast("Field", field.output_field)  # type: ignore
+
+    field_type = field_type_map.get(type(field))
+    if field_type is None or has_object_definition(field_type):
+        return strawberry.ID
+
+    return field_type
 
 
 def is_optional(
