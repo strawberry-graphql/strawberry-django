@@ -137,5 +137,9 @@ class Berry:
 > Another way of limiting this is by using the [PermissionExtension](permissions.md)
 > provided by this lib.
 
+> [!TIP]
+> To change the `QuerySet` of a single query instead, pass a `queryset` to its field.
+> See [Queries with a Custom Queryset](queries.md#queries-with-a-custom-queryset).
+
 The `kwargs` dictionary can include other parameters that were added in a `@strawberry_django.type` definition
 like [filters](filters.md) or [pagination](pagination.md).

@@ -451,6 +451,16 @@ def _process_type(
                 extensions=getattr(f, "extensions", ()),
             )
 
+        if f.queryset is not None:
+            # Fields of a django type are resolved from the model instance,
+            # meaning that the queryset would never be used
+            raise TypeError(
+                f'Field "{f.python_name}" on type "{cls.__name__}" cannot define a '
+                "`queryset`, as it is resolved from its parent model instance. "
+                "Use the `queryset` argument on fields of non-model types, like "
+                "`Query`, instead."
+            )
+
         f.django_name = django_name
         f.is_relation = is_relation
         f.origin_django_type = django_type
