@@ -1,3 +1,4 @@
+import sys
 from typing import Literal, TypeAlias
 
 import pytest
@@ -6,6 +7,13 @@ from guardian.shortcuts import assign_perm
 from strawberry.relay import to_base64
 
 from strawberry_django.optimizer import DjangoOptimizerExtension
+from strawberry_django.permissions import (
+    HasPerm,
+    HasRetvalPerm,
+    HasSourcePerm,
+    PermTarget,
+)
+from strawberry_django.utils.query import filter_for_user
 
 from .projects.faker import (
     GroupFactory,
@@ -15,6 +23,7 @@ from .projects.faker import (
     SuperuserUserFactory,
     UserFactory,
 )
+from .projects.models import Issue
 from .utils import GraphQLTestClient, assert_num_queries
 
 PermKind: TypeAlias = Literal["user", "group", "superuser"]
@@ -936,6 +945,165 @@ def test_conn_obj_perm_required(db, gql_client: GraphQLTestClient, kind: PermKin
                     "totalCount": 1,
                 },
             }
+
+
+def _assign_global_perm(kind: PermKind, user):
+    perm = Permission.objects.get(codename="view_issue")
+    if kind == "user":
+        user.user_permissions.add(perm)
+    elif kind == "group":
+        group = GroupFactory.create()
+        group.permissions.add(perm)
+        user.groups.add(group)
+    else:  # pragma:nocover
+        raise AssertionError
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", ["user", "group"])
+def test_obj_perm_required_no_global(db, gql_client: GraphQLTestClient, kind: PermKind):
+    query = """
+    query Issue ($id: ID!) {
+        withGlobal: issueObjPermRequiredOptional (id: $id) {
+          id
+        }
+        withoutGlobal: issueObjPermRequiredNoGlobalOptional (id: $id) {
+          id
+        }
+      }
+    """
+    issue_no_perm = IssueFactory.create()
+    issue_with_perm = IssueFactory.create()
+
+    user = UserFactory.create()
+    _assign_global_perm(kind, user)
+
+    # The global permission is enough when it is accepted, but not otherwise
+    with gql_client.login(user):
+        for issue in [issue_no_perm, issue_with_perm]:
+            issue_id = to_base64("IssueType", issue.pk)
+            res = gql_client.query(query, {"id": issue_id})
+            assert res.data == {
+                "withGlobal": {"id": issue_id},
+                "withoutGlobal": None,
+            }
+
+    if kind == "user":
+        assign_perm("view_issue", user, issue_with_perm)
+    else:
+        assign_perm("view_issue", user.groups.get(), issue_with_perm)
+
+    with gql_client.login(user):
+        issue_id = to_base64("IssueType", issue_no_perm.pk)
+        res = gql_client.query(query, {"id": issue_id})
+        assert res.data == {
+            "withGlobal": {"id": issue_id},
+            "withoutGlobal": None,
+        }
+
+        issue_id = to_base64("IssueType", issue_with_perm.pk)
+        res = gql_client.query(query, {"id": issue_id})
+        assert res.data == {
+            "withGlobal": {"id": issue_id},
+            "withoutGlobal": {"id": issue_id},
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("kind", ["user", "group"])
+def test_list_obj_perm_required_no_global(
+    db, gql_client: GraphQLTestClient, kind: PermKind
+):
+    query = """
+    query Issue {
+        withGlobal: issueListObjPermRequired {
+          id
+        }
+        withoutGlobal: issueListObjPermRequiredNoGlobal {
+          id
+        }
+      }
+    """
+    issue_no_perm = IssueFactory.create()
+    issue_with_perm = IssueFactory.create()
+
+    user = UserFactory.create()
+    _assign_global_perm(kind, user)
+
+    res = gql_client.query(query)
+    assert res.data == {"withGlobal": [], "withoutGlobal": []}
+
+    # The global permission is enough when it is accepted, but not otherwise
+    with gql_client.login(user):
+        res = gql_client.query(query)
+        assert res.data == {
+            "withGlobal": [
+                {"id": to_base64("IssueType", issue_no_perm.pk)},
+                {"id": to_base64("IssueType", issue_with_perm.pk)},
+            ],
+            "withoutGlobal": [],
+        }
+
+    if kind == "user":
+        assign_perm("view_issue", user, issue_with_perm)
+    else:
+        assign_perm("view_issue", user.groups.get(), issue_with_perm)
+
+    with gql_client.login(user):
+        res = gql_client.query(query)
+        assert res.data == {
+            "withGlobal": [
+                {"id": to_base64("IssueType", issue_no_perm.pk)},
+                {"id": to_base64("IssueType", issue_with_perm.pk)},
+            ],
+            "withoutGlobal": [
+                {"id": to_base64("IssueType", issue_with_perm.pk)},
+            ],
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_filter_for_user_no_global_without_obj_perms_backend(
+    db, monkeypatch: pytest.MonkeyPatch
+):
+    IssueFactory.create()
+    user = UserFactory.create()
+    user.user_permissions.add(Permission.objects.get(codename="view_issue"))
+
+    # Make the guardian integration unavailable, leaving no backend to check
+    # object permissions against
+    monkeypatch.setitem(sys.modules, "strawberry_django.integrations.guardian", None)
+
+    qs = Issue.objects.all()
+    assert filter_for_user(qs, user, "projects.view_issue").count() == 1
+    assert (
+        filter_for_user(
+            qs,
+            user,
+            "projects.view_issue",
+            accept_global_perms=False,
+        ).count()
+        == 0
+    )
+
+
+def test_perm_no_global_requires_obj_perm_target():
+    with pytest.raises(ValueError, match="accept_global_perms=False"):
+        HasPerm("projects.view_issue", accept_global_perms=False)
+
+    with pytest.raises(ValueError, match="accept_global_perms=False"):
+        HasRetvalPerm(
+            "projects.view_issue",
+            target=PermTarget.GLOBAL,
+            accept_global_perms=False,
+        )
+
+    assert not HasSourcePerm(
+        "projects.view_issue", accept_global_perms=False
+    ).accept_global_perms
+    assert not HasRetvalPerm(
+        "projects.view_issue", accept_global_perms=False
+    ).accept_global_perms
 
 
 @pytest.mark.django_db(transaction=True)

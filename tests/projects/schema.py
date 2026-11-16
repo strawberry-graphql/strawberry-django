@@ -568,6 +568,20 @@ class Query:
             extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
         )
     )
+    # User permission on the resolved object for "projects.view_issue",
+    # without considering the user's global permissions
+    issue_obj_perm_required_no_global_optional: IssueType | None = (
+        strawberry_django.node(
+            extensions=[
+                HasRetvalPerm(perms=["projects.view_issue"], accept_global_perms=False)
+            ],
+        )
+    )
+    issue_list_obj_perm_required_no_global: list[IssueType] = strawberry_django.field(
+        extensions=[
+            HasRetvalPerm(perms=["projects.view_issue"], accept_global_perms=False)
+        ],
+    )
 
     @strawberry_django.field(
         extensions=[HasPerm(perms=["projects.view_issue"], with_superuser=True)]
