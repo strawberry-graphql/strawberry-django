@@ -33,6 +33,7 @@ from strawberry_django.fields.types import (
     OneToManyInput,
     OneToOneInput,
 )
+from strawberry_django.relay.utils import ensure_model_instance
 from strawberry_django.settings import strawberry_django_settings
 from strawberry_django.utils.inspect import get_model_fields
 
@@ -131,6 +132,10 @@ def _parse_data(
                         exclude_m2m=[related_field.name],
                     )
                 elif isinstance(v.pk, models.Model) and v.data:
+                    related_field = get_model_fields(model).get(k)
+                    related_model = getattr(related_field, "related_model", None)
+                    if isinstance(related_model, type):
+                        ensure_model_instance(v.pk, related_model)
                     v = update(  # ruff: ignore[redefined-loop-name]
                         info, v.pk, v.data, key_attr=key_attr, full_clean=full_clean
                     )

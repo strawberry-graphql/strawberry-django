@@ -9,6 +9,8 @@ from django.db.models import Model
 from strawberry import UNSET
 from typing_extensions import TypedDict
 
+from strawberry_django.relay.utils import ensure_model_instance
+
 _T = TypeVar("_T")  # ruff: ignore[unused-private-type-var]
 _M = TypeVar("_M", bound=Model)
 InputListTypes: TypeAlias = Union[strawberry.ID, "ParsedObject"]
@@ -30,8 +32,7 @@ class ParsedObject:
             return None, self.data
 
         if isinstance(self.pk, models.Model):
-            assert isinstance(self.pk, model)
-            return self.pk, self.data
+            return ensure_model_instance(self.pk, model), self.data
 
         return model._default_manager.get(pk=self.pk), self.data
 
