@@ -28,9 +28,33 @@ def test_create(mutation):
     ]
 
 
+def test_create_preserves_model_clean_changes(mutation, monkeypatch):
+    def clean(instance):
+        instance.name = instance.name.strip().lower()
+        instance.sweetness = 9
+
+    monkeypatch.setattr(models.Fruit, "clean", clean)
+
+    result = mutation(
+        '{ fruit: createFruit(data: { name: " Strawberry " }) { id name sweetness } }',
+    )
+
+    assert not result.errors
+    assert result.data["fruit"] == {
+        "id": "1",
+        "name": "strawberry",
+        "sweetness": 9,
+    }
+    fruit = models.Fruit.objects.get()
+    assert fruit.name == "strawberry"
+    assert fruit.sweetness == 9
+
+
 def test_create_with_optional_file(mutation):
     fname = "test_create_with_optional_file.png"
     upload = prep_image(fname)
+    contents = upload.read()
+    upload.seek(0)
     result = mutation(
         """\
         CreateFruit($picture: Upload!) {
@@ -47,11 +71,15 @@ def test_create_with_optional_file(mutation):
     )
 
     assert not result.errors
+    fruit = models.Fruit.objects.get()
     assert result.data["createFruit"] == {
         "id": "1",
         "name": "strawberry",
-        "picture": {"name": f".tmp_upload/{fname}"},
+        "picture": {"name": fruit.picture.name},
     }
+    assert fruit.picture.name.startswith(".tmp_upload/test_create_with_optional_file")
+    with fruit.picture.open("rb") as picture:
+        assert picture.read() == contents
 
 
 def test_create_with_optional_file_when_not_setting_it(mutation):
