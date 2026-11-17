@@ -7,6 +7,7 @@ import dataclasses
 import inspect
 import itertools
 from collections.abc import Callable
+from types import MethodType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,9 +15,10 @@ from typing import (
     cast,
 )
 
+from asgiref.sync import sync_to_async
 from django.core.exceptions import FieldDoesNotExist
-from django.db import models
-from django.db.models import Prefetch
+from django.db import connections, models
+from django.db.models import Prefetch, prefetch_related_objects
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.expressions import BaseExpression, Combinable
 from django.db.models.fields.reverse_related import (
@@ -85,7 +87,7 @@ from .utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import AsyncGenerator, Generator
 
     from django.contrib.contenttypes.fields import GenericRelation
     from strawberry.types.execution import ExecutionContext
@@ -107,6 +109,194 @@ _M = TypeVar("_M", bound=models.Model)
 
 _sentinel = object()
 _annotate_placeholder = "__annotated_placeholder__"
+
+
+def _inheritance_lookup_model(
+    model: type[models.Model], lookup: str
+) -> type[models.Model] | None:
+    """Return the child model selected by the first inheritance accessor."""
+    name = lookup.split(LOOKUP_SEP, 1)[0]
+    try:
+        relation = model._meta.get_field(name)
+    except FieldDoesNotExist:
+        return None
+
+    if (
+        isinstance(relation, OneToOneRel)
+        and relation.parent_link
+        and isinstance(relation.related_model, type)
+        and issubclass(relation.related_model, model)
+    ):
+        return relation.related_model
+    return None
+
+
+def _without_lookup_prefix(prefetch: str | Prefetch, prefix: str) -> str | Prefetch:
+    path = prefetch if isinstance(prefetch, str) else prefetch.prefetch_through
+    path = path.removeprefix(f"{prefix}{LOOKUP_SEP}")
+    if isinstance(prefetch, str):
+        return path
+
+    rewritten = copy.copy(prefetch)
+    rewritten.prefetch_through = path
+    rewritten.prefetch_to = rewritten.prefetch_to.removeprefix(f"{prefix}{LOOKUP_SEP}")
+    return rewritten
+
+
+def _prefetch_inheritance_results(qs: QuerySet, results: list[models.Model]) -> None:
+    """Prefetch child paths on concrete objects returned by model-utils."""
+    normal: list[str | Prefetch] = []
+    inherited: dict[type[models.Model], list[str | Prefetch]] = {}
+    for lookup in getattr(qs, "_prefetch_related_lookups", ()):
+        prefetch = lookup
+        path = prefetch if isinstance(prefetch, str) else prefetch.prefetch_through
+        model = qs.model
+        concrete_model = _inheritance_lookup_model(model, path)
+        if concrete_model is None or LOOKUP_SEP not in path:
+            normal.append(prefetch)
+            continue
+
+        while concrete_model is not None and LOOKUP_SEP in path:
+            prefix, _, _ = path.partition(LOOKUP_SEP)
+            prefetch = _without_lookup_prefix(prefetch, prefix)
+            path = prefetch if isinstance(prefetch, str) else prefetch.prefetch_through
+            model = concrete_model
+            concrete_model = _inheritance_lookup_model(model, path)
+
+        inherited.setdefault(model, []).append(prefetch)
+
+    cohorts: dict[
+        tuple[type[models.Model], ...],
+        list[models.Model],
+    ] = {}
+    for obj in results:
+        models_for_obj = tuple(model for model in inherited if isinstance(obj, model))
+        if models_for_obj:
+            cohorts.setdefault(models_for_obj, []).append(obj)
+
+    for models_for_cohort, children in cohorts.items():
+        prefetches = [
+            prefetch for model in models_for_cohort for prefetch in inherited[model]
+        ]
+        # A custom prefetch for a parent path must run before a descendant
+        # lookup can implicitly populate that path with its default queryset.
+        # Prefer an explicit Prefetch when rewritten lookups have equal depth,
+        # so a default string lookup cannot hide its filtered queryset.
+        prefetches.sort(
+            key=lambda prefetch: (
+                (
+                    prefetch if isinstance(prefetch, str) else prefetch.prefetch_through
+                ).count(LOOKUP_SEP),
+                isinstance(prefetch, str),
+            )
+        )
+        prefetch_related_objects(children, *prefetches)
+
+    if normal:
+        prefetch_related_objects(results, *normal)
+
+
+def _prefetch_inheritance_related_objects(qs: QuerySet) -> None:
+    """Prefetch inheritance paths after normal queryset evaluation."""
+    results = getattr(qs, "_result_cache", None) or []
+    _prefetch_inheritance_results(qs, results)
+    qs._prefetch_done = True  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def _iterator_inheritance_queryset(
+    qs: QuerySet,
+    use_chunked_fetch: bool,
+    chunk_size: int | None,
+) -> Generator[models.Model, None, None]:
+    """Iterate while prefetching inheritance paths on each result chunk."""
+    iterable = qs._iterable_class(  # pyright: ignore[reportAttributeAccessIssue]
+        qs,
+        chunked_fetch=use_chunked_fetch,
+        chunk_size=chunk_size or 2000,
+    )
+    if chunk_size is None:
+        yield from iterable
+        return
+
+    iterator = iter(iterable)
+    while results := list(itertools.islice(iterator, chunk_size)):
+        _prefetch_inheritance_results(qs, results)
+        yield from results
+
+
+async def _aiterator_inheritance_queryset(
+    qs: QuerySet,
+    chunk_size: int = 2000,
+) -> AsyncGenerator[models.Model, None]:
+    """Asynchronously iterate and prefetch each inheritance result chunk."""
+    if chunk_size <= 0:
+        raise ValueError("Chunk size must be strictly positive.")
+
+    use_chunked_fetch = not connections[qs.db].settings_dict.get(
+        "DISABLE_SERVER_SIDE_CURSORS"
+    )
+    iterable = qs._iterable_class(  # pyright: ignore[reportAttributeAccessIssue]
+        qs,
+        chunked_fetch=use_chunked_fetch,
+        chunk_size=chunk_size,
+    )
+    results: list[models.Model] = []
+    async for item in iterable:
+        results.append(item)
+        if len(results) >= chunk_size:
+            await sync_to_async(
+                _prefetch_inheritance_results,
+                thread_sensitive=True,
+            )(qs, results)
+            for result in results:
+                yield result
+            results.clear()
+
+    if results:
+        await sync_to_async(
+            _prefetch_inheritance_results,
+            thread_sensitive=True,
+        )(qs, results)
+        for result in results:
+            yield result
+
+
+def _normalize_inherited_hints(
+    store: OptimizerStore,
+    model: type[models.Model],
+    root_model: type[models.Model],
+    prefix: str,
+) -> None:
+    """Use an inherited relation directly on the downcast child instance."""
+    prefix_with_sep = f"{prefix}{LOOKUP_SEP}"
+
+    def is_inherited(path: str) -> bool:
+        if not path.startswith(prefix_with_sep):
+            return False
+        name = path[len(prefix_with_sep) :].split(LOOKUP_SEP, 1)[0]
+        try:
+            field = model._meta.get_field(name)
+        except FieldDoesNotExist:
+            return False
+        return (
+            field.model is not model
+            and not field.model._meta.abstract
+            and issubclass(root_model, field.model)
+        )
+
+    store.only = [
+        path[len(prefix_with_sep) :] if is_inherited(path) else path
+        for path in store.only
+    ]
+    store.prefetch_related = [
+        _without_lookup_prefix(prefetch, prefix)
+        if isinstance(prefetch, (str, Prefetch))
+        and is_inherited(
+            prefetch if isinstance(prefetch, str) else prefetch.prefetch_through
+        )
+        else prefetch
+        for prefetch in store.prefetch_related
+    ]
 
 
 @dataclasses.dataclass
@@ -316,6 +506,15 @@ class OptimizerStore:
             qs._annotated = list(  # pyright: ignore[reportAttributeAccessIssue]
                 qs.query.annotation_select  # pyright: ignore[reportAttributeAccessIssue]
             )
+            if getattr(qs, "_prefetch_related_lookups", ()):
+                qs._prefetch_related_objects = MethodType(  # type: ignore[method-assign]
+                    _prefetch_inheritance_related_objects, qs
+                )
+                qs._iterator = MethodType(  # type: ignore[method-assign]
+                    _iterator_inheritance_queryset, qs
+                )
+                qs.aiterator = MethodType(_aiterator_inheritance_queryset, qs)
+                get_queryset_config(qs).inheritance_prefetch = True
 
         return qs
 
@@ -1338,7 +1537,7 @@ def _get_model_hints(
                 prefix = LOOKUP_SEP.join(
                     p.join_field.get_accessor_name() for p in path_from_parent
                 )
-                return _get_model_hints(
+                store = _get_model_hints(
                     dj_definition.model,
                     schema,
                     object_definition,
@@ -1347,6 +1546,11 @@ def _get_model_hints(
                     config=config,
                     prefix=prefix,
                 )
+                if store is not None:
+                    _normalize_inherited_hints(
+                        store, dj_definition.model, model, prefix
+                    )
+                return store
 
         return None
 

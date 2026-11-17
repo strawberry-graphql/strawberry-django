@@ -1,19 +1,358 @@
+from typing import Any
+
 import pytest
+from asgiref.sync import async_to_sync
+from django.contrib.contenttypes.prefetch import (  # pyright: ignore[reportMissingImports]
+    GenericPrefetch,
+)
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.utils import CaptureQueriesContext
 
+from strawberry_django.optimizer import (
+    _without_lookup_prefix,  # ruff: ignore[import-private-name]
+)
 from tests.utils import assert_num_queries
 
 from .models import (
     AndroidProject,
     ArtProject,
+    ArtProjectTag,
     Company,
     EngineeringProject,
     IOSProject,
+    ProjectNote,
     ResearchProject,
     SoftwareProject,
 )
 from .schema import schema
+
+
+def test_rewritten_inheritance_prefetch_preserves_prefetch_subclass():
+    queryset = ArtProjectTag.objects.filter(name="included")
+    prefetch = GenericPrefetch(
+        "artproject__content_object",
+        [queryset],
+        to_attr="target",
+    )
+
+    rewritten: Any = _without_lookup_prefix(prefetch, "artproject")
+
+    assert isinstance(rewritten, GenericPrefetch)
+    assert rewritten.prefetch_through == "content_object"
+    assert rewritten.prefetch_to == "target"
+    assert len(rewritten.querysets) == 1
+    assert rewritten.querysets[0].model is ArtProjectTag
+    assert str(rewritten.querysets[0].query) == str(queryset.query)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset():
+    first = ArtProject.objects.create(topic="First", artist="Artist")
+    second = ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=first, text="first note")
+    ProjectNote.objects.create(project=second, text="second note")
+    ArtProjectTag.objects.create(project=first, name="first tag")
+    ArtProjectTag.objects.create(project=second, name="second tag")
+
+    query = """
+    query {
+      projects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "first note"}],
+                "tags": [{"name": "first tag"}],
+            },
+            {
+                "topic": "Second",
+                "notes": [{"text": "second note"}],
+                "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset_iterator():
+    first = ArtProject.objects.create(topic="First", artist="Artist")
+    second = ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=first, text="first note")
+    ProjectNote.objects.create(project=second, text="second note")
+    ArtProjectTag.objects.create(project=first, name="first tag")
+    ArtProjectTag.objects.create(project=second, name="second tag")
+
+    query = """
+    query {
+      iteratedProjects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "iteratedProjects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "first note"}],
+                "tags": [{"name": "first tag"}],
+            },
+            {
+                "topic": "Second",
+                "notes": [{"text": "second note"}],
+                "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inherited_queryset_iterator_without_chunk_size():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProjectTag.objects.create(project=project, name="tag")
+
+    query = """
+    query Test($chunkSize: Int) {
+      iteratedProjects(chunkSize: $chunkSize) {
+        topic
+        ... on ArtProjectType {
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query, variable_values={"chunkSize": None})
+    assert not result.errors
+    assert result.data == {
+        "iteratedProjects": [
+            {
+                "topic": "First",
+                "tags": [{"name": "tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.parametrize("chunk_size", [2, 3])
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_on_inherited_queryset_aiterator(chunk_size: int):
+    first = ArtProject.objects.create(topic="First", artist="Artist")
+    second = ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=first, text="first note")
+    ProjectNote.objects.create(project=second, text="second note")
+    ArtProjectTag.objects.create(project=first, name="first tag")
+    ArtProjectTag.objects.create(project=second, name="second tag")
+
+    query = """
+    query Test($chunkSize: Int!) {
+      aiteratedProjects(chunkSize: $chunkSize) {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = async_to_sync(schema.execute)(
+            query,
+            variable_values={"chunkSize": chunk_size},
+        )
+    assert not result.errors
+    assert result.data == {
+        "aiteratedProjects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "first note"}],
+                "tags": [{"name": "first tag"}],
+            },
+            {
+                "topic": "Second",
+                "notes": [{"text": "second note"}],
+                "tags": [{"name": "second tag"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inherited_queryset_aiterator_rejects_non_positive_chunk_size():
+    query = """
+    query {
+      aiteratedProjects(chunkSize: 0) {
+        ... on ArtProjectType {
+          tags { name }
+        }
+      }
+    }
+    """
+
+    result = async_to_sync(schema.execute)(query)
+
+    assert result.data is None
+    assert result.errors
+    assert result.errors[0].message == "Chunk size must be strictly positive."
+
+
+@pytest.mark.django_db(transaction=True)
+def test_filtered_prefetch_on_inherited_queryset_is_not_ignored():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProjectTag.objects.create(project=project, name="included")
+    ArtProjectTag.objects.create(project=project, name="excluded")
+
+    query = """
+    query {
+      filteredPrefetchedProjects {
+        topic
+        ... on ArtProjectType {
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "filteredPrefetchedProjects": [
+            {
+                "topic": "First",
+                "tags": [{"name": "included"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_filtered_prefetch_is_not_ignored_across_inheritance_levels():
+    android_project = AndroidProject.objects.create(
+        topic="Android",
+        timeline="3 months",
+        repository="https://example.com/android",
+        android_version="14",
+    )
+    ios_project = IOSProject.objects.create(
+        topic="iOS",
+        timeline="3 months",
+        repository="https://example.com/ios",
+        ios_version="16",
+    )
+    ProjectNote.objects.create(project=android_project, text="included")
+    ProjectNote.objects.create(project=android_project, text="excluded")
+    ProjectNote.objects.create(project=ios_project, text="iOS first")
+    ProjectNote.objects.create(project=ios_project, text="iOS second")
+
+    query = """
+    query {
+      filteredPrefetchedMultilevelProjects {
+        ... on AndroidProjectType {
+          notes { text }
+        }
+        ... on IOSProjectType {
+          notes { text }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "filteredPrefetchedMultilevelProjects": [
+            {
+                "notes": [{"text": "included"}],
+            },
+            {
+                "notes": [{"text": "iOS first"}, {"text": "iOS second"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_inheritance_prefetch_supports_dependent_to_attr_lookup():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProjectTag.objects.create(project=project, name="included")
+    ArtProjectTag.objects.create(project=project, name="excluded")
+
+    query = """
+    query {
+      projects {
+        ... on ArtProjectType {
+          filteredTagsToAttr { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(2):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "projects": [
+            {
+                "filteredTagsToAttr": [{"name": "included"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prefetch_relations_after_cloning_inherited_queryset():
+    project = ArtProject.objects.create(topic="First", artist="Artist")
+    ArtProject.objects.create(topic="Second", artist="Artist")
+    ProjectNote.objects.create(project=project, text="note")
+    ArtProjectTag.objects.create(project=project, name="tag")
+
+    query = """
+    query {
+      clonedProjects {
+        topic
+        ... on ArtProjectType {
+          notes { text }
+          tags { name }
+        }
+      }
+    }
+    """
+
+    with assert_num_queries(3):
+        result = schema.execute_sync(query)
+    assert not result.errors
+    assert result.data == {
+        "clonedProjects": [
+            {
+                "topic": "First",
+                "notes": [{"text": "note"}],
+                "tags": [{"name": "tag"}],
+            }
+        ]
+    }
 
 
 @pytest.mark.django_db(transaction=True)
