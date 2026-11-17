@@ -516,3 +516,37 @@ def test_order_nulls(query, db, fruits):
         {"id": str(f3.id)},
         {"id": str(f2.id)},
     ]
+
+
+def test_order_field_with_sequence_and_variables(db, fruits):
+    received_sequences = []
+
+    @strawberry_django.ordering.order(models.Fruit)
+    class SequenceFruitOrder:
+        @strawberry_django.order_field
+        def name(self, prefix: str, value: auto, sequence):
+            received_sequences.append(sequence)
+            return [value.resolve(f"{prefix}name")]
+
+    @strawberry.type
+    class Query:
+        fruits: list[Fruit] = strawberry_django.field(order=SequenceFruitOrder)
+
+    schema = strawberry.Schema(query=Query)
+    expected = {
+        "fruits": [{"name": "banana"}, {"name": "raspberry"}, {"name": "strawberry"}]
+    }
+
+    result = schema.execute_sync("{ fruits(order: { name: ASC }) { name } }")
+    assert not result.errors
+    assert result.data == expected
+
+    # The sequence isn't known when the order is given through a variable
+    result = schema.execute_sync(
+        "query Fruits($order: SequenceFruitOrder) { fruits(order: $order) { name } }",
+        variable_values={"order": {"name": "ASC"}},
+    )
+    assert not result.errors
+    assert result.data == expected
+
+    assert received_sequences == [{}, {}]

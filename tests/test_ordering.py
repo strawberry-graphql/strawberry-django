@@ -475,3 +475,27 @@ def test_order_nulls(query, db, fruits):
         {"id": str(f3.id)},
         {"id": str(f2.id)},
     ]
+
+
+def test_order_field_with_sequence(db, fruits):
+    received_sequences = []
+
+    @strawberry_django.order_type(models.Fruit)
+    class SequenceFruitOrder:
+        @strawberry_django.order_field
+        def name(self, prefix: str, value: auto, sequence):
+            received_sequences.append(sequence)
+            return [value.resolve(f"{prefix}name")]
+
+    @strawberry.type
+    class Query:
+        fruits: list[Fruit] = strawberry_django.field(ordering=SequenceFruitOrder)
+
+    schema = strawberry.Schema(query=Query)
+
+    result = schema.execute_sync("{ fruits(ordering: [{ name: ASC }]) { name } }")
+    assert not result.errors
+    assert result.data == {
+        "fruits": [{"name": "banana"}, {"name": "raspberry"}, {"name": "strawberry"}]
+    }
+    assert received_sequences == [{}]
