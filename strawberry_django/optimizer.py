@@ -1685,31 +1685,37 @@ def optimize(
     if strawberry_type is None:
         return qs
 
+    from strawberry_django.permissions import reset_perm_context
+
     inheritance_qs = is_inheritance_qs(qs)
     subclasses = set() if inheritance_qs else None
 
-    for inner_object_definition in get_possible_concrete_types(
-        qs.model, schema, strawberry_type
-    ):
-        parent_type = _get_gql_definition(schema, inner_object_definition)
-        new_store = _get_model_hints(
-            qs.model,
-            schema,
-            inner_object_definition,
-            parent_type=parent_type,
-            info=info,
-            config=config,
-            subclass_collection=subclasses,
-        )
-        if new_store is not None:
-            store |= new_store
+    # Isolate perm_context so a parent field's HasRetvalPerm checkers cannot leak
+    # into nested relation prefetch querysets (which target different models/apps)
+    # or prematurely mark the parent perm_context as safe.
+    with reset_perm_context():
+        for inner_object_definition in get_possible_concrete_types(
+            qs.model, schema, strawberry_type
+        ):
+            parent_type = _get_gql_definition(schema, inner_object_definition)
+            new_store = _get_model_hints(
+                qs.model,
+                schema,
+                inner_object_definition,
+                parent_type=parent_type,
+                info=info,
+                config=config,
+                subclass_collection=subclasses,
+            )
+            if new_store is not None:
+                store |= new_store
 
-    if store:
-        if inheritance_qs and subclasses:
-            qs = qs.select_subclasses(*subclasses)
-        qs = store.apply(qs, info=info, config=config)
-        qs_config = get_queryset_config(qs)
-        qs_config.optimized = True
+        if store:
+            if inheritance_qs and subclasses:
+                qs = qs.select_subclasses(*subclasses)
+            qs = store.apply(qs, info=info, config=config)
+            qs_config = get_queryset_config(qs)
+            qs_config.optimized = True
 
     return qs
 
