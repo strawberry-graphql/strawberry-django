@@ -1,7 +1,12 @@
+import dataclasses
+import json
+
 import pytest
 import strawberry
 from asgiref.sync import sync_to_async
+from django.http import HttpRequest
 from strawberry import auto, relay
+from strawberry.django.views import GraphQLView
 
 import strawberry_django
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -270,6 +275,35 @@ def test_queryset_with_optimizer_runs_a_single_query(sweet_fruits):
             {"name": "banana", "color": {"name": "red"}},
             {"name": "raspberry", "color": {"name": "red"}},
         ],
+    }
+
+
+def test_queryset_with_view_root_value(sweet_fruits, rf):
+    @dataclasses.dataclass
+    class Root:
+        request: HttpRequest
+
+    class View(GraphQLView):
+        def get_root_value(self, request):
+            return Root(request=request)
+
+    view = View.as_view(schema=strawberry.Schema(query=Query))
+    request = rf.post(
+        "/graphql/",
+        {"query": "{ sweetFruits { name } sweetFruitsConnection { totalCount } }"},
+        content_type="application/json",
+    )
+
+    result = json.loads(view(request).content)
+
+    assert "errors" not in result
+    assert result["data"] == {
+        "sweetFruits": [
+            {"name": "strawberry"},
+            {"name": "banana"},
+            {"name": "raspberry"},
+        ],
+        "sweetFruitsConnection": {"totalCount": 3},
     }
 
 

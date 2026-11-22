@@ -238,15 +238,16 @@ class StrawberryDjangoField(
             assert info
             result = self.resolver(source, info, args, resolver_kwargs)
             is_awaitable = inspect.isawaitable(result)
+        elif self.queryset is not None:
+            # A configured queryset is used whatever the source is, as custom
+            # root values (e.g. from `get_root_value`) are not model instances.
+            # `all()` returns a fresh copy, so the results cached by a
+            # previous request are never reused
+            result = self.queryset.all()
         elif source is None:
-            if self.queryset is not None:
-                # `all()` returns a fresh copy, so the results cached by a
-                # previous request are never reused
-                result = self.queryset.all()
-            else:
-                model = self.django_model
-                assert model is not None
-                result = model._default_manager.all()
+            model = self.django_model
+            assert model is not None
+            result = model._default_manager.all()
         else:
             # Small optimization to async resolvers avoid having to call it in an
             # sync_to_async context if the value is already cached, since it will not
@@ -507,7 +508,14 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
                 django_type = field.django_type
 
-                if root is not None:
+                if field.queryset is not None:
+                    # A configured queryset is used whatever the root is. The
+                    # type's `get_queryset`, permissions, filters, ordering and
+                    # the optimizer are applied to it by `get_queryset_hook`.
+                    # `all()` doesn't evaluate it, so this is safe to run on the
+                    # event loop.
+                    retval = field.queryset.all()
+                elif root is not None:
                     # If this is a nested field, call get_result instead because we want
                     # to retrieve the queryset from its RelatedManager. Accessing the
                     # manager and calling `.all()` builds the queryset without
@@ -517,12 +525,6 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
                         "models.QuerySet",
                         getattr(root, field.django_name or field.python_name).all(),
                     )
-                elif field.queryset is not None:
-                    # The type's `get_queryset`, permissions, filters, ordering and
-                    # the optimizer are applied to it by `get_queryset_hook`.
-                    # `all()` doesn't evaluate it, so this is safe to run on the
-                    # event loop.
-                    retval = field.queryset.all()
                 else:
                     if django_type is None:
                         raise TypeError(
