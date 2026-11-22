@@ -284,7 +284,7 @@ def test_queryset_with_view_root_value(sweet_fruits, rf):
         request: HttpRequest
 
     class View(GraphQLView):
-        def get_root_value(self, request):
+        def get_root_value(self, request):  # type: ignore
             return Root(request=request)
 
     view = View.as_view(schema=strawberry.Schema(query=Query))
