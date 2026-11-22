@@ -78,8 +78,25 @@ def filter_for_user_q(
     except FieldDoesNotExist:
         with_groups = False
 
-    if isinstance(perms, str):
-        perms = [perms]
+    perms = [perms] if isinstance(perms, str) else list(perms)
+
+    if not any_perm and len(perms) > 1:
+        # Permissions are stored one per row (both the global and the object ones),
+        # so requiring all of them needs to be checked one permission at a time,
+        # otherwise an object having only some of them would match.
+        q = Q()
+        for p in perms:
+            perm_q = filter_for_user_q(
+                qs,
+                user,
+                [p],
+                with_groups=with_groups,
+                with_superuser=with_superuser,
+                with_global_perms=with_global_perms,
+            )
+            if isinstance(perm_q, Q):
+                q &= perm_q
+        return q
 
     model = cast("type[Model]", qs.model)
     if model._meta.concrete_model:

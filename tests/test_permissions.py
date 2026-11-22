@@ -1087,6 +1087,42 @@ def test_filter_for_user_no_global_without_obj_perms_backend(
     )
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("with_global_perms", [True, False])
+def test_filter_for_user_all_perms_requires_every_perm(db, with_global_perms: bool):
+    issue_all = IssueFactory.create()
+    issue_partial = IssueFactory.create()
+    user = UserFactory.create()
+    group = GroupFactory.create()
+    user.groups.add(group)
+
+    # Permissions can be split between the user and its groups
+    assign_perm("view_issue", user, issue_all)
+    assign_perm("change_issue", group, issue_all)
+    assign_perm("view_issue", user, issue_partial)
+
+    qs = Issue.objects.all()
+    perms = ["projects.view_issue", "projects.change_issue"]
+    assert list(
+        filter_for_user(
+            qs,
+            user,
+            perms,
+            any_perm=False,
+            with_global_perms=with_global_perms,
+        ),
+    ) == [issue_all]
+    assert set(
+        filter_for_user(
+            qs,
+            user,
+            perms,
+            any_perm=True,
+            with_global_perms=with_global_perms,
+        ),
+    ) == {issue_all, issue_partial}
+
+
 def test_perm_no_global_requires_obj_perm_target():
     with pytest.raises(ValueError, match="with_global_perms=False"):
         HasPerm("projects.view_issue", with_global_perms=False)
