@@ -24,6 +24,7 @@ from strawberry.types.enum import EnumValue, StrawberryEnumDefinition
 
 import strawberry_django
 from strawberry_django.fields.field import StrawberryDjangoField
+from strawberry_django.fields.types import resolve_model_field_lookup_type
 from strawberry_django.type import _process_type  # ruff: ignore[import-private-name]
 
 
@@ -240,6 +241,48 @@ def test_field_does_not_exist():
         @strawberry_django.type(FieldTypesModel)
         class Type:
             unknown_field: auto
+
+
+@pytest.mark.parametrize(
+    ("field_name", "expected_type"),
+    [
+        ("pk", strawberry.ID),
+        ("id", strawberry.ID),
+        ("char", str),
+        ("integer", int),
+        ("date", dt.date),
+        ("uuid", uuid.UUID),
+        ("json", JSON),
+        ("generated_decimal", decimal.Decimal),
+        # Relations are typed as the field they point to
+        ("foreign_key", strawberry.ID),
+        ("one_to_one", strawberry.ID),
+        # Fields that are not mapped to a scalar fall back to ID
+        ("file", strawberry.ID),
+        ("image", strawberry.ID),
+    ],
+)
+def test_lookup_type(field_name: str, expected_type: Any):
+    assert resolve_model_field_lookup_type(FieldTypesModel, field_name) is expected_type
+
+
+@pytest.mark.parametrize(
+    "field_name", ["many_to_many", "related_foreign_key", "related_one_to_one"]
+)
+def test_lookup_type_not_concrete(field_name: str):
+    with pytest.raises(
+        TypeError,
+        match=(
+            rf"Cannot look up FieldTypesModel by '{field_name}': "
+            r"only concrete model fields can be used as a lookup key"
+        ),
+    ):
+        resolve_model_field_lookup_type(FieldTypesModel, field_name)
+
+
+def test_lookup_type_field_does_not_exist():
+    with pytest.raises(FieldDoesNotExist):
+        resolve_model_field_lookup_type(FieldTypesModel, "unknown_field")
 
 
 def test_override_field_type():

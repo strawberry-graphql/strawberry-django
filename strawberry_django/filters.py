@@ -288,11 +288,14 @@ def apply(
     queryset: _QS,
     info: Info | None = None,
     pk: Any | None = None,
+    *,
+    lookup_key: str | None = None,
 ) -> _QS:
     if pk not in (None, strawberry.UNSET):  # ruff: ignore[literal-membership]
-        settings = strawberry_django_settings()
-        pk_field_name = settings["DEFAULT_PK_FIELD_NAME"]
-        queryset = queryset.filter(**{pk_field_name: pk})
+        if lookup_key is None:
+            settings = strawberry_django_settings()
+            lookup_key = settings["DEFAULT_PK_FIELD_NAME"]
+        queryset = queryset.filter(**{lookup_key: pk})
 
     if filters in (None, strawberry.UNSET) or not has_django_definition(filters):  # ruff: ignore[literal-membership]
         return queryset
@@ -306,7 +309,12 @@ def apply(
 
 
 class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
-    def __init__(self, filters: type | UnsetType | None = UNSET, **kwargs):
+    def __init__(
+        self,
+        filters: type | UnsetType | None = UNSET,
+        lookup_key: str | None = None,
+        **kwargs,
+    ):
         if filters and get_origin(filters) is Annotated:
             filters = get_type_from_lazy_annotation(filters) or filters
 
@@ -314,11 +322,13 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
             raise TypeError("filters needs to be a strawberry type")
 
         self.filters = filters
+        self.lookup_key = lookup_key
         super().__init__(**kwargs)
 
     def __copy__(self) -> Self:
         new_field = super().__copy__()
         new_field.filters = self.filters
+        new_field.lookup_key = self.lookup_key
         return new_field
 
     @property
@@ -348,11 +358,8 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
                 and not self.is_connection
                 and not self.is_paginated
             ):
-                settings = strawberry_django_settings()
                 arguments.append(
-                    argument(
-                        settings["DEFAULT_PK_FIELD_NAME"], cast("type", strawberry.ID)
-                    )
+                    argument(self.get_lookup_key(), self.get_lookup_key_type())
                 )
             elif filters is not None and self.is_list:
                 is_optional = True
@@ -387,6 +394,32 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
 
         return filters if filters is not UNSET else None
 
+    def get_lookup_key(self) -> str:
+        """Return the name of the argument used to retrieve a single object.
+
+        This is `lookup_key` when it is set, or the `DEFAULT_PK_FIELD_NAME`
+        setting otherwise.
+        """
+        if self.lookup_key is not None:
+            return self.lookup_key
+
+        settings = strawberry_django_settings()
+        return settings["DEFAULT_PK_FIELD_NAME"]
+
+    def get_lookup_key_type(self) -> Any:
+        """Return the GraphQL type of the argument used to retrieve a single object.
+
+        The type is resolved from the model field named by `lookup_key`.
+        Without a `lookup_key`, it is `strawberry.ID`.
+        """
+        model = self.django_model
+        if self.lookup_key is None or model is None:
+            return strawberry.ID
+
+        from .fields.types import resolve_model_field_lookup_type
+
+        return resolve_model_field_lookup_type(model, self.lookup_key)
+
     def get_queryset(
         self,
         queryset: _QS,
@@ -395,10 +428,10 @@ class StrawberryDjangoFieldFilters(StrawberryDjangoFieldBase):
         filters: WithStrawberryDjangoObjectDefinition | None = None,
         **kwargs,
     ) -> _QS:
-        settings = strawberry_django_settings()
-        pk = kwargs.get(settings["DEFAULT_PK_FIELD_NAME"])
+        lookup_key = self.get_lookup_key()
+        pk = kwargs.get(lookup_key)
         queryset = super().get_queryset(queryset, info, **kwargs)
-        return apply(filters, queryset, info, pk)
+        return apply(filters, queryset, info, pk, lookup_key=lookup_key)
 
 
 @dataclass_transform(
