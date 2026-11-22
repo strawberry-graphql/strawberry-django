@@ -1,6 +1,23 @@
 CHANGELOG
 =========
 
+0.96.5 - 2026-11-22
+-------------------
+
+Fix custom order methods that take a `sequence` argument failing with an `AssertionError`
+when the legacy `order` argument is given through a variable, and every time they are used
+in an `order_type` (through the `ordering` argument). They now receive an empty sequence in
+those cases.
+
+This release was contributed by [@officialasishkumar](https://github.com/officialasishkumar) in [#989](https://github.com/strawberry-graphql/strawberry-django/pull/989)
+
+0.96.4 - 2026-11-22
+-------------------
+
+Isolate `perm_context` during queryset optimization so a parent field's `HasRetvalPerm` does not leak into nested relation prefetch querysets (preventing cross-app `ValueError` errors in mutations and node queries, as well as same-app permission misapplication and early `is_safe` marking).
+
+This release was contributed by [@duhanguler](https://github.com/duhanguler) in [#1001](https://github.com/strawberry-graphql/strawberry-django/pull/1001)
+
 0.96.3 - 2026-11-09
 -------------------
 
