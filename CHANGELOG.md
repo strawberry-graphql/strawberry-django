@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.96.5 - 2026-11-22
+-------------------
+
+Fix custom order methods that take a `sequence` argument failing with an `AssertionError`
+when the legacy `order` argument is given through a variable, and every time they are used
+in an `order_type` (through the `ordering` argument). They now receive an empty sequence in
+those cases.
+
+This release was contributed by [@officialasishkumar](https://github.com/officialasishkumar) in [#989](https://github.com/strawberry-graphql/strawberry-django/pull/989)
+
 0.96.4 - 2026-11-22
 -------------------
 
