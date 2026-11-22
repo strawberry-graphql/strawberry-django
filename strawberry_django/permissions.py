@@ -95,6 +95,15 @@ def with_perm_checker(checker: "HasPerm"):
         perm_context.reset(token)
 
 
+@contextlib.contextmanager
+def reset_perm_context():
+    token = perm_context.set(PermContext())
+    try:
+        yield
+    finally:
+        perm_context.reset(token)
+
+
 def set_perm_safe(value: bool):
     perm_context.get().is_safe_list.append(value)
 
