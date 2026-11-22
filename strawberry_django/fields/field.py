@@ -996,7 +996,6 @@ def connection(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
-    queryset: models.QuerySet | None = None,
 ) -> Any: ...
 
 
@@ -1187,7 +1186,6 @@ def offset_paginated(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
-    queryset: models.QuerySet | None = None,
 ) -> Any: ...
 
 

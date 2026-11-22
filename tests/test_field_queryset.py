@@ -23,6 +23,17 @@ class Fruit:
     sweetness: auto
 
 
+@strawberry_django.type(models.Color)
+class Color:
+    name: auto
+
+
+@strawberry_django.type(models.Fruit)
+class ColoredFruit:
+    name: auto
+    color: Color | None
+
+
 @strawberry_django.type(models.Fruit, filters=FruitFilter)
 class FruitNode(relay.Node):
     name: auto
@@ -55,6 +66,9 @@ class Query:
         strawberry_django.connection(
             queryset=models.Fruit.objects.filter(sweetness__gte=5),
         )
+    )
+    sweet_colored_fruits: list[ColoredFruit] = strawberry_django.field(
+        queryset=models.Fruit.objects.filter(sweetness__gte=5),
     )
     sweet_berries: list[BerryFruit] = strawberry_django.field(
         queryset=models.Fruit.objects.filter(sweetness__gte=5),
@@ -89,6 +103,9 @@ def sweet_fruits(db):
         models.Fruit.objects.create(name="lemon", sweetness=1),
         models.Fruit.objects.create(name="banana", sweetness=6),
         models.Fruit.objects.create(name="raspberry", sweetness=5),
+        # Matches the filters and the type's `get_queryset` used by the tests,
+        # but is not part of the fields' queryset
+        models.Fruit.objects.create(name="blackberry", sweetness=3),
     ]
 
 
@@ -238,17 +255,20 @@ async def test_queryset_is_not_cached_between_executions(query, sweet_fruits):
 
 
 def test_queryset_with_optimizer_runs_a_single_query(sweet_fruits):
+    color = models.Color.objects.create(name="red")
+    models.Fruit.objects.filter(sweetness__gte=5).update(color=color)
     schema = strawberry.Schema(query=Query, extensions=[DjangoOptimizerExtension])
 
+    # Without the optimizer, the color of each fruit would be another query
     with utils.assert_num_queries(1):
-        result = schema.execute_sync("{ sweetFruits { name } }")
+        result = schema.execute_sync("{ sweetColoredFruits { name color { name } } }")
 
     assert not result.errors
     assert result.data == {
-        "sweetFruits": [
-            {"name": "strawberry"},
-            {"name": "banana"},
-            {"name": "raspberry"},
+        "sweetColoredFruits": [
+            {"name": "strawberry", "color": {"name": "red"}},
+            {"name": "banana", "color": {"name": "red"}},
+            {"name": "raspberry", "color": {"name": "red"}},
         ],
     }
 
@@ -272,7 +292,7 @@ def test_queryset_with_resolver_raises():
                 return models.Fruit.objects.all()  # type: ignore
 
     with pytest.raises(TypeError, match="cannot have both a `queryset` and a resolver"):
-        strawberry_django.connection(
+        strawberry_django.connection(  # type: ignore
             resolver=resolver,
             queryset=models.Fruit.objects.all(),
         )
