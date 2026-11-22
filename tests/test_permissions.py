@@ -1100,3 +1100,309 @@ def test_query_paginated_with_obj_permissions(db, gql_client: GraphQLTestClient)
                 ],
             }
         }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_update_mutation_has_retval_perm_with_nested_relations(db):
+    """Ensure HasRetvalPerm on update mutations does not leak into nested prefetches."""
+    import strawberry
+    from django.test import RequestFactory
+    from strawberry.django.context import StrawberryDjangoContext
+
+    import strawberry_django
+    from strawberry_django import mutations
+    from strawberry_django.permissions import HasRetvalPerm, HasSourcePerm
+
+    from .projects.faker import TagFactory
+    from .projects.models import Assignee, Favorite, Issue, Tag, User
+
+    @strawberry_django.type(User)
+    class LocalUserType:
+        id: strawberry.auto
+        username: strawberry.auto
+
+        @classmethod
+        def get_queryset(cls, queryset, info):
+            return queryset
+
+    @strawberry_django.type(Tag)
+    class LocalTagType:
+        id: strawberry.auto
+        name: strawberry.auto
+
+    @strawberry_django.type(Issue)
+    class LocalIssueType:
+        id: strawberry.auto
+        name: strawberry.auto
+        assignees: list[LocalUserType] = strawberry_django.field()
+        tags: list[LocalTagType] = strawberry_django.field()
+
+    @strawberry_django.type(Favorite)
+    class LocalFavoriteType:
+        id: strawberry.auto
+        name: strawberry.auto
+        user: LocalUserType | None = strawberry_django.field(
+            extensions=[HasSourcePerm(perms=["projects.change_favorite"])],
+        )
+
+    @strawberry_django.input(Issue, partial=True)
+    class LocalIssueInput:
+        id: strawberry.auto
+        name: strawberry.auto
+
+    @strawberry_django.input(Favorite, partial=True)
+    class LocalFavoriteInput:
+        id: strawberry.auto
+        name: strawberry.auto
+
+    @strawberry.type
+    class LocalQuery:
+        issue: LocalIssueType = strawberry_django.field()
+
+    @strawberry.type
+    class LocalMutation:
+        update_issue: LocalIssueType = mutations.update(
+            LocalIssueInput,
+            extensions=[HasRetvalPerm(perms=["projects.change_issue"])],
+        )
+        update_favorite: LocalFavoriteType = mutations.update(
+            LocalFavoriteInput,
+            extensions=[HasRetvalPerm(perms=["projects.change_favorite"])],
+        )
+
+    local_schema = strawberry.Schema(
+        query=LocalQuery,
+        mutation=LocalMutation,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    user = UserFactory.create()
+    assignee = UserFactory.create()
+    tag = TagFactory.create(name="urgent")
+    issue = IssueFactory.create(name="Before")
+    Assignee.objects.create(issue=issue, user=assignee)
+    issue.tags.add(tag)
+
+    mutation = """
+    mutation UpdateIssue($data: LocalIssueInput!) {
+      updateIssue(data: $data) {
+        id
+        name
+        assignees {
+          id
+          username
+        }
+        tags {
+          id
+          name
+        }
+      }
+    }
+    """
+
+    rf = RequestFactory()
+    request = rf.post("/graphql")
+    request.user = user
+    context = StrawberryDjangoContext(request=request, response=None)  # type: ignore
+
+    # Without permission: mutation is rejected and DB is not modified
+    res = local_schema.execute_sync(
+        mutation,
+        variable_values={"data": {"id": str(issue.pk), "name": "Denied"}},
+        context_value=context,
+    )
+    assert res.errors is not None
+    issue.refresh_from_db()
+    assert issue.name == "Before"
+
+    # With object permission on Issue only (no perms on User or Tag):
+    # cross-app (assignees -> auth.User) must not raise ValueError, and
+    # same-app (tags -> projects.Tag) must not be filtered by change_issue.
+    assign_perm("projects.change_issue", user, issue)
+    request = rf.post("/graphql")
+    request.user = user
+    context = StrawberryDjangoContext(request=request, response=None)  # type: ignore
+
+    res = local_schema.execute_sync(
+        mutation,
+        variable_values={"data": {"id": str(issue.pk), "name": "After"}},
+        context_value=context,
+    )
+    assert res.errors is None
+    assert res.data == {
+        "updateIssue": {
+            "id": str(issue.pk),
+            "name": "After",
+            "assignees": [{"id": str(assignee.pk), "username": assignee.username}],
+            "tags": [{"id": str(tag.pk), "name": "urgent"}],
+        }
+    }
+
+    # Cross-app ForeignKey with custom get_queryset (triggers Prefetch) + HasSourcePerm
+    favorite = Favorite.objects.create(name="FavBefore", user=assignee, issue=issue)
+    assign_perm("projects.change_favorite", user, favorite)
+    fav_mutation = """
+    mutation UpdateFavorite($data: LocalFavoriteInput!) {
+      updateFavorite(data: $data) {
+        id
+        name
+        user {
+          id
+          username
+        }
+      }
+    }
+    """
+    request = rf.post("/graphql")
+    request.user = user
+    context = StrawberryDjangoContext(request=request, response=None)  # type: ignore
+    res = local_schema.execute_sync(
+        fav_mutation,
+        variable_values={"data": {"id": str(favorite.pk), "name": "FavAfter"}},
+        context_value=context,
+    )
+    assert res.errors is None
+    assert res.data == {
+        "updateFavorite": {
+            "id": str(favorite.pk),
+            "name": "FavAfter",
+            "user": {"id": str(assignee.pk), "username": assignee.username},
+        }
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_node_query_has_retval_perm_with_nested_relations(
+    db, gql_client: GraphQLTestClient
+):
+    """Ensure HasRetvalPerm on node queries does not leak or bypass via nested prefetches."""
+    from .projects.faker import TagFactory
+    from .projects.models import Assignee
+
+    user = UserFactory.create()
+    assignee = StaffUserFactory.create()
+    tag = TagFactory.create(name="backend")
+    issue = IssueFactory.create()
+    Assignee.objects.create(issue=issue, user=assignee)
+    issue.tags.add(tag)
+
+    issue_gid = to_base64("IssueType", issue.pk)
+    same_app_query = """
+    query Issue($id: ID!) {
+      issueObjPermRequired(id: $id) {
+        id
+        tags {
+          name
+        }
+      }
+    }
+    """
+    cross_app_query = """
+    query Issue($id: ID!) {
+      issueObjPermRequired(id: $id) {
+        id
+        staffAssignees {
+          id
+        }
+        tags {
+          name
+        }
+      }
+    }
+    """
+
+    # Unauthorized user selecting a same-app nested relation must STILL be denied
+    with gql_client.login(user):
+        res = gql_client.query(
+            same_app_query,
+            {"id": issue_gid},
+            assert_no_errors=False,
+        )
+        assert res.data is None
+        assert res.errors is not None
+
+    # Authorized user selecting cross-app & same-app nested relations succeeds
+    assign_perm("projects.view_issue", user, issue)
+    with gql_client.login(user):
+        res = gql_client.query(cross_app_query, {"id": issue_gid})
+        assert res.data == {
+            "issueObjPermRequired": {
+                "id": issue_gid,
+                "staffAssignees": [{"id": to_base64("StaffType", assignee.username)}],
+                "tags": [{"name": "backend"}],
+            }
+        }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_nested_field_has_retval_perm_still_enforced(db):
+    """Ensure child field HasRetvalPerm is still enforced when parent context is reset."""
+    import strawberry
+    from django.test import RequestFactory
+    from strawberry.django.context import StrawberryDjangoContext
+
+    import strawberry_django
+    from strawberry_django.permissions import HasRetvalPerm
+
+    from .projects.models import Assignee, Issue, User
+
+    @strawberry_django.type(User)
+    class PermUserType:
+        id: strawberry.auto
+        username: strawberry.auto
+
+    @strawberry_django.type(Issue)
+    class PermIssueType:
+        id: strawberry.auto
+        name: strawberry.auto
+        assignees: list[PermUserType] = strawberry_django.field(
+            extensions=[HasRetvalPerm(perms=["auth.view_user"])],
+        )
+
+    @strawberry.type
+    class LocalQuery:
+        issue: PermIssueType = strawberry_django.field(
+            extensions=[HasRetvalPerm(perms=["projects.view_issue"])],
+        )
+
+    local_schema = strawberry.Schema(
+        query=LocalQuery,
+        extensions=[DjangoOptimizerExtension],
+    )
+
+    user = UserFactory.create()
+    allowed_assignee = UserFactory.create()
+    denied_assignee = UserFactory.create()
+    issue = IssueFactory.create()
+    Assignee.objects.create(issue=issue, user=allowed_assignee)
+    Assignee.objects.create(issue=issue, user=denied_assignee)
+
+    assign_perm("projects.view_issue", user, issue)
+    assign_perm("auth.view_user", user, allowed_assignee)
+
+    query = """
+    query {
+      issue {
+        id
+        assignees {
+          id
+          username
+        }
+      }
+    }
+    """
+    rf = RequestFactory()
+    request = rf.post("/graphql")
+    request.user = user
+    context = StrawberryDjangoContext(request=request, response=None)  # type: ignore
+
+    res = local_schema.execute_sync(query, context_value=context)
+    assert res.errors is None
+    assert res.data == {
+        "issue": {
+            "id": str(issue.pk),
+            "assignees": [
+                {"id": str(allowed_assignee.pk), "username": allowed_assignee.username}
+            ],
+        }
+    }
