@@ -496,6 +496,9 @@ relay_input_field_type_map: dict[
 }
 
 
+_MISSING: Any = object()
+
+
 def _get_mapped_type(model_field_type: type, *type_maps: dict[Any, Any]) -> Any:
     """Get the type mapped to a model field class, or to its closest mapped base class.
 
@@ -506,8 +509,9 @@ def _get_mapped_type(model_field_type: type, *type_maps: dict[Any, Any]) -> Any:
     """
     for cls in model_field_type.__mro__:
         for type_map in type_maps:
-            if cls in type_map:
-                return type_map[cls]
+            mapped = type_map.get(cls, _MISSING)
+            if mapped is not _MISSING:
+                return mapped
 
     return NotImplemented
 
