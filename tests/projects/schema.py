@@ -573,13 +573,13 @@ class Query:
     issue_obj_perm_required_no_global_optional: IssueType | None = (
         strawberry_django.node(
             extensions=[
-                HasRetvalPerm(perms=["projects.view_issue"], accept_global_perms=False)
+                HasRetvalPerm(perms=["projects.view_issue"], with_global_perms=False)
             ],
         )
     )
     issue_list_obj_perm_required_no_global: list[IssueType] = strawberry_django.field(
         extensions=[
-            HasRetvalPerm(perms=["projects.view_issue"], accept_global_perms=False)
+            HasRetvalPerm(perms=["projects.view_issue"], with_global_perms=False)
         ],
     )
 

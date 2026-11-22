@@ -228,7 +228,7 @@ See the [django-guardian integration](../integrations/guardian.md) for setup ins
 
 By default, `HasSourcePerm` and `HasRetvalPerm` accept global (model-level) permissions as well: a user who has the `documents.view_document` permission globally can access every document, not only the ones they have been given the permission for at the object level.
 
-Pass `accept_global_perms=False` to only consider the permissions assigned for the objects themselves, like the `accept_global_perms` option of django-guardian's `get_objects_for_user`:
+Pass `with_global_perms=False` to only consider the permissions assigned for the objects themselves, like the `accept_global_perms` option of django-guardian's `get_objects_for_user`:
 
 ```python
 @strawberry.type
@@ -237,14 +237,14 @@ class Query:
     # even if they have the "documents.view_document" global permission
     @strawberry_django.field(
         extensions=[
-            HasRetvalPerm("documents.view_document", accept_global_perms=False),
+            HasRetvalPerm("documents.view_document", with_global_perms=False),
         ]
     )
     def documents(self) -> list[DocumentType]:
         return models.Document.objects.all()
 ```
 
-This option is only available for object-level checks. Passing `accept_global_perms=False` to `HasPerm` raises a `ValueError`.
+This option is only available for object-level checks. Passing `with_global_perms=False` to `HasPerm` raises a `ValueError`.
 
 ## No Permission Handling
 

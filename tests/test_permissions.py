@@ -1081,29 +1081,29 @@ def test_filter_for_user_no_global_without_obj_perms_backend(
             qs,
             user,
             "projects.view_issue",
-            accept_global_perms=False,
+            with_global_perms=False,
         ).count()
         == 0
     )
 
 
 def test_perm_no_global_requires_obj_perm_target():
-    with pytest.raises(ValueError, match="accept_global_perms=False"):
-        HasPerm("projects.view_issue", accept_global_perms=False)
+    with pytest.raises(ValueError, match="with_global_perms=False"):
+        HasPerm("projects.view_issue", with_global_perms=False)
 
-    with pytest.raises(ValueError, match="accept_global_perms=False"):
+    with pytest.raises(ValueError, match="with_global_perms=False"):
         HasRetvalPerm(
             "projects.view_issue",
             target=PermTarget.GLOBAL,
-            accept_global_perms=False,
+            with_global_perms=False,
         )
 
     assert not HasSourcePerm(
-        "projects.view_issue", accept_global_perms=False
-    ).accept_global_perms
+        "projects.view_issue", with_global_perms=False
+    ).with_global_perms
     assert not HasRetvalPerm(
-        "projects.view_issue", accept_global_perms=False
-    ).accept_global_perms
+        "projects.view_issue", with_global_perms=False
+    ).with_global_perms
 
 
 @pytest.mark.django_db(transaction=True)
