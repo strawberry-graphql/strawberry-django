@@ -334,6 +334,49 @@ The Query Optimizer automatically adds `select_related()` and `prefetch_related(
 
 See the [Query Optimizer Guide](./optimizer.md) for optimization details.
 
+## Namespacing Queries
+
+Fields can be grouped in plain Strawberry types, to organize a larger API in namespaces (or "folders"). Django fields in those types are resolved like they would be in the `Query` type, so the type can be returned without giving them any values:
+
+```python title="schema.py"
+import strawberry
+import strawberry_django
+from strawberry_django.pagination import OffsetPaginated
+from strawberry_django.relay import DjangoListConnection
+
+from .types import Fruit
+
+
+@strawberry.type
+class FruitQuery:
+    fruits: list[Fruit] = strawberry_django.field()
+    fruits_paginated: OffsetPaginated[Fruit] = strawberry_django.offset_paginated()
+    fruits_connection: DjangoListConnection[Fruit] = strawberry_django.connection()
+
+
+@strawberry.type
+class Query:
+    @strawberry.field
+    def fruits(self) -> FruitQuery:
+        return FruitQuery()
+```
+
+```graphql
+query {
+  fruits {
+    fruits {
+      id
+      name
+    }
+  }
+}
+```
+
+Filters, ordering, pagination, permissions and the [Query Optimizer](./optimizer.md) work in those fields as well. A value given to a field when creating the type (e.g. `FruitQuery(fruits=Fruit.objects.filter(...))`) is used instead of the model's default manager.
+
+> [!NOTE]
+> The primary key argument of single object fields (like `fruit: Fruit = strawberry_django.field()`) is only added in the `Query` type. Use `strawberry_django.node()` (for [Relay](./relay.md) types) or a [custom resolver](#custom-resolvers) to retrieve single objects in a namespace.
+
 ## Query Arguments
 
 Add custom arguments to your queries for flexibility.
