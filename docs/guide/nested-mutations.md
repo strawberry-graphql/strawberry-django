@@ -188,8 +188,8 @@ an object they can't access could still attach it to an object they can change. 
 they could create a task in a project they don't belong to. How the related objects are
 retrieved depends on the type of the ids in the input:
 
-- **`strawberry.ID`** (e.g. `author_id: auto`, `ListInput[strawberry.ID]`, or a relation
-  field annotated with `auto` when `MAP_AUTO_ID_AS_GLOBAL_ID` is not set): the ids are
+- **`strawberry.ID`** (e.g. `ListInput[strawberry.ID]`, or `author_id` and relation fields
+  annotated with `auto` when `MAP_AUTO_ID_AS_GLOBAL_ID` is not set): the ids are
   either assigned as they are (e.g. to `author_id`) or looked up in the related model's
   default manager. No GraphQL type is involved, so no access restriction is applied.
 - **`relay.GlobalID`** (e.g. `NodeInput`, `ListInput[NodeInput]`, or a relation field
@@ -301,7 +301,7 @@ from strawberry.types import Info
 @strawberry_django.input(models.Task)
 class TaskInput:
     name: auto
-    project_id: auto
+    project_id: strawberry.ID
 
 
 @strawberry.type
