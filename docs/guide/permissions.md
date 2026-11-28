@@ -320,3 +320,4 @@ def field_without_directive(self) -> str: ...
 - [django-guardian Integration](../integrations/guardian.md) - Object-level permissions
 - [Authentication](./authentication.md) - User authentication
 - [Error Handling](./error-handling.md) - Handling permission errors
+- [Nested Mutations](./nested-mutations.md#restricting-which-objects-can-be-related) - Restricting which objects can be related in mutations

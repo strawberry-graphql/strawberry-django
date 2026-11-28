@@ -181,6 +181,140 @@ mutation RemoveTags {
 }
 ```
 
+### Restricting Which Objects Can Be Related
+
+Related objects are referenced by their ids, so a user who knows (or guesses) the id of
+an object they can't access could still attach it to an object they can change. For example,
+they could create a task in a project they don't belong to. How the related objects are
+retrieved depends on the type of the ids in the input:
+
+- **`strawberry.ID`** (e.g. `ListInput[strawberry.ID]`, or `author_id` and relation fields
+  annotated with `auto` when `MAP_AUTO_ID_AS_GLOBAL_ID` is not set): the ids are
+  either assigned as they are (e.g. to `author_id`) or looked up in the related model's
+  default manager. No GraphQL type is involved, so no access restriction is applied.
+- **`relay.GlobalID`** (e.g. `NodeInput`, `ListInput[NodeInput]`, or a relation field
+  annotated with `auto` when `MAP_AUTO_ID_AS_GLOBAL_ID` is set): the objects are resolved
+  through the type the `GlobalID` refers to. Its `resolve_node` uses the type's
+  [`get_queryset`](./types.md#customizing-the-returned-queryset), so objects excluded by it
+  can't be related.
+
+This means that, when using [Relay](./relay.md), restricting the type's `get_queryset` to the
+objects the current user can access also prevents relating any other object:
+
+```python title="models.py"
+class Project(models.Model):
+    name = models.CharField(max_length=100)
+    members = models.ManyToManyField(User, related_name="projects")
+
+
+class Task(models.Model):
+    name = models.CharField(max_length=100)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tasks")
+```
+
+```python title="types.py"
+from strawberry import auto, relay
+from strawberry_django import NodeInput
+from strawberry_django.auth.utils import get_current_user
+
+
+@strawberry_django.type(models.Project)
+class Project(relay.Node):
+    name: auto
+
+    @classmethod
+    def get_queryset(cls, queryset, info, **kwargs):
+        user = get_current_user(info)
+        if not user.is_authenticated:
+            return queryset.none()
+
+        return queryset.filter(members=user)
+
+
+@strawberry_django.type(models.Task)
+class Task(relay.Node):
+    name: auto
+    project: Project
+
+
+@strawberry_django.input(models.Task)
+class TaskInput:
+    name: auto
+    project: NodeInput
+```
+
+```python title="mutations.py"
+@strawberry.type
+class Mutation:
+    create_task: Task = mutations.create(TaskInput, handle_django_errors=True)
+```
+
+When the given project isn't returned by `Project.get_queryset`, retrieving it raises a
+`Project.DoesNotExist` error, nothing is saved and, since `handle_django_errors` is enabled,
+an `OperationInfo` is returned instead of the task:
+
+```graphql
+mutation CreateTask {
+  createTask(data: { name: "Write docs", project: { id: "UHJvamVjdDoy" } }) {
+    __typename
+    ... on OperationInfo {
+      messages {
+        kind
+        message
+      }
+    }
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "createTask": {
+      "__typename": "OperationInfo",
+      "messages": [
+        {
+          "kind": "ERROR",
+          "message": "Project matching query does not exist."
+        }
+      ]
+    }
+  }
+}
+```
+
+> [!WARNING]
+> Only the type's `get_queryset` is applied when resolving related objects. Permission
+> extensions, such as `HasRetvalPerm`, are not checked for them.
+>
+> Also, a `GlobalID` can refer to any type that implements `Node` in your schema. If more
+> than one type is defined for the same model, a user can relate an object through any
+> of them, so make sure all of them restrict their `get_queryset`.
+
+When using `strawberry.ID`, retrieve the related objects yourself in a
+[custom mutation](#manual-nested-mutations), applying the same restrictions:
+
+```python title="mutations.py"
+from strawberry.types import Info
+
+
+@strawberry_django.input(models.Task)
+class TaskInput:
+    name: auto
+    project_id: strawberry.ID
+
+
+@strawberry.type
+class Mutation:
+    @strawberry_django.mutation(handle_django_errors=True)
+    def create_task(self, info: Info, data: TaskInput) -> Task:
+        # Raises Project.DoesNotExist if the user can't access the project
+        project = Project.get_queryset(models.Project.objects.all(), info).get(
+            pk=data.project_id,
+        )
+        return models.Task.objects.create(name=data.name, project=project)
+```
+
 ## Manual Nested Mutations
 
 For more control, you can write custom mutation resolvers. This is useful when you need:
