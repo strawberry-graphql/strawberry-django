@@ -38,6 +38,18 @@ class ArtProject(Project):
         return self.art_style.upper()
 
 
+class ProjectNote(models.Model):
+    project = models.ForeignKey(Project, related_name="notes", on_delete=models.CASCADE)
+    text = models.CharField(max_length=100)
+
+
+class ArtProjectTag(models.Model):
+    project = models.ForeignKey(
+        ArtProject, related_name="tags", on_delete=models.CASCADE
+    )
+    name = models.CharField(max_length=100)
+
+
 class ResearchProject(Project):
     supervisor = models.CharField(max_length=30)
     research_notes = models.TextField()
