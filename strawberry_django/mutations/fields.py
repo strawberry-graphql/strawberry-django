@@ -14,7 +14,11 @@ from django.db import models, transaction
 from strawberry import UNSET, relay
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.types import get_object_definition
+from strawberry.types.base import StrawberryContainer
+from strawberry.types.enum import StrawberryEnumDefinition
 from strawberry.types.field import UNRESOLVED
+from strawberry.types.lazy_type import LazyType
+from strawberry.types.union import StrawberryUnion
 from strawberry.utils.str_converters import capitalize_first, to_camel_case
 
 from strawberry_django.arguments import argument
@@ -76,6 +80,23 @@ def _get_mutation_types(gql_type: StrawberryType | type) -> Iterable[type]:
             if concrete_type not in seen:
                 seen.add(concrete_type)
                 yield concrete_type
+
+
+def _get_non_object_type_names(gql_type: StrawberryType | type) -> Iterable[str]:
+    if isinstance(gql_type, StrawberryContainer):
+        yield from _get_non_object_type_names(gql_type.of_type)
+    elif isinstance(gql_type, StrawberryUnion):
+        for t in gql_type.types:
+            yield from _get_non_object_type_names(t)
+    elif isinstance(gql_type, LazyType):
+        yield from _get_non_object_type_names(gql_type.resolve_type())
+    elif isinstance(gql_type, StrawberryEnumDefinition):
+        yield gql_type.name
+    elif (definition := get_object_definition(gql_type)) is None:
+        # Scalars, e.g. `bool` or `strawberry.ID`
+        yield getattr(gql_type, "__name__", str(gql_type))
+    elif definition.is_input:
+        yield definition.name
 
 
 def _get_validaton_error_message(error: ValidationError):
@@ -167,6 +188,16 @@ class DjangoMutationBase(StrawberryDjangoFieldBase):
             return resolved
 
         if self.handle_errors and not self._resolved_return_type:
+            if non_object_type_names := list(_get_non_object_type_names(resolved)):
+                type_names = ", ".join(f"`{name}`" for name in non_object_type_names)
+                raise TypeError(
+                    f"Mutation `{self.python_name}` can't handle django errors, as it"
+                    f" returns {type_names}. Its return type is combined with"
+                    " `OperationInfo` in a union, and GraphQL unions can only contain"
+                    " object types. Return an object type instead, or set"
+                    " `handle_django_errors=False` in the mutation."
+                )
+
             types_ = tuple(_get_mutation_types(resolved))
             if OperationInfo not in types_:
                 types_ = (*types_, OperationInfo)
