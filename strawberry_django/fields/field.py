@@ -94,6 +94,11 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+_QUERYSET_WITH_RESOLVER_ERROR = (
+    "A field cannot have both a `queryset` and a resolver. Return the queryset "
+    "from the resolver instead."
+)
+
 
 class StrawberryDjangoField(
     StrawberryDjangoPagination,
@@ -129,9 +134,11 @@ class StrawberryDjangoField(
         prefetch_related: TypeOrSequence[PrefetchType] | None = None,
         annotate: TypeOrMapping[AnnotateType] | None = None,
         disable_optimization: bool = False,
+        queryset: models.QuerySet | None = None,
         **kwargs,
     ):
         self.disable_optimization = disable_optimization
+        self.queryset = queryset
         self.store = OptimizerStore.with_hints(
             only=only,
             select_related=select_related,
@@ -141,6 +148,15 @@ class StrawberryDjangoField(
         self._cached_arguments: list[StrawberryArgument] | None = None
 
         super().__init__(*args, **kwargs)
+
+        if queryset is not None and self.base_resolver is not None:
+            raise TypeError(_QUERYSET_WITH_RESOLVER_ERROR)
+
+    def __call__(self, resolver: _RESOLVER_TYPE) -> Self:
+        if self.queryset is not None:
+            raise TypeError(_QUERYSET_WITH_RESOLVER_ERROR)
+
+        return super().__call__(resolver)
 
     @property
     def arguments(self) -> list[StrawberryArgument]:
@@ -157,6 +173,7 @@ class StrawberryDjangoField(
     def __copy__(self) -> Self:
         new_field = super().__copy__()
         new_field.disable_optimization = self.disable_optimization
+        new_field.queryset = self.queryset
         new_field.store = self.store.copy()
         new_field._cached_arguments = None
         return new_field
@@ -221,6 +238,12 @@ class StrawberryDjangoField(
             assert info
             result = self.resolver(source, info, args, resolver_kwargs)
             is_awaitable = inspect.isawaitable(result)
+        elif self.queryset is not None:
+            # A configured queryset is used whatever the source is, as custom
+            # root values (e.g. from `get_root_value`) are not model instances.
+            # `all()` returns a fresh copy, so the results cached by a
+            # previous request are never reused
+            result = self.queryset.all()
         elif source is None:
             model = self.django_model
             assert model is not None
@@ -485,7 +508,14 @@ class StrawberryDjangoConnectionExtension(relay.ConnectionExtension):
 
                 django_type = field.django_type
 
-                if root is not None:
+                if field.queryset is not None:
+                    # A configured queryset is used whatever the root is. The
+                    # type's `get_queryset`, permissions, filters, ordering and
+                    # the optimizer are applied to it by `get_queryset_hook`.
+                    # `all()` doesn't evaluate it, so this is safe to run on the
+                    # event loop.
+                    retval = field.queryset.all()
+                elif root is not None:
                     # If this is a nested field, call get_result instead because we want
                     # to retrieve the queryset from its RelatedManager. Accessing the
                     # manager and calling `.all()` builds the queryset without
@@ -729,6 +759,7 @@ def field(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: models.QuerySet | None = None,
 ) -> Any: ...
 
 
@@ -786,6 +817,7 @@ def field(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: models.QuerySet | None = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -829,6 +861,7 @@ def field(
         prefetch_related=prefetch_related,
         annotate=annotate,
         disable_optimization=disable_optimization,
+        queryset=queryset,
     )
 
     if order:
@@ -934,6 +967,7 @@ def connection(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: models.QuerySet | None = None,
 ) -> Any: ...
 
 
@@ -992,6 +1026,7 @@ def connection(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: models.QuerySet | None = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1082,6 +1117,7 @@ def connection(
         prefetch_related=prefetch_related,
         annotate=annotate,
         disable_optimization=disable_optimization,
+        queryset=queryset,
     )
 
     if resolver:
@@ -1122,6 +1158,7 @@ def offset_paginated(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: models.QuerySet | None = None,
 ) -> Any: ...
 
 
@@ -1178,6 +1215,7 @@ def offset_paginated(
     prefetch_related: TypeOrSequence[PrefetchType] | None = None,
     annotate: TypeOrMapping[AnnotateType] | None = None,
     disable_optimization: bool = False,
+    queryset: models.QuerySet | None = None,
     # This init parameter is used by pyright to determine whether this field
     # is added in the constructor or not. It is not used to change
     # any behavior at the moment.
@@ -1265,6 +1303,7 @@ def offset_paginated(
         prefetch_related=prefetch_related,
         annotate=annotate,
         disable_optimization=disable_optimization,
+        queryset=queryset,
     )
 
     if resolver:
